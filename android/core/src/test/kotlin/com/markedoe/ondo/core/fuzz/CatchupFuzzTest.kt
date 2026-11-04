@@ -1,11 +1,15 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import kotlin.test.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /** Catch-up templates (`catchup-source`) come from the playlist and are filled when a replay starts. */
 class CatchupFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val long = 1_000_000
 
     @Test(timeout = 20_000)

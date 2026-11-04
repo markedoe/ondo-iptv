@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
@@ -12,9 +13,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class CategoryFilterTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val names = listOf("|PT| Filmes", "|PT| Ação", "|FR| Films", "|FR| Action", "|EN| Movies", "|EN| Drama", "|DE| Filme", "|DE| Action", "Classics")
     private val categories = names.mapIndexed { index, name -> MediaCategory("m-$index", name, ContentType.MOVIE) }
     private val movies = categories.mapIndexed { index, category ->

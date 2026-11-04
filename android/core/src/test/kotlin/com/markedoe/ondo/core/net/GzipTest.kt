@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.net
 
+import com.markedoe.ondo.core.HangGuard
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.DeflaterOutputStream
@@ -9,8 +10,11 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class GzipTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private fun gzip(text: String): ByteArray =
         ByteArrayOutputStream().also { out -> GZIPOutputStream(out).use { it.write(text.encodeToByteArray()) } }.toByteArray()
 

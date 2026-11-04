@@ -8,6 +8,7 @@ import androidx.core.view.children
 import androidx.media3.ui.PlayerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
@@ -28,6 +29,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = OndoApplication::class, qualifiers = "w411dp-h891dp-xxhdpi")
 class PlayerOpenedAloneTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createEmptyComposeRule()
 
     private val app: OndoApplication = ApplicationProvider.getApplicationContext()

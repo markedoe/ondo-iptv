@@ -2,6 +2,7 @@ package com.markedoe.ondo
 
 import java.io.File
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -9,6 +10,8 @@ import org.junit.Test
  * calls enableEdgeToEdge() (Play Console, "deprecated APIs or parameters for edge-to-edge").
  */
 class EdgeToEdgeTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val deprecated = listOf("statusBarColor", "navigationBarColor", "navigationBarDividerColor", "windowTranslucentStatus", "windowTranslucentNavigation", "windowLayoutInDisplayCutoutMode")
 
     @Test

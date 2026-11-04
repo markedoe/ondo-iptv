@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.fuzz
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.epg.EpgFilter
 import com.markedoe.ondo.core.epg.EpgIndex
@@ -19,6 +20,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockWebServer
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -26,6 +28,8 @@ import org.junit.Test
  * (an `XmltvParseException` or another `IOException`), never hangs, never reads an entity from disk or network.
  */
 class XmltvFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val parser = XmltvParser()
     private val now = 1_760_000_000_000L
 

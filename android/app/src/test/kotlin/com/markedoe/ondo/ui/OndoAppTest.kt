@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
@@ -35,6 +36,8 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w411dp-h891dp-xxhdpi")
 class OndoAppTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createComposeRule()
     @get:Rule val folder = TemporaryFolder()
 

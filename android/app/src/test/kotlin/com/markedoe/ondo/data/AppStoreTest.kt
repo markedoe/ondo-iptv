@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import java.io.File
 import java.io.InputStream
 import org.junit.Assert.assertEquals
@@ -12,6 +13,8 @@ import org.junit.rules.TemporaryFolder
 
 /** The user's documents survive a damaged file: never read as empty, never written over. */
 class AppStoreTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     private fun playlist(name: String) = SavedPlaylist(id = name, name = name, url = "http://example.com/$name.m3u")

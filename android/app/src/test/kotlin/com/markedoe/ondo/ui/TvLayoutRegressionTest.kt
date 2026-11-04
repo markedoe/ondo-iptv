@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
@@ -103,6 +104,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TvLayoutRegressionTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun movie(id: String, name: String, rating: Double = 7.0) = ShowcaseItem.MovieItem(

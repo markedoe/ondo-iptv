@@ -3,6 +3,7 @@ package com.markedoe.ondo.data
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.CreditRecord
 import com.markedoe.ondo.core.library.IndexedPerson
 import com.markedoe.ondo.core.library.MetadataFreshness
@@ -11,12 +12,15 @@ import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbGenre
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** What TMDb said stays in a SQLite file between launches: titles, their credits, the people in them, dead images. */
 @RunWith(AndroidJUnit4::class)
 class SqliteMetadataStoreTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     /** Genres and the titles TMDb recommends are kept with a title; a genre's titles are found by its name. */

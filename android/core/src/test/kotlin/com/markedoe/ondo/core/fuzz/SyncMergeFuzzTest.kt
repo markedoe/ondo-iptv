@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.sync.SyncClock
 import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
@@ -12,6 +13,7 @@ import com.markedoe.ondo.core.sync.SyncSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 /**
  * The merge's promises (docs/SYNC.md, "Merge") on generated snapshots: the order of the two snapshots does not
@@ -19,6 +21,8 @@ import kotlin.test.assertTrue
  * different versions of the same records, deletions, and the same playlist added under several IDs.
  */
 class SyncMergeFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /**
      * Generated snapshots, from a few versions of each record. Unless [simultaneousEdits], each version has a time of
      * its own and devices hold copies of them, as when a change travels from device to device; otherwise devices may

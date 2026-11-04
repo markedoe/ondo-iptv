@@ -1,8 +1,10 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.parsing.TitleParser
 import java.util.regex.Pattern
 import kotlin.test.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -10,6 +12,8 @@ import org.junit.Test
  * episode titles): it must stay linear in the length of a title, however broken the title is.
  */
 class TitleParserFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** One megabyte, as in a broken playlist line. */
     private val long = 1_000_000
 

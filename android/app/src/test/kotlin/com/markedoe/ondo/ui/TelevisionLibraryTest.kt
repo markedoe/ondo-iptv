@@ -31,6 +31,7 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.CrashLog
@@ -68,6 +69,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionLibraryTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
 

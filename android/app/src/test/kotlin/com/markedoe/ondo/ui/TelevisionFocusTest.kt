@@ -42,6 +42,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.platform.app.InstrumentationRegistry
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.UncaughtErrors
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.net.HttpClient
@@ -85,6 +86,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionFocusTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val uncaught = UncaughtErrors()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()

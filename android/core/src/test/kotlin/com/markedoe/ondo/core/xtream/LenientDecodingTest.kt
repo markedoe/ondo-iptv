@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.xtream
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.model.XtreamCredentials
 import kotlin.test.Test
@@ -13,8 +14,11 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import org.junit.Rule
 
 class LenientDecodingTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private fun obj(json: String): JsonObject = Json.parseToJsonElement(json) as JsonObject
 
     private fun field(json: String): JsonElement? = obj("""{"v":$json}""")["v"]
@@ -154,6 +158,8 @@ class LenientDecodingTest {
 }
 
 class XtreamDtoTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val credentials = XtreamCredentials("http://p.example.com", "u", "p")
 
     @Test

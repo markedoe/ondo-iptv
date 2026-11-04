@@ -1,11 +1,15 @@
 package com.markedoe.ondo.core.playback
 
+import com.markedoe.ondo.core.HangGuard
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import org.junit.Rule
 
 /** The format shown on movie and series pages. */
 class MediaFormatTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun theAddressNamesTheFormat() {
         assertEquals("MKV", MediaFormat.label("http://panel.example.com/movie/u/p/5001.mkv"))

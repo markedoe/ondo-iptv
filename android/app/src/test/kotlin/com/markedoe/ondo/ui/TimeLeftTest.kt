@@ -4,9 +4,11 @@ import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
 import androidx.test.core.app.ApplicationProvider
+import com.markedoe.ondo.HangGuard
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -14,6 +16,8 @@ import org.robolectric.RobolectricTestRunner
 /** The time left on a movie or an episode: minutes under an hour, hours and minutes from an hour on. */
 @RunWith(RobolectricTestRunner::class)
 class TimeLeftTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private fun resources(tag: String): Resources {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val configuration = Configuration(context.resources.configuration).apply { setLocale(Locale.forLanguageTag(tag)) }

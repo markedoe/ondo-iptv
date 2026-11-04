@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.PictureSupport
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
@@ -18,6 +19,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -26,6 +28,8 @@ import org.junit.Test
  * versions" off is the playlist as it is.
  */
 class FilmVersionsAppTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val labels = Labels("Movie", "Series", Locale.US)
     private val uhdFilms = MediaCategory("m-4k", "4K | Films", ContentType.MOVIE)
 

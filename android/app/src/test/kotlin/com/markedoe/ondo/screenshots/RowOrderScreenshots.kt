@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.screens.RowOrderActions
 import com.markedoe.ondo.ui.screens.RowOrderScreen
@@ -23,6 +24,8 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "en-rUS-w360dp-h640dp-xxhdpi")
 class RowOrderScreenshots {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test

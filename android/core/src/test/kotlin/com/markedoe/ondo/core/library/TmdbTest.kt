@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.Series
@@ -13,8 +14,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import org.junit.Rule
 
 class TmdbTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun trendingDecodingAndMatching() = runTest {
         val http = MockHttpClient()

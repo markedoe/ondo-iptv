@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.sync.SentSnapshot
 import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
@@ -28,6 +29,8 @@ import org.junit.rules.TemporaryFolder
 
 /** Sync between two devices' repositories (docs/SYNC.md): what arrives, what follows, what stays on each device. */
 class SyncDataTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     private val list = "http://provider.example.com/list.m3u"

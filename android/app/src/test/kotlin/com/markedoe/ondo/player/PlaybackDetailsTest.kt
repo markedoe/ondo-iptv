@@ -5,14 +5,18 @@ import androidx.media3.common.ColorInfo
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.markedoe.ondo.HangGuard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** What the record of a playback says about the video: the formats that ask the most of a TV's decoder. */
 @RunWith(AndroidJUnit4::class)
 class PlaybackDetailsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun hdrAndDolbyVisionAreNamed() {
         val dolbyVision = Format.Builder()

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,6 +13,8 @@ import org.junit.rules.TemporaryFolder
 
 /** The last error that stopped the app: kept on the device for Settings → About, without addresses or logins. */
 class CrashLogTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     @Test

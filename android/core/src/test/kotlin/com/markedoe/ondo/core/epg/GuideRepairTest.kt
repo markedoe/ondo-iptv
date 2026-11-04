@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.epg
 
+import com.markedoe.ondo.core.HangGuard
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.time.Instant
@@ -8,12 +9,15 @@ import java.time.format.DateTimeFormatter
 import java.util.zip.GZIPOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.junit.Rule
 
 /**
  * Faults common in providers' guides, each of which stopped the parser at its first occurrence: a guide of 1,000
  * programmes kept the 5 before it, without saying so.
  */
 class GuideRepairTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val parser = XmltvParser()
     private val stamp = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC)
     private val utf8 = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"

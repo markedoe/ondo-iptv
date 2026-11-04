@@ -9,8 +9,10 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.SinglePeriodTimeline
 import androidx.media3.exoplayer.source.TrackGroupArray
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.markedoe.ondo.HangGuard
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -21,6 +23,8 @@ import org.junit.runner.RunWith
 @UnstableApi
 @RunWith(AndroidJUnit4::class)
 class PlayerLoadControlTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val playerId = PlayerId("test")
     private val timeline = SinglePeriodTimeline(7_200_000_000, true, false, false, null, MediaItem.fromUri("https://example.com/film.mkv"))
     private val targetBytes = 20 * 1024 * 1024

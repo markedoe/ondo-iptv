@@ -1,16 +1,20 @@
 package com.markedoe.ondo.core.playback
 
+import com.markedoe.ondo.core.HangGuard
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 /**
  * Freezes told apart: the data came in too slowly (network or provider), or it was on time and the picture still
  * stopped or lost frames (player or device). Same cases as the Apple apps' PlaybackHealthTests.
  */
 class PlaybackHealthTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** A 3 Mb/s stream (375 kB per second of media), sampled every half second. */
     private val bytesPerSecond = 375_000.0
 

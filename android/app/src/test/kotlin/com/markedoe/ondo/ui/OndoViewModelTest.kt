@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import app.cash.turbine.test
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.InMemoryMetadataStore
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.model.ContentType
@@ -66,6 +67,8 @@ private class Panel(private val gate: CompletableDeferred<Unit>? = null) : HttpC
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OndoViewModelTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     private val list = "http://provider.example.com/list.m3u"

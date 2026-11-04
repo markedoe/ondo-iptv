@@ -4,15 +4,19 @@ import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.markedoe.ondo.HangGuard
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** The tracks named for a person in the app's language: "Anglais" rather than "en", then what tells them apart. */
 @RunWith(AndroidJUnit4::class)
 class TrackChoicesTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val french = TrackWords(
         track = { "Piste $it" },
         forced = "Forcés",

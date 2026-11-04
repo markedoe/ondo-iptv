@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import kotlinx.serialization.json.Json
@@ -12,8 +13,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class CategoryStylesTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** Same cases as the Swift core (`category_styles.json` in both test suites). */
     @Test
     fun stylesAndWordsOfCategoryNames() {

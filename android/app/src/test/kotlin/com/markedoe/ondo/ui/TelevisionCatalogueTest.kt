@@ -40,6 +40,7 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ContentType
@@ -91,6 +92,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionCatalogueTest {
+    // A catalogue of real size walked with the remote: 20 to 80 s a test in CI, longer on a busy runner.
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard(limitSeconds = 300)
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
 

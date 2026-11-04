@@ -10,9 +10,12 @@ import com.markedoe.ondo.core.model.EpgProgram
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 /** Guards against accidental quadratic behaviour on provider-sized inputs (generous limits for CI machines). */
 class PerformanceTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun largePlaylistParsesQuickly() {
         val text = StringBuilder("#EXTM3U\n")

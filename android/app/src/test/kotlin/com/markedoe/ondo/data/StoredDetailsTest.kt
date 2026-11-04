@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.core.net.HttpClient
@@ -23,6 +24,8 @@ import org.junit.rules.TemporaryFolder
  * asking the panel again, asks again once they are old, and keeps showing them when the panel cannot be reached.
  */
 class StoredDetailsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     private var clock = 1_760_000_000_000L

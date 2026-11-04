@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.sync
 
+import com.markedoe.ondo.core.HangGuard
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -21,10 +22,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
+import org.junit.Rule
 import org.junit.Test
 
 /** Local-network sync (docs/SYNC.md): the shared examples, the merge rules, local addresses and frames. */
 class SyncTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** `fixtures/sync` at the top of the repository, shared with the Swift tests. */
     private fun fixture(name: String): SyncSnapshot {
         val directory = generateSequence(File("").absoluteFile) { it.parentFile }.map { File(it, "fixtures/sync") }.first { it.isDirectory }

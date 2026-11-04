@@ -1,9 +1,11 @@
 package com.markedoe.ondo.core.sync
 
+import com.markedoe.ondo.core.HangGuard
 import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -12,6 +14,8 @@ import org.junit.Test
  * `SyncClockTests`.
  */
 class SyncClockTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     // The clock
 
     @Test

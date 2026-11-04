@@ -1,3 +1,4 @@
+import java.time.Duration
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -72,8 +73,6 @@ android {
             isIncludeAndroidResources = true
             all {
                 it.systemProperties["robolectric.pixelCopyRenderMode"] = "hardware"
-                // Each test named as it starts and ends in the log: one that never ends shows by name.
-                it.testLogging { events("started", "passed", "skipped", "failed") }
             }
         }
     }
@@ -154,8 +153,13 @@ tasks.withType<Test>().configureEach {
     inputs.files(fileTree("src/test/snapshots"))
         .withPropertyName("screenshotReferences")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // A test over its time (HangGuard, 120 s) fails with every thread's stack in the log and in
+    // build/reports/tests/hang-guard; whatever else hangs, Gradle stops the tests before the CI job's 45 minutes.
+    systemProperty("ondo.hangGuard.dir", "build/reports/tests/hang-guard")
+    timeout.set(Duration.ofMinutes(30))
     testLogging {
-        events("failed", "skipped")
+        // Each test named as it starts and ends in the log: one that never ends shows by name.
+        events("started", "passed", "skipped", "failed")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showStackTraces = true
     }

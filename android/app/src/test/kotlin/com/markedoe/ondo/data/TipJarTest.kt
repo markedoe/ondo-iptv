@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import android.app.Activity
+import com.markedoe.ondo.HangGuard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -14,6 +15,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -23,6 +25,8 @@ import org.robolectric.RobolectricTestRunner
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class TipJarTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private class FakeBilling(
         var connects: Boolean = true,
         var prices: Map<Tip, String> = mapOf(Tip.SMALL to "1,99 €", Tip.MEDIUM to "4,99 €", Tip.LARGE to "9,99 €"),

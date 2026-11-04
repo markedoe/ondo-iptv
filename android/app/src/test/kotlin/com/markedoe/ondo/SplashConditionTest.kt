@@ -3,9 +3,12 @@ package com.markedoe.ondo
 import com.markedoe.ondo.data.OndoState
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class SplashConditionTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun theSplashWaitsForThePlaylistsThenBrieflyForTheSavedCatalogue() {
         assertTrue("playlists not read yet", MainActivity.keepsSplash(OndoState(), elapsedMs = 10_000))

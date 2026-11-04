@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ContentType
@@ -12,9 +13,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
 import kotlinx.coroutines.test.runTest
+import org.junit.Rule
 
 /** The names the core gives where the provider gives none read in the viewer's words; ids and the provider's names stay. */
 class PlaceholderNamesTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val french = PlaceholderNames(
         uncategorized = "Non classé",
         other = "Autre",

@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
@@ -30,6 +31,8 @@ import org.robolectric.annotation.Config
 /** A film's versions on its page: a badge each (two of the same tags are two), the one picked selected, a tap picks one. */
 @RunWith(RobolectricTestRunner::class)
 class VersionChipsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createComposeRule()
 
     private val movie = Fixtures.glassCity

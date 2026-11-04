@@ -14,6 +14,8 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(application = OndoApplication::class, qualifiers = "w411dp-h891dp-xxhdpi")
 class MainActivityTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test

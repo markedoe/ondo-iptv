@@ -1,12 +1,16 @@
 package com.markedoe.ondo.core.net
 
+import com.markedoe.ondo.core.HangGuard
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class UrlsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun lenientKeepsValidUrlsAndEscapesTheRest() {
         assertEquals("http://a.example.com/x.m3u8?t=1", Urls.lenient("  http://a.example.com/x.m3u8?t=1 \n"))

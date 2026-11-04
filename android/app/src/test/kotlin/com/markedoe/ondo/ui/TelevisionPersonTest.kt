@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.UncaughtErrors
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -41,6 +42,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionPersonTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val uncaught = UncaughtErrors()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 

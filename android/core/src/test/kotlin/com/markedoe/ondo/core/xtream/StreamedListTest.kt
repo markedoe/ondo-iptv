@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.xtream
 
 import com.markedoe.ondo.core.FileHttp
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.LargeCatalogue
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.model.XtreamCredentials
@@ -31,9 +32,12 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Assume.assumeTrue
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Rule
 
 /** The catalogue's lists, decoded one element at a time from the answer saved to disk (see [decodeList]). */
 class StreamedListTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val folder = Files.createTempDirectory("lists").toFile()
 
     @AfterTest

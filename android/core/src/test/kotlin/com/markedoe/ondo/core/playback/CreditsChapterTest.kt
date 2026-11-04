@@ -1,13 +1,17 @@
 package com.markedoe.ondo.core.playback
 
+import com.markedoe.ondo.core.HangGuard
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 /** The end credits among a file's chapters. The Swift core's `CreditsChapterTests` has the same cases. */
 class CreditsChapterTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun creditsNamesInSeveralLanguages() {
         val names = listOf(

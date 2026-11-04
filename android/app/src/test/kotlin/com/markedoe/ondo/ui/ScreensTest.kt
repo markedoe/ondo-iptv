@@ -30,6 +30,7 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.MediaDetails
@@ -98,6 +99,8 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w411dp-h891dp-xxhdpi")
 class ScreensTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createComposeRule()
     private val labels = Labels("Movie", "Series")
 

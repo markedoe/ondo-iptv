@@ -12,6 +12,7 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.OndoApplication
 import java.net.ServerSocket
 import java.net.Socket
@@ -37,6 +38,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = OndoApplication::class, qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TvPlayerRemoteTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createEmptyComposeRule()
 
     private lateinit var scenario: ActivityScenario<PlayerActivity>

@@ -1,10 +1,14 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /** The order of the rows of the Movies and Series tabs (the same cases as the Swift `RowOrderTests`). */
 class RowOrderTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val action = RowOrder.categoryKey("movie-1", "Action")
     private val drama = RowOrder.categoryKey("movie-2", "  Drama   FR ")
     private val kids = RowOrder.categoryKey("movie-3", "Kids")

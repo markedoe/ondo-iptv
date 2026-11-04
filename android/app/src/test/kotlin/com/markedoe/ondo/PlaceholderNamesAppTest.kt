@@ -27,6 +27,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
@@ -40,6 +41,8 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(application = OndoApplication::class, qualifiers = "fr")
 class PlaceholderNamesAppTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val app: OndoApplication = ApplicationProvider.getApplicationContext()
 
     private val uncategorized = MediaCategory("live-1a2b", "Uncategorized", ContentType.LIVE)

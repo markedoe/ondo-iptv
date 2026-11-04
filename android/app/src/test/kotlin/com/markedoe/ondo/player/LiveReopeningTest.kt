@@ -1,10 +1,14 @@
 package com.markedoe.ondo.player
 
+import com.markedoe.ondo.HangGuard
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class LiveReopeningTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun aLiveStreamIsOpenedAgainThreeTimesInARowThenGivesUp() {
         val reopening = LiveReopening()

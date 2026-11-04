@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.xtream
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.model.XtreamOutputFormat
 import com.markedoe.ondo.core.net.DEFAULT_IPTV_USER_AGENT
@@ -16,6 +17,7 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import org.junit.Rule
 
 /**
  * An Xtream panel end to end: the real OkHttp client against a local server that decodes the query like
@@ -23,6 +25,8 @@ import okhttp3.mockwebserver.RecordedRequest
  * reach it unchanged, or the login fails. Same test as the iPhone app's `PlaylistOverHTTPTests`.
  */
 class XtreamOverHttpTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val server = MockWebServer()
     private val username = "viewer"
     private val password = "pa+ss/w&rd=1"

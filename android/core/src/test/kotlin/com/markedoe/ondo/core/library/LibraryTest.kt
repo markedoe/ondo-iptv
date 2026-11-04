@@ -2,6 +2,7 @@ package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.CoreJson
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.HistoryEntry
@@ -23,8 +24,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import org.junit.Rule
 
 class LibraryTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val playlistId = UUID.randomUUID().toString()
 
     private fun ref(type: ContentType, id: String, episode: String? = null) = MediaReference(playlistId, type, id, episode)
@@ -340,6 +344,8 @@ class LibraryTest {
 }
 
 class PlaylistDecodingTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun oldPlaylistJsonWithoutNewFieldsStillDecodes() {
         val json = """{"id":"7C1C2B8E-3E0B-4F65-9A57-3C0E2D7A1F00","name":"Old","source":{"type":"remote","url":"http://x.example.com/list.m3u"},"unknown":1}"""

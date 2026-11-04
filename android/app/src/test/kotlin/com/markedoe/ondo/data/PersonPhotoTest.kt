@@ -1,11 +1,15 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Rule
 import org.junit.Test
 
 /** A person kept before their photo was known gets it later, in My List and the collections; a known photo stays. */
 class PersonPhotoTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun aPersonKeptWithoutAPhotoGetsTheOneFoundLater() {
         val kept = Favorite.person("Ana Lima", null, 1)

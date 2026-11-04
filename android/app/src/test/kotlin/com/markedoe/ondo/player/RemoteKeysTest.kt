@@ -1,12 +1,16 @@
 package com.markedoe.ondo.player
 
 import android.view.KeyEvent
+import com.markedoe.ondo.HangGuard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Rule
 import org.junit.Test
 
 /** The player's remote keys (Google's TV app quality: TV-PC, TV-PP) and the channel number typed figure by figure. */
 class RemoteKeysTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private fun hidden(keyCode: Int, live: Boolean = false, seekable: Boolean = true) =
         RemoteKeys.action(keyCode, controlsShown = false, zapping = live, seekable = seekable)
 

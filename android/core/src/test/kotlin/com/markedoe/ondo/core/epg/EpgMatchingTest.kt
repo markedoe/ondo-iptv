@@ -2,6 +2,7 @@ package com.markedoe.ondo.core.epg
 
 import com.markedoe.ondo.core.CoreJson
 import com.markedoe.ondo.core.HOUR
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.EpgChannel
 import com.markedoe.ondo.core.model.EpgData
@@ -15,8 +16,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class EpgMatchingTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val start = utc(2025, 10, 9, 20, 0)
 
     private fun program(channel: String, title: String, hour: Int, subtitle: String? = null) = EpgProgram(

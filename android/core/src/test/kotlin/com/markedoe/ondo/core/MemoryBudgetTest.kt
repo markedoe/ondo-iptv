@@ -14,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 
 /**
  * Large catalogues and guides load within a small heap: run by `:core:memoryTest` under 64 MB (see build.gradle.kts),
@@ -23,6 +24,8 @@ import kotlinx.coroutines.runBlocking
  * Settings → About).
  */
 class MemoryBudgetTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val folder = Files.createTempDirectory("memory").toFile()
 
     @AfterTest

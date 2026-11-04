@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
@@ -9,6 +10,7 @@ import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.ui.UiMappers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -16,6 +18,8 @@ import org.junit.Test
  * era, then the rating), never the title itself, another copy of it, or the same film twice.
  */
 class SimilarTitlesTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val films = MediaCategory("m-fr", "|FR| Films", ContentType.MOVIE)
     private val other = MediaCategory("m-fr-kids", "|FR| Kids", ContentType.MOVIE)
     private val shows = MediaCategory("s-fr", "|FR| Series", ContentType.SERIES)

@@ -5,8 +5,11 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import org.junit.Rule
 
 class TextDecodingTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /**
      * What the JDK's strict decoder reads, sequence by sequence: a byte that starts no valid UTF-8 sequence is its
      * Windows-1252 character. Used as the reference for the hand-written check.

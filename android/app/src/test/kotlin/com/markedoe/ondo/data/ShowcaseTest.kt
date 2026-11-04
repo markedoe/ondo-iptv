@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -8,10 +9,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /** Same rules as the iPhone app's `ShowcaseTests`: carousel, next episode, More like this, My List. */
 class ShowcaseTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val playlistId = Fixtures.PLAYLIST_ID
 
     private fun LibraryState.watched(kind: ItemKind, itemId: String, episodeId: String? = null, fraction: Double, duration: Double, at: Long): LibraryState {

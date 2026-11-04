@@ -1,14 +1,18 @@
 package com.markedoe.ondo.core.parsing
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.library.PlaylistLoader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class M3uParserTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun parsesHeaderAndEntries() {
         val playlist = M3uParser.parse(Fixtures.bytes("sample.m3u"))

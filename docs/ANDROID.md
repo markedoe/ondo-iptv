@@ -152,6 +152,9 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   (`PhonePlayerOverlayTest`), Roborazzi screenshots that double as Google Play screenshots (phone,
   7" and 10" tablets, TV, English and French), compared with committed references (see
   [Screenshots and regressions](#screenshots-and-regressions)).
+  Every test class takes `HangGuard` as its first rule (`check_hang_guard.py` in CI): a test that runs over 120 s
+  fails with every thread's stack in the log and in `build/reports/tests/hang-guard`, and each test is named as it
+  starts and ends, so a test that hangs is named instead of the job waiting in silence for its timeout.
 
 Planned next (not included in v1): Chromecast, downloads, profiles and PIN, online
 subtitles, second libVLC engine; on a TV, launcher channels and voice search.

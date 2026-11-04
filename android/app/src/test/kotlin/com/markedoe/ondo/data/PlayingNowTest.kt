@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,6 +12,8 @@ import org.junit.rules.TemporaryFolder
 
 /** The record of what plays: a restart of the whole device during playback becomes the last crash, with what played. */
 class PlayingNowTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     private val about = "Ondo 1.4.0 (1100) · Android 11 (API 30) · Test TV\nmemory class 192 MB, large 384 MB, max heap 384 MB, low RAM false"

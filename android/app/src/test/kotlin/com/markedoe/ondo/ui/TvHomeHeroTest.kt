@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.TextLayoutResult
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -30,6 +31,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR-w960dp-h540dp-land-television-xhdpi")
 class TvHomeHeroTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun page(title: String, plot: String, resumable: Boolean) = HeroPage(

@@ -31,6 +31,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.sync.SyncRows
 import com.markedoe.ondo.data.AppSettings
@@ -61,6 +62,8 @@ import org.robolectric.annotation.Config
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 class RowOrderAppTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val drama = RowOrder.categoryKey(Fixtures.drama.id, Fixtures.drama.name)

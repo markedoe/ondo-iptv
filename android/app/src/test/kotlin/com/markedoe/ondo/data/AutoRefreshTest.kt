@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import kotlinx.coroutines.flow.first
@@ -13,6 +14,8 @@ import org.junit.rules.TemporaryFolder
 
 /** Back in Ondo, the playlist in use is downloaded again once older than the viewer's choice; never with "only when I ask". */
 class AutoRefreshTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     private val list = "http://provider.example.com/list.m3u"

@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.LargeCatalogue
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.epg.XmltvParseException
@@ -46,8 +47,11 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assume.assumeTrue
+import org.junit.Rule
 
 class PlaylistLoaderTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val clock = { 1_234L }
 
     @Test
@@ -379,6 +383,8 @@ class PlaylistLoaderTest {
 }
 
 class ErrorAttributionTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun classification() {
         assertEquals(ErrorAttribution.PROVIDER, ErrorAttribution.classify(HttpException.BadStatus(403)))
@@ -395,6 +401,8 @@ class ErrorAttributionTest {
 }
 
 class JsonFileStoreTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun envelopeBackupAndMissingDocuments() {
         val directory = Files.createTempDirectory("ondo-store").toFile()

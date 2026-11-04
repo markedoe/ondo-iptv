@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.epg
 
 import com.markedoe.ondo.core.FileHttp
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.LargeCatalogue
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.Channel
@@ -13,9 +14,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import org.junit.Rule
 
 /** A guide over the memory it may take is kept within a narrower window around now (see [GuideEstimate]). */
 class GuideBudgetTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val folder = Files.createTempDirectory("guides").toFile()
     private val now = 1_760_000_000_000L
     private val url = "http://epg.example.com/guide.xml"

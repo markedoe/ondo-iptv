@@ -1,12 +1,16 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 /** Same cases as IPTVCore's PeopleTests. */
 class PeopleTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun namesAreSplitCleanedAndKeptOnce() {
         assertEquals(

@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.ui.theme.OndoTheme
@@ -19,6 +20,8 @@ import org.robolectric.RobolectricTestRunner
 /** Up next: offered in the last seconds of an episode that has a next one; Play now and the cross answer it. */
 @RunWith(RobolectricTestRunner::class)
 class UpNextTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val harbor = Series(id = "s1", name = "Harbor", categoryId = "c")

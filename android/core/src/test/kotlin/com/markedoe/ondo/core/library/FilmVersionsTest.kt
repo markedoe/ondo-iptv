@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.xtream.XtreamVodStreamDto
 import kotlin.random.Random
@@ -11,9 +12,12 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import org.junit.Rule
 
 /** The same cases as Apple's `FilmVersionsTests` (IPTVCore). */
 class FilmVersionsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private var next = 0
 
     private fun movie(name: String, year: Int? = null, tmdb: Int? = null, category: String = "c", id: String? = null) =

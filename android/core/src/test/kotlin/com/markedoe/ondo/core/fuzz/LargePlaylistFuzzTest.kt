@@ -1,13 +1,17 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.parsing.M3uParser
 import kotlin.test.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /** Shapes of large playlists: loading stays linear in the number of entries. */
 class LargePlaylistFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val loader = PlaylistLoader(MockHttpClient(), clock = { 0L })
 
     /** Providers reuse one placeholder address for separator entries; 40 000 of them make a 2 MB playlist. */

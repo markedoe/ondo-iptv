@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.parsing
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.library.PlaylistLoaderException
@@ -14,8 +15,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class ContentBuilderTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val loader = PlaylistLoader(MockHttpClient())
 
     private fun content(): PlaylistContent = loader.parse(Fixtures.bytes("sample.m3u"))

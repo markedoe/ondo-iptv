@@ -1,14 +1,18 @@
 package com.markedoe.ondo.core.net
 
+import com.markedoe.ondo.core.HangGuard
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.junit.Rule
 
 /** A small gzip file that inflates without end, or an answer that never stops, must not exhaust the memory. */
 class LimitsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val bomb: ByteArray = ByteArrayOutputStream().also { out ->
         GZIPOutputStream(out).use { gzip -> repeat(64) { gzip.write(ByteArray(1024 * 1024)) } }
     }.toByteArray()

@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.CoreJson
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ChannelEdit
 import com.markedoe.ondo.core.model.ContentType
@@ -20,8 +21,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class LibraryMergeTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /**
      * Categories hidden on either device stay hidden after a merge, in either order: the two sets are united, the last
      * copy merged does not replace the other's.
@@ -131,6 +135,8 @@ class LibraryMergeTest {
 }
 
 class CustomListTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun listLifecycleAndSync() {
         val playlist = UUID.randomUUID().toString()
@@ -173,6 +179,8 @@ class CustomListTest {
 }
 
 class ProfileTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun defaultProfileKeepsHistoricalLibraryName() {
         assertEquals("library", Profile(id = Profile.DEFAULT_ID, name = "Me").libraryDocumentName)
@@ -186,6 +194,8 @@ class ProfileTest {
 }
 
 class ReminderTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val playlistId = UUID.randomUUID().toString()
     private val start = utc(2025, 10, 9, 20, 0)
 
@@ -251,6 +261,8 @@ class ReminderTest {
 }
 
 class ChannelManagementTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val playlistId = UUID.randomUUID().toString()
 
     @Test

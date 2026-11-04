@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
@@ -27,6 +28,8 @@ import org.junit.rules.TemporaryFolder
 
 /** The viewer's TMDb token on Android: checked with TMDb when saved, carried by sync, and what it brings. */
 class TmdbDataTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     private val list = "http://provider.example.com/list.m3u"

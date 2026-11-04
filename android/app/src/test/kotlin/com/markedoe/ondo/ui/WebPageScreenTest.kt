@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.ui.screens.WebPageScreen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -25,6 +26,8 @@ import org.robolectric.annotation.Config
 /** Ondo's own pages (privacy, support) inside the app. */
 @RunWith(AndroidJUnit4::class)
 class WebPageScreenTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun texts(view: View): List<String> = when (view) {

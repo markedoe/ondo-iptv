@@ -1,15 +1,19 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.Movie
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 /** Same cases as the Swift core (`awards_sample.json` in both test suites). */
 class AwardsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val catalogue = AwardsCatalogue.parse(Fixtures.bytes("awards_sample.json").decodeToString())
 
     private fun movie(id: String, name: String, year: Int?) = Movie(id = id, name = name, categoryId = "m", streamUrl = "http://example.com/movie/$id.mp4", year = year)

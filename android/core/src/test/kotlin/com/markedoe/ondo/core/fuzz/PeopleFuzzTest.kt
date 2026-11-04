@@ -1,12 +1,16 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.People
 import kotlin.test.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /** Cast and director fields come from the provider and are split into names on the main thread. */
 class PeopleFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val long = 1_000_000
 
     @Test(timeout = 20_000)

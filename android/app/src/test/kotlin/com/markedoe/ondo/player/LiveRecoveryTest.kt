@@ -1,7 +1,9 @@
 package com.markedoe.ondo.player
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.player.LiveRecovery.Step
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -9,6 +11,8 @@ import org.junit.Test
  * stream's window. A few tries on the same address, then the channel's other addresses, then the error.
  */
 class LiveRecoveryTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun anEndedStreamIsOpenedAgainThenTheOtherAddressesAreTried() {
         val recovery = LiveRecovery()

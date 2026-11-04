@@ -4,6 +4,7 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.w3c.dom.Element
 
@@ -13,6 +14,8 @@ import org.w3c.dom.Element
  * network security policy, so this reads what ships: the manifest and its network security config.
  */
 class NetworkSecurityConfigTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private fun xml(path: String): Element =
         DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }.newDocumentBuilder().parse(File(path)).documentElement
 

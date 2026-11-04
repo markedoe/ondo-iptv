@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.XtreamCredentials
@@ -13,6 +14,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -20,6 +22,8 @@ import org.junit.Test
  * hundreds of megabytes: past the limit the answer is refused, before the app runs out of memory.
  */
 class GzipFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** `megabytes` of spaces after `prefix`, gzip compressed in `members` concatenated members. */
     private fun bomb(prefix: String, megabytes: Int, members: Int = 1): ByteArray {
         val out = ByteArrayOutputStream()

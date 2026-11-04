@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.StableHash
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.model.Channel
@@ -13,8 +14,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class SearchTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private fun makeContent(): PlaylistContent {
         val url = "http://x/1"
         return PlaylistContent(

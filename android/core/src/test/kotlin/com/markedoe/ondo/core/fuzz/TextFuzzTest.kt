@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.catchup.CatchupContext
 import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
@@ -37,6 +38,7 @@ import com.markedoe.ondo.core.xtream.XtreamUrlBuilder
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -45,6 +47,8 @@ import org.junit.Test
  * linear in the length of their input.
  */
 class TextFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** Every helper the app runs on provider text, over random and awkward strings: nothing may throw. */
     @Test(timeout = 60_000)
     fun randomTextNeverThrows() {

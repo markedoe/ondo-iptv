@@ -1,14 +1,18 @@
 package com.markedoe.ondo.player
 
 import androidx.media3.common.Player
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import java.time.Instant
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /** The report of a playback: its timings, and nothing of the address, the login or the title. */
 class PlaybackReporterTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     // Fictitious login on example.com, the very thing a report must never carry.
     private val secretUrl = "http://viewer:secret-pass@panel.example.com:8080/movie/viewer/secret-pass/42.mkv" // leak-guard: allow
     private val request = PlayRequest(

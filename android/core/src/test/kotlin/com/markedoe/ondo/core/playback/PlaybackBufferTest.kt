@@ -1,11 +1,15 @@
 package com.markedoe.ondo.core.playback
 
+import com.markedoe.ondo.core.HangGuard
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class PlaybackBufferTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun automaticKeepsThePlayersOwnDurations() {
         assertNull(PlaybackBuffer.durations(0))

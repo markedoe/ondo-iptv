@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.playback
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaReference
 import com.markedoe.ondo.core.model.PlaybackItem
@@ -10,9 +11,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 /** A problem report leaves the device: it must never carry an address, a login, a host or a title. */
 class ProblemReportTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     // Fictitious login on example.com, the very thing a report must never carry.
     private val secretUrl = "http://viewer:secret-pass@panel.example.com:8080/movie/viewer/secret-pass/42.mkv" // leak-guard: allow
     private val secrets = listOf("secret-pass", "viewer", "example.com", "example.net", "example.org", "203.0.113.7", "2001:db8", "abc123", "someone")

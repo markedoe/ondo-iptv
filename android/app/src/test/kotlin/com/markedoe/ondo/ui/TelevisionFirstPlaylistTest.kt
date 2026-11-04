@@ -22,6 +22,7 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.UncaughtErrors
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -52,6 +53,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionFirstPlaylistTest {
+    // A catalogue of real size walked with the remote: 20 to 80 s a test in CI, longer on a busy runner.
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard(limitSeconds = 300)
+
     @get:Rule val uncaught = UncaughtErrors()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()

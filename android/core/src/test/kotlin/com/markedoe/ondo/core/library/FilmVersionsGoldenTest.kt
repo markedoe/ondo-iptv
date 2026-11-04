@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.Movie
 import java.io.File
 import kotlin.test.Test
@@ -12,6 +13,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Rule
 
 /**
  * The groups written by hand in `fixtures/film-versions/golden.json`, the same file Apple's `FilmVersionsGoldenTests`
@@ -19,6 +21,8 @@ import kotlinx.serialization.json.jsonPrimitive
  * by the code that makes them.
  */
 class FilmVersionsGoldenTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val cases = Json.parseToJsonElement(File("../../fixtures/film-versions/golden.json").readText()).jsonObject["cases"]!!.jsonArray
 
     @Test

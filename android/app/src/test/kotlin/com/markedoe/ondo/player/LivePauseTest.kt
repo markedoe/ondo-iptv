@@ -1,11 +1,15 @@
 package com.markedoe.ondo.player
 
+import com.markedoe.ondo.HangGuard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Rule
 import org.junit.Test
 
 /** A live pause resumes from the archive once it lasted 10 seconds, on a channel with no window to seek in. */
 class LivePauseTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val channel = PlayRequest(title = "World Report", urls = listOf("http://example.com/live.m3u8"), isLive = true, channelId = "c1")
 
     @Test

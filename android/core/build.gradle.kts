@@ -1,3 +1,5 @@
+import java.time.Duration
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
@@ -30,7 +32,17 @@ dependencies {
 tasks.test {
     useJUnit()
     exclude("**/MemoryBudgetTest*")
-    testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+}
+
+// Each test named as it starts and ends in the log; one over its time (HangGuard, 120 s) fails with every thread's
+// stack there and in build/reports/tests/hang-guard; whatever else hangs, Gradle stops before the CI job's 20 minutes.
+tasks.withType<Test>().configureEach {
+    systemProperty("ondo.hangGuard.dir", "build/reports/tests/hang-guard")
+    timeout.set(Duration.ofMinutes(12))
+    testLogging {
+        events("started", "passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 
 // Large catalogues and guides within a heap the size an entry-level TV gives an app (`./gradlew :core:memoryTest`).
@@ -42,7 +54,6 @@ val memoryTest by tasks.registering(Test::class) {
     useJUnit()
     filter { includeTestsMatching("*MemoryBudgetTest") }
     maxHeapSize = "64m"
-    testLogging { events("passed", "failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
 }
 
 // Mutation testing (`./gradlew :core:pitest`, weekly in CI): Pitest plants small bugs in the compiled core

@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.fuzz
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.CategoryStyles
@@ -16,6 +17,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import okhttp3.mockwebserver.MockWebServer
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -24,6 +26,8 @@ import org.junit.Test
  * the invariants the app's lists rely on.
  */
 class PlaylistFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val loader = PlaylistLoader(MockHttpClient(), clock = { 0L })
 
     /** Parses within the contract; when it loads, checks the catalogue as the app uses it. */

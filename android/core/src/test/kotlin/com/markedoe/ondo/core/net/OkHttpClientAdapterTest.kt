@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.net
 
+import com.markedoe.ondo.core.HangGuard
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
@@ -13,8 +14,11 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import org.junit.Rule
 
 class OkHttpClientAdapterTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private lateinit var server: MockWebServer
     private val client = OkHttpClientAdapter()
 

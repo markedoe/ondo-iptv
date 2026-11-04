@@ -2,6 +2,7 @@ package com.markedoe.ondo.core.catchup
 
 import com.markedoe.ondo.core.DAY
 import com.markedoe.ondo.core.HOUR
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.library.PlaybackFactory
 import com.markedoe.ondo.core.model.CatchupInfo
 import com.markedoe.ondo.core.model.Channel
@@ -21,8 +22,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class CatchupTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val start = utc(2025, 10, 9, 18, 0)
     private val end = utc(2025, 10, 9, 18, 45)
     private val now = utc(2025, 10, 9, 20, 0)

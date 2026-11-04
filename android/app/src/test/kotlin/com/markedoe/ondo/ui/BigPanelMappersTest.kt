@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.Playlist
@@ -22,6 +23,7 @@ import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -30,6 +32,8 @@ import org.junit.Test
  * model's flows stops the app too).
  */
 class BigPanelMappersTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val now = 1_760_000_000_000L
     private val playlistId = "a1b2c3d4-0000-4000-8000-000000000001"
     private val credentials = XtreamCredentials(BigPanel.SERVER, BigPanel.USERNAME, BigPanel.PASSWORD)

@@ -6,6 +6,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
@@ -33,7 +34,9 @@ object SyncSession {
         merge: suspend (SyncSnapshot, InetAddress) -> SyncSnapshot?,
     ) = coroutineScope {
         val sessions = Semaphore(SyncNetwork.MAX_SESSIONS)
-        val closer = launch { closing(server) }
+        // Started at once, not dispatched: a coroutine cancelled before it runs never reaches its finally, and the
+        // blocking accept() would then wait for ever on a server nobody closes.
+        val closer = launch(start = CoroutineStart.UNDISPATCHED) { closing(server) }
         try {
             accept(server, sessions, isAllowed, delivered, merge)
         } finally {
@@ -123,7 +126,8 @@ object SyncSession {
      * closing the socket is what ends a blocking read or write.
      */
     private suspend fun <T> withDeadline(socket: Closeable, block: suspend () -> T): T = coroutineScope {
-        val deadline = launch {
+        // Started at once, like the closer of serve(): its finally closes the socket even if cancelled straight away.
+        val deadline = launch(start = CoroutineStart.UNDISPATCHED) {
             try {
                 delay(SyncNetwork.SESSION_TIMEOUT_MS.toLong())
             } finally {

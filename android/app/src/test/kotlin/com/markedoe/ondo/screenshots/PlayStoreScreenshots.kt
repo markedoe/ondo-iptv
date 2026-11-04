@@ -6,6 +6,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.OndoNavigationFrame
@@ -36,6 +37,7 @@ import com.markedoe.ondo.ui.tv.tvSafeArea
 import java.util.Locale
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -53,6 +55,8 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PlayStoreScreenshots(private val device: Device, private val locale: String) {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     enum class Device(val folder: String, val qualifiers: String) {
         PHONE("phoneScreenshots", "w360dp-h640dp-xxhdpi"),
         SEVEN_INCH("sevenInchScreenshots", "w960dp-h540dp-land-xhdpi"),

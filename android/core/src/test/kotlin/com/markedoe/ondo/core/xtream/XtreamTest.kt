@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.xtream
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.model.CatchupInfo
 import com.markedoe.ondo.core.model.XtreamCredentials
@@ -21,8 +22,11 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import org.junit.Rule
 
 class XtreamTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val credentials = XtreamCredentials("http://panel.example.com:8080", "demo", "se/cr+et")
 
     private fun mock() = MockHttpClient().apply {

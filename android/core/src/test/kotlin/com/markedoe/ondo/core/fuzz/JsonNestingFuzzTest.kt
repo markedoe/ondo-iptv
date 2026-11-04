@@ -1,11 +1,13 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.library.PlaylistLoaderException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -13,6 +15,8 @@ import org.junit.Test
  * no caller expects. JSON from a playlist or an M3U `#EXTHTTP` line that nests deeper than any real one is refused.
  */
 class JsonNestingFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val loader = PlaylistLoader(MockHttpClient())
     private val deep = 100_000
 

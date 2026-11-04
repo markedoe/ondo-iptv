@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.fuzz
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import com.markedoe.ondo.core.epg.EpgIndex
@@ -23,6 +24,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -31,6 +33,8 @@ import org.junit.Test
  * row: Compose stops the app on a key used twice).
  */
 class XtreamFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val credentials = XtreamCredentials("http://example.com:8080", "user", "pass") // leak-guard: allow
 
     private val fixtures = mapOf(

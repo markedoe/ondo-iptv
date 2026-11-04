@@ -1,14 +1,18 @@
 package com.markedoe.ondo.player
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /** The figures of More, Stream Statistics, as they read. */
 class StreamStatisticsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** 30 s of a stream received at 1 MB/s (8 Mb/s) that never stops. */
     private fun smooth(): PlaybackHealth {
         val health = PlaybackHealth()

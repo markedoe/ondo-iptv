@@ -48,9 +48,23 @@ class CheckTestCase(unittest.TestCase):
 
 class RepositoryTests(unittest.TestCase):
     def test_the_repository_passes_every_check(self):
-        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality", "awards", "app_store"):
+        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality", "awards", "app_store", "hang_guard"):
             code, output = run(check, REPOSITORY)
             self.assertEqual(code, 0, f"{check}: {output}")
+
+
+class HangGuardTests(CheckTestCase):
+    GUARD = "    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()\n"
+
+    def test_a_test_class_with_the_guard_passes(self):
+        self.write("android/core/src/test/kotlin/AGuardedTest.kt", "class AGuardedTest {\n" + self.GUARD + "    @Test\n    fun works() {}\n}\n")
+        self.write("android/app/src/test/kotlin/Fixtures.kt", "object Fixtures {\n    val name = \"no test here\"\n}\n")
+        self.assertPasses("hang_guard")
+
+    def test_each_test_class_of_a_file_needs_the_guard(self):
+        self.write("android/app/src/test/kotlin/TwoTest.kt",
+                   "class FirstTest {\n" + self.GUARD + "    @Test\n    fun works() {}\n}\n\nclass SecondTest {\n    @Test\n    fun hangs() {}\n}\n")
+        self.assertFails("hang_guard", "android/app/src/test/kotlin/TwoTest.kt: SecondTest")
 
 
 LANGUAGES = ("fr", "es", "pt", "zh-Hans", "ar", "hi")

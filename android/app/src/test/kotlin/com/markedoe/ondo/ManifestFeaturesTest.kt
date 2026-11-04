@@ -2,6 +2,7 @@ package com.markedoe.ondo
 
 import java.io.File
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -10,6 +11,8 @@ import org.junit.Test
  * keep Ondo.
  */
 class ManifestFeaturesTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** Permissions Google Play reads as a required feature (developer.android.com, "uses-feature", permissions). */
     private val implied = mapOf(
         "CHANGE_WIFI_MULTICAST_STATE" to "android.hardware.wifi",

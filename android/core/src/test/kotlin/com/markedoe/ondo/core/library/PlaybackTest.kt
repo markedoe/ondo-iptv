@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.DAY
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.AccountInfo
 import com.markedoe.ondo.core.model.CatchupInfo
 import com.markedoe.ondo.core.model.Channel
@@ -22,8 +23,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class PlaybackTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @Test
     fun numberingUsesExplicitNumbersWhenPresent() {
         val numbers = listOf(101, null, 7, 250)

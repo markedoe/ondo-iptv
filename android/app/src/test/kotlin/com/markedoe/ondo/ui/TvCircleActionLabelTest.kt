@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.CIRCLE_ACTION_LABEL_TAG
@@ -36,6 +37,8 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TvCircleActionLabelTest(private val language: String) {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")

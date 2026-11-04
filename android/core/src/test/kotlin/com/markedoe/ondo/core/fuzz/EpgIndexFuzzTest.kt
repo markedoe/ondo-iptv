@@ -1,16 +1,20 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.EpgProgram
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.junit.Rule
 
 /**
  * What is on now and next, on guides whose programmes touch, leave gaps, start together and overlap (a film around a
  * news flash): the index gives what going through every programme gives.
  */
 class EpgIndexFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val channel = Channel(id = "x", name = "TV1", categoryId = "c", streamUrl = "http://example.com/1", epgId = "tv1")
 
     @Test

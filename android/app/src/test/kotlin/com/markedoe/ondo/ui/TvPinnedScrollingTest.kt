@@ -1,13 +1,17 @@
 package com.markedoe.ondo.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.ui.tv.TvPinnedScrolling
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /** How the rows under a TV's header scroll to the focused card (lengths in pixels). */
 @OptIn(ExperimentalFoundationApi::class)
 class TvPinnedScrollingTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val spec = TvPinnedScrolling(lead = 104f)
 
     @Test

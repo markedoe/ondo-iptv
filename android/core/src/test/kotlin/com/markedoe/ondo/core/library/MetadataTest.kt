@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.Series
 import kotlin.test.Test
@@ -7,8 +8,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class MetadataTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     /** TMDb's id when the provider gives it, else the title's words and year. */
     @Test
     fun aTitlesKeysDoNotDependOnThePlaylist() {

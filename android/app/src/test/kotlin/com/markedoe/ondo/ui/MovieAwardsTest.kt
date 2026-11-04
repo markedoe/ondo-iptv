@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.TmdbItem
 import com.markedoe.ondo.core.library.TrendingMatch
@@ -9,9 +10,12 @@ import com.markedoe.ondo.ui.screens.BrowseKind
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class MovieAwardsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     // "Glass City" (2024) won; "Silent Harbor" (2023) only competed.
     private val catalogue = AwardsCatalogue.parse(
         """

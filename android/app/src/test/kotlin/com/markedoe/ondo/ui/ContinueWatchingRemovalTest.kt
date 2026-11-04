@@ -34,6 +34,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
@@ -65,6 +66,8 @@ import org.robolectric.annotation.Config
 /** A "Continue watching" card taken away with a long press: OK held on a TV's remote, a finger held on a phone. */
 @RunWith(RobolectricTestRunner::class)
 class ContinueWatchingRemovalTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
 

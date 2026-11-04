@@ -1,11 +1,15 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.Channel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import org.junit.Rule
 
 class ChannelZappingTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private fun channel(id: String, number: Int? = null) = Channel(id = id, name = "Channel $id", number = number, categoryId = "c", streamUrl = "http://x/$id")
 
     private val numbered = listOf(channel("a", 1), channel("b", 2), channel("c", 7))

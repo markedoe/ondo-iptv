@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.net.HttpClient
@@ -45,6 +46,8 @@ class FakeHttp(private val answers: Map<String, String>) : HttpClient {
 
 /** Playlists end to end: download, parse, persist, restore, library, playback requests. */
 class OndoRepositoryTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val folder = TemporaryFolder()
 
     private val list = "http://provider.example.com/list.m3u"

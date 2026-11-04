@@ -2,8 +2,10 @@ package com.markedoe.ondo.player
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.OndoApplication
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -17,6 +19,8 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(application = OndoApplication::class, qualifiers = "w411dp-h891dp-xxhdpi")
 class PlayerSessionTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val app: OndoApplication = ApplicationProvider.getApplicationContext()
 
     private fun request(title: String) = PlayRequest(title = title, urls = listOf("http://127.0.0.1:9/$title.mp4"), isLive = false)

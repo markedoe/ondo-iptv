@@ -1,14 +1,18 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.HangGuard
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 /** The carousel's weighted rating. The Apple core has the same tests (`WeightedRatingTests.swift`). */
 class WeightedRatingTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val day = 86_400L
     private val now = 1_800_000_000L
 

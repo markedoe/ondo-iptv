@@ -1,11 +1,15 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.library.CategoryTags
 import kotlin.test.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 /** Category names come from the provider and are scanned for their country tag on the main thread. */
 class CategoryTagsFuzzTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val long = 1_000_000
 
     @Test(timeout = 20_000)

@@ -176,6 +176,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   lecteur du téléphone (`PhonePlayerOverlayTest`), captures Roborazzi qui servent de captures
   Google Play (téléphone, tablettes 7" et 10", TV, anglais et français), comparées à des références versionnées
   (voir [Captures d'écran et régressions](#captures-décran-et-régressions)).
+  Chaque classe de test prend `HangGuard` comme première règle (`check_hang_guard.py` en CI) : un test qui dure plus
+  de 120 s échoue avec la pile de chaque thread dans le journal et dans `build/reports/tests/hang-guard`, et chaque
+  test est nommé quand il commence et quand il finit : un test bloqué est nommé au lieu d'un job qui attend en
+  silence son délai.
 
 Prévu ensuite (non inclus en v1) : Chromecast, téléchargements, profils et PIN,
 sous-titres en ligne, second moteur libVLC ; sur une TV, chaînes du lanceur et recherche vocale.

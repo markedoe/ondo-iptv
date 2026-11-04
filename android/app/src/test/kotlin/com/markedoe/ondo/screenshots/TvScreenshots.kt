@@ -22,6 +22,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.TopLevel
@@ -88,6 +89,8 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "en-rUS-w960dp-h540dp-land-television-xhdpi")
 class TvScreenshots {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val catalogue = ShowcaseCatalogue.load(french = false)

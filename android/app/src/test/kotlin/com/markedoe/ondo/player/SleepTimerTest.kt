@@ -1,16 +1,20 @@
 package com.markedoe.ondo.player
 
+import com.markedoe.ondo.HangGuard
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Rule
 import org.junit.Test
 
 /** The sleep timer pauses the player when its time is up, once; another choice starts it again, Off stops it. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SleepTimerTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val start = 1_700_000_000_000L
 
     @Test

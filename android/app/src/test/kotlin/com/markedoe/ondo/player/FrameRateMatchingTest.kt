@@ -1,13 +1,17 @@
 package com.markedoe.ondo.player
 
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.player.FrameRateMatching.Plan
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 /** A film at 24 frames a second on a 60 Hz TV: the screen moves to 24 Hz, when the viewer allows it. */
 class FrameRateMatchingTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val tv = listOf(60f, 59.94f, 50f, 30f, 25f, 24f, 23.976f)
 
     @Test

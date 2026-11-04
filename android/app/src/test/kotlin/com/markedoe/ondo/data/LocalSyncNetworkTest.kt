@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.test.core.app.ApplicationProvider
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.sync.SyncNetwork
 import com.markedoe.ondo.core.sync.SyncSession
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -22,6 +23,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -34,6 +36,8 @@ import org.robolectric.shadows.ShadowNetwork
  */
 @RunWith(RobolectricTestRunner::class)
 class LocalSyncNetworkTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val snapshot = SyncSnapshot(device = "11111111-2222-3333-4444-555555555555", deviceName = "Phone")
     private val answer = SyncSnapshot(device = "99999999-2222-3333-4444-555555555555", deviceName = "TV")
 

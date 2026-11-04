@@ -5,14 +5,18 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.markedoe.ondo.HangGuard
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** Programme reminders handed to WorkManager, which delivers them even when Ondo is not running. */
 @RunWith(AndroidJUnit4::class)
 class RemindersTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val context: android.content.Context = ApplicationProvider.getApplicationContext()
 
     @Before

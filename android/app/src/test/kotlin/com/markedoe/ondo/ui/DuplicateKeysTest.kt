@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.ContentType
@@ -49,6 +50,8 @@ import org.robolectric.annotation.Config
  */
 @RunWith(AndroidJUnit4::class)
 class DuplicateKeysTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createComposeRule()
 
     /** The awards file bundled with the app (Gradle runs unit tests from the module's folder). */

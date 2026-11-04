@@ -24,6 +24,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
+import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.ui.tv.OndoTvTheme
 import java.util.Date
@@ -44,6 +45,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TvPlayerControlsTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var controls: PlayerControls

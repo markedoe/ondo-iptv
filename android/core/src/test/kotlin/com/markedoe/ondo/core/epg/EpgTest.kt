@@ -2,6 +2,7 @@ package com.markedoe.ondo.core.epg
 
 import com.markedoe.ondo.core.Fixtures
 import com.markedoe.ondo.core.HOUR
+import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.EpgData
@@ -20,8 +21,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.Rule
 
 class EpgTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val parser = XmltvParser()
 
     @Test
