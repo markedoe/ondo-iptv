@@ -101,6 +101,7 @@ import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
 import com.markedoe.ondo.ui.screens.LiveActions
 import com.markedoe.ondo.ui.screens.LiveScreen
+import com.markedoe.ondo.ui.screens.LocalPlaylistOrderLabel
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.MyListActions
@@ -502,6 +503,7 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onRemoveResume = { viewModel.removeFromContinueWatching(it.key) },
             onOpenResume = { item -> viewModel.resumedTitle(item.key)?.let(navController::open) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = false, myList = true, anyType = true)) },
+            onSeeAllRow = { source, series -> navController.navigate(Routes.Grid(series = series, source = source.name)) },
             onSeeAllLive = { navController.openTab(TopLevel.LIVE) },
             onPlayChannel = viewModel::playChannel,
             onPlaylists = { navController.navigate(Routes.Settings) },
@@ -535,6 +537,7 @@ private fun VodDestination(viewModel: OndoViewModel, navController: NavHostContr
             onOpenResume = { item -> viewModel.resumedTitle(item.key)?.let(navController::open) },
             onCategory = { category -> navController.navigate(Routes.Grid(series = series, categoryId = category?.id)) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = series, myList = true)) },
+            onSeeAllRow = { source -> navController.navigate(Routes.Grid(series = series, source = source.name)) },
             onSearch = { navController.openSearch(viewModel) },
             onCategories = { navController.navigate(Routes.Categories(if (series) "series" else "movie")) },
         ),
@@ -629,10 +632,12 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
     val errors by viewModel.seriesErrors.collectAsStateWithLifecycle()
     var season by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(id) { viewModel.loadSeries(id) }
-    // Off the main thread: finding the series, its similar titles and hidden categories go through the whole catalogue.
+    // Off the main thread: finding the series, its similar titles, awards and hidden categories go through the whole
+    // catalogue.
     var gone by remember { mutableStateOf(false) }
-    val detail by produceKept<SeriesDetailUiState?>("series", null, state, id) {
-        withContext(Dispatchers.Default) { UiMappers.series(state, id)?.let { UiMappers.seriesDetail(state, it, null, null) } }
+    val locale = LocalConfiguration.current.locales[0]
+    val detail by produceKept<SeriesDetailUiState?>("series", null, state, id, locale) {
+        withContext(Dispatchers.Default) { UiMappers.series(state, id)?.let { UiMappers.seriesDetail(state, it, null, null, locale) } }
             .also { gone = it == null && !state.isLoading && !state.isRestoring }
     }
     BackWhenGone(gone, navController)
@@ -800,13 +805,20 @@ private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostCo
 private fun GridDestination(viewModel: OndoViewModel, navController: NavHostController, route: Routes.Grid) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf("") }
+    val source = GridSource.of(route.source)
     val title = when {
+        source == GridSource.NEW -> stringResource(if (route.series) R.string.new_series else R.string.new_movies)
+        source == GridSource.AWARDS -> stringResource(R.string.award_winners)
         route.myList -> stringResource(R.string.my_list)
         route.categoryId != null -> UiMappers.categoryName(state, route.series, route.categoryId).orEmpty()
         route.series -> stringResource(R.string.all_series)
         else -> stringResource(R.string.all_movies)
     }
-    val sort = state.settings.posterSort
+    // A row's titles open in the row's own order, whatever the order chosen for the categories: another order chosen
+    // here is this page's only.
+    var rowSort by rememberSaveable { mutableStateOf(PosterSort.PLAYLIST) }
+    val sort = if (source != null) rowSort else state.settings.posterSort
+    val onSort: (PosterSort) -> Unit = if (source != null) ({ rowSort = it }) else viewModel::setPosterSort
     // The filter applies once typing pauses: each key no longer looks through the whole catalogue.
     val query by produceState(filter, filter) {
         if (value != filter) {
@@ -818,19 +830,20 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
     // Off the main thread: sorting a hundred thousand titles must not freeze the screen while typing.
     val items by produceKept("grid", emptyList<ShowcaseItem>(), state, route, query, sort, kept) {
         withContext(Dispatchers.Default) {
-            UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort, kept)
+            UiMappers.grid(state, route, query, sort, kept = kept)
         }
     }
     // Sorted by rating: TMDb's ratings the grid lacks are fetched in the background while it shows.
     LaunchedEffect(route, sort, state.settings.tmdbToken, state.content) {
         if (sort != PosterSort.RATING || state.settings.tmdbToken == null) return@LaunchedEffect
         val facts = viewModel.keptPosterFacts()
-        val all = withContext(Dispatchers.Default) {
-            UiMappers.grid(viewModel.state.value, route.series, route.categoryId, route.myList, "", route.anyType, sort, facts)
-        }
+        val all = withContext(Dispatchers.Default) { UiMappers.grid(viewModel.state.value, route, sort = sort, kept = facts) }
         viewModel.fillRatingSort(all)
     }
-    CompositionLocalProvider(LocalShowsMyList provides route.myList) {
+    CompositionLocalProvider(
+        LocalShowsMyList provides route.myList,
+        LocalPlaylistOrderLabel provides if (source != null) R.string.sort_default_order else R.string.sort_playlist_order,
+    ) {
         PosterGridScreen(
             title = title,
             items = items,
@@ -839,7 +852,7 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             onOpen = navController::open,
             onBack = { navController.popBackStack() },
             sort = sort,
-            onSort = viewModel::setPosterSort,
+            onSort = onSort,
             hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
             onHideWatched = viewModel::setHideWatchedMovies,
         )

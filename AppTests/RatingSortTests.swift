@@ -23,6 +23,20 @@ final class RatingSortTests: XCTestCase {
     https://stream.example.com/l101.mp4
     """
 
+    /// New titles, for the rows' grids (New Movies, New Series): released this year or last year.
+    private static let thisYear = Calendar.current.component(.year, from: .now)
+    private static let newTitles = """
+    #EXTM3U
+    #EXTINF:5400 group-title="Movies | Drama",Fresh One (\(thisYear))
+    https://stream.example.com/fresh1.mp4
+    #EXTINF:5400 group-title="Movies | Drama",Fresh Two (\(thisYear - 1))
+    https://stream.example.com/fresh2.mp4
+    #EXTINF:2700 group-title="Series | Drama",New Show (\(thisYear)) S01E01
+    https://stream.example.com/n101.mp4
+    #EXTINF:2700 group-title="Series | Drama",Newer Show (\(thisYear)) S01E01
+    https://stream.example.com/w101.mp4
+    """
+
     override func setUp() async throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("OndoRatingSort-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -32,9 +46,9 @@ final class RatingSortTests: XCTestCase {
         try? FileManager.default.removeItem(at: root)
     }
 
-    private func model(token: Bool) async throws -> AppModel {
+    private func model(token: Bool, catalogue: String = RatingSortTests.catalogue) async throws -> AppModel {
         let file = root.appendingPathComponent("list.m3u")
-        try Data(Self.catalogue.utf8).write(to: file)
+        try Data(catalogue.utf8).write(to: file)
         let secrets = InMemorySecretStore()
         if token { _ = secrets.set("example-tmdb-token", for: Keychain.tmdbKey) }
         let model = AppModel(storageRoot: root, secrets: secrets, reminderScheduler: InMemoryReminderScheduler())
@@ -133,5 +147,26 @@ final class RatingSortTests: XCTestCase {
         XCTAssertEqual(AppModel.sorted(list, by: .rating, votes: votes).map(\.name), ["None", "High", "Also Low", "Low"])
         let shows = [Series(id: "a", name: "Plain", categoryID: "c", rating: 9), Series(id: "b", name: "Rated", categoryID: "c", rating: 1)]
         XCTAssertEqual(AppModel.sorted(shows, by: .rating, votes: [ShowcaseItem.series(shows[1]).id: (6.0, 50)]).map(\.name), ["Rated", "Plain"])
+    }
+
+    /// A row's grid (See All of New Movies, New Series; Award Winners sorts the same way): the row's own order until
+    /// Rating is chosen there, then TMDb's weighted rating first.
+    func testARowsGridSortedByRatingUsesTMDbAndKeepsTheRowsOrderOtherwise() async throws {
+        let model = try await model(token: true, catalogue: Self.newTitles)
+        let newMovies = PseudoCategory.newReleases(.movie), newSeries = PseudoCategory.newReleases(.series)
+        func movie(_ name: String) throws -> ShowcaseItem { .movie(try XCTUnwrap(model.content.movies.first { $0.name == name })) }
+        func show(_ name: String) throws -> ShowcaseItem { .series(try XCTUnwrap(model.content.series.first { $0.name == name })) }
+        keep(try movie("Fresh One"), in: model)
+        keep(try movie("Fresh Two"), average: 8.0, votes: 5_000, in: model)
+        keep(try show("New Show"), in: model)
+        keep(try show("Newer Show"), average: 7.9, votes: 800, in: model)
+
+        XCTAssertEqual(MovieGridView.movies(newMovies, model: model).map(\.name), ["Fresh One", "Fresh Two"], "the row's order: newest first")
+        XCTAssertEqual(SeriesGridView.series(newSeries, model: model).map(\.name), ["New Show", "Newer Show"])
+        await model.fillRatingSort(MovieGridView.movies(newMovies, model: model, rowSort: .rating).map(ShowcaseItem.movie))
+        await model.fillRatingSort(SeriesGridView.series(newSeries, model: model, rowSort: .rating).map(ShowcaseItem.series))
+        XCTAssertEqual(MovieGridView.movies(newMovies, model: model, rowSort: .rating).map(\.name), ["Fresh Two", "Fresh One"])
+        XCTAssertEqual(SeriesGridView.series(newSeries, model: model, rowSort: .rating).map(\.name), ["Newer Show", "New Show"])
+        XCTAssertEqual(MovieGridView.movies(newMovies, model: model).map(\.name), ["Fresh One", "Fresh Two"], "the default stays the row's order")
     }
 }

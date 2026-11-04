@@ -11,14 +11,17 @@ extension AppModel {
         return "|tmdb\(tmdbMetadata.sortRevision)"
     }
 
-    /// What a grid's fill depends on: it starts again with another category, order, token or catalogue.
-    func ratingFillID(category: MediaCategory) -> String {
-        "\(category.id)|\(settings.posterSort.rawValue)|\(hasTMDbKey)|\(content.fetchedAt.timeIntervalSince1970)"
+    /// What a grid's fill depends on: it starts again with another category, order (`sort`, the grid's), token or
+    /// catalogue.
+    func ratingFillID(category: MediaCategory, sort: PosterSort) -> String {
+        "\(category.id)|\(sort.rawValue)|\(hasTMDbKey)|\(content.fetchedAt.timeIntervalSince1970)"
     }
 
     /// TMDb's votes a rating sort ranks by, by `ShowcaseItem.id`; nil for another order or without a TMDb token.
     func ratingSortVotes(_ sort: PosterSort) -> [String: (average: Double, count: Int)]? {
         guard sort == .rating, hasTMDbKey else { return nil }
+        // A grid that sorts without a cached key (a row's) redraws when the votes change.
+        _ = tmdbMetadata.sortRevision
         return tmdbMetadata.sortVotes
     }
 

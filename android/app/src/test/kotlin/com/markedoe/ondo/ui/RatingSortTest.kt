@@ -2,6 +2,7 @@ package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.model.MediaDetails
@@ -47,6 +48,18 @@ class RatingSortTest {
         votes(key(Fixtures.blueHorizon), 7.5, 2_000, series = true),
     )
 
+    /** Award winners for the rows of award winners: Glass City (2024) before The Long Road (2021), and two series. */
+    private val awards = AwardsCatalogue.parse(
+        """
+        {"awards":[{"id":"palme-dor","group":"cannes","names":{"en":"Palme d'Or"}}],
+         "films":[{"titles":["Glass City"],"year":2024,"awards":[["palme-dor",2024,1]]},
+                  {"titles":["The Long Road"],"year":2021,"awards":[["palme-dor",2021,1]]}],
+         "seriesAwards":[{"id":"emmy-drama-series","group":"emmys","names":{"en":"Primetime Emmy Award for Outstanding Drama Series"}}],
+         "series":[{"titles":["Harbor Lights"],"year":2025,"awards":[["emmy-drama-series",2025,1]]},
+                   {"titles":["Blue Horizon"],"year":2023,"awards":[["emmy-drama-series",2023,1]]}]}
+        """.trimIndent(),
+    )
+
     private fun state(token: Boolean): OndoState {
         val base = Fixtures.state()
         val library = listOf(Fixtures.northernLights, Fixtures.summerInLisbon, Fixtures.longRoad).fold(LibraryState()) { library, movie ->
@@ -54,6 +67,7 @@ class RatingSortTest {
         }
         return base.copy(
             library = library,
+            awards = awards,
             settings = if (token) base.settings.copy(serviceKeys = listOf(SyncKey(SyncKey.TMDB, "example-token", 1))) else base.settings,
             movieDetails = listOf(Fixtures.northernLights, Fixtures.summerInLisbon, Fixtures.longRoad)
                 .associate { it.id to MediaDetails(title = it.name, genre = "Drama") },
@@ -64,7 +78,9 @@ class RatingSortTest {
     private fun surfaces(state: OndoState, facts: Map<String, TitleMetadata>): Map<String, List<String>> {
         val sort = PosterSort.RATING
         fun grid(series: Boolean, category: String?, myList: Boolean = false, anyType: Boolean = false) =
-            UiMappers.grid(state, series, category, myList, "", anyType, sort, facts).map { it.title }
+            UiMappers.grid(state, series, category, myList, "", anyType, sort, kept = facts).map { it.title }
+        fun row(source: GridSource, series: Boolean) =
+            UiMappers.grid(state, Routes.Grid(series = series, source = source.name), sort = sort, now = Fixtures.NOW, kept = facts).map { it.title }
         fun browse(kind: BrowseKind, value: String) = UiMappers.browse(state, kind, value, Locale.US, emptyList(), sort, facts)
         return mapOf(
             "All Movies" to grid(series = false, category = null).filter { it in drama },
@@ -75,6 +91,9 @@ class RatingSortTest {
             "a year's page" to browse(BrowseKind.YEAR, "2024").movies.map { it.title },
             "All Series" to grid(series = true, category = null),
             "a series category" to grid(series = true, category = Fixtures.seriesMystery.id),
+            "New movies (See all)" to row(GridSource.NEW, series = false),
+            "Award-winning films (See all)" to row(GridSource.AWARDS, series = false),
+            "Award-winning series (See all)" to row(GridSource.AWARDS, series = true),
         )
     }
 
@@ -93,6 +112,10 @@ class RatingSortTest {
                 "a year's page" to listOf("Midnight Orchard", "Glass City"),
                 "All Series" to listOf("Blue Horizon", "Harbor Lights", "The Archive"),
                 "a series category" to listOf("Blue Horizon", "The Archive"),
+                // Midnight Orchard, rated by TMDb, before the provider's best.
+                "New movies (See all)" to listOf("Midnight Orchard", "The Last Signal", "Northern Lights", "Glass City"),
+                "Award-winning films (See all)" to listOf("The Long Road", "Glass City"),
+                "Award-winning series (See all)" to listOf("Blue Horizon", "Harbor Lights"),
             ),
             surfaces(state(token = true), kept),
         )
@@ -111,6 +134,9 @@ class RatingSortTest {
                 "a year's page" to listOf("Glass City", "Midnight Orchard"),
                 "All Series" to listOf("Harbor Lights", "The Archive", "Blue Horizon"),
                 "a series category" to listOf("The Archive", "Blue Horizon"),
+                "New movies (See all)" to listOf("The Last Signal", "Northern Lights", "Glass City", "Midnight Orchard"),
+                "Award-winning films (See all)" to listOf("Glass City", "The Long Road"),
+                "Award-winning series (See all)" to listOf("Harbor Lights", "Blue Horizon"),
             ),
             surfaces(state(token = false), kept),
         )
@@ -130,5 +156,25 @@ class RatingSortTest {
         val stored = kept + votes(key(Fixtures.northernLights), 8.9, 10_000)
         assertEquals(listOf("Northern Lights", "The Long Road", "Summer in Lisbon"), surfaces(session, stored)["a movie category"])
         assertEquals(listOf("Northern Lights", "Summer in Lisbon", "The Long Road"), surfaces(state, emptyMap())["a movie category"])
+    }
+
+    /** A row's grid opens in the row's own order, TMDb token or not: only a sort by rating changes it. */
+    @Test
+    fun aRowsGridKeepsTheRowsOrderByDefault() {
+        for (token in listOf(true, false)) {
+            val state = state(token)
+            for (series in listOf(false, true)) for (source in GridSource.entries) {
+                val route = Routes.Grid(series = series, source = source.name)
+                assertEquals(
+                    "$source, series $series, token $token",
+                    UiMappers.rowTitles(state, source, series, Fixtures.NOW, Int.MAX_VALUE).map { it.title },
+                    UiMappers.grid(state, route, now = Fixtures.NOW, kept = kept).map { it.title },
+                )
+            }
+        }
+        assertEquals(
+            listOf("Glass City", "The Long Road"),
+            UiMappers.grid(state(token = true), Routes.Grid(series = false, source = GridSource.AWARDS.name), now = Fixtures.NOW, kept = kept).map { it.title },
+        )
     }
 }

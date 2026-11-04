@@ -42,6 +42,7 @@
     <string name="filter">Filtrar</string>
     <string name="sort">Ordenar</string>
     <string name="sort_playlist_order">Orden de la playlist</string>
+    <string name="sort_default_order">Orden predeterminado</string>
     <string name="sort_release_date">Fecha de estreno</string>
     <string name="sort_rating">Puntuación</string>
     <string name="sort_by">Orden: %1$s</string>
@@ -190,7 +191,7 @@
     <string name="error_load_provider">El proveedor no envió ninguna playlist. Comprueba la dirección y tu suscripción.</string>
     <string name="error_load_format">No es una playlist que Ondo pueda leer (M3U, Xtream Codes, XSPF o JSON).</string>
     <string name="awards">Premios</string>
-    <string name="award_winners">Películas premiadas</string>
+    <string name="award_winners">Títulos premiados</string>
     <string name="award_winner">Ganadora, %1$s</string>
     <string name="award_in_competition">En competición, %1$s</string>
     <string name="award_nominated">Nominada, %1$s</string>
@@ -208,7 +209,7 @@
     <string name="my_list_people_hint">Usa Mi lista en la página de un actor o de un director para encontrarlo aquí.</string>
     <string name="help_mylist_title">Mi lista</string>
     <string name="help_mylist_body">En la ficha de una película o serie, Mi lista la mantiene a mano. En TV en directo, mantén pulsado un canal para añadirlo a Mi lista.\n\nLa pestaña Mi lista reúne tus películas, series y canales; la búsqueda es la lupa de la parte superior de cada pantalla.\n\nLas colecciones son tus propios grupos, como Fin de semana o Niños: usa Colección en la ficha de una película o serie y encuéntralas en Mi lista, en Colecciones.\n\nLas personas que guardas en Mi lista muestran su foto.</string>
-    <string name="help_search_body">Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda, la lupa de la parte superior de cada pantalla, recorre canales, películas y series. En la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas de un festival o una ceremonia.\n\nEn una categoría, el botón de ordenar coloca los pósteres por orden de la playlist, nombre, fecha de incorporación, fecha de estreno o puntuación. En una TV, el orden se elige con un botón al final del nombre de la categoría, encima de los pósteres: pulsa Arriba desde la primera fila. Las fichas de las películas muestran sus premios y selecciones en festivales. Toca el nombre de un director o de un actor en una ficha para ver sus otras películas y series de tu playlist: las series siempre, las películas entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu playlist que los comparten, con el mismo botón de ordenar que una categoría. La búsqueda también encuentra actores y directores por su nombre. La búsqueda encuentra una palabra en cualquier parte de un título («dust» encuentra «Stardust»): primero el título exacto, luego los títulos que empiezan por ella, y después los demás. Los títulos y canales cuyo nombre lleva una etiqueta de idioma oculta, como |DE|, se dejan fuera igual que las categorías ocultas. En una TV, la búsqueda se abre con el teclado visible.</string>
+    <string name="help_search_body">Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda, la lupa de la parte superior de cada pantalla, recorre canales, películas y series. En la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas y series de un festival o una ceremonia.\n\nEn una categoría, el botón de ordenar coloca los pósteres por orden de la playlist, nombre, fecha de incorporación, fecha de estreno o puntuación. En una TV, el orden se elige con un botón al final del nombre de la categoría, encima de los pósteres: pulsa Arriba desde la primera fila. Las fichas de las películas muestran sus premios y selecciones en festivales, las de las series sus premios. Toca el nombre de un director o de un actor en una ficha para ver sus otras películas y series de tu playlist: las series siempre, las películas entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu playlist que los comparten, con el mismo botón de ordenar que una categoría. La búsqueda también encuentra actores y directores por su nombre. La búsqueda encuentra una palabra en cualquier parte de un título («dust» encuentra «Stardust»): primero el título exacto, luego los títulos que empiezan por ella, y después los demás. Los títulos y canales cuyo nombre lleva una etiqueta de idioma oculta, como |DE|, se dejan fuera igual que las categorías ocultas. En una TV, la búsqueda se abre con el teclado visible.</string>
     <string name="search_filters">Filtros</string>
     <string name="filter_from">Desde</string>
     <string name="filter_to">Hasta</string>
@@ -234,6 +235,10 @@
     <string name="award_group_european_film_awards">Premios del Cine Europeo</string>
     <string name="award_group_san_sebastian">Festival de San Sebastián</string>
     <string name="award_group_locarno">Festival de Locarno</string>
+    <string name="award_group_emmys">Premios Primetime Emmy</string>
+    <string name="award_group_bafta_tv">Premios BAFTA TV</string>
+    <string name="award_group_international_emmys">Premios Emmy Internacional</string>
+    <string name="award_group_peabody">Premios Peabody</string>
     <string name="person_nothing_title">Nada en esta playlist</string>
     <string name="person_nothing">No se conoce ninguna película ni serie de esta playlist con %1$s.</string>
     <string name="person_opened_pages">Las películas solo se buscan entre las fichas que ya abriste.</string>
@@ -452,7 +457,7 @@
     <string name="all_movies_count">Todas las películas (%1$s)</string>
     <string name="all_series_count">Todas las series (%1$s)</string>
     <string name="help_rows_title">Ordenar las filas de Películas y Series</string>
-    <string name="help_rows_body">Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Películas premiadas y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla, o en un televisor pulsa OK para tomarla, Arriba y Abajo para moverla, OK para soltarla y Atrás para cancelar; desactiva el interruptor de una fila para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.</string>
+    <string name="help_rows_body">Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Títulos premiados y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla, o en un televisor pulsa OK para tomarla, Arriba y Abajo para moverla, OK para soltarla y Atrás para cancelar; desactiva el interruptor de una fila para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.</string>
     <!-- Profiles (docs/PROFILES.md) -->
     <string name="profile_main_name">Yo</string>
     <string name="whos_watching">¿Quién está viendo?</string>
