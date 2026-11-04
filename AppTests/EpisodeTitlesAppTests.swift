@@ -9,9 +9,9 @@ import IPTVCore
 /// `episodeLine(of:)`; search lists no episode. Same cases as Android's `EpisodeSurfacesTest`.
 @MainActor
 final class EpisodeTitlesAppTests: XCTestCase {
-    private let name = "|EN| Tom Clancy's Jack Ryan"
+    private let seriesName = "|EN| Tom Clancy's Jack Ryan"
 
-    private func model() throws -> AppModel {
+    private func makeModel() throws -> AppModel {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("OndoEpisodes-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
@@ -19,16 +19,16 @@ final class EpisodeTitlesAppTests: XCTestCase {
     }
 
     func testAnEpisodeReadsTheSameOnEveryScreen() throws {
-        let model = try model()
-        let series = Series(id: "s1", name: name, categoryID: "c", xtreamSeriesID: 1)
+        let model = try makeModel()
+        let series = Series(id: "s1", name: seriesName, categoryID: "c", xtreamSeriesID: 1)
         let episodes = (1...5).map { number in
             Episode(
-                id: "30\(number)", title: "\(name) S03E0\(number)", season: 3, number: number,
+                id: "30\(number)", title: "\(seriesName) S03E0\(number)", season: 3, number: number,
                 streamURL: URL(string: "http://panel.example.com/series/u/p/30\(number).mp4")!,
                 posterURL: number == 1 || number == 4 ? URL(string: "http://img.example.com/provider-\(number).jpg") : nil
             )
         }
-        let details = SeriesDetails(info: MediaDetails(title: name), seasons: [Season(number: 3, name: "Season 3", episodes: episodes)])
+        let details = SeriesDetails(info: MediaDetails(title: seriesName), seasons: [Season(number: 3, name: "Season 3", episodes: episodes)])
         model.tmdbMetadata.seasons[series.id] = [3: [
             TMDbEpisode(number: 1, name: "Falcon", stillPath: "/tmdb-1.jpg"),
             TMDbEpisode(number: 2, name: "Paralysis", stillPath: "/tmdb-2.jpg"),
@@ -51,7 +51,7 @@ final class EpisodeTitlesAppTests: XCTestCase {
         // Continue Watching (and an episode resumed at once), a line kept before this change included.
         let entry = HistoryEntry(
             reference: MediaReference(playlistID: UUID(), type: .series, itemID: series.id, episodeID: "302"),
-            title: name, subtitle: "S03E02 · \(name) S03E02"
+            title: seriesName, subtitle: "S03E02 · \(seriesName) S03E02"
         )
         XCTAssertEqual(model.episodeLine(of: entry), "S03E02 · " + english.episode(2))
         let film = HistoryEntry(reference: MediaReference(playlistID: UUID(), type: .movie, itemID: "m"), title: "Film", subtitle: "4K")
