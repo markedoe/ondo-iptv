@@ -188,5 +188,8 @@ class AppStore(
 
         /** The main profile's library document ([Profile.libraryDocumentName]). */
         const val MAIN_LIBRARY = "library"
+
+        /** The collections shared with every profile (docs/PROFILES.md, "Shared lists"), as a library document of their own. */
+        const val HOUSEHOLD = "household"
     }
 }

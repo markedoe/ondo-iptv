@@ -10,18 +10,22 @@ public struct CustomList: Identifiable, Codable, Hashable, Sendable {
     /// When the name was set, and when the items were put in order: sync merges each on its own (nil: `updatedAt`).
     public var renamedAt: Date?
     public var orderedAt: Date?
+    /// When it was moved into the space it is in, shared with every profile or taken back into a profile (docs/SYNC.md,
+    /// "Shared lists"); nil for a list never moved.
+    public var placedAt: Date?
 
     public init(id: UUID = UUID(), name: String, items: [FavoriteEntry] = [], updatedAt: Date = Date(), renamedAt: Date? = nil,
-                orderedAt: Date? = nil) {
+                orderedAt: Date? = nil, placedAt: Date? = nil) {
         self.id = id
         self.name = name
         self.items = items
         self.updatedAt = updatedAt
         self.renamedAt = renamedAt
         self.orderedAt = orderedAt
+        self.placedAt = placedAt
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, items, updatedAt, renamedAt, orderedAt }
+    enum CodingKeys: String, CodingKey { case id, name, items, updatedAt, renamedAt, orderedAt, placedAt }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -31,6 +35,7 @@ public struct CustomList: Identifiable, Codable, Hashable, Sendable {
         updatedAt = (try? c.decodeIfPresent(Date.self, forKey: .updatedAt)) ?? Date(timeIntervalSince1970: 0)
         renamedAt = try? c.decodeIfPresent(Date.self, forKey: .renamedAt)
         orderedAt = try? c.decodeIfPresent(Date.self, forKey: .orderedAt)
+        placedAt = try? c.decodeIfPresent(Date.self, forKey: .placedAt)
     }
 
     public func contains(_ reference: MediaReference) -> Bool {

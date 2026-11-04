@@ -406,6 +406,9 @@ class OndoViewModel(
 
     suspend fun fillPersonPhotos(names: List<String>) = repository.fillPersonPhotos(names)
 
+    /** Shares a collection with every profile, or takes a shared one back into the open profile. */
+    fun setCollectionShared(id: String, shared: Boolean) = repository.setCollectionShared(id, shared)
+
     fun togglePersonInCollection(id: String, name: String, photoUrl: String?) = repository.togglePersonInCollection(id, name, photoUrl)
 
     /** Makes a collection holding the person. */

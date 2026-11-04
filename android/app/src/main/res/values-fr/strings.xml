@@ -244,6 +244,12 @@
     <string name="rename_collection">Renommer la collection</string>
     <string name="delete_collection">Supprimer la collection</string>
     <string name="delete_collection_confirm">Supprimer cette collection ?</string>
+    <string name="shared_with_all_profiles">Partagée avec tous les profils</string>
+    <string name="shared_collection">Partagée</string>
+    <string name="delete_shared_collection_confirm">Supprimer cette collection pour tous les profils ?</string>
+    <string name="unshare_collection_confirm">Ne plus partager cette collection ?</string>
+    <string name="unshare_collection_explanation">Les autres profils ne verront plus « %1$s ». Elle revient dans vos collections.</string>
+    <string name="stop_sharing">Ne plus partager</string>
     <string name="empty_collection">Collection vide</string>
     <string name="no_collections">Aucune collection</string>
     <string name="collection_default_name">Collection %1$d</string>
