@@ -800,7 +800,7 @@ class PlayerActivity : ComponentActivity() {
         // A decoder that fails to start (a 4K stream beyond the TV's first one, a codec it has twice) gives way to the next.
         val renderers = DefaultRenderersFactory(this).setEnableDecoderFallback(true)
         return ExoPlayer.Builder(this, renderers)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(http))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(dataSources(this, http)))
             .setLoadControl(loadControl())
             // A key frame within 1 s of the target, else the exact position: providers often space key frames
             // 10 s apart, and the closest one can land 5 to 10 s away from a 10 s skip.
@@ -1577,6 +1577,14 @@ class PlayerActivity : ComponentActivity() {
     }
 
     companion object {
+        /**
+         * Where the player reads from: the stream over HTTP with [http] (the player's identity, the provider's
+         * headers, the byte count), a subtitle downloaded from a service from its file on the device.
+         */
+        @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+        fun dataSources(context: android.content.Context, http: androidx.media3.datasource.DataSource.Factory): androidx.media3.datasource.DataSource.Factory =
+            androidx.media3.datasource.DefaultDataSource.Factory(context, http)
+
         private const val EXTRA_REQUEST = "request"
 
         /** Sessions opened by the players of this process, for their IDs (main thread). */

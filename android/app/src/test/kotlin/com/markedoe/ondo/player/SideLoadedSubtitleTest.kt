@@ -51,4 +51,23 @@ class SideLoadedSubtitleTest {
         assertEquals("Tom Clancy's Jack Ryan · S03E03", SubtitleSearchHint("Tom Clancy's Jack Ryan", 2018, 3, 3).label())
         assertEquals("Northern Lights (2025)", SubtitleSearchHint("Northern Lights", 2025).label())
     }
+
+    /**
+     * The player reads a downloaded subtitle from its file: through the stream's HTTP source alone it could not (the
+     * track showed, its cues never came).
+     */
+    @Test
+    fun thePlayerReadsADownloadedSubtitleFromItsFile() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val file = java.io.File(context.cacheDir, "online.srt").apply { writeText("1\n00:00:01,000 --> 00:00:02,000\nHello\n") }
+        val source = PlayerActivity.dataSources(context, androidx.media3.datasource.DefaultHttpDataSource.Factory()).createDataSource()
+        try {
+            source.open(androidx.media3.datasource.DataSpec(android.net.Uri.fromFile(file)))
+            val bytes = androidx.media3.datasource.DataSourceUtil.readToEnd(source)
+            assertEquals(file.readText(), bytes.decodeToString())
+        } finally {
+            source.close()
+            file.delete()
+        }
+    }
 }
