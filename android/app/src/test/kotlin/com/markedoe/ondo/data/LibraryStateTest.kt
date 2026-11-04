@@ -46,6 +46,26 @@ class LibraryStateTest {
         assertEquals(1, library.history.size)
     }
 
+    /**
+     * An episode watched to the end stays in the history, watched; the series' card goes on from it (its next episode,
+     * see Showcase), never back to an older episode left halfway, and a movie watched to the end leaves.
+     */
+    @Test
+    fun aFinishedEpisodeStaysWatchedAndKeepsItsSeriesInContinueWatching() {
+        val second = entry("s1", ItemKind.SERIES, "e2")
+        val third = entry("s1", ItemKind.SERIES, "e3")
+        val library = LibraryState()
+            .recordStart(second).updateProgress(second.key, 900.0, 2_700.0, now = 1)
+            .recordStart(third).updateProgress(third.key, 2_700.0, 2_700.0, now = 2)
+        assertTrue(library.progress(third.key)!!.isFinished)
+        assertEquals("the one left halfway keeps its progress", 900.0, library.progress(second.key)!!.position, 0.0)
+        assertEquals(listOf(third.key), library.continueWatching("p1").map { it.key })
+        // Watched again from the start: it stays the series' card, in progress.
+        val again = library.updateProgress(third.key, 600.0, 2_700.0, now = 3)
+        assertEquals(listOf(third.key), again.continueWatching("p1").map { it.key })
+        assertTrue(again.continueWatching("p1").single().isResumable)
+    }
+
     @Test
     fun episodesKeepTheirOwnProgress() {
         val first = entry("s1", ItemKind.SERIES, "e1")
@@ -70,17 +90,19 @@ class LibraryStateTest {
 
     /**
      * A card taken out of Continue watching leaves it: a series' other episodes in progress go with it (else the one
-     * before would take the card's place); the episodes watched to the end and the other titles stay.
+     * before would take the card's place), and its next episode does not take it either; the episodes watched to the
+     * end and the other titles stay.
      */
     @Test
     fun aCardLeavesContinueWatchingWithItsSeries() {
         var library = LibraryState()
-        val items = listOf(entry("m1"), entry("s1", ItemKind.SERIES, "e1"), entry("s1", ItemKind.SERIES, "e2"), entry("s1", ItemKind.SERIES, "e3"), entry("s2", ItemKind.SERIES, "e1"))
+        val items = listOf(entry("m1"), entry("s1", ItemKind.SERIES, "e1"), entry("s1", ItemKind.SERIES, "e3"), entry("s1", ItemKind.SERIES, "e2"), entry("s2", ItemKind.SERIES, "e1"))
         for ((index, item) in items.withIndex()) {
             library = library.recordStart(item).updateProgress(item.key, 120.0, 3_000.0, now = index.toLong())
         }
-        // e3 is finished: s1 shows e2, the latest in progress.
-        library = library.updateProgress(entry("s1", ItemKind.SERIES, "e3").key, 2_990.0, 3_000.0, now = 10)
+        // e3 was finished before e2 was started: s1 shows e2, the latest.
+        library = library.updateProgress(entry("s1", ItemKind.SERIES, "e3").key, 2_990.0, 3_000.0, now = 2)
+        library = library.updateProgress(entry("s1", ItemKind.SERIES, "e2").key, 300.0, 3_000.0, now = 10)
         val card = library.continueWatching("p1").first { it.itemId == "s1" }
         assertEquals("e2", card.episodeId)
         val removed = library.removingFromContinueWatching(card, now = 20)
@@ -90,7 +112,7 @@ class LibraryStateTest {
         // The other devices forget them too.
         assertTrue(removed.syncDeleted.keys.containsAll(listOf(SyncKeys.progress(entry("s1", ItemKind.SERIES, "e1")), SyncKeys.progress(card))))
         // A movie: only it.
-        assertEquals(listOf("s2", "s1"), library.removingFromContinueWatching(library.progress(entry("m1").key)!!, now = 21).continueWatching("p1").map { it.itemId })
+        assertEquals(listOf("s1", "s2"), library.removingFromContinueWatching(library.progress(entry("m1").key)!!, now = 21).continueWatching("p1").map { it.itemId })
     }
 
     @Test

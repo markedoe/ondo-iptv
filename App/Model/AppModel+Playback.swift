@@ -169,6 +169,14 @@ extension AppModel {
             if let movie = index.moviesByID[entry.reference.itemID] { play(movie) }
         case .series:
             guard let series = index.seriesByID[entry.reference.itemID] else { return }
+            if entry.isFinished {
+                // Its card stands for the series before its seasons were known: the episode after it.
+                Task {
+                    guard let details = await episodes(of: series), let next = nextEpisode(in: series, details: details) else { return }
+                    play(next.episode, in: series, season: next.season.episodes)
+                }
+                return
+            }
             if let item = quickEpisodeItem(entry, in: series) {
                 // Plays at once; the season follows for the next episodes.
                 let session = PlaybackSession(queue: [item], index: 0)

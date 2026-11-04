@@ -52,6 +52,16 @@ data class WatchEntry(
     val isFinished: Boolean get() = kind != ItemKind.CHANNEL && HistoryEntry.isFinished(position, duration, creditsStart)
     val isResumable: Boolean get() = kind != ItemKind.CHANNEL && position > 30 && !isFinished
     val minutesLeft: Int get() = (((duration - position).coerceAtLeast(0.0)) / 60).toInt()
+
+    companion object {
+        /** The movie, episode or channel a [key] stands for, without what was watched of it; null for another key. */
+        fun ofKey(key: String): WatchEntry? {
+            val parts = key.split('|')
+            if (parts.size != 4) return null
+            val kind = ItemKind.entries.firstOrNull { it.name == parts[1] } ?: return null
+            return WatchEntry(parts[0], kind, parts[2], parts[3].ifEmpty { null }, title = "", lastWatchedAt = 0)
+        }
+    }
 }
 
 /** A programme the viewer wants to be told about, a few minutes before it starts (times in milliseconds). */
@@ -196,19 +206,32 @@ data class LibraryState(
      */
     fun removingFromContinueWatching(entry: WatchEntry, now: Long): LibraryState =
         history
+            .filter { !(it.kind == ItemKind.SERIES && it.isFinished) }
             .filter { it.key == entry.key || (entry.kind == ItemKind.SERIES && it.playlistId == entry.playlistId && it.kind == entry.kind && it.itemId == entry.itemId && it.isResumable) }
             .fold(this) { library, gone -> library.remove(gone, now) }
 
-    /** Movies and episodes in progress, most recent first, one entry per series. */
+    /**
+     * Movies and episodes in progress, most recent first, one entry per series: the episode watched last, also when
+     * it was finished (the series then goes on with the next one, see [Showcase.continueWatching]) unless its card was
+     * taken away since; never an older episode left halfway. An episode only just started (not resumable yet) does not
+     * count.
+     */
     fun continueWatching(playlistId: String, limit: Int = 20): List<WatchEntry> {
         val seen = mutableSetOf<String>()
         return history
             .asSequence()
-            .filter { it.playlistId == playlistId && it.isResumable }
+            .filter { it.playlistId == playlistId && (it.kind == ItemKind.MOVIE || it.kind == ItemKind.SERIES) }
+            .filter { it.isResumable || (it.kind == ItemKind.SERIES && it.isFinished && !removedSince(it)) }
             .sortedByDescending { it.lastWatchedAt }
             .filter { seen.add("${it.kind}|${it.itemId}") }
             .take(limit)
             .toList()
+    }
+
+    /** Whether an episode of [entry]'s series was taken out of Continue watching after [entry] was watched. */
+    private fun removedSince(entry: WatchEntry): Boolean {
+        val prefix = SyncKeys.progress(entry.copy(episodeId = null))
+        return syncDeleted.any { (key, time) -> time >= entry.lastWatchedAt && key.startsWith(prefix) }
     }
 
     /** Channels watched recently, most recent first. */

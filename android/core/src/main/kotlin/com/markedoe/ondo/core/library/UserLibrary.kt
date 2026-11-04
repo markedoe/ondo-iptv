@@ -134,19 +134,30 @@ data class UserLibrary(
 
     fun progress(reference: MediaReference): HistoryEntry? = history.firstOrNull { it.reference.playbackKey == reference.playbackKey }
 
-    /** Movies and episodes in progress, most recent first, one entry per series (its latest episode). */
+    /**
+     * Movies and episodes in progress, most recent first, one entry per series: the episode watched last, also when it
+     * was finished (the series then goes on with the next one, which the app finds in its seasons) unless an episode of
+     * the series was removed from the history since; never an older episode left halfway. An episode only just started
+     * (not resumable yet) does not count.
+     */
     fun continueWatching(playlistId: String? = null, limit: Int = 20): List<HistoryEntry> {
         val seenItems = HashSet<String>()
         val result = ArrayList<HistoryEntry>()
         for (entry in history.sortedByDescending { it.lastWatchedAt }) {
             if (entry.reference.type == ContentType.LIVE) continue
             if (playlistId != null && entry.reference.playlistId != playlistId) continue
+            if (!entry.isResumable && !(entry.reference.type == ContentType.SERIES && entry.isFinished && !isRemovedSince(entry))) continue
             if (!seenItems.add(entry.reference.itemKey)) continue
-            if (!entry.isResumable) continue
             result.add(entry)
             if (result.size >= limit) break
         }
         return result
+    }
+
+    /** Whether an episode of [entry]'s series was removed from the history after [entry] was watched. */
+    private fun isRemovedSince(entry: HistoryEntry): Boolean {
+        val prefix = entry.reference.itemKey + "|"
+        return historyTombstones.any { (key, time) -> time >= entry.lastWatchedAt && key.startsWith(prefix) }
     }
 
     fun recentChannels(playlistId: String, limit: Int = 20): List<HistoryEntry> =

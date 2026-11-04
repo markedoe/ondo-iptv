@@ -221,19 +221,29 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         history.first { $0.reference.isSamePlayback(as: reference) }
     }
 
-    /// Movies and episodes in progress, most recent first, one entry per series.
+    /// Movies and episodes in progress, most recent first, one entry per series: the episode watched last, also when it
+    /// was finished (the series then goes on with the next one, which the app finds in its seasons) unless an episode of
+    /// the series was removed from the history since; never an older episode left halfway. An episode only just started
+    /// (not resumable yet) does not count.
     public func continueWatching(playlistID: UUID? = nil, limit: Int = 20) -> [HistoryEntry] {
         var seenItems = Set<String>()
         var result: [HistoryEntry] = []
         for entry in history.sorted(by: { $0.lastWatchedAt > $1.lastWatchedAt }) {
             guard entry.reference.type != .live,
                   playlistID == nil || entry.reference.playlistID == playlistID,
-                  seenItems.insert(entry.reference.itemKey).inserted,
-                  entry.isResumable else { continue }
+                  entry.isResumable || (entry.reference.type == .series && entry.isFinished && !isRemovedSince(entry)),
+                  seenItems.insert(entry.reference.itemKey).inserted
+            else { continue }
             result.append(entry)
             if result.count >= limit { break }
         }
         return result
+    }
+
+    /// Whether an episode of `entry`'s series was removed from the history after `entry` was watched.
+    private func isRemovedSince(_ entry: HistoryEntry) -> Bool {
+        let prefix = entry.reference.itemKey + "|"
+        return historyTombstones.contains { $0.value >= entry.lastWatchedAt && $0.key.hasPrefix(prefix) }
     }
 
     public func recentChannels(playlistID: UUID, limit: Int = 20) -> [HistoryEntry] {

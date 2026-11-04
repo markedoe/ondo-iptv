@@ -56,6 +56,31 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(library.history.first?.title, "M1")
     }
 
+    /// An episode watched to the end stays in the history, watched, and stays its series' entry in Continue watching (the
+    /// app goes on with the next episode); never an older episode left halfway. Removing an episode of the series from
+    /// the history after it takes the series away; watching it again brings it back.
+    func testFinishedEpisodeStaysWatchedAndKeepsItsSeriesInContinueWatching() {
+        var library = UserLibrary()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        library.recordPlayback(HistoryEntry(reference: ref(.series, "s", episode: "e2"), title: "S", lastWatchedAt: t0))
+        library.updateProgress(ref(.series, "s", episode: "e2"), position: 900, duration: 2700, now: t0)
+        library.recordPlayback(HistoryEntry(reference: ref(.series, "s", episode: "e3"), title: "S", lastWatchedAt: t0.addingTimeInterval(10)))
+        library.updateProgress(ref(.series, "s", episode: "e3"), position: 2700, duration: 2700, now: t0.addingTimeInterval(10))
+        library.recordPlayback(HistoryEntry(reference: ref(.movie, "m"), title: "M", lastWatchedAt: t0.addingTimeInterval(20)))
+        library.updateProgress(ref(.movie, "m"), position: 6000, duration: 6000, now: t0.addingTimeInterval(20))
+
+        XCTAssertEqual(library.progress(for: ref(.series, "s", episode: "e3"))?.isFinished, true)
+        XCTAssertEqual(library.progress(for: ref(.series, "s", episode: "e2"))?.position, 900, "the one left halfway keeps its progress")
+        XCTAssertEqual(library.continueWatching(playlistID: playlistID).map(\.id), [ref(.series, "s", episode: "e3").playbackKey],
+                       "the series by its last episode watched; a finished movie leaves")
+
+        library.removeHistory(try! XCTUnwrap(library.progress(for: ref(.series, "s", episode: "e2"))), now: t0.addingTimeInterval(30))
+        XCTAssertEqual(library.continueWatching(playlistID: playlistID), [], "taken away")
+        XCTAssertEqual(library.progress(for: ref(.series, "s", episode: "e3"))?.isFinished, true, "still watched")
+        library.updateProgress(ref(.series, "s", episode: "e3"), position: 2700, duration: 2700, now: t0.addingTimeInterval(40))
+        XCTAssertEqual(library.continueWatching(playlistID: playlistID).map(\.id), [ref(.series, "s", episode: "e3").playbackKey])
+    }
+
     /// Watched with 10 minutes or less left once three quarters are seen, or at 95 %; never by time with no duration.
     func testWatchedWithTenMinutesLeft() {
         func movie(_ minutes: Double, of total: Double) -> HistoryEntry {

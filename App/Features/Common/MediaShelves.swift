@@ -185,6 +185,8 @@ struct ContinueCard: View {
     var body: some View {
         let item = model.showcaseItem(for: entry)
         let artwork = item.flatMap { model.backdropURL(for: $0) } ?? entry.imageURL
+        // A series going on with its next episode: from its start, never the finished one named as if to resume it.
+        let upNext = model.isUpNext(entry)
         Button {
             model.resume(entry)
         } label: {
@@ -201,10 +203,14 @@ struct ContinueCard: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) {
                                 Image(systemName: "play.fill").font(.caption)
-                                Text(entry.timeLeftText).font(.caption.weight(.semibold))
+                                if upNext {
+                                    Text("Play").font(.caption.weight(.semibold))
+                                } else {
+                                    Text(entry.timeLeftText).font(.caption.weight(.semibold))
+                                }
                             }
                             .foregroundStyle(.white)
-                            ProgressBar(value: entry.progress)
+                            if !upNext { ProgressBar(value: entry.progress) }
                         }
                         .padding(10)
                     }
@@ -212,7 +218,7 @@ struct ContinueCard: View {
                     .cardLift()
                 Text(entry.title).font(.subheadline.weight(.semibold)).lineLimit(1)
                 // A film of several versions: the one in progress.
-                if let subtitle = entry.subtitle ?? model.versionLabel(for: entry) {
+                if let subtitle = (upNext && entry.isFinished ? nil : entry.subtitle) ?? model.versionLabel(for: entry) {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
@@ -221,10 +227,12 @@ struct ContinueCard: View {
         }
         .cardButtonStyle()
         .contextMenu {
-            Button(role: .destructive) {
-                model.removeFromHistory(entry)
-            } label: {
-                Label("Remove from History", systemImage: "trash")
+            if !upNext {
+                Button(role: .destructive) {
+                    model.removeFromHistory(entry)
+                } label: {
+                    Label("Remove from History", systemImage: "trash")
+                }
             }
         }
     }

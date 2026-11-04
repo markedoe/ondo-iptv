@@ -139,17 +139,45 @@ extension AppModel {
             .filter { !excluded.contains($0) && !hidden.contains($0.id) }
     }
 
+    /// Movies and episodes in progress; a series whose last episode watched was finished goes on with the next one
+    /// (`nextEpisode(in:details:)`, from its seasons once known: an entry at its start, or the next one's own when it was
+    /// started), and leaves after its last episode. Its seasons not known yet, the finished entry stands for the series:
+    /// `resume(_:)` plays the next one.
     func continueWatching() -> [HistoryEntry] {
         guard let playlist = activePlaylist else { return [] }
         // Categories only: a title already started stays here though its own name carries a hidden language.
         let excluded = excludedCategoryIDs
-        return library.continueWatching(playlistID: playlist.id).filter { entry in
+        return library.continueWatching(playlistID: playlist.id).compactMap { entry -> HistoryEntry? in
             switch entry.reference.type {
-            case .movie: return index.moviesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
-            case .series: return index.seriesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
-            case .live: return false
+            case .movie:
+                return index.moviesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } == true ? entry : nil
+            case .series:
+                guard let series = index.seriesByID[entry.reference.itemID], !excluded.contains(series.categoryID) else { return nil }
+                return entry.isFinished ? goingOn(from: entry, in: series) : entry
+            case .live: return nil
             }
         }
+    }
+
+    /// The card of `series` after its episode `finished`: the next episode, nil after the last one; `finished` itself
+    /// while the seasons are not known.
+    private func goingOn(from finished: HistoryEntry, in series: Series) -> HistoryEntry? {
+        guard let details = storedDetails(for: series) else { return finished }
+        guard let next = nextEpisode(in: series, details: details), next.episode.id != finished.reference.episodeID else { return nil }
+        if let own = progress(episode: next.episode, in: series), own.isResumable { return own }
+        return HistoryEntry(
+            reference: MediaReference(playlistID: finished.reference.playlistID, type: .series, itemID: series.id, episodeID: next.episode.id),
+            title: finished.title,
+            subtitle: "\(next.episode.code) · \(next.episode.title)",
+            imageURL: next.episode.posterURL ?? series.coverURL,
+            lastWatchedAt: finished.lastWatchedAt
+        )
+    }
+
+    /// A Continue Watching card of a series going on with its next episode (the one before was finished): played from
+    /// its start, and not taken away (that would take the finished episode out of the history).
+    func isUpNext(_ entry: HistoryEntry) -> Bool {
+        entry.reference.type == .series && !entry.isResumable
     }
 
     /// The movies, or the series, in progress: Home shows them in two rows, each tab in one.

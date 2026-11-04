@@ -68,6 +68,33 @@ class LibraryTest {
         assertNull(library.favorites.single().reference.episodeId)
     }
 
+    /**
+     * An episode watched to the end stays in the history, watched, and stays its series' entry in Continue watching (the
+     * app goes on with the next episode); never an older episode left halfway. Removing an episode of the series from
+     * the history after it takes the series away; watching it again brings it back.
+     */
+    @Test
+    fun finishedEpisodeStaysWatchedAndKeepsItsSeriesInContinueWatching() {
+        var library = UserLibrary()
+        val t0 = 1_000_000_000L
+        val second = ref(ContentType.SERIES, "s", "e2")
+        val third = ref(ContentType.SERIES, "s", "e3")
+        library = library.recordPlayback(HistoryEntry(second, "S", lastWatchedAt = t0)).updateProgress(second, 900.0, 2700.0, now = t0)
+        library = library.recordPlayback(HistoryEntry(third, "S", lastWatchedAt = t0 + 10_000)).updateProgress(third, 2700.0, 2700.0, now = t0 + 10_000)
+        library = library.recordPlayback(HistoryEntry(ref(ContentType.MOVIE, "m"), "M", lastWatchedAt = t0 + 20_000))
+            .updateProgress(ref(ContentType.MOVIE, "m"), 6000.0, 6000.0, now = t0 + 20_000)
+
+        assertEquals(true, library.progress(third)?.isFinished)
+        assertEquals(900.0, library.progress(second)?.position, "the one left halfway keeps its progress")
+        assertEquals(listOf(third.playbackKey), library.continueWatching(playlistId).map { it.id }, "the series by its last episode watched; a finished movie leaves")
+
+        library = library.removeHistory(library.progress(second)!!, now = t0 + 30_000)
+        assertEquals(emptyList(), library.continueWatching(playlistId), "taken away")
+        assertEquals(true, library.progress(third)?.isFinished, "still watched")
+        library = library.updateProgress(third, 2700.0, 2700.0, now = t0 + 40_000)
+        assertEquals(listOf(third.playbackKey), library.continueWatching(playlistId).map { it.id })
+    }
+
     @Test
     fun historyAndContinueWatching() {
         var library = UserLibrary()
