@@ -96,18 +96,20 @@ class ProfilesTest {
         assertEquals("Me", state.activeProfile.name)
         assertTrue(state.activeProfile.isMain)
         assertFalse(state.needsProfileSelection)
-        assertEquals(before, state.library)
+        // Everything kept; the hidden category and language only gain the time sync needs (docs/PROFILES.md, "Migration").
+        assertEquals(before, state.library.copy(hiddenAt = emptyMap()))
+        assertEquals(setOf(SyncKeys.hiddenCategory(Fixtures.PLAYLIST_ID, "m-thriller"), SyncKeys.hiddenTag("PT")), state.library.hiddenAt.keys)
         assertTrue(state.settings.hideWatchedMovies)
         assertEquals(4, state.settings.liveBuffer)
-        // On disk: the library keeps its document, untouched; the profiles document is added.
+        // On disk: the library keeps its document, with those times; the profiles document is added.
         val disk = disk()
-        assertEquals(before, disk.loadLibrary())
+        assertEquals(state.library, disk.loadLibrary())
         assertTrue("no profiles document until a profile is added", disk.loadProfiles().isEmpty())
         assertTrue(File(folder.root, "library.json").exists())
         assertTrue(folder.root.listFiles().orEmpty().none { it.name.startsWith("library-") })
-        // And the next launch reads it all back the same.
+        // And the next launch reads it all back the same, dating nothing again.
         val again = started(AppStore(folder.root))
-        assertEquals(before, again.state.value.library)
+        assertEquals(state.library, again.state.value.library)
     }
 
     @Test
