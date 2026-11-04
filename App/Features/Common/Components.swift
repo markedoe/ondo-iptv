@@ -235,6 +235,10 @@ struct CategoryBrowser<Detail: View>: View {
 
     let type: ContentType
     var pseudoCategories: [MediaCategory] = []
+    /// Side by side, the category selected on opening (nil: All, else the first one). On iPhone the caller opens it.
+    var landing: MediaCategory?
+    /// A category opened (selected or pushed).
+    var onOpen: (MediaCategory) -> Void = { _ in }
     @ViewBuilder var detail: (MediaCategory) -> Detail
 
     @State private var selected: MediaCategory?
@@ -274,7 +278,9 @@ struct CategoryBrowser<Detail: View>: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .onAppear {
-                    if selected == nil { selected = pseudoCategories.first ?? categories.first }
+                    if selected == nil {
+                        selected = landing ?? pseudoCategories.first { $0.id == PseudoCategory.all } ?? pseudoCategories.first ?? categories.first
+                    }
                 }
             } else {
                 categoryList
@@ -356,6 +362,7 @@ struct CategoryBrowser<Detail: View>: View {
     }
 
     private func open(_ category: MediaCategory) {
+        onOpen(category)
         if sideBySide {
             selected = category
         } else {

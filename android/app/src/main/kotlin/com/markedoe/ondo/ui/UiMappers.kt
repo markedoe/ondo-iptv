@@ -554,14 +554,19 @@ object UiMappers {
     fun categoryName(state: OndoState, series: Boolean, categoryId: String?): String? =
         (if (series) state.content.seriesCategories else state.content.movieCategories).firstOrNull { it.id == categoryId }?.name
 
-    fun live(state: OndoState, categoryId: String?, favoritesOnly: Boolean, now: Long): LiveUiState {
+    /**
+     * Live TV: [favoritesOnly] null when the viewer has chosen nothing yet (on opening, after a profile or a playlist
+     * change): My List, or all channels while My List has none that shows.
+     */
+    fun live(state: OndoState, categoryId: String?, favoritesOnly: Boolean?, now: Long): LiveUiState {
         val selection = liveChannels(state, categoryId, favoritesOnly)
         return LiveUiState(
             categories = selection.categories,
             selectedCategoryId = selection.categoryId,
-            showingFavorites = favoritesOnly,
+            showingFavorites = selection.favoritesOnly,
             channels = selection.channels.map { channelRow(it, state, now) },
             favoriteIds = selection.favoriteIds,
+            hasFavorites = selection.hasFavorites,
         )
     }
 
@@ -573,11 +578,19 @@ object UiMappers {
 
     /**
      * The channels of a Live TV choice (My List, a category or all), the categories that have some, the favourites, and
-     * the category shown ([categoryId] when it is still among them).
+     * the category shown ([categoryId] when it is still among them), whether My List is shown, and whether it has any
+     * channel that shows (hidden categories and languages left out).
      */
-    private class ChannelSelection(val channels: List<Channel>, val categories: List<MediaCategory>, val favoriteIds: Set<String>, val categoryId: String?)
+    private class ChannelSelection(
+        val channels: List<Channel>,
+        val categories: List<MediaCategory>,
+        val favoriteIds: Set<String>,
+        val categoryId: String?,
+        val favoritesOnly: Boolean,
+        val hasFavorites: Boolean,
+    )
 
-    private fun liveChannels(state: OndoState, categoryId: String?, favoritesOnly: Boolean): ChannelSelection {
+    private fun liveChannels(state: OndoState, categoryId: String?, chosenFavoritesOnly: Boolean?): ChannelSelection {
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val favoriteIds = state.library.favorites(playlistId, ItemKind.CHANNEL).mapTo(HashSet()) { it.itemId }
@@ -586,6 +599,9 @@ object UiMappers {
         val categories = state.content.liveCategories.filter { it.id in used }.distinctBy { it.id }
         // A category hidden since, or gone with a refresh: all channels again, rather than an empty list with no chip on.
         val shown = categoryId?.takeIf { id -> categories.any { it.id == id } }
+        val hasFavorites = visible.any { it.id in favoriteIds }
+        // Nothing chosen yet: My List when it has channels, else all of them (never an empty page on opening).
+        val favoritesOnly = chosenFavoritesOnly ?: (categoryId == null && hasFavorites)
         val channels = visible.filter {
             when {
                 favoritesOnly -> it.id in favoriteIds
@@ -593,7 +609,7 @@ object UiMappers {
                 else -> true
             }
         }
-        return ChannelSelection(channels, categories, favoriteIds, shown)
+        return ChannelSelection(channels, categories, favoriteIds, shown, favoritesOnly, hasFavorites)
     }
 
     /** Rows of the TV guide at most: each row lays out its programmes. Beyond, a note asks to choose a category. */
@@ -607,7 +623,7 @@ object UiMappers {
     }
 
     /** The TV guide of the Live TV choice: its channels (at most [GUIDE_ROW_LIMIT]) and their programmes. */
-    fun guide(state: OndoState, categoryId: String?, favoritesOnly: Boolean, now: Long): GuideUiState {
+    fun guide(state: OndoState, categoryId: String?, favoritesOnly: Boolean?, now: Long): GuideUiState {
         val selection = liveChannels(state, categoryId, favoritesOnly)
         val window = guideWindow(now)
         val guide = state.guide
@@ -622,7 +638,7 @@ object UiMappers {
             isLoading = state.isLoading,
             categories = selection.categories,
             selectedCategoryId = selection.categoryId,
-            showingFavorites = favoritesOnly,
+            showingFavorites = selection.favoritesOnly,
             reminders = state.library.upcomingReminders(playlistId, now).mapTo(HashSet()) { "${it.channelId}|${it.start}" },
         )
     }

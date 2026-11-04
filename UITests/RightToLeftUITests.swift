@@ -25,6 +25,9 @@ final class RightToLeftUITests: XCTestCase {
         let liveTab = app.tabBars.buttons["البث المباشر"]
         XCTAssertTrue(liveTab.waitForExistence(timeout: 30), "main interface")
         liveTab.tap()
+        // Live TV opens on My List (the fixture has favourite channels): Back to the categories, where the guide is.
+        let back = app.navigationBars.buttons["البث المباشر"]
+        if back.waitForExistence(timeout: 10) { back.tap() }
         let guide = app.buttons["دليل البرامج"].firstMatch
         XCTAssertTrue(guide.waitForExistence(timeout: 10), "guide link")
         guide.tap()

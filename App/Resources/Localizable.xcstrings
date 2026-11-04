@@ -2151,42 +2151,42 @@
         }
       }
     },
-    "Add to My List keeps a movie, a series or a channel at hand. On iPhone, My List is a tab with Movies, Series, Channels and Collections; on iPad and Mac, it is in the sidebar.\n\nCollections are your own groups, such as Weekend or Kids: use Collection on a movie or series page, or Add to Collection in a menu.\n\nEach profile has its own My List, collections and history.": {
+    "Add to My List keeps a movie, a series or a channel at hand. On iPhone, My List is a tab with Movies, Series, Channels and Collections; on iPad and Mac, it is in the sidebar. Live TV opens on the channels in My List.\n\nCollections are your own groups, such as Weekend or Kids: use Collection on a movie or series page, or Add to Collection in a menu.\n\nEach profile has its own My List, collections and history.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter à Ma liste garde un film, une série ou une chaîne à portée de main. Sur iPhone, Ma liste est un onglet avec Films, Séries, Chaînes et Collections ; sur iPad et Mac, elle est dans la barre latérale.\n\nLes collections sont vos propres groupes, comme Week-end ou Enfants : utilisez Collection sur la fiche d’un film ou d’une série, ou Ajouter à une collection dans un menu.\n\nChaque profil a sa propre Ma liste, ses collections et son historique."
+            "value": "Ajouter à Ma liste garde un film, une série ou une chaîne à portée de main. Sur iPhone, Ma liste est un onglet avec Films, Séries, Chaînes et Collections ; sur iPad et Mac, elle est dans la barre latérale. TV en direct s’ouvre sur les chaînes de Ma liste.\n\nLes collections sont vos propres groupes, comme Week-end ou Enfants : utilisez Collection sur la fiche d’un film ou d’une série, ou Ajouter à une collection dans un menu.\n\nChaque profil a sa propre Ma liste, ses collections et son historique."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir a Mi lista mantiene a mano una película, una serie o un canal. En iPhone, Mi lista es una pestaña con Películas, Series, Canales y Colecciones; en iPad y Mac, está en la barra lateral.\n\nLas colecciones son tus propios grupos, como Fin de semana o Niños: usa Colección en la ficha de una película o serie, o Añadir a una colección en un menú.\n\nCada perfil tiene su propia Mi lista, sus colecciones y su historial."
+            "value": "Añadir a Mi lista mantiene a mano una película, una serie o un canal. En iPhone, Mi lista es una pestaña con Películas, Series, Canales y Colecciones; en iPad y Mac, está en la barra lateral. TV en directo se abre en los canales de Mi lista.\n\nLas colecciones son tus propios grupos, como Fin de semana o Niños: usa Colección en la ficha de una película o serie, o Añadir a una colección en un menú.\n\nCada perfil tiene su propia Mi lista, sus colecciones y su historial."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adicionar à Minha lista deixa um filme, uma série ou um canal à mão. No iPhone, Minha lista é uma aba com Filmes, Séries, Canais e Coleções; no iPad e no Mac, fica na barra lateral.\n\nColeções são seus próprios grupos, como Fim de semana ou Crianças: use Coleção na página de um filme ou série, ou Adicionar a uma coleção em um menu.\n\nCada perfil tem sua própria Minha lista, suas coleções e seu histórico."
+            "value": "Adicionar à Minha lista deixa um filme, uma série ou um canal à mão. No iPhone, Minha lista é uma aba com Filmes, Séries, Canais e Coleções; no iPad e no Mac, fica na barra lateral. A TV ao vivo abre nos canais da Minha lista.\n\nColeções são seus próprios grupos, como Fim de semana ou Crianças: use Coleção na página de um filme ou série, ou Adicionar a uma coleção em um menu.\n\nCada perfil tem sua própria Minha lista, suas coleções e seu histórico."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“添加到我的片单”可将电影、剧集或频道放在手边。在 iPhone 上，“我的片单”是一个标签页，包含电影、剧集、频道和合集；在 iPad 和 Mac 上，它位于边栏中。\n\n合集是你自己的分组，例如“周末”或“儿童”：在电影或剧集页面上使用“合集”，或在菜单中使用“添加到合集”。\n\n每个个人资料都有自己的“我的片单”、合集和观看记录。"
+            "value": "“添加到我的片单”可将电影、剧集或频道放在手边。在 iPhone 上，“我的片单”是一个标签页，包含电影、剧集、频道和合集；在 iPad 和 Mac 上，它位于边栏中。“直播”会先显示“我的片单”中的频道。\n\n合集是你自己的分组，例如“周末”或“儿童”：在电影或剧集页面上使用“合集”，或在菜单中使用“添加到合集”。\n\n每个个人资料都有自己的“我的片单”、合集和观看记录。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تُبقي «إضافة إلى قائمتي» فيلمًا أو مسلسلًا أو قناة في متناول يدك. على iPhone، قائمتي علامة تبويب فيها الأفلام والمسلسلات والقنوات والمجموعات؛ وعلى iPad وMac توجد في الشريط الجانبي.\n\nالمجموعات هي مجموعاتك الخاصة، مثل عطلة نهاية الأسبوع أو الأطفال: استخدم «مجموعة» في صفحة فيلم أو مسلسل، أو «إضافة إلى مجموعة» في قائمة.\n\nلكل ملف شخصي قائمته ومجموعاته وسجله الخاص."
+            "value": "تُبقي «إضافة إلى قائمتي» فيلمًا أو مسلسلًا أو قناة في متناول يدك. على iPhone، قائمتي علامة تبويب فيها الأفلام والمسلسلات والقنوات والمجموعات؛ وعلى iPad وMac توجد في الشريط الجانبي. يُفتح البث المباشر على قنوات قائمتي.\n\nالمجموعات هي مجموعاتك الخاصة، مثل عطلة نهاية الأسبوع أو الأطفال: استخدم «مجموعة» في صفحة فيلم أو مسلسل، أو «إضافة إلى مجموعة» في قائمة.\n\nلكل ملف شخصي قائمته ومجموعاته وسجله الخاص."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "मेरी सूची में जोड़ें किसी फ़िल्म, सीरीज़ या चैनल को हाथ के पास रखता है। iPhone पर मेरी सूची एक टैब है जिसमें फ़िल्में, सीरीज़, चैनल और संग्रह हैं; iPad और Mac पर यह साइडबार में है।\n\nसंग्रह आपके अपने समूह हैं, जैसे वीकेंड या बच्चे: फ़िल्म या सीरीज़ के पेज पर संग्रह का इस्तेमाल करें, या किसी मेनू में संग्रह में जोड़ें चुनें।\n\nहर प्रोफ़ाइल की अपनी मेरी सूची, संग्रह और इतिहास होता है।"
+            "value": "मेरी सूची में जोड़ें किसी फ़िल्म, सीरीज़ या चैनल को हाथ के पास रखता है। iPhone पर मेरी सूची एक टैब है जिसमें फ़िल्में, सीरीज़, चैनल और संग्रह हैं; iPad और Mac पर यह साइडबार में है। लाइव टीवी मेरी सूची के चैनलों पर खुलता है।\n\nसंग्रह आपके अपने समूह हैं, जैसे वीकेंड या बच्चे: फ़िल्म या सीरीज़ के पेज पर संग्रह का इस्तेमाल करें, या किसी मेनू में संग्रह में जोड़ें चुनें।\n\nहर प्रोफ़ाइल की अपनी मेरी सूची, संग्रह और इतिहास होता है।"
           }
         }
       }

@@ -193,6 +193,11 @@ final class OndoUITests: XCTestCase {
         snapshot("02-home")
 
         liveTab.tap()
+        // Live TV opens on My List (the fixture has favourite channels), over the categories: Back reaches them.
+        XCTAssertTrue(app.navigationBars["My List"].waitForExistence(timeout: 15), "Live TV opens on My List")
+        XCTAssertTrue(app.collectionViews.cells.element(boundBy: 0).waitForExistence(timeout: 15), "My List's channels")
+        snapshot("03a-live-my-list")
+        app.navigationBars.buttons["Live TV"].tap()
         let all = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'All'")).firstMatch
         XCTAssertTrue(all.waitForExistence(timeout: 15), "categories")
         snapshot("03-live-categories")

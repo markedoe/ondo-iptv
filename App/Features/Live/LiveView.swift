@@ -1,16 +1,52 @@
 import SwiftUI
 import IPTVCore
 
+/// Live TV opens on My List while it has channels (else on all channels): selected beside the categories on iPad and
+/// Mac, opened over them on iPhone, where Back leads to the other choices. The choice made stays for the session; a
+/// profile or playlist change opens on My List again.
 struct LiveView: View {
     @Environment(AppModel.self) private var model
+    @Environment(NavigationRouter.self) private var router: NavigationRouter?
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
+    /// The profile and playlist Live TV last opened for.
+    @State private var landedFor: String?
+
+    private var sideBySide: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return sizeClass == .regular
+        #endif
+    }
+
+    private var session: String {
+        "\(model.activeProfile.id.uuidString)|\(model.activePlaylist?.id.uuidString ?? "")"
+    }
+
+    private var pseudoCategories: [MediaCategory] {
+        [PseudoCategory.favorites(.live), PseudoCategory.all(.live), PseudoCategory.recent(.live)]
+    }
+
+    private var landing: MediaCategory? {
+        guard let id = model.liveLandingID else { return nil }
+        return pseudoCategories.first { $0.id == id } ?? model.categories(for: .live).first { $0.id == id }
+    }
 
     var body: some View {
         CategoryBrowser(
             type: .live,
-            pseudoCategories: [PseudoCategory.all(.live), PseudoCategory.favorites(.live), PseudoCategory.recent(.live)]
+            pseudoCategories: pseudoCategories,
+            landing: landing,
+            onOpen: { model.liveChoiceID = $0.id }
         ) { category in
             ChannelListView(category: category)
         }
+        // Another profile or playlist: the categories' selection starts again.
+        .id(session)
+        .onAppear(perform: land)
+        .onChange(of: session) { land() }
         .navigationTitle("Live TV")
         .toolbar {
             #if os(iOS)
@@ -27,6 +63,16 @@ struct LiveView: View {
                 CategoryFilterButton(type: .live)
             }
         }
+    }
+
+    /// On iPhone, the first time for a profile and playlist: My List (or the choice made) over the categories.
+    private func land() {
+        guard landedFor != session else { return }
+        let again = landedFor != nil
+        landedFor = session
+        guard !sideBySide else { return }
+        if again { router?.path = NavigationPath() }
+        if let landing { router?.push(landing) }
     }
 }
 

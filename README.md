@@ -63,7 +63,7 @@ interface changes.
   ([tools/awards](tools/awards/README.md)).
 - **Sources**: M3U / M3U8 playlists (URL or file), **Xtream Codes** accounts (API or "force M3U"), XSPF,
   JSON; several playlists, automatic refresh.
-- **Live TV**: categories, numbers, logos, current programme and its progress, My List, recents, search;
+- **Live TV**: opens on My List; categories, numbers, logos, current programme and its progress, recents, search;
   hidden, renamed or renumbered channels.
 - **TV Guide**: XMLTV (gzip), the provider's guide and/or custom URLs, grid with sticky titles, programme
   details, time offset, fallback to the Xtream short EPG, **manual channel ↔ guide matching**, **programme
@@ -132,7 +132,7 @@ interface changes.
   [docs/VERSIONS.md](docs/VERSIONS.md)), detail pages (Resume, From Start, next
   episode, seasons, the provider's trailer on YouTube, More Like This); a director's or an actor's name opens their other movies and series
   (series always, movies among the pages already opened), and a genre, the year or an award the titles that share it.
-- **Live TV**: categories, My List, current and next programme.
+- **Live TV**: opens on My List; categories, current and next programme.
 - **Search** (the magnifying glass of Home, Movies, Series, Live TV and My List; on a TV, in the top bar after the
   tabs, a page of its own that Back closes): channels, movies, series and **actors and directors by name**, filtered by
   release years or by festival / ceremony (winners only, if you like); no programme search. It opens empty each
