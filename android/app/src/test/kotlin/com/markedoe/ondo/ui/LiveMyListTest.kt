@@ -16,7 +16,6 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
@@ -123,12 +122,12 @@ class LiveMyListTest {
                 assertEquals(case, onMyList, ui.showingFavorites)
                 if (onMyList) {
                     compose.onNodeWithTag("liveMyList").assertIsSelected()
-                    compose.onNodeWithTag("liveAll").assertIsNotSelected()
+                    assertNotShown("liveAll")
                     assertEquals(case, listOf(stadiumOne.id, worldReport.id).sorted(), ui.channels.map { it.channel.id }.sorted())
                     assertFalse("$case: no hint once My List has channels", exists("liveMyListHint"))
                 } else {
                     compose.onNodeWithTag("liveAll").assertIsSelected()
-                    compose.onNodeWithTag("liveMyList").assertIsNotSelected()
+                    assertNotShown("liveMyList")
                     assertTrue("$case: all channels, never an empty page", ui.channels.isNotEmpty())
                     assertTrue("$case: how to add a channel to My List", exists("liveMyListHint"))
                 }
@@ -225,6 +224,12 @@ class LiveMyListTest {
 
     private fun live(): LiveUiState = viewModel.live.value!!
 
+    /** Not the choice shown (a TV's chip says only which one is selected; a phone's says it of each). */
+    private fun assertNotShown(tag: String) {
+        val selected = compose.onNodeWithTag(tag).fetchSemanticsNode().config.getOrNull(SemanticsProperties.Selected)
+        assertTrue("$tag is not the choice shown", selected != true)
+    }
+
     @Test
     @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
     fun onATvUpReachesMyListTheChoiceChangesAndBackGoesToTheTopBar() {
@@ -242,7 +247,7 @@ class LiveMyListTest {
         press(Key.DirectionCenter)
         waitFor { !live().showingFavorites && live().channels.size == Fixtures.channels.size }
         compose.onNodeWithTag("liveAll").assertIsSelected()
-        compose.onNodeWithTag("liveMyList").assertIsNotSelected()
+        assertNotShown("liveMyList")
         // The remote stays on the choice it made, as the channels below change.
         waitFor(3_000) { focusedTag() == "liveAll" }
         // Down into the channels, Up again: back on the choice shown, now All.

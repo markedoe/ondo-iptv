@@ -40,19 +40,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
 import com.markedoe.ondo.ui.tv.isTelevision
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +63,7 @@ import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ProgressBar
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.tv.LocalHeldOk
+import com.markedoe.ondo.ui.tv.TvChip
 import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
@@ -292,9 +287,8 @@ private fun choiceFocus(selected: Boolean, selectedChoice: FocusRequester): Modi
 }
 
 /**
- * One choice of channels at the top of Live TV. On a phone, a filter chip. On a TV, the choice shown and the one the
- * remote is on read apart: the one shown is white with a check mark; the one the remote is on grows and has a ring
- * around it (both at once: the white pill ringed).
+ * One choice of channels at the top of Live TV. On a phone, a filter chip. On a TV, the TV's chip: the choice shown is
+ * white with a check mark, the one the remote is on grows inside a ring (both at once: the white chip ringed).
  */
 @Composable
 private fun LiveChoice(
@@ -315,35 +309,8 @@ private fun LiveChoice(
         )
         return
     }
-    var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.08f else 1f, label = "liveChoiceScale")
-    val ink = if (selected) Color.Black else Color.White
-    val fill = when {
-        selected -> Color.White
-        focused -> Color.White.copy(alpha = 0.24f)
-        else -> Color.White.copy(alpha = 0.1f)
-    }
-    Row(
-        modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .border(3.dp, if (focused) Color.White else Color.Transparent, CircleShape)
-            .padding(5.dp)
-            .clip(CircleShape)
-            .background(fill)
-            .onFocusChanged { focused = it.isFocused }
-            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val shownIcon = if (selected) Icons.Rounded.Check else icon
-        shownIcon?.let {
-            Icon(it, contentDescription = null, tint = ink, modifier = Modifier.padding(end = 6.dp).size(18.dp))
-        }
-        Text(text, color = ink, style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
-    }
+    // The TV's chips: the shown one white with a check mark, the one the remote is on ringed and grown (TvChip).
+    TvChip(text, onClick = onClick, modifier = modifier, selected = selected, icon = if (selected) Icons.Rounded.Check else icon)
 }
 
 /** The channel the remote is on, large: its logo, name, what is on now and how far it is, what comes next. */
