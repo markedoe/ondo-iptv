@@ -272,6 +272,12 @@
     <string name="rename_collection">إعادة تسمية المجموعة</string>
     <string name="delete_collection">حذف المجموعة</string>
     <string name="delete_collection_confirm">حذف هذه المجموعة؟</string>
+    <string name="shared_with_all_profiles">مشتركة مع كل الملفات الشخصية</string>
+    <string name="shared_collection">مشتركة</string>
+    <string name="delete_shared_collection_confirm">حذف هذه المجموعة لكل الملفات الشخصية؟</string>
+    <string name="unshare_collection_confirm">إيقاف مشاركة هذه المجموعة؟</string>
+    <string name="unshare_collection_explanation">لن ترى الملفات الشخصية الأخرى «%1$s» بعد الآن. ستعود إلى مجموعاتك.</string>
+    <string name="stop_sharing">إيقاف المشاركة</string>
     <string name="empty_collection">مجموعة فارغة</string>
     <string name="no_collections">لا توجد مجموعات</string>
     <string name="collection_default_name">مجموعة %1$d</string>

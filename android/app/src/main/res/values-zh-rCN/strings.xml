@@ -227,6 +227,12 @@
     <string name="rename_collection">重命名合集</string>
     <string name="delete_collection">删除合集</string>
     <string name="delete_collection_confirm">删除此合集？</string>
+    <string name="shared_with_all_profiles">与所有个人资料共享</string>
+    <string name="shared_collection">已共享</string>
+    <string name="delete_shared_collection_confirm">要为所有个人资料删除此合集吗？</string>
+    <string name="unshare_collection_confirm">要停止共享此合集吗？</string>
+    <string name="unshare_collection_explanation">其他个人资料将不再看到“%1$s”。它会回到你的合集中。</string>
+    <string name="stop_sharing">停止共享</string>
     <string name="empty_collection">空合集</string>
     <string name="no_collections">没有合集</string>
     <string name="collection_default_name">合集 %1$d</string>

@@ -88,6 +88,9 @@ final class AppModel {
     private(set) var playlists: [Playlist] = []
     private(set) var settings = AppSettings()
     private(set) var library = UserLibrary()
+    /// The collections shared with every profile (docs/PROFILES.md, "Shared lists"), apart from any profile's library: the
+    /// same for every profile. Its document is `householdDocumentName`; what was deleted among them is in `sync.json`.
+    var household = UserLibrary()
     /// Set by the profile actions and by sync (`AppModel+Sync`).
     var profiles: [Profile] = []
     /// Category locks are device-wide (parental control), not per profile.
@@ -275,6 +278,7 @@ final class AppModel {
         otherLibraries = Dictionary(profiles.filter { $0.id != activeProfile.id }.map { profile in
             (profile.id, userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
         }, uniquingKeysWith: { first, _ in first })
+        household = userStore.load(UserLibrary.self, name: Self.householdDocumentName) ?? UserLibrary()
         if let locks = userStore.load(Set<String>.self, name: "parental-locks") {
             lockedCategoryKeys = locks
         } else {
@@ -633,6 +637,13 @@ final class AppModel {
             guard other != otherLibraries[profile.id] else { continue }
             otherLibraries[profile.id] = other
             try? userStore.save(other, name: profile.libraryDocumentName)
+        }
+        // And those of the shared collections.
+        var shared = household
+        shared.removeData(for: playlist.id)
+        if shared != household {
+            household = shared
+            try? userStore.save(shared, name: Self.householdDocumentName)
         }
         if settings.activePlaylistID == playlist.id || activePlaylist == nil {
             updateSettings { $0.activePlaylistID = playlists.first?.id }

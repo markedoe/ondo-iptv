@@ -214,7 +214,7 @@ struct HomeView: View {
 
     @ViewBuilder
     private func customLists(metrics: ShelfMetrics) -> some View {
-        let lists = model.library.customLists.filter { !model.items(in: $0).isEmpty }
+        let lists = model.customLists.filter { !model.items(in: $0).isEmpty }
         if !lists.isEmpty {
             Shelf(title: "Collections", route: Self.seeAll(.collections), metrics: metrics) {
                 ForEach(lists) { list in
