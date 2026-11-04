@@ -41,8 +41,22 @@ permissions:
   contents: read
 
 jobs:
+  screenshots:
+    name: App Store screenshots
+    # Fresh captures for the runs that upload the listing (a tag, targets release, all and metadata*); the deliver job
+    # waits for them. contents: write lets the called workflow's publish job update the appstore-screenshots branch;
+    # no secret is passed to it.
+    if: github.event_name == 'push' || github.event.inputs.target == 'release' || github.event.inputs.target == 'all' || startsWith(github.event.inputs.target, 'metadata')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/appstore-screenshots.yml
+
   deliver:
     name: TestFlight / App Store Connect
+    # After the screenshots (skipped for the other targets). Their failure stops nothing: the listing then takes the
+    # screenshots the appstore-screenshots branch already holds.
+    needs: screenshots
+    if: ${{ !cancelled() }}
     runs-on: macos-26
     # A release waits for App Store Connect's processing of both builds.
     timeout-minutes: 240
@@ -110,10 +124,10 @@ jobs:
         if: env.TARGET != 'status' && !startsWith(env.TARGET, 'withdraw') && env.EDITION == 'testflight'
         env:
           GH_TOKEN: ${{ github.token }}
+        # A run of CI counts only when its macOS jobs ran and passed (on this commit or the same tree): a run that skipped
+        # them (docs/CI.md) does not.
         run: |
-          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --status success \
-            --limit 1 --json databaseId --jq length) || passed=0
-          if [ "$passed" -gt 0 ]; then
+          if python3 -I .github/scripts/ci_scope.py passed ci "$GITHUB_SHA"; then
             echo "CI passed on $GITHUB_SHA: the core tests are not run again."
             echo "passed=true" >> "$GITHUB_OUTPUT"
           else
@@ -186,8 +200,14 @@ jobs:
         run: bundle exec fastlane mac beta
       - name: App Store screenshots
         if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'status' || env.TARGET == 'release'
+        env:
+          CAPTURE: ${{ needs.screenshots.result }}
         run: |
-          # Published by the "App Store screenshots" workflow; the listing is uploaded without them otherwise.
+          # Published by the "App Store screenshots" workflow (job screenshots above); the listing is uploaded without
+          # them otherwise. A failed capture leaves the branch as it was: its screenshots are uploaded.
+          if [ "$CAPTURE" = failure ]; then
+            echo "::warning::The App Store screenshots capture failed: the listing takes the screenshots already on the appstore-screenshots branch."
+          fi
           if git fetch -q origin appstore-screenshots; then
             mkdir -p shots fastlane/screenshots/ios fastlane/screenshots/mac
             # FETCH_HEAD: the checkout only maps main, so origin/appstore-screenshots may not exist.

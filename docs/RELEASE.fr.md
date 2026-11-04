@@ -176,8 +176,8 @@ réseau, fichiers choisis par l'utilisateur).
 
    Chaque lancement de *Release* (macOS 26, Xcode 26.6 comme la CI : `DEVELOPER_DIR` de chaque job macOS ;
    Xcode 26 est exigé par Apple depuis avril 2026) lance les tests du cœur (un lancement de l'édition TestFlight
-   s'en passe quand la CI a déjà réussi sur le même commit, comme pour un push sur main ; l'édition App Store les
-   lance toujours),
+   s'en passe quand la CI a déjà réussi, ses jobs macOS lancés, sur le même commit ou le même arbre, comme pour un
+   push sur main ; l'édition App Store les lance toujours ; [CI.fr.md](CI.fr.md)),
    puis trois vérifications dont chacune arrête le lancement avant toute compilation ou soumission : *Review
    playlist answers* (la review d'Apple teste l'app avec la playlist que donnent les notes :
    `check_review_playlist.py --online` la récupère sur le site de main et vérifie que chacun de ses flux et son
@@ -233,7 +233,9 @@ réseau, fichiers choisis par l'utilisateur).
    (règle 2.2) ; `check_app_store.py` vérifie les trois.
 4. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
-   fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.
+   fiche. *Release* le lance d'abord, pour un tag et les cibles `release`, `all` et `metadata*`, et l'envoi de la
+   fiche l'attend ; quand une capture échoue, les captures déjà sur la branche sont envoyées. Il ne tourne plus sur les
+   push : lancez-le à la main pour voir les captures avant une release ([CI.fr.md](CI.fr.md#captures-app-store)).
 
    **En-tête et résultats de recherche** (iPhone et iPad sous iOS / iPadOS 27 ou plus ; pas le Mac) : l'onglet
    *En-tête et résultats de recherche* de la page de la version. Les images sont

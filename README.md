@@ -291,6 +291,8 @@ cd Packages/IPTVCore && swift test
 
 ### What CI checks beyond unit tests
 
+Which workflow runs when, what decides the jobs a change runs, and the CI's costs: [docs/CI.md](docs/CI.md).
+
 Some defects only show up in real conditions, where tests on simulated data cannot see them:
 
 - **Adding a playlist end to end** (`AppTests/PlaylistOverHTTPTests.swift`, UI test

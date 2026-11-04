@@ -316,6 +316,9 @@ cd Packages/IPTVCore && swift test
 
 ### Ce que vérifie la CI en plus des tests unitaires
 
+Quel workflow tourne quand, ce qui décide des jobs que lance un changement, et ce que coûte la CI :
+[docs/CI.fr.md](docs/CI.fr.md).
+
 Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur données simulées ne les voient pas :
 
 - **Ajout d'une playlist de bout en bout** (`AppTests/PlaylistOverHTTPTests.swift`, test UI

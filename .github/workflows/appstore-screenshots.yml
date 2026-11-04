@@ -2,23 +2,16 @@ name: App Store screenshots
 
 # Captures the App Store screenshots (iPhone 6.9", iPad 13" and Mac, English and French) from the
 # fixture catalogue and publishes them on the `appstore-screenshots` branch (Mac ones under `mac/`);
-# the release workflow uploads them with the listing.
+# the release workflow uploads them with the listing. Run by the release workflow before it uploads the listing (a
+# version tag, targets release, all and metadata), or by hand to look at them; not on pushes: nothing reads them between
+# releases (docs/CI.md). One macOS job per device builds once and captures each language from that build.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - UITests/AppStoreScreenshots.swift
-      - MacUITests/**
-      - App/Model/UITestFixture.swift
-      - App/Model/ScreenshotRoute.swift
-      - App/Features/Home/**
-      - .github/workflows/appstore-screenshots.yml
-      - .github/scripts/collect_appstore_screenshots.py
-      - .github/scripts/pick_simulator.py
+  workflow_call:
 
+# The release workflow's call and a run by hand never cancel each other (github.workflow is the caller's name in a call).
 concurrency:
-  group: appstore-screenshots
+  group: appstore-screenshots-${{ github.workflow }}
   cancel-in-progress: true
 
 permissions:
@@ -26,7 +19,7 @@ permissions:
 
 jobs:
   capture:
-    name: ${{ matrix.device }} · ${{ matrix.locale }}
+    name: ${{ matrix.device }}
     runs-on: macos-26
     # The Xcode the apps are built with, not the image's default (which moves with each image). When an image no
     # longer has it, the Xcode step below says so: raise it in every macOS job (ci.yml, appstore-screenshots.yml,
@@ -38,7 +31,6 @@ jobs:
       fail-fast: false
       matrix:
         device: [iphone-max, ipad-13]
-        locale: [en-US, fr-FR]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,33 +59,45 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 \
             --wifiBars 3 --cellularMode active --cellularBars 4 || true
-      - name: Capture
-        env:
-          TEST_RUNNER_SCREENSHOT_LANG: ${{ startsWith(matrix.locale, 'fr') && 'fr' || 'en' }}
+      - name: Build for testing
         run: |
           set -o pipefail
-          xcodebuild test \
+          xcodebuild build-for-testing \
             -project Ondo.xcodeproj -scheme Ondo \
             -destination "id=${{ steps.sim.outputs.udid }}" \
-            -only-testing:OndoUITests/AppStoreScreenshots \
             -derivedDataPath build/shots \
             -clonedSourcePackagesDirPath build/spm \
-            -resultBundlePath build/Shots.xcresult \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
-      - name: Export
-        if: always()
+      - name: Capture and export, each language
+        # The test reads its language from SCREENSHOT_LANG (TEST_RUNNER_ variables reach the test runner); each launch
+        # starts from -uitest-reset, so one language leaves nothing to the next. Both languages are tried, and any
+        # failure fails the job.
         run: |
-          mkdir -p raw out
-          xcrun xcresulttool export attachments --path build/Shots.xcresult --output-path raw
-          python3 .github/scripts/collect_appstore_screenshots.py raw out ${{ matrix.locale }} ${{ matrix.device }}
+          status=0
+          for locale in en-US fr-FR; do
+            case "$locale" in fr*) lang=fr ;; *) lang=en ;; esac
+            set -o pipefail
+            TEST_RUNNER_SCREENSHOT_LANG=$lang xcodebuild test-without-building \
+              -project Ondo.xcodeproj -scheme Ondo \
+              -destination "id=${{ steps.sim.outputs.udid }}" \
+              -only-testing:OndoUITests/AppStoreScreenshots \
+              -derivedDataPath build/shots \
+              -clonedSourcePackagesDirPath build/spm \
+              -resultBundlePath "build/Shots-$locale.xcresult" \
+              CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions || status=1
+            mkdir -p "raw-$locale" out
+            xcrun xcresulttool export attachments --path "build/Shots-$locale.xcresult" --output-path "raw-$locale" || status=1
+            python3 .github/scripts/collect_appstore_screenshots.py "raw-$locale" out "$locale" ${{ matrix.device }} || status=1
+          done
+          exit $status
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: shots-${{ matrix.device }}-${{ matrix.locale }}
+          name: shots-${{ matrix.device }}
           path: out
 
   mac:
-    name: mac · ${{ matrix.locale }}
+    name: mac
     runs-on: macos-26
     # The Xcode the apps are built with, not the image's default (which moves with each image). When an image no
     # longer has it, the Xcode step below says so: raise it in every macOS job (ci.yml, appstore-screenshots.yml,
@@ -101,10 +105,6 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        locale: [en-US, fr-FR]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -123,34 +123,44 @@ jobs:
           path: build/spm
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
           restore-keys: spm-${{ runner.os }}-
-      - name: Capture (macOS UI test, ad-hoc signed)
-        env:
-          TEST_RUNNER_SCREENSHOT_LANG: ${{ startsWith(matrix.locale, 'fr') && 'fr' || 'en' }}
+      - name: Build for testing (macOS UI test, ad-hoc signed)
         run: |
           set -o pipefail
-          xcodebuild test \
+          xcodebuild build-for-testing \
             -project Ondo.xcodeproj -scheme OndoMacScreenshots \
             -destination "platform=macOS" \
             -derivedDataPath build/macos \
             -clonedSourcePackagesDirPath build/spm \
-            -resultBundlePath build/MacShots.xcresult \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= | xcbeautify --renderer github-actions
-      - name: Export
-        if: always()
+      - name: Capture and export, each language
         run: |
-          mkdir -p raw out
-          xcrun xcresulttool export attachments --path build/MacShots.xcresult --output-path raw
-          python3 .github/scripts/collect_appstore_screenshots.py raw out/mac ${{ matrix.locale }} mac
+          status=0
+          for locale in en-US fr-FR; do
+            case "$locale" in fr*) lang=fr ;; *) lang=en ;; esac
+            set -o pipefail
+            TEST_RUNNER_SCREENSHOT_LANG=$lang xcodebuild test-without-building \
+              -project Ondo.xcodeproj -scheme OndoMacScreenshots \
+              -destination "platform=macOS" \
+              -derivedDataPath build/macos \
+              -clonedSourcePackagesDirPath build/spm \
+              -resultBundlePath "build/MacShots-$locale.xcresult" \
+              CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= | xcbeautify --renderer github-actions || status=1
+            mkdir -p "raw-$locale" out
+            xcrun xcresulttool export attachments --path "build/MacShots-$locale.xcresult" --output-path "raw-$locale" || status=1
+            python3 .github/scripts/collect_appstore_screenshots.py "raw-$locale" out/mac "$locale" mac || status=1
+          done
+          exit $status
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: shots-mac-${{ matrix.locale }}
+          name: shots-mac
           path: out
 
   publish:
     name: Publish to the appstore-screenshots branch
     needs: [capture, mac]
-    # The iPhone / iPad captures are published even if the Mac ones failed.
+    # The iPhone / iPad captures are published even if the Mac ones failed; the Mac ones already on the branch are
+    # then kept. Nothing is published when an iPhone / iPad capture failed: the release uploads the branch as it was.
     if: ${{ !cancelled() && needs.capture.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -165,12 +175,22 @@ jobs:
       - name: Push
         env:
           GH_TOKEN: ${{ github.token }}
+          MAC: ${{ needs.mac.result }}
         run: |
+          mkdir -p shots
           cd shots
-          find . -type f | sort
-          echo "App Store screenshots of ${GITHUB_SHA} (run ${GITHUB_RUN_ID})" > README.md
           git init -q
           git checkout -q -b appstore-screenshots
+          if [ "$MAC" != success ]; then
+            rm -rf mac
+            if git fetch -q --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" appstore-screenshots \
+                && git cat-file -e FETCH_HEAD:mac 2>/dev/null; then
+              git archive FETCH_HEAD mac | tar -x
+              echo "::warning::The Mac captures failed: the Mac screenshots already on the branch are kept."
+            fi
+          fi
+          find . -path ./.git -prune -o -type f -print | sort
+          echo "App Store screenshots of ${GITHUB_SHA} (run ${GITHUB_RUN_ID})" > README.md
           git config user.name "ci"
           git config user.email "ci@users.noreply.github.com"
           git add .
