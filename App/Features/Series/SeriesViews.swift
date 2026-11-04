@@ -50,6 +50,11 @@ struct SeriesGridView: View {
         .searchable(text: $filter, prompt: Text("Search series"))
         .navigationTitle(category.id == PseudoCategory.all ? String(localized: "All Series") : category.name)
         .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu() } }
+        // Sorted by rating: TMDb's ratings the grid lacks are fetched in the background (`AppModel.fillRatingSort`).
+        .task(id: model.ratingFillID(category: category)) {
+            guard model.settings.posterSort == .rating, category.id != PseudoCategory.favorites else { return }
+            await model.fillRatingSort(model.series(in: category.id == PseudoCategory.all ? nil : category, sort: .rating).map(ShowcaseItem.series))
+        }
     }
 }
 

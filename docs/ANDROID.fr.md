@@ -71,7 +71,12 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   bout de la ligne du nom de la page, que Haut depuis la première rangée atteint, avec une puce Masquer les films déjà
   vus pour les films (`TvSortMenu.kt`) ; Bas depuis l'onglet ne s'y arrête jamais) : ordre de la playlist
   (sur ces pages, leur propre ordre), nom, date d'ajout, date de sortie ou note. Les titres d'un genre trouvés via
-  TMDb sont triés avec les autres (`UiMappers.browse`).
+  TMDb sont triés avec les autres (`UiMappers.browse`). Par note, avec le jeton TMDb de l'utilisateur : la note TMDb
+  pondérée par son nombre de votes d'abord (`WeightedRating.ratingOrder`, les m = 200 et C = 6,5 du carrousel sans
+  son minimum de 50 votes), puis les titres sans note TMDb selon la note du fournisseur, à égalité par titre ; la page
+  demande à TMDb en arrière-plan jusqu'à 100 de ses titres jamais demandés, deux à la fois au rythme des autres
+  requêtes, et se retrie deux fois : après 20 notes et à la fin (`RatingFill`). Sans jeton, la note du fournisseur
+  comme avant.
 - **Affiches sur TV** : maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
   court message dit lequel), et une coche marque les titres de Ma liste. Dans Ma liste, les personnes gardées ont
   leur photo (complétée depuis leur page ou les titres gardés sur l'appareil).

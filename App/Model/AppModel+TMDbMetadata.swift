@@ -35,6 +35,11 @@ final class TMDbMetadata {
     @ObservationIgnored let pacer = RequestPacer(interval: TMDbMetadata.requestInterval)
     /// Each title's keys, by its id and the TMDb id its details gave (computing a key reads the title's words).
     @ObservationIgnored var keysCache: [String: [String]] = [:]
+    /// TMDb's votes the grids sorted by rating rank by, by title (`ShowcaseItem.id`): taken from `titles` when a grid
+    /// is sorted and as its fill brings more (`AppModel+RatingSort`), not at each answer.
+    @ObservationIgnored var sortVotes: [String: (average: Double, count: Int)] = [:]
+    /// Changes when `sortVotes` does: the grids sorted by rating sort again.
+    var sortRevision = 0
 }
 
 extension AppModel {
@@ -229,7 +234,7 @@ extension AppModel {
 
     /// Asks TMDb about a title and keeps the answer, a "not found" included, under each of its keys. A request TMDb did
     /// not answer keeps nothing: the title is asked again at the next launch.
-    private func fetchTMDbMetadata(for item: ShowcaseItem, paced: Bool) async {
+    func fetchTMDbMetadata(for item: ShowcaseItem, paced: Bool) async {
         guard let credential = secrets.get(Keychain.tmdbKey) else { return }
         let details = cachedDetails(for: item)
         let title = details.map(\.title).flatMap { $0.isEmpty ? nil : $0 } ?? item.title

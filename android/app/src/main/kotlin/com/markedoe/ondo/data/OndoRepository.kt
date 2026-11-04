@@ -1902,6 +1902,25 @@ class OndoRepository(
         return true
     }
 
+    /**
+     * [prepareTmdbMetadata] for a grid sorted by rating ([com.markedoe.ondo.core.library.RatingFill]): true when it was
+     * asked and TMDb's answer, now kept, has a rating.
+     */
+    suspend fun prepareTmdbRating(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?): Boolean {
+        if (!prepareTmdbMetadata(key, series, tmdbId, title, year)) return false
+        val keys = MetadataKey.all(series, tmdbId, title, year)
+        return withContext(io) { runCatching { metadata.titles(keys).values.any { it.rating != null } }.getOrDefault(false) }
+    }
+
+    /**
+     * Of [titles] (a poster's key to its keys in the store, [MetadataKey.all]), those TMDb never answered for: the device
+     * kept nothing under any of their keys, a "not found" included.
+     */
+    suspend fun withoutTmdbAnswer(titles: Map<String, List<String>>): Set<String> = withContext(io) {
+        val kept = runCatching { metadata.titles(titles.values.flatten()) }.getOrDefault(emptyMap())
+        titles.filterValues { keys -> keys.none { it in kept } }.keys
+    }
+
     /** [show]: put what was found on screen (a title shown); a title prepared ahead is only kept on the device. */
     private suspend fun tmdbMetadata(key: String, keys: List<String>, series: Boolean, tmdbId: String?, title: String, year: Int?, ahead: Boolean, client: TmdbClient?, show: Boolean) {
         run {

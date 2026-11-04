@@ -86,6 +86,11 @@ struct MovieGridView: View {
         .searchable(text: $filter, prompt: Text("Search movies"))
         .navigationTitle(category.id == PseudoCategory.all ? String(localized: "All Movies") : category.name)
         .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu(offersHideWatched: category.id != PseudoCategory.favorites) } }
+        // Sorted by rating: TMDb's ratings the grid lacks are fetched in the background (`AppModel.fillRatingSort`).
+        .task(id: model.ratingFillID(category: category)) {
+            guard model.settings.posterSort == .rating, category.id != PseudoCategory.favorites else { return }
+            await model.fillRatingSort(model.movies(in: category.id == PseudoCategory.all ? nil : category, sort: .rating).map(ShowcaseItem.movie))
+        }
     }
 }
 

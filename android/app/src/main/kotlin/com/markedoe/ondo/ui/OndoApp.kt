@@ -34,6 +34,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -69,11 +70,13 @@ import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
+import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.OndoState
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.TipsState
 import com.markedoe.ondo.player.PlayerActivity
 import com.markedoe.ondo.ui.components.LocalPosterMyList
@@ -725,8 +728,16 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
     }
     // The category grids' order, chosen on either.
     val sort = state.settings.posterSort
-    val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found, sort) {
-        withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found, sort) }
+    val kept by keptForRatingSort(viewModel, "browse", state, sort)
+    val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found, sort, kept) {
+        withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found, sort, kept) }
+    }
+    // Sorted by rating: TMDb's ratings the page lacks are fetched in the background while it shows.
+    LaunchedEffect(route, sort, state.settings.tmdbToken, state.content, found) {
+        if (sort != PosterSort.RATING || state.settings.tmdbToken == null) return@LaunchedEffect
+        val facts = viewModel.keptPosterFacts()
+        val page = withContext(Dispatchers.Default) { UiMappers.browse(viewModel.state.value, kind, route.value, locale, found, sort, facts) }
+        viewModel.fillRatingSort(page.movies + page.series)
     }
     BrowseScreen(
         browse,
@@ -798,11 +809,21 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             value = filter
         }
     }
+    val kept by keptForRatingSort(viewModel, "grid", state, sort)
     // Off the main thread: sorting a hundred thousand titles must not freeze the screen while typing.
-    val items by produceKept("grid", emptyList<ShowcaseItem>(), state, route, query, sort) {
+    val items by produceKept("grid", emptyList<ShowcaseItem>(), state, route, query, sort, kept) {
         withContext(Dispatchers.Default) {
-            UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
+            UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort, kept)
         }
+    }
+    // Sorted by rating: TMDb's ratings the grid lacks are fetched in the background while it shows.
+    LaunchedEffect(route, sort, state.settings.tmdbToken, state.content) {
+        if (sort != PosterSort.RATING || state.settings.tmdbToken == null) return@LaunchedEffect
+        val facts = viewModel.keptPosterFacts()
+        val all = withContext(Dispatchers.Default) {
+            UiMappers.grid(viewModel.state.value, route.series, route.categoryId, route.myList, "", route.anyType, sort, facts)
+        }
+        viewModel.fillRatingSort(all)
     }
     CompositionLocalProvider(LocalShowsMyList provides route.myList) {
         PosterGridScreen(
@@ -817,6 +838,19 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
             onHideWatched = viewModel::setHideWatchedMovies,
         )
+    }
+}
+
+/**
+ * What TMDb said and the device kept, for a page sorted by rating with the viewer's TMDb token
+ * ([UiMappers.sortRatings]): read again when a fill brought more ([OndoViewModel.ratingSortVersion]); empty otherwise.
+ */
+@Composable
+private fun keptForRatingSort(viewModel: OndoViewModel, page: String, state: OndoState, sort: PosterSort): State<Map<String, TitleMetadata>> {
+    val version by viewModel.ratingSortVersion.collectAsStateWithLifecycle()
+    val token = state.settings.tmdbToken
+    return produceKept("$page-ratings", emptyMap<String, TitleMetadata>(), state.content, state.tmdbRatings, token, sort, version) {
+        if (sort == PosterSort.RATING && token != null) viewModel.keptPosterFacts() else emptyMap()
     }
 }
 
