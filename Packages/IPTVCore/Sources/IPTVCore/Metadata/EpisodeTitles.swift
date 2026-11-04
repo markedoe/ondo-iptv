@@ -10,12 +10,19 @@ public enum EpisodeTitles {
     /// A title's own last marks, which `CatalogueMatcher.displayTitle` leaves out.
     private static let endMarks = CharacterSet(charactersIn: ".!?…")
 
-    /// "Episode 2", "Épisode 02", "Ep. 2", "E02", "2": a number, not a title.
+    /// "Episode 2", "Épisode 02", "Ep. 2", "E02": a number, not a title. A bare number is one only when it is the
+    /// episode's own ("2" for episode 2): "42" or "1984" can be a title.
     // swiftlint:disable:next force_try
     private static let numberOnly = try! NSRegularExpression(
-        pattern: #"^(?:(?:episode|épisode|episodio|episódio|epizod|folge|capitulo|capítulo|ep\.?|e)\s*)?0*\d{1,4}$"#,
+        pattern: #"^((?:episode|épisode|episodio|episódio|epizod|folge|capitulo|capítulo|ep\.?|e)\s*)?0*(\d{1,4})$"#,
         options: [.caseInsensitive]
     )
+
+    private static func isNumberOnly(_ name: String, number: Int) -> Bool {
+        guard let match = numberOnly.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)) else { return false }
+        if match.range(at: 1).location != NSNotFound { return true }
+        return Range(match.range(at: 2), in: name).flatMap { Int(name[$0]) } == number
+    }
 
     /// A history's line of an episode, "S03E02 · <title>": its code, then its title.
     // swiftlint:disable:next force_try
@@ -51,7 +58,7 @@ public enum EpisodeTitles {
                 }
             }
         }
-        if numberOnly.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)) != nil { name = "" }
+        if isNumberOnly(name, number: number) { name = "" }
         return name.isEmpty ? placeholder(number) : name
     }
 

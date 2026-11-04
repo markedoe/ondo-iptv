@@ -17,11 +17,19 @@ object EpisodeTitles {
     /** A title's own last marks, which [CatalogueMatcher.displayTitle] leaves out. */
     private const val END_MARKS = ".!?…"
 
-    /** "Episode 2", "Épisode 02", "Ep. 2", "E02", "2": a number, not a title. */
+    /**
+     * "Episode 2", "Épisode 02", "Ep. 2", "E02": a number, not a title. A bare number is one only when it is the
+     * episode's own ("2" for episode 2): "42" or "1984" can be a title.
+     */
     private val numberOnly = Regex(
-        """^(?:(?:episode|épisode|episodio|episódio|epizod|folge|capitulo|capítulo|ep\.?|e)\s*)?0*\d{1,4}$""",
+        """^((?:episode|épisode|episodio|episódio|epizod|folge|capitulo|capítulo|ep\.?|e)\s*)?0*(\d{1,4})$""",
         RegexOption.IGNORE_CASE,
     )
+
+    private fun isNumberOnly(name: String, number: Int): Boolean {
+        val match = numberOnly.matchEntire(name) ?: return false
+        return match.groupValues[1].isNotEmpty() || match.groupValues[2].toIntOrNull() == number
+    }
 
     /** The core's name of episode [number], in English ([PlaceholderNames.EPISODE]). */
     fun placeholder(number: Int): String = "${PlaceholderNames.EPISODE} $number"
@@ -48,7 +56,7 @@ object EpisodeTitles {
                 if (rest.isEmpty() || rest.first() in SEPARATORS) name = rest.trim { it in SEPARATORS }
             }
         }
-        if (numberOnly.matches(name)) name = ""
+        if (isNumberOnly(name, number)) name = ""
         return name.ifEmpty { placeholder(number) }
     }
 

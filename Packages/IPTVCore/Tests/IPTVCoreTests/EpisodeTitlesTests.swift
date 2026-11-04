@@ -22,6 +22,9 @@ final class EpisodeTitlesTests: XCTestCase {
         XCTAssertEqual(EpisodeTitles.clean("Tom Clancy's Jack Ryan - The Big Fish", seriesName: jackRyan, number: 1), "The Big Fish")
         XCTAssertEqual(EpisodeTitles.clean("[EN] The Big Fish", seriesName: jackRyan, number: 1), "The Big Fish")
         XCTAssertEqual(EpisodeTitles.clean("Cat's in the Bag...", seriesName: "Copper Valley", number: 2), "Cat's in the Bag...")
+        // A number that is not the episode's own is its title.
+        XCTAssertEqual(EpisodeTitles.clean("42", seriesName: jackRyan, number: 7), "42")
+        XCTAssertEqual(EpisodeTitles.clean("07", seriesName: jackRyan, number: 7), "Episode 7")
         // A title that only starts like the series' name is the episode's own.
         XCTAssertEqual(EpisodeTitles.clean("Copper Valleys", seriesName: "Copper Valley", number: 1), "Copper Valleys")
     }

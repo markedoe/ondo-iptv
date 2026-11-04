@@ -116,7 +116,7 @@ chaque changement de l'interface.
   bande-annonce de TMDb (d'abord dans la langue de l'app, puis en anglais) quand le fournisseur n'en donne pas, et le
   nombre de votes à côté de la note ; les photos du casting en rangée sur la fiche d'un titre (pour une série, le
   casting de toutes ses saisons et ses créateurs) ; pour la saison d'une série que vous affichez, l'image et le nom
-  donnés par TMDb aux épisodes que le fournisseur donne sans ; les personnes que TMDb connaît dans la recherche, avec leur photo, et tous les
+  donnés par TMDb aux épisodes que le fournisseur laisse sans image ni titre ; les personnes que TMDb connaît dans la recherche, avec leur photo, et tous les
   titres de la playlist sur la page d'un acteur ou d'un réalisateur, sous sa photo. Les réponses de TMDb sont gardées
   sur l'appareil (30 jours, 7 pour un titre que TMDb ne connaît pas) : les fiches les affichent tout de suite, même
   hors connexion, et seul ce qui manque ou est ancien est redemandé, en arrière-plan, quelques requêtes par seconde.
@@ -206,7 +206,7 @@ chaque changement de l'interface.
   fournisseur manque ou ne se charge pas, la bande-annonce de TMDb (d'abord dans la langue de l'app) quand le
   fournisseur n'en donne pas, le nombre de votes à côté de la note, les photos du casting sur la fiche d'un titre
   (pour une série, le casting de toutes ses saisons et ses créateurs), l'image et le nom donnés par TMDb aux
-  épisodes que le fournisseur donne sans, les personnes que TMDb connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un
+  épisodes que le fournisseur laisse sans image ni titre, les personnes que TMDb connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un
   réalisateur. Les réponses de TMDb sont gardées sur l'appareil (30 jours, 7 pour un titre que TMDb ne connaît pas) :
   les fiches les affichent tout de suite, même hors ligne, et les personnes de ces titres se trouvent dans la
   recherche et sur leur page sans réseau. Une image du fournisseur qui ne mène nulle part n'est pas réessayée

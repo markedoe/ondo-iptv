@@ -40,6 +40,9 @@ class EpisodeTitlesTest {
         assertEquals("The Big Fish", EpisodeTitles.clean("Tom Clancy's Jack Ryan - The Big Fish", jackRyan, 1))
         assertEquals("The Big Fish", EpisodeTitles.clean("[EN] The Big Fish", jackRyan, 1))
         assertEquals("Cat's in the Bag...", EpisodeTitles.clean("Cat's in the Bag...", "Copper Valley", 2))
+        // A number that is not the episode's own is its title.
+        assertEquals("42", EpisodeTitles.clean("42", jackRyan, 7))
+        assertEquals("Episode 7", EpisodeTitles.clean("07", jackRyan, 7))
         // A title that only starts like the series' name is the episode's own.
         assertEquals("Copper Valleys", EpisodeTitles.clean("Copper Valleys", "Copper Valley", 1))
     }
