@@ -67,12 +67,12 @@ public enum WeightedRating {
         title: (Item) -> String,
         id: (Item) -> String
     ) -> [Item] {
-        // (item, weighted rating, votes, provider's rating, title, id): each read once, not at every comparison.
-        typealias Keyed = (item: Item, score: Double?, votes: Int, provider: Double?, title: String, id: String)
-        let keyed = items.map { item -> Keyed in
+        // Each read once, not at every comparison.
+        let keyed = items.map { item -> RatedItem<Item> in
             let votes = tmdb(item)
             let score = votes.flatMap { weighted(average: $0.average, votes: $0.count) }
-            return (item, score, score == nil ? 0 : votes?.count ?? 0, provider(item).flatMap { $0 > 0 ? $0 : nil }, title(item), id(item))
+            return RatedItem(item: item, score: score, votes: score == nil ? 0 : votes?.count ?? 0,
+                             provider: provider(item).flatMap { $0 > 0 ? $0 : nil }, title: title(item), id: id(item))
         }
         return keyed.sorted { a, b in
             switch (a.score, b.score) {
@@ -111,4 +111,14 @@ public enum WeightedRating {
             }
             .map(\.0)
     }
+}
+
+/// An item of `WeightedRating.ratingOrder` with what it is sorted by.
+private struct RatedItem<Item> {
+    let item: Item
+    let score: Double?
+    let votes: Int
+    let provider: Double?
+    let title: String
+    let id: String
 }

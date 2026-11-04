@@ -32,8 +32,8 @@ extension AppModel {
         // Keys worked out off the main thread (a category can have thousands of titles).
         let inputs = items.map { item in (item.id, item.contentType, cachedDetails(for: item)?.tmdbID, item.title, item.year) }
         let keyed = await Task.detached(priority: .userInitiated) {
-            inputs.map { id, type, tmdbID, title, year in
-                (id + "|" + (tmdbID ?? ""), MetadataKey.all(type, tmdbID: tmdbID, name: title, year: year))
+            inputs.map { input in
+                (input.0 + "|" + (input.2 ?? ""), MetadataKey.all(input.1, tmdbID: input.2, name: input.3, year: input.4))
             }
         }.value
         for (cacheKey, keys) in keyed where state.keysCache[cacheKey] == nil { state.keysCache[cacheKey] = keys }

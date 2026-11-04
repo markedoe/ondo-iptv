@@ -50,7 +50,9 @@ final class RatingFillTests: XCTestCase {
         let asked = await tmdb.asked
         let after = await resortedAfter.values
         let mostAtOnce = await tmdb.mostAtOnce
-        XCTAssertEqual(asked, ids, "each title once, in order")
+        // Each title once; two run at once, so two neighbours may start in either order.
+        XCTAssertEqual(asked.count, ids.count)
+        XCTAssertEqual(Set(asked), Set(ids))
         XCTAssertEqual(resorts, 2)
         XCTAssertTrue((RatingFill.firstBatch...RatingFill.firstBatch + RatingFill.concurrency).contains(after.first ?? 0), "first after a batch: \(after)")
         XCTAssertEqual(after.last, ids.count)
