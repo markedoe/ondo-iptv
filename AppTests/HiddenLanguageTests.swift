@@ -136,4 +136,46 @@ final class HiddenLanguageTests: XCTestCase {
         model.setHidden(false, tag: "PT")
         XCTAssertTrue(surfaces(model)["movies", default: []].contains { $0.contains("Carreira") })
     }
+
+    /// The same lists, once the language is hidden on another device in this profile and sync applies it (docs/SYNC.md,
+    /// "Hidden categories"): as a language, or its categories one by one; then shown again there.
+    func testNoListShowsTheTitlesOfALanguageHiddenOnAnotherDevice() async throws {
+        let model = try await model()
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        let concert = try XCTUnwrap(model.content.movies.first { $0.name.contains("Carreira") })
+        model.toggleFavorite(concert)
+        /// What another device in the same profile sends: this device's data with `change` made there.
+        func elsewhere(_ change: (inout SyncSnapshot) -> Void) -> SyncSnapshot {
+            var snapshot = model.syncSnapshot()
+            snapshot.device = "other"
+            change(&snapshot)
+            return snapshot
+        }
+        let languageCategories = (model.content.movieCategories + model.content.seriesCategories + model.content.liveCategories)
+            .filter { $0.name.contains("|PT|") }
+        XCTAssertFalse(languageCategories.isEmpty)
+        let ways: [(String, [SyncHidden], (Set<String>) -> Bool)] = [
+            ("as a language", [SyncHidden(kind: SyncHidden.tag, value: "PT", hiddenAt: model.syncStamp().syncMilliseconds)],
+             { names in names.contains { $0.contains("Saudade") || $0.contains("Carreira") } }),
+            ("one by one", languageCategories.map {
+                SyncHidden.forCategory(playlistID: playlist.id.uuidString, categoryID: $0.id, hiddenAt: model.syncStamp().syncMilliseconds)
+            }, { names in names.contains { $0.contains("Saudade") } }),
+        ]
+        for (how, records, shows) in ways {
+            await model.applySync(elsewhere { $0.hiddenCategories = records })
+            for (list, names) in surfaces(model) {
+                XCTAssertFalse(shows(Set(names)), "hidden \(how) on another device, \(list) still shows it: \(names)")
+            }
+            // Shown again there: every list shows it again.
+            let shownAt = model.syncStamp().syncMilliseconds
+            await model.applySync(elsewhere { snapshot in
+                snapshot.hiddenCategories = []
+                for record in records { snapshot.deleted[record.key] = shownAt }
+            })
+            let again = surfaces(model)
+            for list in ["movies", "series", "live", "search", "year"] {
+                XCTAssertTrue(again[list, default: []].contains { $0.contains("Saudade") }, "\(list) shows it again, shown again \(how)")
+            }
+        }
+    }
 }

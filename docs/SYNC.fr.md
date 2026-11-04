@@ -25,9 +25,10 @@ chaînes favorites, les acteurs et réalisateurs gardés dans Ma liste, les list
 ce qui a été terminé), les clés de services extérieurs saisies dans les Réglages (le jeton TMDb), l’ordre des
 rangées des onglets Films et Séries avec les rangées masquées (Réglages → Ordre des rangées), et les profils (nom,
 couleur, avatar, Enfant) avec, pour chaque profil, sa liste, ses chaînes favorites, ses personnes, ses listes, sa
-progression et son ordre des rangées (docs/PROFILES.fr.md).
+progression, son ordre des rangées et ses catégories, langues et styles masqués (docs/PROFILES.fr.md).
 
-Restent sur chaque appareil : les autres réglages, les catégories masquées, les modifications de chaînes, les rappels,
+Restent sur chaque appareil : les autres réglages, les chaînes masquées et les modifications de chaînes, les
+verrouillages de catégories (Apple), les rappels,
 les codes des profils (jamais envoyés, salés ou non : voir docs/PROFILES.fr.md), « Toujours ouvrir ce profil », les
 téléchargements, les catalogues eux-mêmes (chaque appareil télécharge ses playlists), et les playlists fichier (un
 fichier importé sur un appareil n’est pas sur les autres).
@@ -127,6 +128,7 @@ appareils Android.
   "people": [ … ],
   "keys": [ … ],
   "rows": [ … ],
+  "hiddenCategories": [ … ],
   "profiles": [ … ],
   "profileData": [ … ],
   "deleted": { "<clé>": 1760000000000 },
@@ -211,6 +213,43 @@ profil a son ordre : celui du profil principal est `rows`, celui d’un autre pr
 qu’un appareil gardait avant que chaque profil ait le sien devient celui du profil principal, avec son instant. Un
 profil Enfant ne peut pas changer son ordre.
 
+**Catégories masquées** (les catégories, langues et pays, et styles qu’un profil masque : Réglages → Catégories,
+« N’afficher que vos langues ? ») — `{"kind", "value", "hiddenAt"}`, un élément pour chaque chose masquée :
+
+- `kind` `category` : une catégorie d’une playlist ; `value` vaut `<id de playlist>|<id de catégorie>`, l’identifiant de
+  la playlist en minuscules, puis celui de la catégorie tel que les deux applications le font à partir de la playlist :
+  `<type>-<identifiant du fournisseur>` pour Xtream (`movie-12`, `live-7`), `<type>-<empreinte de son nom>` pour M3U (le
+  même `StableHash` sur les deux plateformes), l’identifiant que nomment les titres pour une catégorie que le panneau ne
+  liste pas. Les deux plateformes font le même identifiant de la même playlist, et l’identifiant de la playlist est celui
+  que la synchronisation lui donne (la règle 4 de la fusion fait un seul identifiant de la même playlist ajoutée deux
+  fois) : la clé est la même sur chaque appareil. Pas le nom de la catégorie : un panneau peut donner le même nom à deux
+  catégories, les noms de remplacement de l’application (« Other », « Uncategorized ») s’affichent traduits, et une
+  catégorie que le fournisseur renomme réapparaîtrait.
+- `kind` `tag` : une étiquette de langue ou de pays, masquée dans toutes les playlists ; `value` est l’étiquette telle que
+  les deux applications la lisent dans les noms, en capitales (`PT` pour « |PT| Filmes », `EX-YU`).
+- `kind` `word` : un style ou un mot, masqué dans toutes les playlists ; `value` tel que les deux applications le gardent
+  (`manga`, un mot saisi en minuscules sans accents).
+
+Clé : `hide:<kind>:<value>` ; instant : `hiddenAt` (fixé quand on le masque). Le réafficher retire l’élément et ajoute sa
+clé à `deleted`, datée de ce moment. Chaque élément se fusionne seul (règle 2) : masquer une catégorie sur un appareil et
+réafficher une langue sur un autre gardent les deux changements ; un réaffichage postérieur au masquage gagne, un
+masquage postérieur au réaffichage gagne, et à instants égaux le réaffichage gagne (règle 3). Les lecteurs écartent les
+éléments dont `kind` ou `value` est vide, contient un caractère de contrôle (sous U+0020, ou U+007F) ou dépasse 256 unités
+UTF-16, dont `kind` contient `:`, et une `category` dont `value` n’a pas de `|` ; ils mettent en minuscules l’identifiant
+de playlist d’une `category`, et des clés `hide:category:` de `deleted`. Les lecteurs gardent ensuite les 5000 clés
+masquées en dernier (le plus grand `hiddenAt` d’abord, puis la plus petite clé en unités UTF-16), dans la liste de
+l’instantané et dans celle de chaque profil (une fusion garde les mêmes 5000) ; l’appareil garde les siennes au-delà de
+cette limite, sauf réaffichage. Un appareil garde et transmet les éléments d’un `kind` qu’il ne connaît pas. Une
+catégorie d’une playlist supprimée part avec elle (règle 5) ; celle d’une playlist remplacée devient celle de la playlist
+gardée (règle 1). La liste est omise quand elle est vide, dans l’instantané et dans `profileData` : un instantané sans
+aucune est écrit, et condensé, comme une version antérieure l’écrit. Un instantané sans `hiddenCategories` (d’une version
+antérieure) ne réaffiche rien : seul `deleted` le fait. Une version antérieure retire la liste de ce qu’elle garde et
+transmet, mais garde les clés `hide:` de `deleted` comme les autres et les transmet : un réaffichage passe par elle, un
+masquage non (il passe quand les appareils rencontrent une version récente), et rien n’est perdu. Chaque profil a la
+sienne : celle du profil principal est `hiddenCategories`, celle d’un autre profil est dans son `profileData`. Un profil
+Enfant ne peut pas changer la sienne (un parent le peut, docs/PROFILES.fr.md), et les catégories qui semblent pour adultes
+y restent masquées quoi que dise la liste.
+
 **Profils** (docs/PROFILES.fr.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` est un UUID
 en minuscules ; celui du profil principal est `00000000-0000-0000-0000-000000000001`. `symbol` vaut `initial`, un nom
 d’icône ou un emoji. Jamais de code : le code d’un profil reste sur son appareil. Clé : `profile:<id>` ; instant :
@@ -220,7 +259,7 @@ crée, « Moi ») n’est pas envoyé. Supprimer un profil ajoute `profile:<id>`
 jamais supprimé (une suppression de celui-ci est ignorée). Les lecteurs gardent au plus 16 profils : le principal,
 puis par ID.
 
-**Données de profil** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "deleted"?}` : les
+**Données de profil** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "hiddenCategories"?, "deleted"?}` : les
 éléments d’un profil autre que le principal, selon les mêmes règles que ceux de l’instantané lui-même, avec ce qui a
 été supprimé dans ce profil. Les éléments du profil principal sont ceux de l’instantané lui-même : un appareil plus
 ancien, qui ne connaît pas les profils, lit et écrit les données du profil principal, ignore `profiles` et
@@ -273,7 +312,8 @@ change rien.
      petite `image` ;
    - clé : `value` ;
    - rangées : le nombre de clés d’`order` en décimal, un saut de ligne, puis les clés d’`order` et de `hidden` jointes
-     par un saut de ligne (aucune clé n’en contient).
+     par un saut de ligne (aucune clé n’en contient) ;
+   - catégorie masquée : aucune (deux éléments de même clé et de même instant sont les mêmes).
 3. Un élément dont l’instant n’est pas postérieur à l’instant de suppression de sa clé est écarté (à instants
    égaux, la suppression gagne).
 4. **La même playlist ajoutée deux fois** (sur deux appareils avant qu’ils se synchronisent) : les playlists de
@@ -283,12 +323,12 @@ change rien.
    `playlist:<id écarté>` est ajouté à `deleted` avec l’`updatedAt` de la playlist écartée, et
    `<id écarté>` → `<id gardé>` à `replaced`. Les éléments qui ont alors la même clé sont fusionnés à nouveau par la
    règle 2.
-5. Un favori, une progression ou un élément de liste dont la playlist est supprimée (`playlist:<id>` est dans
+5. Un favori, une progression, un élément de liste ou une catégorie masquée dont la playlist est supprimée (`playlist:<id>` est dans
    `deleted` et aucune playlist gardée n’a cet identifiant) est écarté. Celui dont la playlist est simplement
    inconnue (une playlist fichier d’un autre appareil) est gardé.
 6. Le résultat range les playlists par `addedAt` puis `id`, les favoris par `addedAt` puis clé, les progressions
    par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, les personnes par `addedAt` puis clé, les clés par
-   `service`, et les rangées par `tab`.
+   `service`, les rangées par `tab`, et les catégories masquées par clé.
 7. **Les listes se fusionnent partie par partie.** Une liste reste sauf si `list:<id>` est supprimé au plus tôt à
    son `updatedAt` le plus tardif, qu’elle garde. Son nom est celui au `renamedAt` le plus tardif (puis le plus petit
    nom). Ses éléments sont ceux de l’un ou l’autre côté, un par clé, l’`addedAt` le plus tardif gagnant (puis le plus
@@ -315,7 +355,8 @@ change rien.
 
 Un appareil garde l’instantané fusionné comme le sien : il ajoute les playlists qu’il n’avait pas (et les
 télécharge), met à jour celles qui ont changé, supprime celles qui ont été supprimées, et remplace Ma liste, les
-chaînes favorites, les personnes, les listes et la progression par celles fusionnées, garde l’ordre des rangées fusionné, et enregistre les clés des services qu’il
+chaînes favorites, les personnes, les listes et la progression par celles fusionnées, garde l’ordre des rangées fusionné, masque ce que la fusion masque (avec les
+siennes au-delà de la limite de 5000, sauf réaffichage depuis), et enregistre les clés des services qu’il
 utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synchronisé. La progression d’un film ou d’un épisode en lecture sur
 l’appareil n’est pas remplacée pendant la lecture : celle reçue attend, et s’applique à la fin de la lecture si elle
 est la plus tardive. Le catalogue n’est pas non plus rechargé sous le lecteur : quand la playlist utilisée a été
@@ -331,7 +372,7 @@ différents. Chaque appareil garde `last`, le dernier instant qu’il a donné o
 synchronisation, et au lancement jamais antérieur à un instant qu’il détient) :
 
 1. **Un changement fait sur l’appareil** (un favori ajouté ou retiré, une position, une liste modifiée, une playlist
-   ou une clé enregistrée, toute suppression) est daté `max(horloge murale, last + 1)`, qui devient `last`. Un
+   ou une clé enregistrée, une catégorie, une langue ou un style masqué ou réaffiché, toute suppression) est daté `max(horloge murale, last + 1)`, qui devient `last`. Un
    changement fait après que l’appareil en a vu un autre est donc daté après lui, quoi que dise son horloge murale :
    un retrait fait après un ajout gagne partout, et une position enregistrée après une position reçue gagne sur elle.
 2. **Un instantané reçu** perd d’abord les éléments et suppressions datés de plus d’**un jour** après l’horloge

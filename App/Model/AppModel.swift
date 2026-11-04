@@ -940,7 +940,9 @@ extension AppModel {
 
     func setHidden(_ hidden: Bool, category: MediaCategory) {
         guard let playlist = activePlaylist else { return }
-        updateLibrary { $0.setHidden(hidden, playlistID: playlist.id, categoryID: category.id) }
+        let now = syncStamp()
+        updateLibrary { $0.setHidden(hidden, playlistID: playlist.id, categoryID: category.id, now: now) }
+        syncSoon()
     }
 
     func setLocked(_ locked: Bool, category: MediaCategory) {
@@ -1117,6 +1119,10 @@ extension AppModel {
         }
         updateLibrary { library in
             library.hiddenCategoryKeys.formUnion(library.hiddenCategoryKeys.compactMap(moved))
+            // With the time each was hidden: sync carries it (docs/SYNC.md, "Hidden categories").
+            for (key, date) in library.categoryHiddenAt {
+                if let key = moved(key) { library.categoryHiddenAt[key] = max(library.categoryHiddenAt[key] ?? date, date) }
+            }
             for (key, date) in library.hiddenChannels {
                 if let key = moved(key) { library.hiddenChannels[key] = date }
             }

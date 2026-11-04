@@ -50,8 +50,16 @@ appartient au profil principal. Les réglages sont lus comme avant ; sans `activ
 s’ouvre. L’ordre des rangées enregistré avant que chaque profil ait le sien devient celui du profil principal, avec
 son instant (sur Android, il passe des réglages à la bibliothèque principale ; sur Apple, l’enregistrement de
 l’appareil dans `sync.json` est celui du profil principal). Un profil créé avant que les profils se synchronisent reçoit
-un instant au lancement suivant, pour voyager. Des tests sur les deux plateformes ouvrent des données écrites par une
-version précédente et vérifient que rien n’est perdu.
+un instant au lancement suivant, pour voyager.
+
+Les catégories, langues et styles masqués de chaque profil sont datés une fois, au premier lancement de la version qui
+les synchronise, d’un instant postérieur à tout ce que l’appareil détient (sur Apple, leurs dates antérieures et les
+instants où certains ont été réaffichés compris ; Android ne gardait pas d’instants). Ainsi, à la première session de deux
+appareils mis à jour qui ont chacun masqué des choses différentes dans un profil, aucun masquage de l’un ne peut être plus
+ancien qu’un réaffichage de l’autre : chaque profil finit avec les ensembles masqués des deux appareils, rien n’est
+réaffiché, et un changement ultérieur sur l’un ou l’autre gagne ensuite comme d’habitude. Apple note cette datation dans
+`sync.json` (`hiddenDated`), Android date tout élément masqué sans instant. Des tests sur les deux plateformes ouvrent des
+données écrites par une version précédente et vérifient que rien n’est perdu.
 
 ## Ouverture et changement de profil
 
@@ -122,6 +130,10 @@ Chaque profil se synchronise, quel que soit le profil ouvert (docs/SYNC.fr.md, �
   sur l’appareil ;
 - un appareil plus ancien qui ne connaît pas les profils lit et écrit les données du profil principal, comme avant ;
   il ignore les nouveaux champs, et la version du format ne change pas ;
+- les catégories, langues et styles masqués de chaque profil voyagent dans ses données, chacun fusionné seul : masquer
+  sur un appareil masque dans ce profil sur les autres, réafficher réaffiche, et le changement le plus récent gagne ; un
+  profil Enfant ne peut pas changer les siens (un parent le peut), et les catégories qui semblent pour adultes y restent
+  masquées quoi qu’apporte la synchronisation (`fixtures/sync/hidden-*.json`) ;
 - la suppression d’un profil perd face à ses données modifiées plus tard sur un appareil qui n’en savait rien : le
   profil revient avec ces données (`fixtures/sync/profiles-late-*.json`) ;
 - la première fois qu’un appareil reçoit des profils, un de ses profils créé à part (avant que les profils se

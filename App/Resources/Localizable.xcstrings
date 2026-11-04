@@ -20683,42 +20683,42 @@
         }
       }
     },
-    "Settings → Sync on this network keeps the same playlists, My List, collections, progress and TMDb token on your devices at home. Turn it on and keep Ondo open on each device: the devices find each other by themselves; iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other.\n\nEverything goes directly from one device to another on your network, never through the internet. There is no pairing and logins and the TMDb token travel unencrypted on the network, so turn it on at home only. Other settings, hidden categories and playlists imported from a file stay on each device. Only the main profile syncs.": {
+    "Settings → Sync on this network keeps the same playlists, My List, collections, progress and TMDb token on your devices at home. Turn it on and keep Ondo open on each device: the devices find each other by themselves; iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other.\n\nEverything goes directly from one device to another on your network, never through the internet. There is no pairing and logins and the TMDb token travel unencrypted on the network, so turn it on at home only. Each profile’s hidden categories, languages and styles follow it on your devices. Other settings and playlists imported from a file stay on each device.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Réglages → Synchroniser sur ce réseau garde les mêmes playlists, Ma liste, collections, reprises de lecture et jeton TMDb sur vos appareils à la maison. Activez-le sur chaque appareil et gardez Ondo ouvert : les appareils se trouvent tout seuls ; iPhone, iPad et Mac se synchronisent avec les autres appareils Ondo du réseau, pas entre eux.\n\nTout passe directement d’un appareil à l’autre sur votre réseau, jamais par internet. Il n’y a pas d’appairage et les identifiants et le jeton TMDb circulent sans chiffrement sur le réseau : ne l’activez que chez vous. Les autres réglages, les catégories masquées et les playlists importées d’un fichier restent sur chaque appareil. Seul le profil principal se synchronise."
+            "value": "Réglages → Synchroniser sur ce réseau garde les mêmes playlists, Ma liste, collections, reprises de lecture et jeton TMDb sur vos appareils à la maison. Activez-le sur chaque appareil et gardez Ondo ouvert : les appareils se trouvent tout seuls ; iPhone, iPad et Mac se synchronisent avec les autres appareils Ondo du réseau, pas entre eux.\n\nTout passe directement d’un appareil à l’autre sur votre réseau, jamais par internet. Il n’y a pas d’appairage et les identifiants et le jeton TMDb circulent sans chiffrement sur le réseau : ne l’activez que chez vous. Les catégories, langues et styles masqués de chaque profil le suivent sur vos appareils. Les autres réglages et les playlists importées d’un fichier restent sur chaque appareil."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajustes → Sincronizar en esta red mantiene las mismas playlists, Mi lista, colecciones, progreso y token de TMDb en tus dispositivos de casa. Actívalo en cada dispositivo y mantén Ondo abierto en ellos: los dispositivos se encuentran solos; iPhone, iPad y Mac se sincronizan con los demás dispositivos Ondo de la red, no entre sí.\n\nTodo va directamente de un dispositivo a otro por tu red, nunca por internet. No hay emparejamiento y los datos de acceso y el token de TMDb viajan sin cifrar por la red: actívalo solo en casa. Los demás ajustes, las categorías ocultas y las playlists importadas de un archivo se quedan en cada dispositivo. Solo se sincroniza el perfil principal."
+            "value": "Ajustes → Sincronizar en esta red mantiene las mismas playlists, Mi lista, colecciones, progreso y token de TMDb en tus dispositivos de casa. Actívalo en cada dispositivo y mantén Ondo abierto en ellos: los dispositivos se encuentran solos; iPhone, iPad y Mac se sincronizan con los demás dispositivos Ondo de la red, no entre sí.\n\nTodo va directamente de un dispositivo a otro por tu red, nunca por internet. No hay emparejamiento y los datos de acceso y el token de TMDb viajan sin cifrar por la red: actívalo solo en casa. Las categorías, idiomas y estilos ocultos de cada perfil lo siguen en tus dispositivos. Los demás ajustes y las playlists importadas de un archivo se quedan en cada dispositivo."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajustes → Sincronizar nesta rede mantém as mesmas playlists, Minha lista, coleções, progresso e token do TMDb nos seus dispositivos de casa. Ative em cada dispositivo e mantenha o Ondo aberto neles: os dispositivos se encontram sozinhos; iPhone, iPad e Mac sincronizam com os outros dispositivos Ondo da rede, não entre si.\n\nTudo vai direto de um dispositivo para outro pela sua rede, nunca pela internet. Não há pareamento e os dados de acesso e o token do TMDb trafegam sem criptografia na rede: ative apenas em casa. Os demais ajustes, as categorias ocultas e as playlists importadas de um arquivo ficam em cada dispositivo. Só o perfil principal é sincronizado."
+            "value": "Ajustes → Sincronizar nesta rede mantém as mesmas playlists, Minha lista, coleções, progresso e token do TMDb nos seus dispositivos de casa. Ative em cada dispositivo e mantenha o Ondo aberto neles: os dispositivos se encontram sozinhos; iPhone, iPad e Mac sincronizam com os outros dispositivos Ondo da rede, não entre si.\n\nTudo vai direto de um dispositivo para outro pela sua rede, nunca pela internet. Não há pareamento e os dados de acesso e o token do TMDb trafegam sem criptografia na rede: ative apenas em casa. As categorias, os idiomas e os estilos ocultos de cada perfil o acompanham nos seus dispositivos. Os demais ajustes e as playlists importadas de um arquivo ficam em cada dispositivo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "设置 → 在此网络上同步，可让你家中的设备保持相同的播放列表、我的片单、合集、播放进度和 TMDb 令牌。在每台设备上开启此设置并保持 Ondo 打开：设备会自动找到彼此；iPhone、iPad 和 Mac 与网络中的其他 Ondo 设备同步，而不是彼此同步。\n\n所有数据都在你的网络中直接从一台设备传到另一台，绝不经过互联网。没有配对，登录信息和 TMDb 令牌在网络中以未加密方式传输，因此请只在家中开启。其他设置、隐藏的分类和从文件导入的播放列表保留在各自的设备上。只有主个人资料会同步。"
+            "value": "设置 → 在此网络上同步，可让你家中的设备保持相同的播放列表、我的片单、合集、播放进度和 TMDb 令牌。在每台设备上开启此设置并保持 Ondo 打开：设备会自动找到彼此；iPhone、iPad 和 Mac 与网络中的其他 Ondo 设备同步，而不是彼此同步。\n\n所有数据都在你的网络中直接从一台设备传到另一台，绝不经过互联网。没有配对，登录信息和 TMDb 令牌在网络中以未加密方式传输，因此请只在家中开启。每个个人资料隐藏的分类、语言和风格会在你的各台设备上同步。其他设置和从文件导入的播放列表保留在各自的设备上。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "الإعدادات ← المزامنة على هذه الشبكة تُبقي قوائم التشغيل وقائمتي والمجموعات وتقدّم المشاهدة ورمز TMDb نفسها على أجهزتك في المنزل. فعّلها على كل جهاز وأبقِ Ondo مفتوحًا عليها: تعثر الأجهزة على بعضها بنفسها، وتتزامن أجهزة iPhone وiPad وMac مع أجهزة Ondo الأخرى على الشبكة، وليس فيما بينها.\n\nينتقل كل شيء مباشرةً من جهاز إلى آخر على شبكتك، ولا يمر أبدًا عبر الإنترنت. لا يوجد إقران، وتنتقل بيانات الدخول ورمز TMDb على الشبكة دون تشفير، لذا فعّلها في المنزل فقط. تبقى الإعدادات الأخرى والفئات المخفية وقوائم التشغيل المستوردة من ملف على كل جهاز. تتم مزامنة الملف الشخصي الرئيسي فقط."
+            "value": "الإعدادات ← المزامنة على هذه الشبكة تُبقي قوائم التشغيل وقائمتي والمجموعات وتقدّم المشاهدة ورمز TMDb نفسها على أجهزتك في المنزل. فعّلها على كل جهاز وأبقِ Ondo مفتوحًا عليها: تعثر الأجهزة على بعضها بنفسها، وتتزامن أجهزة iPhone وiPad وMac مع أجهزة Ondo الأخرى على الشبكة، وليس فيما بينها.\n\nينتقل كل شيء مباشرةً من جهاز إلى آخر على شبكتك، ولا يمر أبدًا عبر الإنترنت. لا يوجد إقران، وتنتقل بيانات الدخول ورمز TMDb على الشبكة دون تشفير، لذا فعّلها في المنزل فقط. تنتقل الفئات واللغات والأنماط المخفية لكل ملف شخصي معه إلى أجهزتك. تبقى الإعدادات الأخرى وقوائم التشغيل المستوردة من ملف على كل جهاز."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "सेटिंग्स → इस नेटवर्क पर सिंक करें से घर के आपके डिवाइस पर एक जैसी प्लेलिस्ट, मेरी सूची, संग्रह, देखने की प्रगति और TMDb टोकन रहता है। इसे हर डिवाइस पर चालू करें और उन पर Ondo खुला रखें: डिवाइस एक-दूसरे को खुद ढूँढ लेते हैं; iPhone, iPad और Mac नेटवर्क के दूसरे Ondo डिवाइस के साथ सिंक होते हैं, आपस में नहीं।\n\nसब कुछ आपके नेटवर्क पर सीधे एक डिवाइस से दूसरे पर जाता है, कभी इंटरनेट से होकर नहीं। कोई पेयरिंग नहीं है और लॉगिन तथा TMDb टोकन नेटवर्क पर बिना एन्क्रिप्शन के जाते हैं, इसलिए इसे सिर्फ़ घर पर चालू करें। बाकी सेटिंग्स, छिपी कैटेगरी और फ़ाइल से इम्पोर्ट की गई प्लेलिस्ट हर डिवाइस पर अलग रहती हैं। सिर्फ़ मुख्य प्रोफ़ाइल सिंक होती है।"
+            "value": "सेटिंग्स → इस नेटवर्क पर सिंक करें से घर के आपके डिवाइस पर एक जैसी प्लेलिस्ट, मेरी सूची, संग्रह, देखने की प्रगति और TMDb टोकन रहता है। इसे हर डिवाइस पर चालू करें और उन पर Ondo खुला रखें: डिवाइस एक-दूसरे को खुद ढूँढ लेते हैं; iPhone, iPad और Mac नेटवर्क के दूसरे Ondo डिवाइस के साथ सिंक होते हैं, आपस में नहीं।\n\nसब कुछ आपके नेटवर्क पर सीधे एक डिवाइस से दूसरे पर जाता है, कभी इंटरनेट से होकर नहीं। कोई पेयरिंग नहीं है और लॉगिन तथा TMDb टोकन नेटवर्क पर बिना एन्क्रिप्शन के जाते हैं, इसलिए इसे सिर्फ़ घर पर चालू करें। हर प्रोफ़ाइल की छिपी कैटेगरी, भाषाएँ और स्टाइल आपके सभी डिवाइस पर उसके साथ रहती हैं। बाकी सेटिंग्स और फ़ाइल से इम्पोर्ट की गई प्लेलिस्ट हर डिवाइस पर अलग रहती हैं।"
           }
         }
       }

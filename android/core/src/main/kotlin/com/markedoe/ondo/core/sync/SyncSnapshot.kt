@@ -493,8 +493,8 @@ data class SyncHidden(
 
     /** A category with its playlist through [playlist]; the others as they are. */
     fun withPlaylist(playlist: (String) -> String): SyncHidden {
-        if (kind != CATEGORY) return this
         val bar = value.indexOf('|')
+        if (kind != CATEGORY || bar < 0) return this
         return copy(value = playlist(value.substring(0, bar)) + value.substring(bar))
     }
 

@@ -85,6 +85,14 @@ public enum SyncMerge {
         let keys = pick(left.keys + right.keys, key: \.key, time: \.updatedAt, tie: { $0.value.isBefore($1.value) }, deleted: deleted)
         // Likewise for the order of the rows: a side without it (an older version) changes none.
         let rows = pick(left.rows + right.rows, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: deleted)
+        // Each hidden category, language or style on its own: the later hiding or showing again wins; a side without them
+        // (an older version) shows none again. A category of a replaced playlist becomes the kept one's, and goes with a
+        // deleted one.
+        let hiddenCategories = SyncHidden.capped(
+            pick((left.hiddenCategories + right.hiddenCategories).map { $0.withPlaylist(id) }, key: \.key, time: \.hiddenAt,
+                 tie: { $0.key.isBefore($1.key) }, deleted: deleted)
+                .filter { hidden in hidden.playlist.map(alive) ?? true }
+        )
         // Profiles: the later change wins; a deleted profile goes with its data (the main one is never deleted). A side
         // without profiles (an older version) changes none.
         // A profile's deletion loses to its data changed after it, as a list's does (rule 7): data added on a device that
@@ -115,6 +123,7 @@ public enum SyncMerge {
         result.people = people.sorted { before(($0.addedAt, $0.key), ($1.addedAt, $1.key)) }
         result.keys = keys.sorted { $0.service.isBefore($1.service) }
         result.rows = SyncRows.capped(rows).sorted { $0.tab.isBefore($1.tab) }
+        result.hiddenCategories = hiddenCategories.sorted { $0.key.isBefore($1.key) }
         result.profiles = profiles
         result.profileData = profileData
         result.deleted = deleted

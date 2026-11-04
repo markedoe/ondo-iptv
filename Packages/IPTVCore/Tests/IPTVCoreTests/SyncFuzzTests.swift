@@ -50,6 +50,10 @@ final class SyncFuzzTests: XCTestCase {
         for item in items where random.chance(10) { snapshot.deleted["progress:p|movie|\(item)|"] = time() }
         for item in items where random.chance(10) { snapshot.deleted["listitem:l|p|movie|" + item] = time() }
         if random.chance(10) { snapshot.deleted["person:ada"] = time() }
+        for tag in ["PT", "ES"] where random.chance(40) {
+            snapshot.hiddenCategories.append(SyncHidden(kind: SyncHidden.tag, value: tag, hiddenAt: time()))
+        }
+        for tag in ["PT", "ES"] where random.chance(15) { snapshot.deleted["hide:tag:" + tag] = time() }
         return snapshot
     }
 
@@ -118,6 +122,9 @@ final class SyncFuzzTests: XCTestCase {
         }
         for person in start.flatMap(\.people) {
             check(person.key, person.addedAt, result.people.contains { $0.key == person.key && $0.addedAt >= person.addedAt }, person.key)
+        }
+        for hidden in start.flatMap(\.hiddenCategories) {
+            check(hidden.key, hidden.hiddenAt, result.hiddenCategories.contains { $0.key == hidden.key && $0.hiddenAt >= hidden.hiddenAt }, hidden.key)
         }
         let lists = start.flatMap(\.lists)
         guard let list = lists.first else { return }

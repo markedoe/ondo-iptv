@@ -24,3 +24,11 @@ principal dans `profileData` ignorées (ses données sont celles de l’instanta
 `profiles-late-a.json` et `profiles-late-b.json` se fusionnent en `profiles-late-merged.json` : un profil supprimé sur un
 appareil à 100 pendant qu’un autre, pas encore averti, y regardait encore à 200. Les données plus récentes l’emportent
 sur la suppression, comme le contenu d’une liste (règle 7) : le profil et ses données restent.
+
+`hidden-a.json` et `hidden-b.json` se fusionnent en `hidden-merged.json` de la même façon : les catégories, langues et
+styles que chaque profil masque, chacun seul. Une catégorie réaffichée après avoir été masquée part, une catégorie
+masquée de nouveau après un réaffichage reste (y compris une suppression dont l’identifiant de playlist est en
+majuscules), le plus récent de deux masquages d’une langue est gardé, un style masqué après un réaffichage plus ancien
+reste ; une catégorie d’une playlist supprimée part ; un élément d’un type que cette version ne connaît pas est gardé ;
+les valeurs vides, un type contenant `:` et une catégorie sans sa playlist sont écartés. Dans les données d’un autre
+profil, ses propres masquages et réaffichages s’appliquent, jamais ceux du profil principal.

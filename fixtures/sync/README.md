@@ -21,3 +21,10 @@ sent for the main profile in `profileData` ignored (its data is the snapshot's o
 `profiles-late-a.json` and `profiles-late-b.json` merge into `profiles-late-merged.json`: a profile deleted on one device
 at 100 while another, not yet told, kept watching in it at 200. The later data wins over the deletion, as a list's
 content does (rule 7): the profile and its data stay.
+
+`hidden-a.json` and `hidden-b.json` merge into `hidden-merged.json` the same way: the categories, languages and styles each
+profile hides, each one on its own. A category shown again after it was hidden goes, one hidden again after it was
+shown again stays (a deletion with its playlist ID in uppercase included), the later of two hides of a language is kept,
+a style hidden after an older showing again stays; a category of a deleted playlist goes; a record of a kind this version
+does not know is kept; blank values, a kind holding `:` and a category without its playlist are dropped. In another
+profile's data, its own hides and showings again apply, never the main profile's.
