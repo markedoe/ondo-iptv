@@ -84,7 +84,7 @@ class OnlineSubtitlesPanelTest {
         unsupported = setOf(1),
     )
 
-    private fun start(source: Source) {
+    private fun start(source: Source, player: FakeTracksPlayer = episode) {
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
@@ -95,7 +95,7 @@ class OnlineSubtitlesPanelTest {
             val online = remember { OnlineSubtitles(scope, source, SubtitleSearchHint("Copper Valley", 2018, 3, 3), listOf("en", "fr")) { loaded = it } }
             OndoTvTheme {
                 TvPlayerOverlay(
-                    episode, controls, PlayerInfo("Copper Valley", "S03E03 · Lights Out", live = false), statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
+                    player, controls, PlayerInfo("Copper Valley", "S03E03 · Lights Out", live = false), statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
                     scale = scale, onScale = { scale = it }, sleep = sleep, online = online,
                 )
             }
@@ -165,5 +165,21 @@ class OnlineSubtitlesPanelTest {
         start(Source(configured = false))
         openSearch()
         compose.onNodeWithTag("onlineHint").assertIsFocused().assertTextContains("Add your OpenSubtitles, SubDL or SubSource API key in Settings → Subtitle services, or turn on Addic7ed there.")
+    }
+
+    /** A stream without subtitles of its own: the panel says so, and Search online… is right below, for the remote. */
+    @Test
+    fun aStreamWithoutSubtitlesOffersTheSearchRightThere() {
+        val source = Source()
+        start(source, FakeTracksPlayer(listOf(FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0)))
+        press(Key.DirectionRight, 2)
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("tracksHint").assertTextContains("This stream has no subtitles.")
+        compose.onNodeWithTag("trackOff").assertIsFocused()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("searchOnline").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertEquals(listOf(listOf("en", "fr")), source.searched)
+        compose.onNodeWithTag("onlineResult-0").assertExists()
     }
 }
