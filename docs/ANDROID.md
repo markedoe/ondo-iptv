@@ -75,8 +75,11 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   with TMDb's `/authentication` before it is saved (accepted, refused, unreachable), kept in the app's private
   storage and carried by sync (`key:tmdb`, docs/SYNC.md); a Trending row and carousel titles, TMDb's backdrop when
   the provider's is missing or does not load, its trailer, rating with votes and the photos of its cast and directors
-  (`TmdbClient.titleInfo`, one call, by the provider's TMDb id or the title), TMDb's people in Search, and a person's
-  titles from TMDb's credits. What TMDb answers is kept on the device (`SqliteMetadataStore`, `metadata.sqlite`, like
+  (`TmdbClient.titleInfo`, one call, by the provider's TMDb id or the title; a series' `aggregate_credits`, every
+  season's cast, and its creators, `created_by`), TMDb's people in Search, and a person's titles from TMDb's credits.
+  The season a series' page shows gets TMDb's stills and names for the episodes its provider leaves without them
+  (`TmdbClient.seasonEpisodes`, `/tv/{id}/season/{n}`, one call per season, kept as `tv:<id>:<season>`); every screen
+  naming an episode shows its own title, without the series' name, tags or code (`EpisodeTitles`, as on Apple). What TMDb answers is kept on the device (`SqliteMetadataStore`, `metadata.sqlite`, like
   the store on Apple devices; keys `movie:603` or `movie:sandstorm:2021`): pages show it at once, TMDb is asked
   again only after 30 days (7 for a title it does not know), Home's carousel titles and the titles added in the last four days are asked ahead two at a time (the carousel's first
   source ranks the latter by TMDb's average vote weighted by its number of votes: `v/(v+200)·R + 200/(v+200)·6.5`, 50 votes

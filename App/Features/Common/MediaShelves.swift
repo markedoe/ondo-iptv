@@ -212,7 +212,7 @@ struct ContinueCard: View {
                     .cardLift()
                 Text(entry.title).font(.subheadline.weight(.semibold)).lineLimit(1)
                 // A film of several versions: the one in progress.
-                if let subtitle = entry.subtitle ?? model.versionLabel(for: entry) {
+                if let subtitle = model.episodeLine(of: entry) ?? model.versionLabel(for: entry) {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }

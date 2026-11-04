@@ -117,7 +117,9 @@ chaque changement de l'interface.
   synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel ; pour les titres de l'accueil et les
   fiches que vous ouvrez, l'image de fond de TMDb quand celle du fournisseur manque ou ne se charge pas, la
   bande-annonce de TMDb (d'abord dans la langue de l'app, puis en anglais) quand le fournisseur n'en donne pas, et le
-  nombre de votes à côté de la note ; les photos du casting en rangée sur la fiche d'un titre ; les personnes que TMDb connaît dans la recherche, avec leur photo, et tous les
+  nombre de votes à côté de la note ; les photos du casting en rangée sur la fiche d'un titre (pour une série, le
+  casting de toutes ses saisons et ses créateurs) ; pour la saison d'une série que vous affichez, l'image et le nom
+  donnés par TMDb aux épisodes que le fournisseur laisse sans image ni titre ; les personnes que TMDb connaît dans la recherche, avec leur photo, et tous les
   titres de la playlist sur la page d'un acteur ou d'un réalisateur, sous sa photo. Les réponses de TMDb sont gardées
   sur l'appareil (30 jours, 7 pour un titre que TMDb ne connaît pas) : les fiches les affichent tout de suite, même
   hors connexion, et seul ce qui manque ou est ancien est redemandé, en arrière-plan, quelques requêtes par seconde.
@@ -207,8 +209,9 @@ chaque changement de l'interface.
 - **TMDb**, avec votre propre jeton (Réglages → TMDb, vérifié auprès de TMDb à l'enregistrement, transmis par la
   synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel, l'image de fond de TMDb quand celle du
   fournisseur manque ou ne se charge pas, la bande-annonce de TMDb (d'abord dans la langue de l'app) quand le
-  fournisseur n'en donne pas, le nombre de votes à côté de la note, les photos du casting sur la fiche d'un titre,
-  les personnes que TMDb connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un
+  fournisseur n'en donne pas, le nombre de votes à côté de la note, les photos du casting sur la fiche d'un titre
+  (pour une série, le casting de toutes ses saisons et ses créateurs), l'image et le nom donnés par TMDb aux
+  épisodes que le fournisseur laisse sans image ni titre, les personnes que TMDb connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un
   réalisateur. Les réponses de TMDb sont gardées sur l'appareil (30 jours, 7 pour un titre que TMDb ne connaît pas) :
   les fiches les affichent tout de suite, même hors ligne, et les personnes de ces titres se trouvent dans la
   recherche et sur leur page sans réseau. Une image du fournisseur qui ne mène nulle part n'est pas réessayée
@@ -321,6 +324,9 @@ cd Packages/IPTVCore && swift test
 
 ### Ce que vérifie la CI en plus des tests unitaires
 
+Quel workflow tourne quand, ce qui décide des jobs que lance un changement, et ce que coûte la CI :
+[docs/CI.fr.md](docs/CI.fr.md).
+
 Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur données simulées ne les voient pas :
 
 - **Ajout d'une playlist de bout en bout** (`AppTests/PlaylistOverHTTPTests.swift`, test UI
@@ -338,8 +344,9 @@ Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur donné
   « gratuit » pour qualifier l’IPTV, chaînes fictives dans les tests), et l'édition App Store : aucun code
   de téléchargement ni fonction dormante, aucune API privée, jamais « bêta », une fiche et des notes pour
   la review qu'App Review accepte (vérifiée aussi à chaque changement et avant chaque publication).
-- **Compilation Release, édition App Store** (iOS et macOS) : le code `#if DEBUG` et les téléchargements de
-  l'édition TestFlight (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) en sont exclus, comme dans le build soumis.
+- **Compilations Release de l'édition App Store** (iOS et macOS, dans le job *Build iOS + macOS (Debug, App Store
+  edition)*, à côté du build debug macOS et de son lancement) : le code `#if DEBUG` et les téléchargements de l'édition
+  TestFlight (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) en sont exclus, comme dans le build soumis.
 - **Banc de test de la lecture** (`tools/playback-lab`, quand le moteur VLC ou le code de lecture change) :
   libVLC, la bibliothèque du moteur VLC, lit des flux générés servis par un fournisseur qui se comporte mal
   exprès ; gels, temps de démarrage et de saut des films, position de reprise et diagnostic des gels de l'app

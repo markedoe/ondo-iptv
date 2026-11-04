@@ -156,12 +156,17 @@ public struct TMDbClient: Sendable {
     }
 
     private func titleInfo(kind: String, id: Int) async throws -> TMDbTitleInfo {
-        let data = try await get("\(kind)/\(id)", query: [URLQueryItem(name: "append_to_response", value: "credits")])
+        let series = kind == "tv"
+        // A series' `credits` are only its latest season's: its `aggregate_credits` have the cast of every season (a
+        // page of an earlier one names them).
+        let data = try await get("\(kind)/\(id)", query: [URLQueryItem(name: "append_to_response", value: series ? "aggregate_credits" : "credits")])
         let details = try JSONDecoder().decodeCheckingKeys(TMDbTitleDetails.self, from: data)
         let trailer = try await trailerKey(kind: kind, id: id)
-        var directors = (details.credits?.crew ?? []).filter { $0.job == "Director" }
-        if directors.isEmpty { directors = details.createdBy ?? [] }
-        let cast = (details.credits?.cast ?? []).enumerated()
+        let credits = series ? details.aggregateCredits : details.credits
+        // A series' makers are its creators (`created_by`): the episodes' directors are not the series'.
+        var directors = series ? (details.createdBy ?? []) : []
+        if directors.isEmpty { directors = (credits?.crew ?? []).filter { $0.job == "Director" } }
+        let cast = (credits?.cast ?? []).enumerated()
             .sorted { ($0.element.order ?? Int.max, $0.offset) < ($1.element.order ?? Int.max, $1.offset) }
             .map(\.element)
         return TMDbTitleInfo(
@@ -171,8 +176,28 @@ public struct TMDbClient: Sendable {
             voteCount: details.voteCount,
             trailerKey: trailer,
             directors: TMDbCredit.unique(directors),
-            cast: Array(TMDbCredit.unique(cast).prefix(TMDbTitleInfo.castLimit))
+            cast: Array(TMDbCredit.unique(cast).prefix(series ? TMDbTitleInfo.seriesCastLimit : TMDbTitleInfo.castLimit))
         )
+    }
+
+    /// The episodes TMDb knows of season `season` of series `seriesID` (`/tv/{id}/season/{n}`): their number, name,
+    /// still and overview, in the viewer's language. One request for a whole season. Empty when TMDb has no such
+    /// season (404).
+    public func seasonEpisodes(seriesID: Int, season: Int) async throws -> [TMDbEpisode] {
+        let data: Data
+        do {
+            data = try await get("tv/\(seriesID)/season/\(season)")
+        } catch HTTPClientError.badStatus(404) {
+            return []
+        }
+        // An episode without its number is left out, not the season.
+        struct Entry: Decodable {
+            var episode: TMDbEpisode?
+            init(from decoder: Decoder) throws { episode = try? TMDbEpisode(from: decoder) }
+        }
+        struct Page: Decodable { var episodes: [Entry] }
+        var seen = Set<Int>()
+        return try JSONDecoder().decodeCheckingKeys(Page.self, from: data).episodes.compactMap(\.episode).filter { seen.insert($0.number).inserted }
     }
 
     /// The YouTube key of the trailer TMDb lists for a title (`TMDbVideo.best`), among its videos in the viewer's
@@ -251,6 +276,9 @@ public struct TMDbPerson: Decodable, Hashable, Sendable {
 public struct TMDbTitleInfo: Hashable, Sendable {
     /// The cast kept for a title: the first billed.
     public static let castLimit = 20
+    /// A series' cast is every season's (`aggregate_credits`): more of it is kept, so that the actors a provider names
+    /// for an earlier season find their photos.
+    public static let seriesCastLimit = 60
 
     public var tmdbID: Int
     public var backdropURL: URL?
@@ -284,7 +312,7 @@ public struct TMDbCredit: Decodable, Hashable, Sendable {
     public var order: Int?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, job, order
+        case id, name, job, jobs, order
         case profilePath = "profile_path"
     }
 
@@ -301,7 +329,10 @@ public struct TMDbCredit: Decodable, Hashable, Sendable {
         id = try c.decode(Int.self, forKey: .id)
         name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? ""
         profilePath = try? c.decodeIfPresent(String.self, forKey: .profilePath)
-        job = try? c.decodeIfPresent(String.self, forKey: .job)
+        // A series' crew (`aggregate_credits`) names its jobs in a list: "Director" when one of them is.
+        struct Job: Decodable { var job: String? }
+        let jobs = ((try? c.decodeIfPresent([Job].self, forKey: .jobs)) ?? nil)?.compactMap(\.job) ?? []
+        job = (try? c.decodeIfPresent(String.self, forKey: .job)) ?? (jobs.contains("Director") ? "Director" : jobs.first)
         order = try? c.decodeIfPresent(Int.self, forKey: .order)
     }
 
@@ -328,11 +359,14 @@ struct TMDbTitleDetails: Decodable {
     var voteAverage: Double?
     var voteCount: Int?
     var credits: Credits?
-    /// A series' creators: its directors when its crew names none.
+    /// A series' cast and crew of every season.
+    var aggregateCredits: Credits?
+    /// A series' creators: its directors.
     var createdBy: [TMDbCredit]?
 
     enum CodingKeys: String, CodingKey {
         case id, credits
+        case aggregateCredits = "aggregate_credits"
         case backdropPath = "backdrop_path"
         case voteAverage = "vote_average"
         case voteCount = "vote_count"
@@ -346,7 +380,44 @@ struct TMDbTitleDetails: Decodable {
         voteAverage = try? c.decodeIfPresent(Double.self, forKey: .voteAverage)
         voteCount = try? c.decodeIfPresent(Int.self, forKey: .voteCount)
         credits = try? c.decodeIfPresent(Credits.self, forKey: .credits)
+        aggregateCredits = try? c.decodeIfPresent(Credits.self, forKey: .aggregateCredits)
         createdBy = try? c.decodeIfPresent([TMDbCredit].self, forKey: .createdBy)
+    }
+}
+
+/// An episode on TMDb (`TMDbClient.seasonEpisodes`): its number in its season, its name, still and overview.
+public struct TMDbEpisode: Decodable, Hashable, Sendable {
+    public var number: Int
+    public var name: String?
+    public var stillPath: String?
+    public var overview: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, overview
+        case number = "episode_number"
+        case stillPath = "still_path"
+    }
+
+    public init(number: Int, name: String? = nil, stillPath: String? = nil, overview: String? = nil) {
+        self.number = number
+        self.name = name
+        self.stillPath = stillPath
+        self.overview = overview
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        number = try c.decode(Int.self, forKey: .number)
+        func text(_ key: CodingKeys) -> String? {
+            ((try? c.decodeIfPresent(String.self, forKey: key)) ?? nil).flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+        }
+        name = text(.name)
+        stillPath = text(.stillPath)
+        overview = text(.overview)
+    }
+
+    public var stillURL: URL? {
+        stillPath.flatMap { URL(string: "https://image.tmdb.org/t/p/w300" + $0) }
     }
 }
 
