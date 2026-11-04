@@ -26,6 +26,8 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import com.markedoe.ondo.Fixtures
@@ -124,7 +126,8 @@ class RowOrderAppTest {
         compose.waitForIdle()
         val top = { tag: String -> compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot.top }
         assertTrue(top("shelf:${Fixtures.sciFi.id}") < top("shelfAll"))
-        compose.onNodeWithTag("vod").performScrollToNode(hasTestTag("seeAllAll"))
+        // At the end of the row, after its titles.
+        compose.onNode(hasScrollAction() and hasAnyAncestor(hasTestTag("shelfAll"))).performScrollToNode(hasTestTag("seeAllAll"))
         compose.onNodeWithTag("seeAllAll").performClick()
         // null: every category, the grid of the whole catalogue.
         assertNull(opened)
