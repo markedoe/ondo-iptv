@@ -205,9 +205,9 @@ class OndoViewModelTest {
             override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
                 "get_series_info" in url -> """{"info":{"name":"Harbor","cast":"José Silva, Ana Lima","tmdb_id":"77"},"episodes":{"1":[{"id":"101","episode_num":1,"title":"Pilot","container_extension":"mp4"}]}}"""
                 url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
-                url.startsWith("https://api.themoviedb.org/3/tv/77?append_to_response=credits,videos,recommendations,images&") -> {
+                url.startsWith("https://api.themoviedb.org/3/tv/77?append_to_response=aggregate_credits,videos,recommendations,images&") -> {
                     credits += url
-                    """{"id":77,"vote_average":8.1,"vote_count":4321,"credits":{"cast":[{"id":1,"name":"Jose Silva","profile_path":"/jose.jpg"},""" +
+                    """{"id":77,"vote_average":8.1,"vote_count":4321,"aggregate_credits":{"cast":[{"id":1,"name":"Jose Silva","profile_path":"/jose.jpg"},""" +
                         """{"id":2,"name":"Ana Lima","profile_path":null},{"id":3,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}"""
                 }
                 else -> throw HttpException.BadStatus(404)

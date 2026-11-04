@@ -44,6 +44,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
@@ -279,6 +287,52 @@ private fun cardFocus() = Triple(
     CardDefaults.border(),
     CardDefaults.glow(focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.9f), elevation = 18.dp)),
 )
+
+/** Whether a chip shows the remote's focus ([tvFocusRing]): tests check it apart from the chip's selection. */
+val TvFocusRing = SemanticsPropertyKey<Boolean>("TvFocusRing")
+var SemanticsPropertyReceiver.tvFocusRing by TvFocusRing
+
+/** How much a chip with the remote's focus grows, as a focused card. */
+const val CHIP_FOCUSED_SCALE = 1.08f
+
+/** The white ring around a focused chip, and the dark gap between it and the chip (seen around a white chip too). */
+private val FocusRingWidth = 3.dp
+private val FocusRingGap = 2.dp
+
+/**
+ * The remote's focus on a pill-shaped chip, the same on every chip row and apart from its selection (a selected chip is
+ * white): a white ring around it, set apart by a dark gap, and the chip [scale]d up, as a focused card. Drawn outside
+ * the chip: the row keeps its layout. [focused] also goes to the semantics ([TvFocusRing]).
+ */
+fun Modifier.tvFocusRing(focused: Boolean, scale: Float): Modifier = this
+    .graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }
+    .drawWithContent {
+        drawContent()
+        if (focused) {
+            val gap = FocusRingGap.toPx()
+            val width = FocusRingWidth.toPx()
+            fun ring(outset: Float, stroke: Float, color: Color) {
+                val height = size.height + 2 * outset
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(-outset, -outset),
+                    size = Size(size.width + 2 * outset, height),
+                    cornerRadius = CornerRadius(height / 2),
+                    style = Stroke(stroke),
+                )
+            }
+            ring(gap / 2, gap, TvTokens.Ink)
+            ring(gap + width / 2, width, Color.White)
+        }
+    }
+    .semantics { tvFocusRing = focused }
+
+/** The scale of a chip ([tvFocusRing]): [CHIP_FOCUSED_SCALE] with the remote's focus, eased. */
+@Composable
+fun chipScale(focused: Boolean): Float = animateFloatAsState(if (focused) CHIP_FOCUSED_SCALE else 1f, label = "chipScale").value
 
 /** The light a focused card catches: a soft white sheen from its top-left corner. Drawn over the card's picture. */
 @Composable

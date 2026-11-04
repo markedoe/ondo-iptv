@@ -145,7 +145,7 @@ class TmdbTest {
             """{"id":3,"title":"Sandstorm","credits":{"cast":[{"id":21,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
             """{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20"}]}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits,videos,recommendations,images&include_video_language=en,null&include_image_language=en,null&language=en-US&api_key=KEY"] =
+        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=aggregate_credits,videos,recommendations,images&include_video_language=en,null&include_image_language=en,null&language=en-US&api_key=KEY"] =
             """{"id":7,"name":"Copper Valley","videos":{"results":[{"key":"teaserEN001","site":"YouTube","type":"Teaser","iso_639_1":"en"}]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/movie?query=paper%20trail&language=en-US&api_key=KEY"] =
             """{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}""".encodeToByteArray()
