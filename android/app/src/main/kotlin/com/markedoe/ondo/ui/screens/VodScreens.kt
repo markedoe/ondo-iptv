@@ -267,7 +267,7 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
             RowOrder.CONTINUE_WATCHING -> item(key = "vod:resume") {
                 Shelf(stringResource(R.string.continue_watching), metrics, Modifier.row("vod:resume").testTag("shelfResume")) {
                     itemsIndexed(state.continueWatching, key = { _, it -> it.key }) { index, item ->
-                        ContinueCard(item, wideWidth, onClick = { actions.onResume(item) }, initialFocus = first == key && index == 0, onRemove = { actions.onRemoveResume(item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+                        ContinueCard(item, wideWidth, onClick = { actions.onResume(item) }, initialFocus = first == key && index == 0, onRemove = if (item.upNext) null else ({ actions.onRemoveResume(item) }), onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
                     }
                 }
             }

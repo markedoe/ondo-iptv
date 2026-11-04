@@ -214,7 +214,7 @@ fun HomeScreen(
 private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMetrics, actions: HomeActions, preparingKey: String?, modifier: Modifier = Modifier) {
     Shelf(title, metrics, modifier) {
         items(items, key = { it.key }) {
-            ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey, onRemove = { actions.onRemoveResume(it) }, onOpen = if (it.hasPage) ({ actions.onOpenResume(it) }) else null)
+            ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey, onRemove = if (it.upNext) null else ({ actions.onRemoveResume(it) }), onOpen = if (it.hasPage) ({ actions.onOpenResume(it) }) else null)
         }
     }
 }

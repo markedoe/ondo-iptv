@@ -401,7 +401,11 @@ fun ContinueCard(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = CardTextInset, top = 8.dp, end = CardTextInset),
         )
-        val left = if (item.minutesLeft > 1) timeLeftText(item.minutesLeft) else stringResource(R.string.resume)
+        val left = when {
+            item.upNext -> stringResource(R.string.play)
+            item.minutesLeft > 1 -> timeLeftText(item.minutesLeft)
+            else -> stringResource(R.string.resume)
+        }
         Text(
             listOfNotNull(item.subtitle, left).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,

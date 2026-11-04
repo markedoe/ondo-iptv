@@ -77,6 +77,8 @@ data class ResumeItem(
     val hasPage: Boolean = false,
     /** The movie, or the series of the episode, as a poster: what a TV's header shows while the card has the focus. */
     val showcase: ShowcaseItem? = null,
+    /** A series that goes on with its next episode (the last one watched was finished): played from its start, not taken away. */
+    val upNext: Boolean = false,
 )
 
 /** An actor or a director kept in My List or a collection: their name, and their photo (TMDb's) when known. */

@@ -185,12 +185,12 @@ fun TvHomeScreen(
                     for (key in state.shownRows) when (key) {
                         RowOrder.HOME_CONTINUE_MOVIES -> tvShelf(titles.movies, "shelfResumeMovies") {
                             items(resumeMovies, key = { it.key }) { item ->
-                                TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeMovies, item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+                                TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = if (item.upNext) null else ({ removeResume(resumeMovies, item) }), onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
                             }
                         }
                         RowOrder.HOME_CONTINUE_SERIES -> tvShelf(titles.series, "shelfResumeSeries") {
                             items(resumeSeries, key = { it.key }) { item ->
-                                TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeSeries, item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+                                TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = if (item.upNext) null else ({ removeResume(resumeSeries, item) }), onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
                             }
                         }
                         RowOrder.MY_LIST -> tvShelf(titles.myList, "shelfMyList") {
