@@ -68,7 +68,11 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   Up from the first row reaches, with a Hide watched chip for movies (`TvSortMenu.kt`); Down from the tab never lands
   on them): playlist order (on those pages, their own order),
   name, date added, release date or rating. A genre's titles found through TMDb are sorted with the others
-  (`UiMappers.browse`).
+  (`UiMappers.browse`). By rating, with the viewer's TMDb token: TMDb's rating weighted by its number of votes first
+  (`WeightedRating.ratingOrder`, the carousel's m = 200 and C = 6.5 without its 50-vote floor), then the titles TMDb
+  has no rating for by the provider's, ties by title; the page asks TMDb in the background for up to 100 of its titles
+  never asked about, two at a time at the pace of the other requests, and sorts again twice: after 20 ratings and
+  at the end (`RatingFill`). Without a token, the provider's rating as before.
 - **TV posters**: holding OK on a poster adds the title to My List or takes it out (a short message says which), and a check mark
   marks the titles in My List. In My List, the people kept get their photo (filled from their page or from the titles
   kept on the device).

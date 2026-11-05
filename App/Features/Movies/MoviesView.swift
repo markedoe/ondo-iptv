@@ -62,7 +62,7 @@ struct MovieGridView: View {
                 if case .movie(let movie) = item { return movie }
                 return nil
             }
-            return AppModel.sorted(row, by: rowSort)
+            return AppModel.sorted(row, by: rowSort, votes: model.ratingSortVotes(rowSort))
         default: return model.movies(in: category, sort: model.settings.posterSort)
         }
     }
@@ -73,6 +73,9 @@ struct MovieGridView: View {
         let tokens = TextNormalizer.normalize(filter).split(separator: " ")
         return base.filter { TextNormalizer.matches(normalizedText: TextNormalizer.normalize($0.name), queryTokens: tokens) }
     }
+
+    /// The order this grid shows: a row's own (`rowSort`), else the one chosen for every category.
+    private var sort: PosterSort { PseudoCategory.isRow(category.id) ? rowSort : model.settings.posterSort }
 
     var body: some View {
         let list = movies
@@ -109,6 +112,11 @@ struct MovieGridView: View {
             ToolbarItem(placement: .primaryAction) {
                 SortMenu(offersHideWatched: category.id != PseudoCategory.favorites, rowSort: PseudoCategory.isRow(category.id) ? $rowSort : nil)
             }
+        }
+        // Sorted by rating: TMDb's ratings the grid lacks are fetched in the background (`AppModel.fillRatingSort`).
+        .task(id: model.ratingFillID(category: category, sort: sort)) {
+            guard sort == .rating, category.id != PseudoCategory.favorites else { return }
+            await model.fillRatingSort(Self.movies(category, model: model, rowSort: rowSort).map(ShowcaseItem.movie))
         }
     }
 }

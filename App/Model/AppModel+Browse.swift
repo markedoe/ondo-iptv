@@ -32,7 +32,7 @@ extension AppModel {
         let films = self.films
         guard films.isGrouped else { return list }
         let excluded = category == nil ? exclusions.hashValue : hiddenByName.hashValue
-        let key = "films|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category?.id ?? "*")|\(excluded)|\(sort.rawValue)"
+        let key = "films|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category?.id ?? "*")|\(excluded)|\(sort.rawValue)\(ratingSortKey(sort))"
         return cachedList(key) { films.distinct(list) }
     }
 
@@ -52,19 +52,24 @@ extension AppModel {
         }
         guard sort != .playlist else { return list }
         // Sorting a large catalogue by name takes a moment: once per catalogue, category and order, not at every redraw.
-        if let cached = sortedListCache[key] as? [Movie] { return cached }
-        let sorted = Self.sorted(list, by: sort)
-        cacheSortedList(sorted, key: key)
+        let sortKey = key + ratingSortKey(sort)
+        if let cached = sortedListCache[sortKey] as? [Movie] { return cached }
+        let sorted = Self.sorted(list, by: sort, votes: ratingSortVotes(sort))
+        cacheSortedList(sorted, key: sortKey)
         return sorted
     }
 
-    static func sorted(_ list: [Movie], by sort: PosterSort) -> [Movie] {
+    /// `votes`: TMDb's, by `ShowcaseItem.id`, with the viewer's TMDb token (`ratingSortVotes`); nil without one, and the
+    /// rating sort is the provider's alone.
+    static func sorted(_ list: [Movie], by sort: PosterSort, votes: [String: (average: Double, count: Int)]? = nil) -> [Movie] {
         switch sort {
         case .playlist: return list
         case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         case .recent: return list.sorted { ($0.addedAt ?? .distantPast) > ($1.addedAt ?? .distantPast) }
         case .release: return list.sorted { Self.releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
-        case .rating: return list.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
+        case .rating:
+            guard let votes else { return list.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) } }
+            return WeightedRating.ratingOrder(list, tmdb: { votes[ShowcaseItem.movie($0).id] }, provider: \.rating, title: \.name, id: \.id)
         }
     }
 
@@ -82,9 +87,10 @@ extension AppModel {
             key = "series|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|*|\(excluded.hashValue)|\(sort.rawValue)"
         }
         guard sort != .playlist else { return list }
-        if let cached = sortedListCache[key] as? [Series] { return cached }
-        let sorted = Self.sorted(list, by: sort)
-        cacheSortedList(sorted, key: key)
+        let sortKey = key + ratingSortKey(sort)
+        if let cached = sortedListCache[sortKey] as? [Series] { return cached }
+        let sorted = Self.sorted(list, by: sort, votes: ratingSortVotes(sort))
+        cacheSortedList(sorted, key: sortKey)
         return sorted
     }
 
@@ -102,13 +108,15 @@ extension AppModel {
         return list
     }
 
-    static func sorted(_ list: [Series], by sort: PosterSort) -> [Series] {
+    static func sorted(_ list: [Series], by sort: PosterSort, votes: [String: (average: Double, count: Int)]? = nil) -> [Series] {
         switch sort {
         case .playlist: return list
         case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         case .recent: return list.sorted { ($0.addedAt ?? .distantPast) > ($1.addedAt ?? .distantPast) }
         case .release: return list.sorted { Self.releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
-        case .rating: return list.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
+        case .rating:
+            guard let votes else { return list.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) } }
+            return WeightedRating.ratingOrder(list, tmdb: { votes[ShowcaseItem.series($0).id] }, provider: \.rating, title: \.name, id: \.id)
         }
     }
 

@@ -46,7 +46,8 @@ interface changes.
   series in progress (one row each), My List, new releases, trending; live TV last; when the playlist was last
   updated, above its name. Black pages, white for what is chosen; cards rise under the pointer, the keyboard focus
   or a finger.
-- **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
+- **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating (TMDb's
+  first with a token, see TMDb below),
   watched movies hidden if you like (Search and My List keep them), **a film's versions grouped** (4K, Dolby Vision,
   HD, VOSTFR…: the film once, its versions as badges on its page; [docs/VERSIONS.md](docs/VERSIONS.md)),
   detail pages (plot, cast, trailer), seasons / episodes,
@@ -117,6 +118,9 @@ interface changes.
   from the provider's pages and series lists and from TMDb, finds people in Search and their titles at once, without
   the network. A provider picture that is broken is not tried again for 7 days; one that fails on a network error is
   tried once more. Clear Cache removes all of it.
+  Sorted by rating, a grid puts TMDb's rating first, weighted by its number of votes (a 9.8 from four votes does not
+  top it), then the titles TMDb has no rating for, by the provider's; it asks TMDb in the background for up to 100
+  of its titles never asked about, and sorts again twice, not at each answer. Without a token, the provider's rating.
 - **Sync on this network** (Settings, off until turned on): iPhone, iPad and Mac connect to the Android devices
   with Ondo open on the same network and keep the same playlists, My List, collections, progress and TMDb token
   (main profile only; two Apple devices sync through an Android one). Local addresses only
@@ -193,6 +197,9 @@ interface changes.
   or a director's page. What TMDb answers is kept on the device (30 days, 7 for a title TMDb does not know): pages
   show it at once, offline too, and the people of those titles are found in Search and on their page without
   network. A provider image that leads nowhere is not tried again for 7 days.
+  Sorted by rating, a grid puts TMDb's rating first, weighted by its number of votes (a 9.8 from four votes does not
+  top it), then the titles TMDb has no rating for, by the provider's; it asks TMDb in the background for up to 100
+  of its titles never asked about, and sorts again twice, not at each answer. Without a token, the provider's rating.
 - **Settings**: playlists, adult categories hidden by default, languages and categories, app language,
   automatic awards updates, player buffers, TMDb token; a welcome screen to add the first playlist (Ondo ships
   no channels and no demo).

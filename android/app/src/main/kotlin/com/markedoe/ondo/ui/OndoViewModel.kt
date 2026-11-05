@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.FilmVersions
+import com.markedoe.ondo.core.library.MetadataKey
+import com.markedoe.ondo.core.library.RatingFill
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
@@ -647,6 +649,39 @@ class OndoViewModel(
     }
 
     private class PrepareInput(val on: Boolean, val content: PlaylistContent)
+
+    private val _ratingSortVersion = MutableStateFlow(0)
+
+    /** Changes when a grid's fill brought TMDb ratings ([fillRatingSort]): the pages sorted by rating read them again. */
+    val ratingSortVersion: StateFlow<Int> = _ratingSortVersion.asStateFlow()
+
+    /**
+     * A page sorted by rating shows [items] (in its order), in the caller's coroutine (cancelled when the page goes):
+     * with the viewer's TMDb token, up to [RatingFill.LIMIT] of those TMDb never answered for are asked in the
+     * background, two at a time at TMDb's pace (as the titles prepared ahead), kept on the device, and the page sorts
+     * again twice ([RatingFill.run]), not at each answer. Nothing without a token.
+     */
+    suspend fun fillRatingSort(items: List<ShowcaseItem>) {
+        val current = state.value
+        if (current.settings.tmdbToken == null || current.tmdbRefused || items.isEmpty()) return
+        val asked = withContext(computation) {
+            items.associate { item ->
+                val details = details(current, item)
+                val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
+                val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
+                item.key to RatingAsk(item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
+            }
+        }
+        val unanswered = repository.withoutTmdbAnswer(asked.mapValues { (_, a) -> MetadataKey.all(a.series, a.tmdbId, a.title, a.year) })
+        val ask = RatingFill.toAsk(items, isKnown = { it.key !in unanswered })
+        RatingFill.run(
+            ask,
+            fetch = { item -> asked.getValue(item.key).let { repository.prepareTmdbRating(item.key, it.series, it.tmdbId, it.title, it.year) } },
+            resort = { _ratingSortVersion.value += 1 },
+        )
+    }
+
+    private class RatingAsk(val series: Boolean, val tmdbId: String?, val title: String, val year: Int?)
     suspend fun checkAndSaveTmdbToken(token: String) = repository.checkAndSaveTmdbToken(token)
     fun removeTmdbToken() = repository.removeTmdbToken()
     fun acceptSuggestion(suggestion: TagSuggestion) = repository.setTagsHidden(suggestion.hidden, hidden = true)

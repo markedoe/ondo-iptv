@@ -12,6 +12,7 @@ import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
+import com.markedoe.ondo.core.library.WeightedRating
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaCategory
@@ -556,6 +557,7 @@ object UiMappers {
         sort: PosterSort = PosterSort.PLAYLIST,
         source: GridSource? = null,
         now: Long = System.currentTimeMillis(),
+        kept: Map<String, TitleMetadata> = emptyMap(),
     ): List<ShowcaseItem> {
         val hidden = hiddenCategoryIds(state)
         val byName = CategoryFilter.hiddenTitles(state)
@@ -570,18 +572,38 @@ object UiMappers {
             }
         }
         val query = TextNormalizer.normalize(filter)
-        return sorted(if (query.isEmpty()) items else items.filter { TextNormalizer.normalize(it.title).contains(query) }, sort)
+        return sorted(if (query.isEmpty()) items else items.filter { TextNormalizer.normalize(it.title).contains(query) }, sort, sortRatings(state, sort, kept))
+    }
+
+    /**
+     * TMDb's ratings a sort by rating ranks by, by poster key: those [kept] on the device
+     * ([OndoRepository.keptPosterFacts], read again when a page's fill brought more) and of the trending titles. Not the
+     * answers of the page's own header as they come: the poster the remote is on would move under it. Null for another
+     * order or without the viewer's TMDb token: the provider's rating then, as before.
+     */
+    fun sortRatings(state: OndoState, sort: PosterSort, kept: Map<String, TitleMetadata>): Map<String, TmdbRating>? {
+        if (sort != PosterSort.RATING || state.settings.tmdbToken == null) return null
+        val ratings = HashMap<String, TmdbRating>(kept.size * 2)
+        kept.forEach { (key, title) -> title.rating?.let { ratings[key] = it } }
+        for (match in state.trending) match.trending.rating?.let { ratings.putIfAbsent(match.id, it) }
+        return ratings
     }
 
     /** The titles of the poster grid [route] opens, as [grid] gives them. */
-    fun grid(state: OndoState, route: Routes.Grid, filter: String = "", sort: PosterSort = PosterSort.PLAYLIST, now: Long = System.currentTimeMillis()): List<ShowcaseItem> =
-        grid(state, route.series, route.categoryId, route.myList, filter, route.anyType, sort, GridSource.of(route.source), now)
+    fun grid(
+        state: OndoState,
+        route: Routes.Grid,
+        filter: String = "",
+        sort: PosterSort = PosterSort.PLAYLIST,
+        now: Long = System.currentTimeMillis(),
+        kept: Map<String, TitleMetadata> = emptyMap(),
+    ): List<ShowcaseItem> = grid(state, route.series, route.categoryId, route.myList, filter, route.anyType, sort, GridSource.of(route.source), now, kept)
 
     /**
      * Grid order. Release date: newest year first, titles without a year last, the latest addition first within a
      * year, then by name.
      */
-    fun sorted(items: List<ShowcaseItem>, sort: PosterSort): List<ShowcaseItem> {
+    fun sorted(items: List<ShowcaseItem>, sort: PosterSort, ratings: Map<String, TmdbRating>? = null): List<ShowcaseItem> {
         // One collator per sort, not per comparison (getInstance() is costly, and a sort compares n log n times).
         val collator = java.text.Collator.getInstance().apply { strength = java.text.Collator.PRIMARY }
         val byName = Comparator<ShowcaseItem> { a, b -> collator.compare(a.title, b.title) }
@@ -594,7 +616,12 @@ object UiMappers {
                     .thenByDescending { it.addedAt ?: Long.MIN_VALUE }
                     .then(byName),
             )
-            PosterSort.RATING -> items.sortedByDescending { it.rating ?: 0.0 }
+            // With the viewer's TMDb token ([sortRatings]), TMDb's weighted rating before the provider's.
+            PosterSort.RATING -> if (ratings == null) {
+                items.sortedByDescending { it.rating ?: 0.0 }
+            } else {
+                WeightedRating.ratingOrder(items, tmdb = { ratings[it.key] }, provider = { it.rating }, title = { it.title }, id = { it.key })
+            }
         }
     }
 
@@ -912,10 +939,12 @@ object UiMappers {
         locale: Locale = Locale.getDefault(),
         found: List<TrendingMatch> = emptyList(),
         sort: PosterSort = PosterSort.PLAYLIST,
+        kept: Map<String, TitleMetadata> = emptyMap(),
     ): BrowseUiState {
         val page = browsePage(state, kind, value, locale, found)
         if (sort == PosterSort.PLAYLIST) return page
-        return page.copy(movies = sorted(page.movies, sort), series = sorted(page.series, sort))
+        val ratings = sortRatings(state, sort, kept)
+        return page.copy(movies = sorted(page.movies, sort, ratings), series = sorted(page.series, sort, ratings))
     }
 
     private fun browsePage(state: OndoState, kind: BrowseKind, value: String, locale: Locale, found: List<TrendingMatch>): BrowseUiState {
