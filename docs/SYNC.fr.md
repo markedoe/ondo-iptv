@@ -25,7 +25,7 @@ Synchronisés : les playlists (nom, type, adresse, identifiant et mot de passe, 
 chaînes favorites, les acteurs et réalisateurs gardés dans Ma liste, les listes (collections) avec leurs personnes, la progression de lecture (où chaque film et épisode a été laissé, et
 ce qui a été terminé), les clés de services extérieurs saisies dans les Réglages (le jeton TMDb, et les clés des services de sous-titres et
 le compte OpenSubtitles avec l’interrupteur d’Addic7ed), l’ordre des
-rangées des onglets Accueil, Films et Séries avec les rangées masquées (Réglages → Ordre des rangées), et les profils (nom,
+rangées des onglets Accueil, Films et Séries avec les rangées masquées (Réglages → Ordre des rangées) et les présélections, et les profils (nom,
 couleur, avatar, Enfant) avec, pour chaque profil, sa liste, ses chaînes favorites, ses personnes, ses listes, sa
 progression, son ordre des rangées, ses présélections et ses catégories, langues et styles masqués (docs/PROFILES.fr.md), et les listes
 partagées avec tous les profils.

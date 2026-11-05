@@ -58,12 +58,16 @@ extension AppModel {
         var facts: [String: Selections.Facts] = [:]
         facts.reserveCapacity(content.movies.count + content.series.count)
         for movie in content.movies {
-            facts["m-" + movie.id] = Selections.Facts(genres: genres([movieDetailsCache[movie.id]?.genre]), awardGroups: groups(movieAwards[movie.id]),
-                                                     year: movie.year, styles: styles[movie.categoryID] ?? [])
+            facts["m-" + movie.id] = Selections.Facts(
+                genres: genres([movieDetailsCache[movie.id]?.genre]), awardGroups: groups(movieAwards[movie.id]),
+                year: movie.year, styles: styles[movie.categoryID] ?? []
+            )
         }
         for show in content.series {
-            facts["s-" + show.id] = Selections.Facts(genres: genres([show.genre, seriesDetailsCache[show.id]?.info.genre]),
-                                                    awardGroups: groups(seriesAwards[show.id]), year: show.year, styles: styles[show.categoryID] ?? [])
+            facts["s-" + show.id] = Selections.Facts(
+                genres: genres([show.genre, seriesDetailsCache[show.id]?.info.genre]), awardGroups: groups(seriesAwards[show.id]),
+                year: show.year, styles: styles[show.categoryID] ?? []
+            )
         }
         let tags = SelectionTags(key: key, facts: facts, genreNames: names)
         selectionTagsCache = tags

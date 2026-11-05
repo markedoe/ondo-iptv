@@ -25,7 +25,7 @@ Synced: the playlists (name, kind, address, login and password, guide address), 
 the actors and directors kept in My List, the lists (collections) with the people in them, playback progress (where each movie and episode was left, and what was finished), and the
 keys typed in Settings for outside services (the TMDb token, and the subtitle services' keys and OpenSubtitles account
 with the Addic7ed switch), the order of the rows of the Home, Movies and Series tabs with the rows hidden (Settings →
-Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's own My List, favourite channels,
+Row order) and the selections, and the viewer profiles (name, colour, avatar, Kids) with each profile's own My List, favourite channels,
 people, lists, progress, order of rows, selections and hidden categories, languages and styles (docs/PROFILES.md), and the lists
 shared with every profile.
 

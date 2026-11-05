@@ -97,6 +97,7 @@ public enum Selections {
     /// drawn from the selection, the `day` ("2026-11-05", the device's own date) and the title (`key`), the highest
     /// first; the titles `watched` last. The same titles give the same order all day, and another the next day; only
     /// additions and multiplications of exact numbers, so every platform gives the same order.
+    // swiftlint:disable:next function_parameter_count
     public static func dailyOrder<Item>(
         _ items: [Item],
         selectionID: String,
