@@ -425,7 +425,7 @@ final class PlayerController: NSObject {
         }
         // The item is not ready yet: playback starts with the resume seek.
         if pendingStart != nil && !startSeekSent { return }
-        if restartRemuxStoppedAfterTheEnd(at: 0) { return }
+        if restartRemuxStoppedAfterTheEnd(at: 0, plays: true) { return }
         if state == .ended { seek(to: 0) }
         if isLive && !hasLiveWindow {
             // Without a DVR window a paused live stream can only resume at the live edge.
@@ -466,7 +466,8 @@ final class PlayerController: NSObject {
             seekVLC(to: target)
             return
         }
-        if restartRemuxStoppedAfterTheEnd(at: target) { return }
+        // Moving in the ended film does not play it.
+        if restartRemuxStoppedAfterTheEnd(at: target, plays: false) { return }
         if pendingStart != nil && !startSeekSent {
             // Before the item is ready: this becomes the position it starts at.
             pendingStart = target
@@ -535,7 +536,9 @@ extension PlayerController {
     }
 
     private func tick(_ time: CMTime) {
-        guard activeEngine == .apple else { return }
+        // Without an item (a remux opening, a film whose server stopped after its end) the clock says 0: the position
+        // shown stays where it was.
+        guard activeEngine == .apple, player.currentItem != nil else { return }
         let seconds = time.seconds
         if let start = pendingStart {
             // The clock is not at the resume point yet: neither shown nor saved.
@@ -806,9 +809,11 @@ extension PlayerController {
     }
 
     /// The viewer plays (or moves in) a remuxed film whose server stopped after its end: a new remux starts at
-    /// `position`, with the system player (PlayerController+Remux). True when it does.
-    func restartRemuxStoppedAfterTheEnd(at position: Double) -> Bool {
+    /// `position`, with the system player (PlayerController+Remux), playing or paused as `plays` says (nil keeps
+    /// what was asked). True when it does.
+    func restartRemuxStoppedAfterTheEnd(at position: Double, plays: Bool? = nil) -> Bool {
         guard remuxStoppedAfterTheEnd, var current = item else { return false }
+        if let plays { playsWhenReady = plays }
         note("the remux starts again at \(Int(position)) s")
         current.startPosition = position
         item = current
