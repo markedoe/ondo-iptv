@@ -16,7 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -74,7 +73,8 @@ class WatchedEpisodesEverywhereTest {
     @Test
     fun anEpisodeWatchedAnyWayInShowsOnEverySurface() = runTest {
         val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue)), backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)).also { models += it }
+        // Once the saved state is read: a playlist added before would lose its place as the active one.
+        val viewModel = readyViewModel(repository).also { models += it }
         assertTrue(repository.addPlaylist("Home", list).isSuccess)
         val series: Series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series.single()
         // The series page was opened: its seasons are known.
