@@ -543,48 +543,129 @@ public enum CatalogueMatcher {
     }
 
     private static let separators = CharacterSet(charactersIn: " -:|·_.,")
+    /// `separators`, as the scalars `trimmed` drops (`trimmingCharacters(in:)` without going through `NSString`).
+    private static let separatorScalars = Set(" -:|·_.,".unicodeScalars)
 
     /// A provider's title as people read it, its case kept: without the provider's tags around the name.
     /// "|FR| Le Transport", "[FR] Le Transport", "FR - Le Transport", "STFR| Le Transport", "Le Transport VFF",
     /// "Le Transport (MULTI) (2021)" -> "Le Transport". The title as it is when nothing would be left of it.
     /// The same rules as Android's `CatalogueMatcher.displayTitle`, with the same tests. TMDb's searches and keys are
     /// made of it too (`key`, `searchQuery`); stored titles stay the provider's.
+    ///
+    /// Every title of a catalogue goes through it (`FilmVersions`, the awards): the regular expressions are compiled once,
+    /// and an ASCII title is searched byte by byte, where Foundation's search (through `NSString`) gives the same answer.
     public static func displayTitle(_ title: String) -> String {
         var name = title
+        let ascii = title.utf8.allSatisfy { $0 < 0x80 }
         // Each pattern only where its first character is (the same result, without a regular expression per title of a
         // whole catalogue: FilmVersions cleans every title).
-        if name.contains("[") { name = name.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression) }
-        if name.contains("|") { name = name.replacingOccurrences(of: #"\|[^|\s][^|]{0,23}\|"#, with: " ", options: .regularExpression) }
-        if name.contains("(") { name = name.replacingOccurrences(of: #"\(\s*\d{4}\s*\)"#, with: " ", options: .regularExpression) }
+        if contains(name, "[", ascii: ascii) { name = replacing(bracketedPattern, in: name) }
+        if contains(name, "|", ascii: ascii) { name = replacing(barredPattern, in: name) }
+        if contains(name, "(", ascii: ascii) { name = replacing(parenthesizedYearPattern, in: name) }
         // "(MULTI)", "(VOSTFR 4K)": a group of tags only.
-        if name.contains("(") { name = replacingGroups(in: name, pattern: #"\([^)]*\)"#) { group in
+        if contains(name, "(", ascii: ascii) { name = replacingGroups(in: name, regex: parenthesizedPattern) { group in
             let inner = group.trimmingCharacters(in: CharacterSet(charactersIn: "()"))
             let words = inner.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "/" })
                 .map(String.init).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             return !words.isEmpty && words.allSatisfy(isTag) ? " " : group
         } }
         // "FR - ", "FR-4K: ", "EN | ", "STFR| " before the name; "ST FR - ", "FR SUB | " are one tag in two words.
-        if name.contains(where: { "-:|·".contains($0) }), let match = leadingTag.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
+        if ascii ? name.utf8.contains(where: { $0 == 0x2D || $0 == 0x3A || $0 == 0x7C }) : name.contains(where: { "-:|·".contains($0) }),
+           let match = leadingTag.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
            let tagRange = Range(match.range(at: 1), in: name), let whole = Range(match.range, in: name) {
             let words = name[tagRange].split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "+" }).map(String.init)
             if words.allSatisfy(isTag) || isTag(words.joined()) { name = String(name[whole.upperBound...]) }
         }
-        var words = name.split(separator: " ", omittingEmptySubsequences: false)
-            .map { String($0).trimmingCharacters(in: separators) }
+        var words = name.spaceSplit(omittingEmptySubsequences: false)
+            .map { trimmed(String($0)) }
             .filter { !$0.isEmpty }
         while words.count > 1, let last = words.last, isTag(last) { words.removeLast() }
         while words.count > 1, let first = words.first, isTag(first) { words.removeFirst() }
         // The separators inside the name stay: only the words' own edges were trimmed above.
-        var cleaned = rebuild(name, words: words).trimmingCharacters(in: separators)
-        if cleaned.contains("  ") || cleaned.contains(where: { $0.isWhitespace && $0 != " " }) {
-            cleaned = cleaned.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        var cleaned = trimmed(rebuild(name, words: words, ascii: ascii))
+        let otherSpace = ascii ? cleaned.utf8.contains(where: { (0x09...0x0D).contains($0) }) : cleaned.contains(where: { $0.isWhitespace && $0 != " " })
+        if contains(cleaned, "  ", ascii: ascii) || otherSpace {
+            cleaned = replacing(whitespacePattern, in: cleaned)
         }
         return cleaned.isEmpty ? title.trimmingCharacters(in: .whitespacesAndNewlines) : cleaned
     }
 
-    private static let leadingTag = try! NSRegularExpression(pattern: #"^\s*([\p{L}\p{N}]{2,8}(?:[-+ ][\p{L}\p{N}]{1,6})?)\s*[-:|·]\s+"#)
+    private static let leadingTag = compiled(#"^\s*([\p{L}\p{N}]{2,8}(?:[-+ ][\p{L}\p{N}]{1,6})?)\s*[-:|·]\s+"#)
+    private static let bracketedPattern = compiled(#"\[[^\]]*\]"#)
+    private static let barredPattern = compiled(#"\|[^|\s][^|]{0,23}\|"#)
+    private static let parenthesizedYearPattern = compiled(#"\(\s*\d{4}\s*\)"#)
+    private static let parenthesizedPattern = compiled(#"\([^)]*\)"#)
+    private static let whitespacePattern = compiled(#"\s+"#)
+
+    /// How many regular expressions were compiled for `displayTitle`: each once, not once per title.
+    static let compiledPatterns = CallCount()
+    /// How many times `displayTitle` searched a title through Foundation (a title that is not ASCII).
+    static let foundationSearches = CallCount()
+
+    private static func compiled(_ pattern: String) -> NSRegularExpression {
+        compiledPatterns.add()
+        return try! NSRegularExpression(pattern: pattern)
+    }
+
+    /// Each match of `regex` in `text` replaced by a space, as `replacingOccurrences(of:with:options: .regularExpression)`
+    /// does, without compiling the pattern again.
+    private static func replacing(_ regex: NSRegularExpression, in text: String) -> String {
+        regex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: " ")
+    }
+
+    /// `text` without the `separators` at its ends, scalar by scalar as `trimmingCharacters(in:)` (every separator is one
+    /// UTF-16 unit).
+    static func trimmed(_ text: String) -> String {
+        let scalars = text.unicodeScalars
+        guard let first = scalars.firstIndex(where: { !separatorScalars.contains($0) }) else { return "" }
+        let last = scalars.lastIndex(where: { !separatorScalars.contains($0) })!
+        if first == scalars.startIndex && last == scalars.index(before: scalars.endIndex) { return text }
+        return String(scalars[first...last])
+    }
+
+    /// Whether `text` holds `needle`: byte by byte in an ASCII text, else as Foundation searches.
+    private static func contains(_ text: String, _ needle: String, ascii: Bool) -> Bool {
+        guard ascii else {
+            foundationSearches.add()
+            return text.contains(needle)
+        }
+        if needle.utf8.count == 1, let byte = needle.utf8.first { return text.utf8.contains(byte) }
+        return byteRange(of: Array(needle.utf8), in: Array(text.utf8), from: 0) != nil
+    }
+
+    /// The first place of `needle` in `bytes` from `start`, as offsets.
+    private static func byteRange(of needle: [UInt8], in bytes: [UInt8], from start: Int) -> Range<Int>? {
+        guard !needle.isEmpty, bytes.count >= needle.count, start <= bytes.count - needle.count else { return nil }
+        var i = start
+        let end = bytes.count - needle.count
+        while i <= end {
+            if bytes[i] == needle[0] {
+                var j = 1
+                while j < needle.count && bytes[i + j] == needle[j] { j += 1 }
+                if j == needle.count { return i..<(i + needle.count) }
+            }
+            i += 1
+        }
+        return nil
+    }
 
     /// `name` from its first kept word to its last (`words`, in order), with what lies between them as it was.
+    private static func rebuild(_ name: String, words: [String], ascii: Bool) -> String {
+        guard ascii else {
+            foundationSearches.add()
+            return rebuild(name, words: words)
+        }
+        let bytes = Array(name.utf8)
+        guard let first = words.first, let start = byteRange(of: Array(first.utf8), in: bytes, from: 0) else { return words.joined(separator: " ") }
+        var end = start.lowerBound
+        for word in words {
+            guard let found = byteRange(of: Array(word.utf8), in: bytes, from: end) else { return words.joined(separator: " ") }
+            end = found.upperBound
+        }
+        return String(decoding: bytes[start.lowerBound..<end], as: UTF8.self)
+    }
+
+    /// `rebuild` for any text, with Foundation's search.
     private static func rebuild(_ name: String, words: [String]) -> String {
         guard let first = words.first, let start = name.range(of: first) else { return words.joined(separator: " ") }
         var end = start.lowerBound
@@ -595,9 +676,8 @@ public enum CatalogueMatcher {
         return String(name[start.lowerBound..<end])
     }
 
-    /// `text` with each match of `pattern` replaced by what `transform` makes of it.
-    private static func replacingGroups(in text: String, pattern: String, _ transform: (String) -> String) -> String {
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
+    /// `text` with each match of `regex` replaced by what `transform` makes of it.
+    private static func replacingGroups(in text: String, regex: NSRegularExpression, _ transform: (String) -> String) -> String {
         var result = ""
         var last = text.startIndex
         for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
@@ -615,12 +695,12 @@ public enum CatalogueMatcher {
         // the same title as TMDb's.
         var name = displayTitle(title)
         // Remove bracketed tags: [MULTI], (VOSTFR)…
-        name = name.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
+        name = replacing(bracketedPattern, in: name)
         // A provider's tag between bars, before or after the name: "|FR-4K DV| MobLand", "MobLand |MULTI|". A bar
         // followed by a space only separates parts of the name: "FR | Sandstorm | 4K" keeps "Sandstorm".
-        name = name.replacingOccurrences(of: #"\|[^|\s][^|]{0,23}\|"#, with: " ", options: .regularExpression)
+        name = replacing(barredPattern, in: name)
         name = TitleParser.splitYear(name).0
-        name = name.replacingOccurrences(of: #"\([^)]*\)"#, with: " ", options: .regularExpression)
+        name = replacing(parenthesizedPattern, in: name)
         return TextNormalizer.channelMatchWords(name)
     }
 

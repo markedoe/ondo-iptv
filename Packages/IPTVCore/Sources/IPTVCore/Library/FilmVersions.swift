@@ -226,8 +226,8 @@ public struct FilmVersions: Sendable {
     public static func agreement(_ a: String, _ aYear: Int?, _ b: String, _ bYear: Int?) -> Agreement {
         guard groupable(a), groupable(b) else { return .different }
         if let aYear, let bYear, aYear != bYear { return .different }
-        let first = a.split(separator: " ").map(String.init)
-        let second = b.split(separator: " ").map(String.init)
+        let first = a.spaceSplit().map(String.init)
+        let second = b.spaceSplit().map(String.init)
         guard first.filter(isNumber).sorted() == second.filter(isNumber).sorted() else { return .different }
         if a == b || contentWords(a) == contentWords(b) { return .same }
         let (short, long) = first.count <= second.count ? (first, second) : (second, first)
@@ -295,12 +295,12 @@ public struct FilmVersions: Sendable {
     /// Whether a title key can stand for a film: not empty, and not made of the providers' tags only ("4k", "multi",
     /// "fr 4k"): such names say nothing of the film.
     public static func groupable(_ key: String) -> Bool {
-        !key.isEmpty && !key.split(separator: " ").allSatisfy { CatalogueMatcher.isTagWord(String($0)) }
+        !key.isEmpty && !key.spaceSplit().allSatisfy { CatalogueMatcher.isTagWord(String($0)) }
     }
 
     /// Rule B's titles: `groupable`, and more than a number ("FR - 2021" is "2021").
     static func groupableByTitle(_ key: String) -> Bool {
-        groupable(key) && !key.split(separator: " ").allSatisfy { isNumeral(String($0)) }
+        groupable(key) && !key.spaceSplit().allSatisfy { isNumeral(String($0)) }
     }
 
     /// Short words of many languages that say nothing of a film ("the", "le", "de"): "The Matrix" and "The Godfather"
@@ -312,7 +312,7 @@ public struct FilmVersions: Sendable {
 
     /// A title key's distinct words without `stopWords` (all of them when nothing else is left).
     private static func contentWords(_ key: String) -> Set<String> {
-        let all = Set(key.split(separator: " ").map(String.init))
+        let all = Set(key.spaceSplit().map(String.init))
         let content = all.subtracting(stopWords)
         return content.isEmpty ? all : content
     }
