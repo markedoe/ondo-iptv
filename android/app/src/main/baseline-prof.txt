@@ -66,6 +66,26 @@ HSPLcom/markedoe/ondo/ui/screens/*Search*;->**(**)**
 Lcom/markedoe/ondo/ui/screens/*Browse*;
 HSPLcom/markedoe/ondo/ui/screens/*Browse*;->**(**)**
 
+# Television (ui/tv): the frame and top bar, the design shared by its screens, Home, the header above the Movies and
+# Series rows, the detail pages, Search and the sort menu, by source file (as above). Its settings, categories and row
+# order screens, rarely opened, are left to the JIT.
+Lcom/markedoe/ondo/ui/tv/*Television*;
+HSPLcom/markedoe/ondo/ui/tv/*Television*;->**(**)**
+Lcom/markedoe/ondo/ui/tv/*TvShell*;
+HSPLcom/markedoe/ondo/ui/tv/*TvShell*;->**(**)**
+Lcom/markedoe/ondo/ui/tv/*TvDesign*;
+HSPLcom/markedoe/ondo/ui/tv/*TvDesign*;->**(**)**
+Lcom/markedoe/ondo/ui/tv/*TvHome*;
+HSPLcom/markedoe/ondo/ui/tv/*TvHome*;->**(**)**
+Lcom/markedoe/ondo/ui/tv/*TvFocusHeader*;
+HSPLcom/markedoe/ondo/ui/tv/*TvFocusHeader*;->**(**)**
+Lcom/markedoe/ondo/ui/tv/*TvDetail*;
+HSPLcom/markedoe/ondo/ui/tv/*TvDetail*;->**(**)**
+Lcom/markedoe/ondo/ui/tv/*TvSearch*;
+HSPLcom/markedoe/ondo/ui/tv/*TvSearch*;->**(**)**
+Lcom/markedoe/ondo/ui/tv/*TvSortMenu*;
+HSPLcom/markedoe/ondo/ui/tv/*TvSortMenu*;->**(**)**
+
 # Player: the activity, its load control and playback reports (not the problem report dialog, opened on demand).
 Lcom/markedoe/ondo/player/PlayerActivity*;
 HSPLcom/markedoe/ondo/player/PlayerActivity*;->**(**)**
