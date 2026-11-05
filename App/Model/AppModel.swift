@@ -223,8 +223,10 @@ final class AppModel {
     @ObservationIgnored private var shortEPGRequested = Set<String>()
     /// Playlist channels per guide channel, rebuilt when the catalogue or the guide changes.
     @ObservationIgnored var channelsByGuideIDCache: (key: String, map: [String: [Channel]], guideIDs: [String: String])?
-    /// Sorted movie and series lists, by catalogue, category and order (AppModel+Browse).
-    @ObservationIgnored var sortedListCache: [String: Any] = [:]
+    /// Sorted movie and series lists, by catalogue, category and order (AppModel+Browse), the last 16 used.
+    @ObservationIgnored var sortedListCache = RecentCache<Any>(capacity: 16)
+    /// How many times a whole list was sorted for `sortedListCache` (each takes a moment on a large catalogue).
+    @ObservationIgnored var listSorts = 0
 
     /// Cached so parental checks in long lists do not hit the keychain.
     private(set) var hasParentalPIN = false

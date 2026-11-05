@@ -53,7 +53,8 @@ extension AppModel {
         guard sort != .playlist else { return list }
         // Sorting a large catalogue by name takes a moment: once per catalogue, category and order, not at every redraw.
         let sortKey = key + ratingSortKey(sort)
-        if let cached = sortedListCache[sortKey] as? [Movie] { return cached }
+        if let cached = sortedListCache.value(sortKey) as? [Movie] { return cached }
+        listSorts += 1
         let sorted = Self.sorted(list, by: sort, votes: ratingSortVotes(sort))
         cacheSortedList(sorted, key: sortKey)
         return sorted
@@ -88,21 +89,23 @@ extension AppModel {
         }
         guard sort != .playlist else { return list }
         let sortKey = key + ratingSortKey(sort)
-        if let cached = sortedListCache[sortKey] as? [Series] { return cached }
+        if let cached = sortedListCache.value(sortKey) as? [Series] { return cached }
+        listSorts += 1
         let sorted = Self.sorted(list, by: sort, votes: ratingSortVotes(sort))
         cacheSortedList(sorted, key: sortKey)
         return sorted
     }
 
-    /// Keeps the last few sorted lists (the grids on screen and the shelves of Home).
+    /// Keeps the last few sorted lists (the grids on screen, the shelves of Home, the rows of a tab): the one used longest
+    /// ago goes when more come, so a list asked for at every redraw (the Movies tab's All row, the whole catalogue sorted)
+    /// stays while its rows scroll by.
     private func cacheSortedList(_ list: Any, key: String) {
-        if sortedListCache.count >= 16 { sortedListCache.removeAll() }
-        sortedListCache[key] = list
+        sortedListCache.store(list, key: key)
     }
 
     /// The list kept under `key`, built once (`key` names everything the list depends on).
     func cachedList<T>(_ key: String, build: () -> [T]) -> [T] {
-        if let cached = sortedListCache[key] as? [T] { return cached }
+        if let cached = sortedListCache.value(key) as? [T] { return cached }
         let list = build()
         cacheSortedList(list, key: key)
         return list
