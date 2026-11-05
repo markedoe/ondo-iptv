@@ -172,8 +172,9 @@ final class PlaybackTimingTests: XCTestCase {
         XCTAssertLessThan(controller.currentTime, 39, "not at the end of the film")
     }
 
-    /// The same with the film playing: it starts again where it was, playing. It opens at 25 s of the 40 s film and its
-    /// server stops as soon as the picture moves, which leaves the restart about 14 s before the end.
+    /// The same with the film playing: it starts again where it was, playing. It opens at 15 s of the 40 s film (the
+    /// resume may land on the next key frame, at 20 s) and its server stops as soon as the picture moves, which leaves
+    /// the restart about 20 s before the end.
     func testTheRemuxStartsAgainPlayingWhenItsServerStopsDuringTheFilm() async throws {
         let server = try filmServer()
         let base = try await server.start()
@@ -181,7 +182,7 @@ final class PlaybackTimingTests: XCTestCase {
         controller.isMuted = true
         defer { controller.stop() }
         var item = film(at: base.appendingPathComponent("movie/viewer/secret/47.mkv"))
-        item.startPosition = 25
+        item.startPosition = 15
         controller.load(item)
         try await wait(seconds: 45) { logged(controller, "picture moving after ") != nil }
         let first = try XCTUnwrap(controller.remuxServer, controller.log.entries.map(\.event).joined(separator: "\n"))
@@ -207,7 +208,7 @@ final class PlaybackTimingTests: XCTestCase {
         var ends = 0
         controller.onEnded = { _ in ends += 1 }
         var item = film(at: base.appendingPathComponent("movie/viewer/secret/48.mkv"))
-        item.startPosition = 35
+        item.startPosition = 30
         controller.load(item)
         try await wait(seconds: 45) { controller.state == .ended }
         let opened = controller.log.entries.map(\.event)

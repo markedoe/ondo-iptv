@@ -106,6 +106,9 @@ extension PlayerController {
         #if os(iOS)
         guard let server = remuxServer, server.hasFailed else { return false }
         remuxServerFailed(server, "the system player could not reach it")
+        // A film that had ended, played again or moved in before the server's failure was heard of: it starts again
+        // where the viewer asked (at its end, nothing is left to play).
+        if duration <= 0 || currentTime < duration - 1 { _ = restartRemuxStoppedAfterTheEnd(at: currentTime) }
         return true
         #else
         return false
