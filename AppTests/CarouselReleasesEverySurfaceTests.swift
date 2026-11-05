@@ -68,7 +68,8 @@ final class CarouselReleasesEverySurfaceTests: XCTestCase {
             }
         }
         model.tmdbMetadata.carouselRevision += 1
-        let road = try XCTUnwrap(model.downloadItem(for: model.content.movies.first { $0.name == "The Long Road" }!))
+        let longRoad = try XCTUnwrap(model.content.movies.first { $0.name == "The Long Road" })
+        let road = try XCTUnwrap(model.downloadItem(for: longRoad))
         model.recordStart(road)
         model.recordProgress(road, position: 600, duration: 6_000)
 
