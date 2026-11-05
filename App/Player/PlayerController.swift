@@ -100,6 +100,8 @@ final class PlayerController: NSObject {
     #if os(iOS)
     @ObservationIgnored var remuxServer: RemuxServer?
     #endif
+    /// The remuxed film had ended when its server stopped: no server runs until the viewer plays it again.
+    @ObservationIgnored var remuxStoppedAfterTheEnd = false
     /// Freezes and lost pictures of this playback, explained (sampled twice a second, PlayerController+Health).
     var health = PlaybackHealth()
     /// The statistics panel is shown over the picture.
@@ -423,6 +425,7 @@ final class PlayerController: NSObject {
         }
         // The item is not ready yet: playback starts with the resume seek.
         if pendingStart != nil && !startSeekSent { return }
+        if restartRemuxStoppedAfterTheEnd(at: 0, plays: true) { return }
         if state == .ended { seek(to: 0) }
         if isLive && !hasLiveWindow {
             // Without a DVR window a paused live stream can only resume at the live edge.
@@ -463,6 +466,8 @@ final class PlayerController: NSObject {
             seekVLC(to: target)
             return
         }
+        // Moving in the ended film does not play it.
+        if restartRemuxStoppedAfterTheEnd(at: target, plays: false) { return }
         if pendingStart != nil && !startSeekSent {
             // Before the item is ready: this becomes the position it starts at.
             pendingStart = target
@@ -531,7 +536,9 @@ extension PlayerController {
     }
 
     private func tick(_ time: CMTime) {
-        guard activeEngine == .apple else { return }
+        // Without an item (a remux opening, a film whose server stopped after its end) the clock says 0: the position
+        // shown stays where it was.
+        guard activeEngine == .apple, player.currentItem != nil else { return }
         let seconds = time.seconds
         if let start = pendingStart {
             // The clock is not at the resume point yet: neither shown nor saved.
@@ -799,6 +806,20 @@ extension PlayerController {
     func pictureInPictureChanged(_ active: Bool) {
         isPictureInPictureActive = active
         onPictureInPictureChange?(active)
+    }
+
+    /// The viewer plays (or moves in) a remuxed film whose server stopped after its end: a new remux starts at
+    /// `position`, with the system player (PlayerController+Remux), playing or paused as `plays` says (nil keeps
+    /// what was asked). True when it does.
+    func restartRemuxStoppedAfterTheEnd(at position: Double, plays: Bool? = nil) -> Bool {
+        guard remuxStoppedAfterTheEnd, var current = item else { return false }
+        if let plays { playsWhenReady = plays }
+        note("the remux starts again at \(Int(position)) s")
+        current.startPosition = position
+        item = current
+        currentTime = position
+        loadCurrentCandidate()
+        return true
     }
 
     /// A film that fails after a while restarts where it was, not at the position it was opened at.

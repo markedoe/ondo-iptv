@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 import UIKit
 import IPTVCore
 @testable import Ondo
@@ -140,18 +141,56 @@ final class PlaybackTimingTests: XCTestCase {
     }
 
     /// iOS takes back the remuxed film's server while the app is suspended (a paused film, the phone locked): the remux
-    /// starts again where the film was, with the system player, rather than VLC taking over.
+    /// starts again where the film was, paused as it was, with the system player, rather than VLC taking over. The film
+    /// opens at 15 s and is paused before its server stops: a 40 s film left playing could reach its end on a slow
+    /// machine. Its key frames are 10 s apart and a resume may land on the next one: from 15 s, at 20 s, then at 30 s
+    /// at most, before the end.
     func testTheRemuxStartsAgainWhereTheFilmWasWhenItsServerStops() async throws {
         let server = try filmServer()
         let base = try await server.start()
         let controller = PlayerController()
         controller.isMuted = true
         defer { controller.stop() }
-        controller.load(film(at: base.appendingPathComponent("movie/viewer/secret/45.mkv")))
+        var item = film(at: base.appendingPathComponent("movie/viewer/secret/45.mkv"))
+        item.startPosition = 15
+        controller.load(item)
         try await wait(seconds: 45) { logged(controller, "picture moving after ") != nil }
         let first = try XCTUnwrap(controller.remuxServer, controller.log.entries.map(\.event).joined(separator: "\n"))
-        controller.seek(to: 25, tolerance: 1)
-        try await wait(seconds: 45) { logged(controller, "seek done after ") != nil }
+        controller.pause()
+        try await wait(seconds: 45) { controller.state == .paused }
+        XCTAssertEqual(controller.state, .paused, controller.log.entries.map(\.event).joined(separator: "\n"))
+        controller.remuxServerFailed(first, "test")
+        // The restart's resume seek has landed once the new item's own position is there.
+        let landed = { controller.player.currentItem?.currentTime().seconds ?? 0 }
+        try await wait(seconds: 45) {
+            controller.remuxServer.map { $0 !== first } == true && controller.state == .paused
+                && controller.player.currentItem?.status == .readyToPlay && landed() >= 14
+        }
+        let log = controller.log.entries.map(\.event)
+        XCTAssertTrue(log.contains { $0.hasPrefix("remux server failed") }, log.joined(separator: "\n"))
+        XCTAssertEqual(controller.engineName, "AVPlayer (MKV remuxed)", log.joined(separator: "\n"))
+        XCTAssertEqual(controller.player.currentItem?.status, .readyToPlay, log.joined(separator: "\n"))
+        XCTAssertEqual(controller.state, .paused, log.joined(separator: "\n"))
+        XCTAssertGreaterThanOrEqual(landed(), 14, "the resume seek landed")
+        XCTAssertLessThan(landed(), 39, "not at the end of the film")
+        XCTAssertGreaterThanOrEqual(controller.currentTime, 14, "it starts again where it was")
+        XCTAssertLessThan(controller.currentTime, 39, "not at the end of the film")
+    }
+
+    /// The same with the film playing: it starts again where it was, playing. It opens at 15 s of the 40 s film (the
+    /// resume may land on the next key frame, at 20 s) and its server stops as soon as the picture moves, which leaves
+    /// the restart about 20 s before the end.
+    func testTheRemuxStartsAgainPlayingWhenItsServerStopsDuringTheFilm() async throws {
+        let server = try filmServer()
+        let base = try await server.start()
+        let controller = PlayerController()
+        controller.isMuted = true
+        defer { controller.stop() }
+        var item = film(at: base.appendingPathComponent("movie/viewer/secret/47.mkv"))
+        item.startPosition = 15
+        controller.load(item)
+        try await wait(seconds: 45) { logged(controller, "picture moving after ") != nil }
+        let first = try XCTUnwrap(controller.remuxServer, controller.log.entries.map(\.event).joined(separator: "\n"))
         controller.remuxServerFailed(first, "test")
         try await wait(seconds: 45) { controller.remuxServer.map { $0 !== first } == true && controller.state == .playing }
         let log = controller.log.entries.map(\.event)
@@ -159,6 +198,74 @@ final class PlaybackTimingTests: XCTestCase {
         XCTAssertEqual(controller.engineName, "AVPlayer (MKV remuxed)", log.joined(separator: "\n"))
         XCTAssertEqual(controller.state, .playing, log.joined(separator: "\n"))
         XCTAssertGreaterThanOrEqual(controller.currentTime, 15, "it starts again where it was")
+        XCTAssertLessThan(controller.currentTime, 39, "not at the end of the film")
+    }
+
+    /// A remuxed film that ended, then its server taken back (the phone locked on the end of the film): nothing is
+    /// opened again (the provider is not reached) and the film does not end twice. Playing it again starts a new remux
+    /// from the beginning, with the system player, not VLC.
+    func testAFilmThatEndedIsNotOpenedAgainWhenItsServerStopsAndReplaysRemuxed() async throws {
+        let server = try filmServer()
+        let base = try await server.start()
+        let controller = PlayerController()
+        controller.isMuted = true
+        defer { controller.stop() }
+        var ends = 0
+        controller.onEnded = { _ in ends += 1 }
+        var item = film(at: base.appendingPathComponent("movie/viewer/secret/48.mkv"))
+        item.startPosition = 30
+        controller.load(item)
+        try await wait(seconds: 45) { controller.state == .ended }
+        let opened = controller.log.entries.map(\.event)
+        XCTAssertEqual(controller.state, .ended, opened.joined(separator: "\n"))
+        XCTAssertEqual(ends, 1, opened.joined(separator: "\n"))
+        let first = try XCTUnwrap(controller.remuxServer, opened.joined(separator: "\n"))
+        let attempts = opened.filter { $0.hasPrefix("address ") }.count
+
+        controller.remuxServerFailed(first, "test")
+        var log = controller.log.entries.map(\.event)
+        XCTAssertEqual(controller.state, .ended, log.joined(separator: "\n"))
+        XCTAssertNil(controller.remuxServer, log.joined(separator: "\n"))
+        XCTAssertGreaterThan(controller.duration, 0)
+        XCTAssertEqual(controller.currentTime, controller.duration, accuracy: 1, "the seek bar still shows the end")
+        XCTAssertEqual(log.filter { $0.hasPrefix("address ") }.count, attempts, "nothing opened again: " + log.joined(separator: "\n"))
+        XCTAssertEqual(ends, 1, "the film ends once")
+
+        controller.play()
+        try await wait(seconds: 45) { controller.remuxServer != nil && controller.state == .playing }
+        log = controller.log.entries.map(\.event)
+        XCTAssertEqual(controller.state, .playing, log.joined(separator: "\n"))
+        XCTAssertEqual(controller.engineName, "AVPlayer (MKV remuxed)", log.joined(separator: "\n"))
+        XCTAssertTrue(log.last { $0.hasPrefix("address ") }?.hasSuffix("with the system player (MKV remuxed)") == true, log.joined(separator: "\n"))
+        XCTAssertLessThan(controller.currentTime, 10, "it plays again from the beginning")
+        XCTAssertEqual(ends, 1, log.joined(separator: "\n"))
+    }
+
+    /// Moving in a remuxed film that ended and whose server stopped starts a new remux there, paused: the viewer only
+    /// moved, the film does not start playing by itself.
+    func testMovingInAFilmThatEndedAfterItsServerStoppedStartsTheRemuxPaused() async throws {
+        let server = try filmServer()
+        let base = try await server.start()
+        let controller = PlayerController()
+        controller.isMuted = true
+        defer { controller.stop() }
+        var item = film(at: base.appendingPathComponent("movie/viewer/secret/49.mkv"))
+        item.startPosition = 30
+        controller.load(item)
+        try await wait(seconds: 45) { controller.state == .ended }
+        let first = try XCTUnwrap(controller.remuxServer, controller.log.entries.map(\.event).joined(separator: "\n"))
+        controller.remuxServerFailed(first, "test")
+        XCTAssertNil(controller.remuxServer, controller.log.entries.map(\.event).joined(separator: "\n"))
+
+        controller.seek(to: 10)
+        try await wait(seconds: 45) {
+            controller.remuxServer != nil && controller.state == .paused && controller.player.currentItem?.status == .readyToPlay
+        }
+        let log = controller.log.entries.map(\.event)
+        XCTAssertEqual(controller.state, .paused, log.joined(separator: "\n"))
+        XCTAssertEqual(controller.engineName, "AVPlayer (MKV remuxed)", log.joined(separator: "\n"))
+        XCTAssertEqual(controller.player.rate, 0, "it stays paused")
+        XCTAssertEqual(controller.currentTime, 10, accuracy: 1, log.joined(separator: "\n"))
     }
 
     /// A server that sends the whole file instead of its parts cannot serve the remux: VLC plays the film. (The
