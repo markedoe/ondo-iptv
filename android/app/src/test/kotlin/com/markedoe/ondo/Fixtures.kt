@@ -1,5 +1,9 @@
 package com.markedoe.ondo
 
+import com.markedoe.ondo.core.library.InMemoryMetadataStore
+import com.markedoe.ondo.core.library.MetadataKey
+import com.markedoe.ondo.core.library.MetadataStore
+import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.Episode
@@ -14,6 +18,8 @@ import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.SavedPlaylist
+import java.time.Instant
+import java.time.ZoneId
 
 /** A small fictional catalogue (the same titles as the iPhone screenshots). */
 object Fixtures {
@@ -101,6 +107,58 @@ object Fixtures {
         seasons = series.episodes.groupBy { it.season }.toSortedMap().map { (number, episodes) -> Season(number, "Season $number", episodes) },
     )
 
+    /** The day [daysAgo] days before [NOW] where the tests run, as TMDb writes a date ("2025-10-06"). */
+    fun releasedDaysAgo(daysAgo: Long): String = Instant.ofEpochMilli(NOW).atZone(ZoneId.systemDefault()).toLocalDate().minusDays(daysAgo).toString()
+
+    /**
+     * When TMDb says the titles came out, in days before [NOW] (a series: its latest episode), by poster key: the carousel
+     * goes by it ([com.markedoe.ondo.data.Showcase.heroItems]). Released lately: Harbor Lights (yesterday), The Last
+     * Signal (2 days), Northern Lights (3), Blue Horizon (a 2023 series with a new season 4 days ago), Glass City (5),
+     * Silent Harbor (20). Not: The Archive (nothing new for over a year), Summer in Lisbon (2022), The Long Road (2021),
+     * Midnight Orchard (in ten days); Late Show (yesterday) is in the hidden adult category.
+     */
+    val releaseDaysAgo: Map<String, Long> = mapOf(
+        "s-s1" to 1L, "m-4" to 2L, "m-1" to 3L, "s-s3" to 4L, "m-2" to 5L, "m-3" to 20L,
+        "s-s2" to 400L, "m-5" to 1_200L, "m-7" to 1_500L, "m-6" to -10L, "m-8" to 1L,
+    )
+
+    /**
+     * What TMDb said of [content]'s titles, as the device keeps it, by poster key: their release ([releaseDaysAgo]) and a
+     * backdrop, no votes (a test adds them). Kept under each title's name and year ([MetadataKey.title]).
+     */
+    fun kept(content: PlaylistContent = this.content): Map<String, TitleMetadata> {
+        val titles = content.movies.map { Triple("m-" + it.id, MetadataKey.title(false, it.name, it.year), false) } +
+            content.series.map { Triple("s-" + it.id, MetadataKey.title(true, it.name, it.year), true) }
+        return titles.mapNotNull { (key, storeKey, series) ->
+            val days = releaseDaysAgo[key] ?: return@mapNotNull null
+            key to TitleMetadata(
+                key = storeKey ?: return@mapNotNull null, kind = MetadataKey.kind(series), fetchedAt = NOW, genres = emptyList(),
+                backdropUrl = "https://img.example.com/backdrop/$key.jpg", releaseDate = releasedDaysAgo(days),
+            )
+        }.toMap()
+    }
+
+    /** A store that keeps [kept]: the app's Home finds its carousel's release dates in it, as after TMDb answered. */
+    fun metadata(content: PlaylistContent = this.content): InMemoryMetadataStore = InMemoryMetadataStore().apply { save(kept(content).values.toList()) }
+
+    /**
+     * What TMDb said of every title of [content], by poster key: released lately (the playlist's first title on the day of
+     * [now], each next one a day earlier, back to a month), with a backdrop, no votes. Any catalogue's carousel then
+     * features its titles, the newest releases first.
+     */
+    fun released(content: PlaylistContent, now: Long = NOW): Map<String, TitleMetadata> {
+        val today = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate()
+        val titles = content.movies.map { Triple("m-" + it.id, MetadataKey.title(false, it.name, it.year), false) } +
+            content.series.map { Triple("s-" + it.id, MetadataKey.title(true, it.name, it.year), true) }
+        return titles.withIndex().mapNotNull { (index, title) ->
+            val (key, storeKey, series) = title
+            key to TitleMetadata(
+                key = storeKey ?: return@mapNotNull null, kind = MetadataKey.kind(series), fetchedAt = now, genres = emptyList(),
+                backdropUrl = "https://img.example.com/backdrop/$key.jpg", releaseDate = today.minusDays(index % 30L).toString(),
+            )
+        }.toMap()
+    }
+
     val playlist = SavedPlaylist(id = PLAYLIST_ID, name = "Home", url = "http://example.com/list.m3u", addedAt = NOW)
 
     fun state(library: LibraryState = LibraryState(), content: PlaylistContent = this.content, settings: AppSettings = AppSettings(activePlaylistId = PLAYLIST_ID)) = OndoState(
@@ -111,4 +169,16 @@ object Fixtures {
         library = library,
         seriesDetails = content.series.associate { it.id to details(it) },
     )
+}
+
+/**
+ * A store where TMDb already answered for every title of the catalogue on screen ([content], read when Home reads the
+ * store), as [Fixtures.released] at [now]: Home's carousel, which goes by release date, features them.
+ */
+class ReleasedLately(
+    private val now: () -> Long = { Fixtures.NOW },
+    private val base: InMemoryMetadataStore = InMemoryMetadataStore(),
+    private val content: () -> PlaylistContent,
+) : MetadataStore by base {
+    override fun namedTitles(): List<TitleMetadata> = base.namedTitles() + Fixtures.released(content(), now()).values
 }

@@ -28,14 +28,14 @@ class ShowcaseTest {
         content: PlaylistContent = Fixtures.content,
         hidden: Set<String> = emptySet(),
         votes: Map<String, TmdbRating> = emptyMap(),
-    ) = Showcase(content, library, playlistId, hidden, votes = votes)
+    ) = Showcase(content, library, playlistId, hidden, votes = votes, kept = Fixtures.kept(content))
 
     /**
-     * What TMDb's voters said, by poster key. Added within four days (the last signal exactly four days ago): Northern
-     * Lights 7.3 from 12,345 (7.29 weighted), Glass City 10 from 10 (not enough votes), Silent Harbor 8.0 from 50 (6.8),
-     * The Last Signal 8.0 from 4,000 (7.93), Harbor Lights and Blue Horizon 7.9 from 800 (7.62 each), The Archive no
-     * votes known. Added earlier, so out of the window whatever the votes: Summer in Lisbon (5 days), The Long Road
-     * (7 days). Late Show is in the hidden adult category.
+     * What TMDb's voters said, by poster key, of the titles [Fixtures.releaseDaysAgo] dates: The Last Signal 8.0 from
+     * 4,000 (7.93 weighted), Harbor Lights and Blue Horizon 7.9 from 800 (7.62 each: the newer first), Northern Lights
+     * 7.3 from 12,345 (7.29), Silent Harbor 8.0 from 50 (6.8, released 20 days ago: in once the window widens), Glass
+     * City 10 from 10 (6.67, just enough votes). Summer in Lisbon and The Long Road, best rated, are old films; Late
+     * Show is in the hidden adult category.
      */
     private val votes = mapOf(
         "m-1" to TmdbRating(7.3, 12_345),
@@ -85,120 +85,80 @@ class ShowcaseTest {
     }
 
     @Test
-    fun theCarouselShowsTheBestRatedRecentAdditionsWeightedByVotes() {
-        val adultHidden = setOf(Fixtures.adultMovies.id)
-        val showcase = showcase(hidden = adultHidden, votes = votes)
+    fun theCarouselShowsTheBestRatedRecentReleasesWeightedByVotes() {
+        val showcase = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = votes)
         assertEquals(
-            "added in the last four days with at least 50 votes, by weighted rating, then latest added: ten from ten votes, " +
-                "unknown votes, older titles and hidden categories are out",
-            listOf("The Last Signal", "Harbor Lights", "Blue Horizon", "Northern Lights", "Silent Harbor"),
-            showcase.bestRecent(Fixtures.NOW).map { it.title },
-        )
-        // The other sources fill the carousel after them (new releases here), each title once.
-        assertEquals(
-            listOf("The Last Signal", "Harbor Lights", "Blue Horizon", "Northern Lights", "Silent Harbor", "The Archive", "Glass City", "Midnight Orchard"),
+            "released in the last 7 days, then 14, 30: by weighted rating, ties to the newest; an old series with nothing new, " +
+                "older titles, a release to come and hidden categories are out",
+            listOf("The Last Signal", "Harbor Lights", "Blue Horizon", "Northern Lights", "Silent Harbor", "Glass City"),
             showcase.heroItems(Fixtures.NOW).map { it.title },
         )
-        assertEquals(2, showcase.heroItems(Fixtures.NOW, limit = 2).size)
-        // A fortnight on, nothing was added in the last four days: new releases alone.
-        val later = Fixtures.NOW + 14 * 86_400_000L
-        assertTrue(showcase.bestRecent(later).isEmpty())
-        assertEquals(
-            listOf("Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
-            showcase.heroItems(later).map { it.title },
-        )
+        assertEquals(listOf("The Last Signal", "Harbor Lights"), showcase.heroItems(Fixtures.NOW, limit = 2).map { it.title })
+        // The provider's dates added do not count: Summer in Lisbon and The Long Road, best rated of all, are old films.
+        assertTrue(showcase.heroItems(Fixtures.NOW).none { it.title == "Summer in Lisbon" || it.title == "The Long Road" })
     }
 
     @Test
-    fun aTenFromTenVotesAddedYesterdayIsNotInTheCarouselsBestRecent() {
-        val tenVotes = mapOf("m-1" to TmdbRating(10.0, 10), "m-4" to TmdbRating(7.0, 500))
-        val pick = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = tenVotes).bestRecent(Fixtures.NOW).map { it.title }
-        assertFalse("Northern Lights" in pick)
-        assertEquals(listOf("The Last Signal"), pick)
-    }
-
-    @Test
-    fun aTitleAddedFiveDaysAgoIsNotInTheCarouselsBestRecent() {
-        val pick = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = mapOf("m-5" to TmdbRating(9.5, 50_000), "m-3" to TmdbRating(7.0, 500))).bestRecent(Fixtures.NOW).map { it.title }
-        assertFalse("Summer in Lisbon" in pick)
-        assertEquals(listOf("Silent Harbor"), pick)
-    }
-
-    /** A catalogue of old titles with posters, in a hidden category too, one without a poster. */
-    private fun oldCatalogue(): PlaylistContent {
-        fun art(id: String) = "http://example.com/poster/$id.jpg"
-        return Fixtures.content.copy(
-            movies = Fixtures.content.movies.map { it.copy(year = 2010, posterUrl = if (it.id == Fixtures.summerInLisbon.id) null else art(it.id)) },
-            series = Fixtures.content.series.map { it.copy(year = 2010, coverUrl = art(it.id)) },
-        )
-    }
-
-    @Test
-    fun aCatalogueWithoutTmdbVotesOrRecentReleasesStillShowsACarousel() {
-        val showcase = showcase(content = oldCatalogue(), hidden = setOf(Fixtures.adultMovies.id))
-        assertTrue(showcase.bestRecent(Fixtures.NOW).isEmpty())
-        assertTrue(showcase.newReleases(Fixtures.NOW).isEmpty())
-        val hero = showcase.heroItems(Fixtures.NOW).map { it.title }
-        assertEquals("the latest added with artwork first, then by title", listOf("Harbor Lights", "Northern Lights"), hero.take(2))
-        assertFalse("a hidden category stays out", "Late Show" in hero)
-        assertFalse("no artwork, no place", "Summer in Lisbon" in hero)
-        assertTrue(hero.size > 2)
-    }
-
-    @Test
-    fun withoutAnAddedDateTheLatestWithArtworkFollowThePlaylistOrder() {
-        val content = oldCatalogue().let { it.copy(movies = it.movies.map { m -> m.copy(addedAt = null) }, series = emptyList()) }
-        val hero = showcase(content = content, hidden = setOf(Fixtures.adultMovies.id)).heroItems(Fixtures.NOW).map { it.title }
-        assertEquals(listOf("Northern Lights", "Glass City", "Silent Harbor"), hero.take(3))
-    }
-
-    @Test
-    fun aTenFromTenVotesTitleIsStillNotRankedFirstByTheBestRecentSource() {
-        val ranked = mapOf("m-1" to TmdbRating(10.0, 10), "m-4" to TmdbRating(7.0, 500))
-        val showcase = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = ranked)
-        assertEquals("The Last Signal", showcase.bestRecent(Fixtures.NOW).first().title)
-        assertEquals("The Last Signal", showcase.heroItems(Fixtures.NOW).first().title)
-    }
-
-    @Test
-    fun theBestRecentWindowIsFourDays() {
+    fun anOldSeriesWithANewSeasonIsInAndOneWithNothingNewIsOut() {
         val showcase = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = votes)
-        assertEquals(4L, RECENT_DAYS)
-        val day = 86_400_000L
-        assertTrue("exactly four days is in", "The Last Signal" in showcase.bestRecent(Fixtures.NOW).map { it.title })
-        assertFalse("a day later it is out", "The Last Signal" in showcase.bestRecent(Fixtures.NOW + day).map { it.title })
-        assertEquals(listOf("Harbor Lights", "Blue Horizon", "Northern Lights", "Silent Harbor").sorted(), showcase.bestRecent(Fixtures.NOW + day).map { it.title }.sorted())
-        // Added five and seven days ago: out whatever their votes.
-        assertTrue(showcase.bestRecent(Fixtures.NOW).none { it.title == "Summer in Lisbon" || it.title == "The Long Road" })
+        val hero = showcase.heroItems(Fixtures.NOW).map { it.title }
+        assertEquals(2023, Fixtures.blueHorizon.year)
+        assertTrue("a 2023 series whose new season aired 4 days ago", "Blue Horizon" in hero)
+        assertEquals(2024, Fixtures.theArchive.year)
+        assertFalse("its latest episode aired over a year ago", "The Archive" in hero)
+        assertFalse("released in ten days", "Midnight Orchard" in hero)
     }
 
     @Test
-    fun withoutTmdbVotesTheBestRecentSourceIsEmptyAndTheCarouselFallsBack() {
+    fun withoutVotesTheNewestReleasesStandInAndWithoutRecentReleasesTheCarouselIsEmpty() {
         val none = showcase(hidden = setOf(Fixtures.adultMovies.id))
-        assertTrue(none.bestRecent(Fixtures.NOW).isEmpty())
         assertEquals(
-            "new releases, alternating movies and series",
-            listOf("Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
+            "the newest releases by date",
+            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "Blue Horizon", "Glass City", "Silent Harbor"),
             none.heroItems(Fixtures.NOW).map { it.title },
         )
-        // The provider's own rating is not a vote count: it does not qualify a title.
-        // Votes known for some titles only: the others stay out of the source, not out of the carousel.
-        val some = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = mapOf("m-4" to TmdbRating(8.0, 4_000)))
-        assertEquals(listOf("The Last Signal"), some.bestRecent(Fixtures.NOW).map { it.title })
-        assertTrue("The Archive" in some.heroItems(Fixtures.NOW).map { it.title })
+        // Two months on, nothing was released in the last 60 days: no carousel, rather than older titles.
+        assertTrue(none.heroItems(Fixtures.NOW + 70 * 86_400_000L).isEmpty())
+        // Without any release date known (no TMDb answer, no provider details), none either.
+        assertTrue(Showcase(Fixtures.content, LibraryState(), playlistId).heroItems(Fixtures.NOW).isEmpty())
     }
 
     @Test
-    fun theTitlesPreparedAheadAreTheNewAndBestRecentOnes() {
-        val titles = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = votes).aheadTitles(Fixtures.NOW, limit = 50)
-        assertEquals("each once", titles.size, titles.distinctBy { it.key }.size)
-        assertTrue("the best recent title first", titles.first().title == "The Last Signal")
-        assertFalse("hidden categories left out", titles.any { it.title == "Late Show" })
+    fun theProvidersFullReleaseDateCountsAndAYearAloneDoesNot() {
+        val kept = Fixtures.kept().mapValues { it.value.copy(releaseDate = "") }
+        val provider = mapOf("m-1" to Fixtures.releasedDaysAgo(2), "m-2" to "2025")
+        val showcase = Showcase(
+            Fixtures.content, LibraryState(), playlistId, setOf(Fixtures.adultMovies.id), kept = kept,
+            providerRelease = { provider[it.key] },
+        )
+        assertEquals(listOf("Northern Lights"), showcase.heroItems(Fixtures.NOW).map { it.title })
+    }
+
+    @Test
+    fun aTitleWithoutArtworkOrInAHiddenCategoryIsNeverInTheCarousel() {
+        val kept = Fixtures.kept().mapValues { (key, title) -> if (key == "m-4") title.copy(backdropUrl = null) else title }
+        val showcase = Showcase(Fixtures.content, LibraryState(), playlistId, setOf(Fixtures.adultMovies.id), votes = votes, kept = kept)
+        val hero = showcase.heroItems(Fixtures.NOW).map { it.title }
+        assertFalse("no poster, no backdrop", "The Last Signal" in hero)
+        assertFalse("hidden adult category, released yesterday", "Late Show" in hero)
+        assertTrue("Late Show" in showcase(votes = votes).heroItems(Fixtures.NOW).map { it.title })
+        // A poster is artwork enough.
+        val poster = Fixtures.content.copy(movies = Fixtures.content.movies.map { if (it.id == "4") it.copy(posterUrl = "http://example.com/poster/4.jpg") else it })
+        assertTrue("The Last Signal" in Showcase(poster, LibraryState(), playlistId, kept = kept).heroItems(Fixtures.NOW).map { it.title })
+    }
+
+    @Test
+    fun theTitlesAskedAboutAreTheOnesThatMayHaveComeOutLately() {
+        val asked = showcase(hidden = setOf(Fixtures.adultMovies.id)).releasesToAsk(Fixtures.NOW).map { it.title }
+        // Released this year or last (2024-2025 at NOW), or changed by the provider in the last 60 days: the playlist adds
+        // all of them within a week, so every shown title is asked, the latest changed first.
+        assertEquals(listOf("Northern Lights", "Harbor Lights", "Glass City", "The Archive", "Silent Harbor", "Blue Horizon"), asked.take(6))
+        assertFalse("hidden categories left out", "Late Show" in asked)
+        val later = Fixtures.NOW + 400 * 86_400_000L
+        assertEquals("a year on, the 2024 and older titles nobody changed are not asked", listOf("Northern Lights", "Harbor Lights", "The Last Signal"), showcase().releasesToAsk(later).map { it.title }.filter { it != "Late Show" })
+        val ahead = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = votes).aheadTitles(Fixtures.NOW, limit = 50)
+        assertEquals("each once", ahead.size, ahead.distinctBy { it.key }.size)
         assertEquals(3, showcase().aheadTitles(Fixtures.NOW, limit = 3).size)
-        // Titles added in the window are asked for first even when their votes are not known yet.
-        val unknown = showcase(hidden = setOf(Fixtures.adultMovies.id)).aheadTitles(Fixtures.NOW, limit = 50).map { it.title }
-        assertTrue("Silent Harbor" in unknown)
-        assertFalse("Summer in Lisbon" in unknown)
     }
 
     @Test
@@ -206,9 +166,11 @@ class ShowcaseTest {
         val copy = Fixtures.lastSignal.copy(id = "4-fr", streamUrl = "http://example.com/movie/4-fr.mp4")
         val content = Fixtures.content.copy(movies = Fixtures.content.movies + copy)
         val copyVotes = votes + ("m-4-fr" to TmdbRating(8.0, 4_000))
-        val titles = showcase(content = content, hidden = setOf(Fixtures.adultMovies.id), votes = copyVotes).bestRecent(Fixtures.NOW).map { it.title }
+        val kept = Fixtures.kept(content).let { it + ("m-4-fr" to it.getValue("m-4")) }
+        val titles = Showcase(content, LibraryState(), playlistId, setOf(Fixtures.adultMovies.id), votes = copyVotes, kept = kept).heroItems(Fixtures.NOW).map { it.title }
         assertEquals(1, titles.count { it == "The Last Signal" })
     }
+
 
     @Test
     fun newMoviesAndSeriesGoByReleaseYear() {

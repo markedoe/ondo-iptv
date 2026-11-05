@@ -1415,7 +1415,7 @@ class OndoRepository(
         val facts = withContext(Dispatchers.Default) {
             val result = HashMap<String, TitleMetadata>()
             for (title in named) {
-                if (title.genres.isNullOrEmpty() && title.rating == null) continue
+                if (title.genres.isNullOrEmpty() && title.rating == null && title.releaseDate.isNullOrEmpty()) continue
                 for (match in titles.match(listOf(title.key))) result.putIfAbsent(match.id, title)
             }
             result
@@ -2046,12 +2046,35 @@ class OndoRepository(
      * The same, waited for, and not shown on screen: a title prepared while Ondo is open (Settings, "Prepare new
      * titles"). Kept on the device like the others; false when it was already asked this session.
      */
-    suspend fun prepareTmdbMetadata(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?): Boolean {
+    suspend fun prepareTmdbMetadata(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?, changedAt: Long? = null): Boolean {
         val keys = MetadataKey.all(series, tmdbId, title, year)
         // Not marked as asked for the screen: the title's page, opened later, shows what was kept.
         if (keys.isEmpty() || key in metadataAsked || !metadataPrepared.add(key)) return false
-        tmdbMetadata(key, keys, series, tmdbId, title, year, ahead = true, client = tmdbClient() ?: return false, show = false)
+        tmdbMetadata(key, keys, series, tmdbId, title, year, ahead = true, client = tmdbClient() ?: return false, show = false, changedAt = changedAt)
         return true
+    }
+
+    /**
+     * [prepareTmdbMetadata] for the carousel ([com.markedoe.ondo.core.library.RecentReleases]): asked again when the
+     * provider changed the title ([changedAt], epoch seconds: a series' new episode) since TMDb was; true when TMDb's
+     * answer, now kept, has a release date.
+     */
+    suspend fun prepareTmdbRelease(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?, changedAt: Long?): Boolean {
+        if (!prepareTmdbMetadata(key, series, tmdbId, title, year, changedAt)) return false
+        val keys = MetadataKey.all(series, tmdbId, title, year)
+        return withContext(io) { runCatching { metadata.titles(keys).values.any { !it.releaseDate.isNullOrEmpty() } }.getOrDefault(false) }
+    }
+
+    /**
+     * Of [titles] (a poster's key to its keys in the store, [MetadataKey.all], and when the provider last changed it), those
+     * whose release the carousel needs asked ([com.markedoe.ondo.core.library.RecentReleases.needsAsking]).
+     */
+    suspend fun withoutReleaseDate(titles: Map<String, Pair<List<String>, Long?>>): Set<String> = withContext(io) {
+        val kept = runCatching { metadata.titles(titles.values.flatMap { it.first }) }.getOrDefault(emptyMap())
+        titles.filter { (_, title) ->
+            val found = title.first.firstNotNullOfOrNull { kept[it] }
+            com.markedoe.ondo.core.library.RecentReleases.needsAsking(found != null, found?.found == true, found?.releaseDate, found?.fetchedAt ?: 0L, title.second)
+        }.keys
     }
 
     /**
@@ -2074,11 +2097,13 @@ class OndoRepository(
     }
 
     /** [show]: put what was found on screen (a title shown); a title prepared ahead is only kept on the device. */
-    private suspend fun tmdbMetadata(key: String, keys: List<String>, series: Boolean, tmdbId: String?, title: String, year: Int?, ahead: Boolean, client: TmdbClient?, show: Boolean) {
+    private suspend fun tmdbMetadata(key: String, keys: List<String>, series: Boolean, tmdbId: String?, title: String, year: Int?, ahead: Boolean, client: TmdbClient?, show: Boolean, changedAt: Long? = null) {
         run {
             val stored = withContext(io) { storedMetadata(keys) }
             if (stored != null && show) showMetadata(key, stored.first, stored.second)
-            if (stored != null && MetadataFreshness.isFresh(stored.first, now())) return@run
+            // Fresh, unless the provider changed the title since (a series' new episode moves its latest air date).
+            val changed = changedAt != null && stored != null && stored.first.found && changedAt * 1_000 > stored.first.fetchedAt
+            if (stored != null && MetadataFreshness.isFresh(stored.first, now()) && !changed) return@run
             if (client == null) return@run
             val info = try {
                 if (ahead) {

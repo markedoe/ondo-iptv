@@ -91,7 +91,7 @@ class BigPanelMappersTest {
     @Test
     fun homeAndItsShelvesHoldEachKeyOnce() {
         for (library in listOf(true, false)) {
-            val home = UiMappers.home(state(library), Labels("Movie", "Series", Locale.US), now)
+            val home = UiMappers.home(state(library), Labels("Movie", "Series", Locale.US), now, com.markedoe.ondo.Fixtures.released(content, now))
             assertTrue("up to fifteen titles: ${home.hero.size}", home.hero.size in 6..15)
             assertTrue("the suggestion shows", home.tagSuggestion != null)
             assertUnique("hero", home.hero.map { it.item.key })

@@ -55,9 +55,9 @@ object MetadataFreshness {
     /** An image address that led nowhere. */
     const val DEAD_IMAGE_MS = 7L * 24 * 60 * 60 * 1000
 
-    /** A title kept before genres and recommendations were kept with it is asked again. */
+    /** A title kept before genres and recommendations, or its release date, were kept with it is asked again. */
     fun isFresh(title: TitleMetadata, now: Long): Boolean =
-        !(title.found && title.genres == null) && isFresh(title.fetchedAt, if (title.found) FOUND_MS else NOT_FOUND_MS, now)
+        !(title.found && (title.genres == null || title.releaseDate == null)) && isFresh(title.fetchedAt, if (title.found) FOUND_MS else NOT_FOUND_MS, now)
 
     /** Fetched less than [maxAge] ago. A date in the future (the clock was changed) is not trusted. */
     fun isFresh(fetchedAt: Long, maxAge: Long, now: Long): Boolean = now - fetchedAt in 0 until maxAge
@@ -82,6 +82,11 @@ data class TitleMetadata(
     val related: List<RelatedTitle>? = null,
     /** Its title as a picture ([TmdbLogo.best]); null when it has none, or was kept before logos were. */
     val logoUrl: String? = null,
+    /**
+     * The date the carousel counts its release from ([TmdbTitleInfo.releaseDate]): empty when TMDb gives none, null when
+     * kept before release dates were.
+     */
+    val releaseDate: String? = null,
 ) {
     /** "TMDb 7.3 (12,345)" needs both: a rating TMDb's users gave, and how many gave it. */
     val rating: TmdbRating?
@@ -107,6 +112,7 @@ data class TitleMetadata(
             genres = info?.genres,
             related = info?.related?.map { RelatedTitle(it.mediaType == TmdbItem.MediaType.TV, it.id, it.title, it.year) },
             logoUrl = info?.logoUrl,
+            releaseDate = info?.let { it.releaseDate.orEmpty() },
         )
     }
 }
@@ -204,8 +210,8 @@ interface MetadataStore {
     fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata>
 
     /**
-     * The titles TMDb found, kept under their name and year ([MetadataKey.title]) with what a poster shows of them: the
-     * rating and the genres ([TitleMetadata.related] left out).
+     * The titles TMDb found, kept under their name and year ([MetadataKey.title]) with what a poster and the carousel show
+     * of them: the rating, the genres, the release date and the backdrop ([TitleMetadata.related] left out).
      */
     fun namedTitles(): List<TitleMetadata>
 

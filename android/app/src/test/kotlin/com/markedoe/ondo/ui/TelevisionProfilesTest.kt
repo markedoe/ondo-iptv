@@ -80,7 +80,7 @@ class TelevisionProfilesTest {
         profiles?.let(store::saveProfiles)
         library?.let { store.saveLibrary(it) }
         store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content.copy(fetchedAt = System.currentTimeMillis()))
-        repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main), mainProfileName = "Me")
+        repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main), mainProfileName = "Me", metadata = com.markedoe.ondo.Fixtures.metadata())
         val viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
         compose.setContent {

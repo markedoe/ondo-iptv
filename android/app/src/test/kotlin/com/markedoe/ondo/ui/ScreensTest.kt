@@ -409,9 +409,9 @@ class ScreensTest {
     fun homeShowsTheCarouselAndItsActionsWork() {
         val listed = mutableListOf<ShowcaseItem>()
         val played = mutableListOf<ShowcaseItem>()
-        // Harbor Lights leads the carousel as the best recent title by TMDb's votes.
+        // Harbor Lights leads the carousel as the best recent release by TMDb's votes.
         val voted = Fixtures.state().copy(tmdbRatings = mapOf(Fixtures.harborLights.let { "s-" + it.id } to com.markedoe.ondo.core.library.TmdbRating(8.2, 5_000)))
-        val state = UiMappers.home(voted, labels, Fixtures.NOW)
+        val state = UiMappers.home(voted, labels, Fixtures.NOW, Fixtures.kept())
         compose.setContent {
             OndoTheme {
                 HomeScreen(state, HomeActions(onPlay = { played += it }, onToggleMyList = { listed += it }), autoAdvance = false)
@@ -453,7 +453,7 @@ class ScreensTest {
 
     @Test
     fun playShowsProgressWhileTheTitleGetsReady() {
-        val state = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
+        val state = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW, Fixtures.kept())
         var preparing by mutableStateOf<String?>(null)
         compose.setContent { OndoTheme { HomeScreen(state, HomeActions(), autoAdvance = false, preparingKey = preparing) } }
         val progress = hasContentDescription("Loading…") and hasAnyAncestor(hasTestTag("heroPlay"))

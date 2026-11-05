@@ -109,6 +109,34 @@ class TmdbTest {
         assertEquals(1, http.requested.size, "one call")
     }
 
+    /**
+     * The date the carousel counts a release from comes with the same call: a movie's release; a series' latest episode
+     * (a 2014 series with a new season this week is new), else its latest season, else its first air date.
+     */
+    @Test
+    fun theReleaseDateComesWithTheTitle() = runTest {
+        val http = MockHttpClient()
+        fun route(kind: String, id: Int, body: String) {
+            val credits = if (kind == "tv") "aggregate_credits" else "credits"
+            http.routes["https://api.themoviedb.org/3/$kind/$id?append_to_response=$credits,videos,recommendations,images&include_video_language=en,null&include_image_language=en,null&language=en-US&api_key=KEY"] =
+                body.encodeToByteArray()
+        }
+        route("movie", 1, """{"id":1,"title":"Harbor","release_date":"2026-11-02"}""")
+        route("movie", 2, """{"id":2,"title":"Dock","release_date":""}""")
+        route("tv", 3, """{"id":3,"name":"Old Harbor","first_air_date":"2014-03-01","last_air_date":"2026-11-01","last_episode_to_air":{"air_date":"2026-11-03"},"seasons":[{"air_date":"2014-03-01"},{"air_date":"2026-10-27"},{"air_date":"2027-02-01"}]}""")
+        route("tv", 4, """{"id":4,"name":"Port","first_air_date":"2014-03-01","seasons":[{"air_date":"2014-03-01"},{"air_date":"2016-05-01"}]}""")
+        route("tv", 5, """{"id":5,"name":"Pilot","first_air_date":"2026-11-04"}""")
+        route("tv", 6, """{"id":6,"name":"Rumour","first_air_date":"2026"}""")
+        val client = TmdbClient("KEY", http)
+        suspend fun date(series: Boolean, id: Int) = client.titleInfo(series, id.toString(), "x", null)!!.releaseDate
+        assertEquals("2026-11-02", date(false, 1))
+        assertNull(date(false, 2))
+        assertEquals("2026-11-03", date(true, 3), "the latest episode, not an announced season")
+        assertEquals("2016-05-01", date(true, 4), "the latest season")
+        assertEquals("2026-11-04", date(true, 5), "a brand-new series: its first air date")
+        assertNull(date(true, 6), "a year alone is not a date")
+    }
+
     /** The same call brings the title's genres and the titles TMDb recommends with it; a genre's titles come by page. */
     @Test
     fun genresAndRecommendationsComeWithTheTitle() = runTest {

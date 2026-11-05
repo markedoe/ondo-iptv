@@ -120,7 +120,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
 
     @Test
     fun home() = capture("01-home", TopLevel.HOME) {
-        val home = UiMappers.home(state, labels, now).copy(channels = emptyList())
+        val home = UiMappers.home(state, labels, now, catalogue.kept()).copy(channels = emptyList())
         if (tv) TvHomeScreen(home, HomeActions()) else HomeScreen(home, HomeActions())
     }
 

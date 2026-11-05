@@ -72,8 +72,9 @@ class UiMappersTest {
     }
 
     /**
-     * Trending titles (TMDb) of the playlist: a row of their own and the carousel after what is being watched, in TMDb's
-     * order, without a hidden category or, when Settings hides them, a finished movie.
+     * Trending titles (TMDb) of the playlist: a row of their own, in TMDb's order, without a hidden category or, when
+     * Settings hides them, a finished movie. The carousel goes by release date: an old film TMDb says is trending stays
+     * out of it.
      */
     @Test
     fun trendingTitlesShowInTheirRowAndTheCarousel() {
@@ -86,14 +87,14 @@ class UiMappersTest {
         )
         val finished = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.summerInLisbon.id, title = "Summer in Lisbon", lastWatchedAt = 1)
         val library = LibraryState().recordStart(finished).updateProgress(finished.key, 5_900.0, 6_000.0, now = 2)
-        val home = UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, Fixtures.NOW)
+        val home = UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, Fixtures.NOW, Fixtures.kept())
         assertEquals(listOf("The Long Road", "Blue Horizon", "Summer in Lisbon"), home.trending.map { it.title })
-        // Without TMDb votes there is no best recent source: trending titles come first, then new releases.
+        // Without TMDb votes, the newest releases by date: Blue Horizon for its new season, not for trending.
         assertEquals(
-            listOf("The Long Road", "Blue Horizon", "Summer in Lisbon", "Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
+            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "Blue Horizon", "Glass City", "Silent Harbor"),
             home.hero.map { it.item.title },
         )
-        // With votes, the best rated additions of the last four days (weighted by the votes) come first.
+        // With votes, the recent releases with enough of them, by weighted rating; ten votes at 10 stay near the prior.
         val voted = Fixtures.state(library).copy(
             trending = trending,
             tmdbRatings = mapOf(
@@ -103,11 +104,9 @@ class UiMappersTest {
             ),
         )
         assertEquals(
-            listOf("Harbor Lights", "Northern Lights", "The Long Road", "Blue Horizon", "Summer in Lisbon", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
-            UiMappers.home(voted, labels, Fixtures.NOW).hero.map { it.item.title },
+            listOf("Harbor Lights", "Northern Lights", "The Last Signal"),
+            UiMappers.home(voted, labels, Fixtures.NOW, Fixtures.kept()).hero.map { it.item.title },
         )
-        val week = Fixtures.NOW + 14 * 86_400_000L
-        assertEquals("The Long Road", UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, week).hero.first().item.title)
 
         val hidingWatched = Fixtures.state(library, settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, hideWatchedMovies = true)).copy(trending = trending)
         assertEquals(listOf("The Long Road", "Blue Horizon"), UiMappers.home(hidingWatched, labels, Fixtures.NOW).trending.map { it.title })
@@ -195,7 +194,7 @@ class UiMappersTest {
 
     @Test
     fun homeShowsTheCarouselShelvesAndChannels() {
-        val home = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
+        val home = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW, Fixtures.kept())
         assertEquals("Home", home.playlistName)
         assertEquals(6, home.hero.size)
         assertEquals("Movie · 2025 · ★ 7.8", home.hero.first { it.item.title == "Northern Lights" }.meta)
@@ -213,18 +212,20 @@ class UiMappersTest {
 
     @Test
     fun ratingsUseTheUsersDecimalSeparator() {
-        val hero = UiMappers.home(Fixtures.state(), Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW).hero
+        val hero = UiMappers.home(Fixtures.state(), Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW, Fixtures.kept()).hero
         assertEquals("Film · 2025 · ★ 7,8", hero.first { it.item.title == "Northern Lights" }.meta)
     }
 
     /** Both ratings side by side: the provider's, then TMDb's with its number of votes when TMDb gave them. */
     @Test
     fun aRatingShowsItsVotesWhenTmdbGaveThem() {
-        val key = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.item.key
+        // Every recent release rated on the device, so that the carousel holds them all.
+        val kept = Fixtures.kept().mapValues { (_, title) -> title.copy(voteAverage = 7.0, voteCount = 100) }
+        val key = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW, kept).hero.first { it.item.title == "Northern Lights" }.item.key
         val state = Fixtures.state().copy(tmdbRatings = mapOf(key to TmdbRating(7.346, 12345)))
-        assertEquals("Movie · 2025 · ★ 7.8 · TMDb 7.3 (12,345)", UiMappers.home(state, labels, Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.meta)
-        assertEquals("Series · 2025 · Drama · ★ 8.2", UiMappers.home(state, labels, Fixtures.NOW).hero.first { it.item.title == "Harbor Lights" }.meta)
-        val french = UiMappers.home(state, Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.meta
+        assertEquals("Movie · 2025 · ★ 7.8 · TMDb 7.3 (12,345)", UiMappers.home(state, labels, Fixtures.NOW, kept).hero.first { it.item.title == "Northern Lights" }.meta)
+        assertEquals("Series · 2025 · Drama · ★ 8.2", UiMappers.home(state, labels, Fixtures.NOW, kept).hero.first { it.item.title == "Harbor Lights" }.meta)
+        val french = UiMappers.home(state, Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW, kept).hero.first { it.item.title == "Northern Lights" }.meta
         assertTrue(french, french.matches(Regex("Film · 2025 · ★ 7,8 · TMDb 7,3 \\(12[\\s\\u00A0\\u202F]345\\)")))
         assertNull(UiMappers.ratingFact(null, null, Locale.US))
         assertNull(UiMappers.ratingFact(0.0, null, Locale.US))
@@ -333,7 +334,7 @@ class UiMappersTest {
             .recordStart(finished).updateProgress(finished.key, 5_900.0, 6_000.0, now = 2)
             .toggleFavorite(Favorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, "Glass City", addedAt = 3))
         fun titles(state: com.markedoe.ondo.data.OndoState): Map<String, List<String>> {
-            val home = UiMappers.home(state, labels, Fixtures.NOW)
+            val home = UiMappers.home(state, labels, Fixtures.NOW, Fixtures.kept())
             val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state))
             return mapOf(
                 "grid" to UiMappers.grid(state, false, null, false, "").map { it.title },
@@ -591,7 +592,8 @@ class UiMappersTest {
         )
         /** Every list of titles, by its name: what each shows, as text (the titles and names in it). */
         fun surfaces(state: OndoState): Map<String, String> {
-            val home = UiMappers.home(state, labels, Fixtures.NOW)
+            // Every title released lately, so that the carousel would feature the hidden ones.
+            val home = UiMappers.home(state, labels, Fixtures.NOW, Fixtures.released(state.content))
             val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state), state.library.hiddenTags)
             // What a search found, without the words typed.
             fun found(search: SearchUiState) = listOf(search.movies, search.series, search.channels.map { it.channel.name }, search.people).toString()
@@ -767,10 +769,10 @@ class UiMappersTest {
 
     @Test
     fun myListItemsAreOpenable() {
-        val library = LibraryState().toggleFavorite(Favorite(Fixtures.PLAYLIST_ID, ItemKind.SERIES, Fixtures.theArchive.id, "The Archive", addedAt = 1))
-        val home = UiMappers.home(Fixtures.state(library), labels, Fixtures.NOW)
-        assertEquals(listOf(ShowcaseItem.SeriesItem(Fixtures.theArchive)), home.myList)
-        assertTrue(home.hero.first { it.item == ShowcaseItem.SeriesItem(Fixtures.theArchive) }.inMyList)
+        val library = LibraryState().toggleFavorite(Favorite(Fixtures.PLAYLIST_ID, ItemKind.SERIES, Fixtures.harborLights.id, "Harbor Lights", addedAt = 1))
+        val home = UiMappers.home(Fixtures.state(library), labels, Fixtures.NOW, Fixtures.kept())
+        assertEquals(listOf(ShowcaseItem.SeriesItem(Fixtures.harborLights)), home.myList)
+        assertTrue(home.hero.first { it.item == ShowcaseItem.SeriesItem(Fixtures.harborLights) }.inMyList)
     }
 
     @Test

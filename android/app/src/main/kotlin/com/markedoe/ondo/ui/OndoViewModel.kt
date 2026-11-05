@@ -101,9 +101,12 @@ class OndoViewModel(
         this.labels.value = labels
     }
 
-    /** What TMDb said of the catalogue's titles and the device kept (votes included), again as more is kept; empty until read. */
+    /** Changes when the carousel's fill brought release dates ([fillCarouselReleases]): Home reads what was kept again. */
+    private val carouselVersion = MutableStateFlow(0)
+
+    /** What TMDb said of the catalogue's titles and the device kept (votes and release dates included), again as more is kept; empty until read. */
     private val keptFacts: Flow<Map<String, TitleMetadata>> =
-        state.distinctUntilChanged { old, new -> old.content === new.content && old.tmdbRatings === new.tmdbRatings }
+        combine(state.distinctUntilChanged { old, new -> old.content === new.content && old.tmdbRatings === new.tmdbRatings }, carouselVersion) { state, _ -> state }
             .mapLatest { repository.keptPosterFacts() }
             .onStart { emit(emptyMap()) }
 
@@ -650,12 +653,48 @@ class OndoViewModel(
                     val details = details(state.value, item)
                     val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
                     val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
-                    repository.prepareTmdbMetadata(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
+                    repository.prepareTmdbMetadata(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year, changedAt = item.addedAt)
                 }
             }
     }
 
     private class PrepareInput(val on: Boolean, val content: PlaylistContent)
+
+    /**
+     * Home's carousel goes by release date ([com.markedoe.ondo.core.library.RecentReleases]), which TMDb gives: while Ondo
+     * is on screen (the caller stops it otherwise), with the viewer's TMDb token, the titles that may have been released
+     * lately ([com.markedoe.ondo.data.Showcase.releasesToAsk]) whose date the device does not know, or whose provider
+     * changed them since TMDb was asked (a series' new episode), are asked in the background: [RatingFill.LIMIT] at most per
+     * catalogue, two at a time at TMDb's pace (shared with the titles prepared ahead), kept on the device, and Home reads
+     * them again twice ([RatingFill.run]), not at each answer. Nothing without a token; starts over with a new catalogue.
+     */
+    suspend fun fillCarouselReleases() {
+        state
+            .map { PrepareInput(it.settings.tmdbToken != null && !it.tmdbRefused, it.content) }
+            .distinctUntilChanged { old, new -> old.on == new.on && old.content === new.content }
+            .collectLatest { input ->
+                if (!input.on) return@collectLatest
+                // Home draws first.
+                delay(CAROUSEL_FILL_DELAY_MS)
+                val current = state.value
+                val now = clock()
+                val asked = withContext(computation) {
+                    UiMappers.showcase(current).releasesToAsk(now).take(CAROUSEL_CANDIDATES).map { item ->
+                        val details = details(current, item)
+                        val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
+                        val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
+                        item to RatingAsk(item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
+                    }
+                }
+                val unknown = repository.withoutReleaseDate(asked.associate { (item, a) -> item.key to (MetadataKey.all(a.series, a.tmdbId, a.title, a.year) to item.addedAt) })
+                val ask = RatingFill.toAsk(asked, isKnown = { it.first.key !in unknown })
+                RatingFill.run(
+                    ask,
+                    fetch = { (item, a) -> repository.prepareTmdbRelease(item.key, a.series, a.tmdbId, a.title, a.year, item.addedAt) },
+                    resort = { carouselVersion.value += 1 },
+                )
+            }
+    }
 
     private val _ratingSortVersion = MutableStateFlow(0)
 
@@ -705,6 +744,10 @@ class OndoViewModel(
 
         /** Series whose details Home fetches ahead, at most. */
         const val PREFETCH_LIMIT = 4
+
+        /** The carousel's candidates read at most, and the wait before asking about them (see [fillCarouselReleases]). */
+        const val CAROUSEL_CANDIDATES = 2_000
+        const val CAROUSEL_FILL_DELAY_MS = 2_000L
 
         /** Titles prepared ahead at most, and the wait before starting (see [prepareAhead]). */
         const val PREPARE_LIMIT = 300

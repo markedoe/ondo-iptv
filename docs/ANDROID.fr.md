@@ -78,7 +78,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   (sur ces pages, leur propre ordre), nom, date d'ajout, date de sortie ou note. Les titres d'un genre trouvés via
   TMDb sont triés avec les autres (`UiMappers.browse`). Par note, avec le jeton TMDb de l'utilisateur : la note TMDb
   pondérée par son nombre de votes d'abord (`WeightedRating.ratingOrder`, les m = 200 et C = 6,5 du carrousel sans
-  son minimum de 50 votes), puis les titres sans note TMDb selon la note du fournisseur, à égalité par titre ; la page
+  son minimum de 10 votes), puis les titres sans note TMDb selon la note du fournisseur, à égalité par titre ; la page
   demande à TMDb en arrière-plan jusqu'à 100 de ses titres jamais demandés, deux à la fois au rythme des autres
   requêtes, et se retrie deux fois : après 20 notes et à la fin (`RatingFill`). Sans jeton, la note du fournisseur
   comme avant.
@@ -87,8 +87,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   leur photo (complétée depuis leur page ou les titres gardés sur l'appareil).
 - **TMDb** avec le jeton de l'utilisateur (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`) :
   vérifié par `/authentication` de TMDb avant d'être enregistré (accepté, refusé, injoignable), gardé dans le
-  stockage privé de l'app et transmis par la synchronisation (`key:tmdb`, docs/SYNC.fr.md) ; une rangée Tendances et
-  des titres du carrousel, l'image de fond de TMDb quand celle du fournisseur manque ou ne se charge pas,
+  stockage privé de l'app et transmis par la synchronisation (`key:tmdb`, docs/SYNC.fr.md) ; une rangée Tendances, les
+  dates de sortie et les votes du carrousel, l'image de fond de TMDb quand celle du fournisseur manque ou ne se charge pas,
   sa bande-annonce, sa note avec le nombre de votes et les photos de son casting et de ses réalisateurs
   (`TmdbClient.titleInfo`, un seul appel, par l'identifiant TMDb du fournisseur ou le titre ; pour une série, ses
   `aggregate_credits`, le casting de toutes ses saisons, et ses créateurs, `created_by`), les personnes de TMDb
@@ -98,10 +98,22 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   montre son propre titre, sans le nom de la série, les étiquettes ni le code (`EpisodeTitles`, comme sur Apple). Les réponses de TMDb sont gardées sur
   l'appareil (`SqliteMetadataStore`, `metadata.sqlite`, comme sur les appareils Apple ; clés
   `movie:603` ou `movie:sandstorm:2021`) : les fiches les affichent tout de suite, TMDb n'est redemandé qu'après
-  30 jours (7 pour un titre qu'il ne connaît pas), les titres du carrousel de l'accueil et ceux ajoutés ces quatre derniers jours sont demandés à l'avance deux
-  à la fois (la première source du carrousel classe ces derniers par la note moyenne de TMDb pondérée par son nombre de
-  votes : `v/(v+200)·R + 200/(v+200)·6,5`, 50 votes au moins, égalité au plus récemment ajouté puis au titre ;
-  `WeightedRating`, comme sur Apple), les crédits gardés trouvent les personnes dans la recherche et leurs titres sans réseau, et une adresse
+  30 jours (7 pour un titre qu'il ne connaît pas), et le carrousel de l'accueil suit la date de sortie gardée
+  (`RecentReleases`, comme sur Apple) : la `release_date` d'un film, le dernier épisode d'une série
+  (`last_episode_to_air`, `last_air_date`), sinon sa dernière saison, sinon sa `first_air_date`, lus dans le même
+  appel `/movie/{id}` ou `/tv/{id}` et gardés en `release_date` (sinon la date complète du fournisseur d'une fiche
+  ouverte ; une année seule n'est pas une date). Les titres sortis ces 7 derniers jours, jamais une date à venir,
+  classés par la note moyenne de TMDb pondérée par son nombre de votes (`v/(v+200)·R + 200/(v+200)·6,5`,
+  `WeightedRating`), 10 votes au moins (les nouveautés en ont peu : avec m = 200, quelques votes restent de toute façon
+  près de la moyenne a priori), égalité au plus récent puis au titre ; 14, 30 puis 60 jours tant que moins de 15 sont
+  retenus ; aucun retenu, les sorties les plus récentes par date ; rien de sorti en 60 jours, pas de carrousel (jamais
+  de titres plus anciens). Une image est requise (affiche ou image de fond) ; catégories, langues et mots masqués,
+  films vus et limites du profil s'appliquent. Les dates arrivent sans rafale sur l'accueil : avec le jeton de
+  l'utilisateur, tant qu'Ondo est à l'écran, les titres peut-être récents (sortis cette année ou l'an dernier, ou
+  modifiés par le fournisseur ces 60 derniers jours, comme une série avec un nouvel épisode) dont l'appareil ne
+  connaît pas la date, ou que le fournisseur a modifiés depuis la question à TMDb, sont demandés en arrière-plan,
+  100 au plus par catalogue, deux à la fois au rythme des autres requêtes (`RatingFill`), et l'accueil les relit deux
+  fois ; un titre gardé avant les dates de sortie est redemandé quand il s'affiche (comme pour les genres), les crédits gardés trouvent les personnes dans la recherche et leurs titres sans réseau, et une adresse
   d'image morte est retenue 7 jours. Un 401 plus tard (un
   jeton révoqué, ou arrivé par la synchronisation) s'affiche comme refusé dans les Réglages, et plus rien n'est demandé.
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,

@@ -88,7 +88,7 @@ class TelevisionTextFieldsTest {
         store.savePlaylists(listOf(Fixtures.playlist))
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
         store.saveContent(Fixtures.PLAYLIST_ID, content)
-        repository = OndoRepository(store, FakeHttp(answers), CoroutineScope(SupervisorJob() + Dispatchers.Main))
+        repository = OndoRepository(store, FakeHttp(answers), CoroutineScope(SupervisorJob() + Dispatchers.Main), metadata = com.markedoe.ondo.ReleasedLately { repository.state.value.content })
         val viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
         compose.setContent {

@@ -509,7 +509,7 @@ class OndoViewModelTest {
         assertEquals(list, state.activePlaylist?.url)
         viewModel.home.test {
             var home = awaitItem()
-            while (home == null || home.hero.isEmpty()) home = awaitItem()
+            while (home == null || home.newMovies.isEmpty()) home = awaitItem()
             assertEquals("Home", home.playlistName)
             assertEquals(listOf("Long Road"), home.newMovies.map { it.title })
             assertEquals(listOf("Harbor"), home.newSeries.map { it.title })

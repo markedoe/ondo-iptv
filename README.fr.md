@@ -43,7 +43,7 @@ chaque changement de l'interface.
 ### iPhone, iPad et Mac
 
 - **Accueil** : films et séries à la une dans un grand cadre arrondi (titre, informations et boutons à
-  l'intérieur), films et séries en cours (une rangée chacun), Ma liste, nouveautés, tendances ; le direct en
+  l'intérieur) : les sorties récentes, selon leur date de sortie (voir le carrousel plus bas), films et séries en cours (une rangée chacun), Ma liste, nouveautés, tendances ; le direct en
   dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom. Des pages noires, du blanc pour
   ce qui est choisi ; les cartes se soulèvent sous le pointeur, le focus du clavier ou le doigt.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
@@ -114,7 +114,8 @@ chaque changement de l'interface.
   séries restent sur l'appareil : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même
   quand le fournisseur ne répond pas.
 - **TMDb**, avec votre propre jeton (Réglages → TMDb, vérifié auprès de TMDb à l'enregistrement, transmis par la
-  synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel ; pour les titres de l'accueil et les
+  synchronisation) : une rangée Tendances sur l'accueil ; les dates de sortie et les votes du carrousel de
+  l'accueil ; pour les titres de l'accueil et les
   fiches que vous ouvrez, l'image de fond de TMDb quand celle du fournisseur manque ou ne se charge pas, la
   bande-annonce de TMDb (d'abord dans la langue de l'app, puis en anglais) quand le fournisseur n'en donne pas, et le
   nombre de votes à côté de la note ; les photos du casting en rangée sur la fiche d'un titre (pour une série, le
@@ -141,9 +142,13 @@ chaque changement de l'interface.
 
 ### Android (téléphones, tablettes et TV)
 
-- **Accueil** : carrousel (avec un jeton TMDb, d'abord les titres les mieux notés ajoutés ces quatre derniers jours :
-  la note moyenne de TMDb pondérée par le nombre de votes, au moins 50 votes pour être retenu ; puis les Tendances et les
-  nouveautés), films et séries en cours (une rangée chacun ; appuyez longuement sur une carte, ou
+- **Accueil** : carrousel des sorties récentes, selon leur date de sortie et jamais selon le jour où le fournisseur
+  a ajouté un titre : les films sortis ces 7 derniers jours, les séries avec un épisode ou une saison sortis ces
+  7 derniers jours (une série de 2014 avec une nouvelle saison cette semaine y est, une série sans rien de nouveau
+  non), rien d'annoncé pour plus tard ; les meilleurs d'abord selon la note moyenne de TMDb pondérée par le nombre de
+  votes (avec un jeton TMDb ; 10 votes au moins) ; 14, puis 30, puis 60 jours quand moins de 15 titres sont retenus ;
+  sans votes, les sorties les plus récentes par date ; masqué quand rien n'est sorti en 60 jours. Films et séries en
+  cours (une rangée chacun ; appuyez longuement sur une carte, ou
   maintenez OK sur une TV, pour la retirer), Ma liste, nouveautés, chaînes ; la date de dernière mise à jour de la
   playlist, au-dessus de son nom.
 - **Ordre des rangées** (Réglages) : les rangées de l'Accueil, Films et Séries dans l'ordre choisi, chacune affichée ou
@@ -211,7 +216,8 @@ chaque changement de l'interface.
   TMDb, et iPhone, iPad et Mac se synchronisent avec eux ; directement entre les appareils, vers des adresses locales
   uniquement, rien ne passe par internet ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **TMDb**, avec votre propre jeton (Réglages → TMDb, vérifié auprès de TMDb à l'enregistrement, transmis par la
-  synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel, l'image de fond de TMDb quand celle du
+  synchronisation) : une rangée Tendances sur l'accueil, les dates de sortie et les votes du carrousel de l'accueil,
+  l'image de fond de TMDb quand celle du
   fournisseur manque ou ne se charge pas, la bande-annonce de TMDb (d'abord dans la langue de l'app) quand le
   fournisseur n'en donne pas, le nombre de votes à côté de la note, les photos du casting sur la fiche d'un titre
   (pour une série, le casting de toutes ses saisons et ses créateurs), l'image et le nom donnés par TMDb aux

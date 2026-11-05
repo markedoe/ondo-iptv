@@ -197,7 +197,23 @@ class TmdbClient(
             .filter { (it.mediaType == TmdbItem.MediaType.MOVIE || it.mediaType == TmdbItem.MediaType.TV) && it.title.isNotBlank() }
             .take(TmdbTitleInfo.RELATED_LIMIT)
         val logos = ((details["images"] as? JsonObject)?.get("logos") as? JsonArray).orEmpty().mapNotNull { TmdbLogo.from(it) }
-        return TmdbTitleInfo(item.id, item.backdropUrl, TmdbVideo.best(videos, viewer)?.key, item.rating, directors, cast, genres, related, TmdbLogo.best(logos, viewer)?.url)
+        return TmdbTitleInfo(
+            item.id, item.backdropUrl, TmdbVideo.best(videos, viewer)?.key, item.rating, directors, cast, genres, related, TmdbLogo.best(logos, viewer)?.url,
+            releaseDate = releaseDate(details, series),
+        )
+    }
+
+    /**
+     * The date the carousel counts a title's release from ([RecentReleases]): a movie's `release_date`; for a series, its
+     * latest episode's (`last_episode_to_air`, `last_air_date`), else its latest season's, else its first (`first_air_date`).
+     * A full date only; null when TMDb gives none.
+     */
+    private fun releaseDate(details: JsonObject, series: Boolean): String? {
+        fun date(element: JsonElement?) = (element as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { RecentReleases.epochDay(it) != null }
+        if (!series) return date(details["release_date"])
+        val latest = listOfNotNull(date((details["last_episode_to_air"] as? JsonObject)?.get("air_date")), date(details["last_air_date"])).maxOrNull()
+        val season = (details["seasons"] as? JsonArray).orEmpty().mapNotNull { date((it as? JsonObject)?.get("air_date")) }.maxOrNull()
+        return latest ?: season ?: date(details["first_air_date"])
     }
 
     /** A person's place in a title's billing (`order`); unbilled last. */
@@ -284,6 +300,8 @@ data class TmdbTitleInfo(
     val related: List<TmdbItem> = emptyList(),
     /** Its title as a picture, its logo ([TmdbLogo.best]). */
     val logoUrl: String? = null,
+    /** "2026-11-02": a movie's release, a series' latest episode or season ([TmdbClient.titleInfo]); null when TMDb gives none. */
+    val releaseDate: String? = null,
 ) {
     companion object {
         const val CAST_LIMIT = 20

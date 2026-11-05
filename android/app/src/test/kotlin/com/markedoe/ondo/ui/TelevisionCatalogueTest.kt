@@ -117,7 +117,7 @@ class TelevisionCatalogueTest {
         store.savePlaylists(playlists)
         store.saveSettings(AppSettings(activePlaylistId = playlists.firstOrNull()?.id, syncOnLocalNetwork = syncOn))
         if (demo in playlists) store.saveContent(demo.id, demoContent)
-        repository = OndoRepository(store, FakeHttp(BigPanel.answers()), CoroutineScope(SupervisorJob() + Dispatchers.Main))
+        repository = OndoRepository(store, FakeHttp(BigPanel.answers()), CoroutineScope(SupervisorJob() + Dispatchers.Main), metadata = com.markedoe.ondo.ReleasedLately { repository.state.value.content })
         val viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
         compose.setContent {

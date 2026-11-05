@@ -443,7 +443,7 @@ class TvScreenshots {
 
     @Test
     fun homeWithTheRowsFocused() {
-        show(TopLevel.HOME) { TvHomeScreen(UiMappers.home(state, labels, now).copy(channels = emptyList()), HomeActions(), autoAdvance = false) }
+        show(TopLevel.HOME) { TvHomeScreen(UiMappers.home(state, labels, now, catalogue.kept()).copy(channels = emptyList()), HomeActions(), autoAdvance = false) }
         focusFirstCard("shelfResumeMovies", "shelfResumeSeries", "shelfMyList", "shelfNewMovies")
         capture("home-rows")
     }

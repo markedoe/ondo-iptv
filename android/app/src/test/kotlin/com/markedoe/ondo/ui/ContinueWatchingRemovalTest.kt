@@ -85,7 +85,7 @@ class ContinueWatchingRemovalTest {
         store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content.copy(fetchedAt = System.currentTimeMillis()))
         val library = entries.foldIndexed(LibraryState()) { index, library, entry -> library.recordStart(entry).updateProgress(entry.key, 1_800.0, 6_000.0, now = 2L + index) }
         store.saveLibrary(library)
-        repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main))
+        repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main), metadata = com.markedoe.ondo.Fixtures.metadata())
         val viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
         compose.setContent {

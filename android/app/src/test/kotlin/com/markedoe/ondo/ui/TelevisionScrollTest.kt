@@ -101,7 +101,7 @@ class TelevisionScrollTest {
             fetchedAt = System.currentTimeMillis(),
         )
         store.saveContent(Fixtures.PLAYLIST_ID, content)
-        val repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main))
+        val repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main), metadata = com.markedoe.ondo.Fixtures.metadata(content))
         val viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
         compose.setContent {

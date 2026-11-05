@@ -69,7 +69,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   on them): playlist order (on those pages, their own order),
   name, date added, release date or rating. A genre's titles found through TMDb are sorted with the others
   (`UiMappers.browse`). By rating, with the viewer's TMDb token: TMDb's rating weighted by its number of votes first
-  (`WeightedRating.ratingOrder`, the carousel's m = 200 and C = 6.5 without its 50-vote floor), then the titles TMDb
+  (`WeightedRating.ratingOrder`, the carousel's m = 200 and C = 6.5 without its 10-vote floor), then the titles TMDb
   has no rating for by the provider's, ties by title; the page asks TMDb in the background for up to 100 of its titles
   never asked about, two at a time at the pace of the other requests, and sorts again twice: after 20 ratings and
   at the end (`RatingFill`). Without a token, the provider's rating as before.
@@ -78,7 +78,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   kept on the device).
 - **TMDb** with the viewer's own token (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`): checked
   with TMDb's `/authentication` before it is saved (accepted, refused, unreachable), kept in the app's private
-  storage and carried by sync (`key:tmdb`, docs/SYNC.md); a Trending row and carousel titles, TMDb's backdrop when
+  storage and carried by sync (`key:tmdb`, docs/SYNC.md); a Trending row, the carousel's release dates and votes, TMDb's backdrop when
   the provider's is missing or does not load, its trailer, rating with votes and the photos of its cast and directors
   (`TmdbClient.titleInfo`, one call, by the provider's TMDb id or the title; a series' `aggregate_credits`, every
   season's cast, and its creators, `created_by`), TMDb's people in Search, and a person's titles from TMDb's credits.
@@ -86,9 +86,21 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   (`TmdbClient.seasonEpisodes`, `/tv/{id}/season/{n}`, one call per season, kept as `tv:<id>:<season>`); every screen
   naming an episode shows its own title, without the series' name, tags or code (`EpisodeTitles`, as on Apple). What TMDb answers is kept on the device (`SqliteMetadataStore`, `metadata.sqlite`, like
   the store on Apple devices; keys `movie:603` or `movie:sandstorm:2021`): pages show it at once, TMDb is asked
-  again only after 30 days (7 for a title it does not know), Home's carousel titles and the titles added in the last four days are asked ahead two at a time (the carousel's first
-  source ranks the latter by TMDb's average vote weighted by its number of votes: `v/(v+200)·R + 200/(v+200)·6.5`, 50 votes
-  at least, ties to the latest added then the title; `WeightedRating`, as on Apple),
+  again only after 30 days (7 for a title it does not know), and Home's carousel goes by the release date it keeps
+  (`RecentReleases`, as on Apple): a movie's `release_date`, a series' latest episode (`last_episode_to_air`,
+  `last_air_date`), else its latest season, else its `first_air_date`, read from the same `/movie/{id}` or `/tv/{id}`
+  call and kept as `release_date` (else the provider's full date from a page opened; a year alone is no date). The
+  titles released in the last 7 days, never a date to come, ranked by TMDb's average vote weighted by its number of
+  votes (`v/(v+200)·R + 200/(v+200)·6.5`, `WeightedRating`), 10 votes at least (new releases have few: with
+  m = 200, a handful of votes stays near the prior anyway), ties to the newest then the title; 14, 30 then 60 days
+  while fewer than 15 qualify; none qualifying, the newest releases by date; nothing released in 60 days, no
+  carousel (never older titles). Artwork required (a poster or a backdrop); hidden categories, languages, words,
+  watched movies and the profile's limits apply. The dates come without a burst on Home: with the viewer's token,
+  while Ondo is on screen, the titles that may be recent (released this year or last, or changed by the provider in
+  the last 60 days, as a series with a new episode) whose date the device does not know, or that the provider
+  changed since TMDb was asked, are asked in the background, 100 at most per catalogue, two at a time at the pace of
+  the other requests (`RatingFill`), and Home reads them again twice; a title kept before release dates is asked
+  again as it shows (as genres were),
   the credits kept find people in Search and their titles without network, and a dead image address is remembered
   for 7 days.
   A 401 later (a token revoked, or one that came by sync) shows as refused in Settings, and nothing more is asked.

@@ -73,6 +73,7 @@ class TelevisionFirstPlaylistTest {
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
             downloadFolder = folder.root.resolve("downloads"),
             guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
+            metadata = com.markedoe.ondo.ReleasedLately(now = System::currentTimeMillis) { repository.state.value.content },
         )
         val viewModel = OndoViewModel(repository, Labels())
         var inputModes: InputModeManager? = null

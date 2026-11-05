@@ -27,7 +27,7 @@ class MetadataTest {
     @Test
     fun aKnownTitleIsTrustedLongerThanAnUnknownOne() {
         val day = 24 * 60 * 60 * 1000L
-        val found = TitleMetadata("movie:1", "movie", fetchedAt = 0, genres = emptyList())
+        val found = TitleMetadata("movie:1", "movie", fetchedAt = 0, genres = emptyList(), releaseDate = "")
         val notFound = found.copy(found = false)
         assertTrue(MetadataFreshness.isFresh(found, 20 * day))
         assertFalse(MetadataFreshness.isFresh(found, 31 * day))
@@ -35,6 +35,8 @@ class MetadataTest {
         assertFalse(MetadataFreshness.isFresh(notFound, 8 * day))
         assertFalse(MetadataFreshness.isFresh(found, -day), "a date in the future is not trusted")
         assertFalse(MetadataFreshness.isFresh(found.copy(genres = null), day), "kept before genres were: asked again")
+        assertFalse(MetadataFreshness.isFresh(found.copy(releaseDate = null), day), "kept before release dates were: asked again")
+        assertTrue(MetadataFreshness.isFresh(notFound.copy(releaseDate = null), day))
     }
 
     @Test
@@ -54,7 +56,7 @@ class MetadataTest {
             cast = listOf(TmdbPerson(2, "Ana Lima"), TmdbPerson(3, "José Silva", profilePath = "/jose.jpg")),
         )
         val row = TitleMetadata.of("series:copper:", series = true, info = info, fetchedAt = 5)
-        assertEquals(TitleMetadata("series:copper:", "series", 7, info.backdropUrl, "trailer0001", 8.0, 10, 5, found = true, genres = emptyList(), related = emptyList()), row)
+        assertEquals(TitleMetadata("series:copper:", "series", 7, info.backdropUrl, "trailer0001", 8.0, 10, 5, found = true, genres = emptyList(), related = emptyList(), releaseDate = ""), row)
         assertFalse(TitleMetadata.of("movie:x:", series = false, info = null, fetchedAt = 5).found)
         assertEquals(
             listOf(

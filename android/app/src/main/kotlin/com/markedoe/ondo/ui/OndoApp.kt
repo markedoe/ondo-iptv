@@ -176,6 +176,10 @@ fun OndoApp(viewModel: OndoViewModel) {
     LaunchedEffect(viewModel, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.prepareAhead() }
     }
+    // The carousel's release dates (with a TMDb token): only while Ondo is on screen.
+    LaunchedEffect(viewModel, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.fillCarouselReleases() }
+    }
     TelevisionFrame {
         when {
             !state.isReady -> Box(Modifier.fillMaxSize())

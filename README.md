@@ -42,8 +42,8 @@ interface changes.
 
 ### iPhone, iPad and Mac
 
-- **Home**: featured movies and series in a large rounded frame (title, facts and buttons inside it), movies and
-  series in progress (one row each), My List, new releases, trending; live TV last; when the playlist was last
+- **Home**: featured movies and series in a large rounded frame (title, facts and buttons inside it): the recent
+  releases, by release date (see the carousel below), movies and series in progress (one row each), My List, new releases, trending; live TV last; when the playlist was last
   updated, above its name. Black pages, white for what is chosen; cards rise under the pointer, the keyboard focus
   or a finger.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating (TMDb's
@@ -107,7 +107,7 @@ interface changes.
 - **Data**: JSON backup / restore, clearable cache. Posters, thumbnails and the movie and series pages stay on the
   device: they show at once at the next launch, and the pages still open when the provider cannot be reached.
 - **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a Trending
-  row on Home and in the carousel; for the titles of Home and the pages you open, TMDb's background image when the
+  row on Home; the release dates and votes of Home's carousel; for the titles of Home and the pages you open, TMDb's background image when the
   provider's is missing or broken, TMDb's trailer (in the app's language first, then English) when the provider
   gives none, and the number of votes next to the rating; the cast's photos in a row on a title's page (a series' cast
   of every season, its creators); for the season of a series you show, TMDb's picture and name of the episodes the
@@ -130,8 +130,12 @@ interface changes.
 
 ### Android (phones, tablets and TV)
 
-- **Home**: carousel (with a TMDb token, first the best rated titles added in the last four days: TMDb's average
-  vote weighted by the number of votes, at least 50 votes to qualify; then Trending and new releases), movies and series in progress (one row each; long-press a card, or hold OK on a TV, to take
+- **Home**: carousel of recent releases, by release date and never by the day the provider added a title: movies
+  released in the last 7 days, series with an episode or a season out in the last 7 days (a series from 2014 with a
+  new season this week is in, one with nothing new is not), nothing announced for later; the best first by TMDb's
+  average vote weighted by the number of votes (with a TMDb token; 10 votes at least); 14, then 30, then 60 days when
+  fewer than 15 qualify; without votes, the newest releases by date; hidden when nothing came out in 60 days. Movies
+  and series in progress (one row each; long-press a card, or hold OK on a TV, to take
   it out), My List, new releases, channels; when the playlist was last updated, above its name.
 - **Row order** (Settings): the rows of Home, Movies and Series in the order you choose, each shown or hidden (drag on
   a phone; on a TV, OK picks a row up, Up and Down move it, OK puts it down, Back cancels); "All movies" / "All
@@ -190,7 +194,7 @@ interface changes.
   them; directly between the devices, to local addresses only, nothing through the internet
   ([docs/SYNC.md](docs/SYNC.md)).
 - **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a
-  Trending row on Home and in the carousel, TMDb's background image when the provider's is missing or broken, TMDb's
+  Trending row on Home, the release dates and votes of Home's carousel, TMDb's background image when the provider's is missing or broken, TMDb's
   trailer (in the app's language first) when the provider gives none, the number of votes next to the rating, photos
   of the cast on a title's page (a series' cast of every season, its creators), TMDb's picture and name of the
   episodes a provider gives without them, the people TMDb knows in Search, and all the titles of the playlist on an actor's

@@ -25,7 +25,7 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
                 "CREATE TABLE title (key TEXT PRIMARY KEY, kind TEXT NOT NULL, tmdb_id INTEGER, backdrop TEXT, trailer TEXT, " +
-                    "vote_average REAL, vote_count INTEGER, fetched_at INTEGER NOT NULL, found INTEGER NOT NULL, genres TEXT, related TEXT, logo TEXT)",
+                    "vote_average REAL, vote_count INTEGER, fetched_at INTEGER NOT NULL, found INTEGER NOT NULL, genres TEXT, related TEXT, logo TEXT, release_date TEXT)",
             )
             db.execSQL(
                 "CREATE TABLE credit (title_key TEXT NOT NULL, person_key TEXT NOT NULL, name TEXT NOT NULL, role TEXT NOT NULL, " +
@@ -62,16 +62,18 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
          * Version 2 keeps genres and recommendations (added to the titles kept, asked again as they show); version 3,
          * the people's movies and series; version 4, the titles' logos (a title kept before has none until it is asked
          * again); version 5, the seasons' episodes, and a series' cast of every season (its kept credits, its latest
-         * season's only, are asked again as it shows).
+         * season's only, are asked again as it shows); version 6, the titles' release dates (a title kept before has
+         * none: asked again as it shows, or as the carousel needs it).
          */
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            if (oldVersion !in 1..4) return restart(db)
+            if (oldVersion !in 1..5) return restart(db)
             try {
                 if (oldVersion < 2) {
                     db.execSQL("ALTER TABLE title ADD COLUMN genres TEXT")
                     db.execSQL("ALTER TABLE title ADD COLUMN related TEXT")
                 }
                 if (oldVersion < 4) db.execSQL("ALTER TABLE title ADD COLUMN logo TEXT")
+                if (oldVersion < 6 && !hasColumn(db, "title", "release_date")) db.execSQL("ALTER TABLE title ADD COLUMN release_date TEXT")
                 createPersonWorks(db)
                 createSeasons(db)
                 if (oldVersion < 5) {
@@ -83,6 +85,12 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
                 restart(db)
             }
         }
+
+        private fun hasColumn(db: SQLiteDatabase, table: String, column: String): Boolean =
+            db.rawQuery("PRAGMA table_info($table)", null).use { c ->
+                val name = c.getColumnIndex("name")
+                generateSequence { if (c.moveToNext()) c.getString(name) else null }.any { it == column }
+            }
 
         override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = restart(db)
 
@@ -143,6 +151,7 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
         genres = GenreText.decode(c.getString(9)),
         related = RelatedTitle.decode(c.getString(10)),
         logoUrl = c.getString(11),
+        releaseDate = c.getString(12),
     )
 
     override fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata> = read(emptyList()) { db ->
@@ -164,7 +173,7 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
     override fun namedTitles(): List<TitleMetadata> = read(emptyList()) { db ->
         // A name's key has three parts ("movie:quiet water:2021"); a TMDb id's two ("movie:603").
         db.rawQuery(
-            "SELECT key, kind, vote_average, vote_count, fetched_at, genres FROM title WHERE found = 1 AND key LIKE '%:%:%'",
+            "SELECT key, kind, vote_average, vote_count, fetched_at, genres, release_date, backdrop FROM title WHERE found = 1 AND key LIKE '%:%:%'",
             null,
         ).use { c ->
             buildList {
@@ -177,6 +186,8 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
                             voteCount = if (c.isNull(3)) null else c.getInt(3),
                             fetchedAt = c.getLong(4),
                             genres = GenreText.decode(c.getString(5)),
+                            releaseDate = c.getString(6),
+                            backdropUrl = c.getString(7),
                         ),
                     )
                 }
@@ -227,6 +238,7 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
                 put("genres", title.genres?.let(GenreText::encode))
                 put("related", title.related?.let(RelatedTitle::encode))
                 put("logo", title.logoUrl)
+                put("release_date", title.releaseDate)
             }
             db.insertWithOnConflict("title", null, values, SQLiteDatabase.CONFLICT_REPLACE)
         }
@@ -307,8 +319,8 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
 
     companion object {
         const val FILE_NAME = "metadata.sqlite"
-        private const val VERSION = 5
-        private const val COLUMNS = "key, kind, tmdb_id, backdrop, trailer, vote_average, vote_count, fetched_at, found, genres, related, logo"
+        private const val VERSION = 6
+        private const val COLUMNS = "key, kind, tmdb_id, backdrop, trailer, vote_average, vote_count, fetched_at, found, genres, related, logo, release_date"
         private const val KEPT_FOR_MS = 180L * 24 * 60 * 60 * 1000
 
         /** SQLite's limit on the `?` of one statement is 999 on older Android versions. */

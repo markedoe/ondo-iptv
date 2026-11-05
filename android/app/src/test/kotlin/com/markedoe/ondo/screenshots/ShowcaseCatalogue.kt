@@ -1,6 +1,8 @@
 package com.markedoe.ondo.screenshots
 
 import com.markedoe.ondo.core.epg.EpgIndex
+import com.markedoe.ondo.core.library.MetadataKey
+import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.Episode
@@ -193,6 +195,19 @@ class ShowcaseCatalogue private constructor(private val file: CatalogueFile, pri
         seriesCategories = categories.filter { it.type == ContentType.SERIES },
         fetchedAt = NOW - file.updatedMinutesAgo * 60_000L,
     )
+
+    /**
+     * What TMDb says of the demo's titles in the screenshots, by poster key: each released the day it was added. Open
+     * films are older than that; Home's carousel, which goes by release date, features them as new releases here.
+     */
+    fun kept(): Map<String, TitleMetadata> {
+        val today = java.time.Instant.ofEpochMilli(NOW).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        fun title(series: Boolean, name: String, year: Int, daysAgo: Int) = MetadataKey.title(series, name, year)?.let { key ->
+            TitleMetadata(key, MetadataKey.kind(series), fetchedAt = NOW, genres = emptyList(), releaseDate = today.minusDays(daysAgo.toLong()).toString())
+        }
+        return (file.movies.mapNotNull { movie -> title(false, movie.title, movie.year, movie.addedDaysAgo)?.let { "m-" + movie.id to it } } +
+            file.series.mapNotNull { show -> title(true, show.title, show.year, show.addedDaysAgo)?.let { "s-" + show.id to it } }).toMap()
+    }
 
     /** The pages already opened: what the provider's details give (cast, director, backdrop…). */
     val movieDetails: Map<String, MediaDetails> = file.movies.associate { movie ->

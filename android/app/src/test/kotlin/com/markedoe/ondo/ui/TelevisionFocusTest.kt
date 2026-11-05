@@ -121,6 +121,7 @@ class TelevisionFocusTest {
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
             downloadFolder = folder.root.resolve("downloads"),
             guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
+            metadata = com.markedoe.ondo.ReleasedLately(now = System::currentTimeMillis) { repository.state.value.content },
         )
         compose.runOnIdle { app.value = OndoViewModel(repository, Labels()) }
         waitFor { exists("hero") }
@@ -142,6 +143,7 @@ class TelevisionFocusTest {
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
             downloadFolder = folder.root.resolve("downloads"),
             guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
+            metadata = com.markedoe.ondo.ReleasedLately(now = System::currentTimeMillis) { repository.state.value.content },
         )
         app.value = OndoViewModel(repository, Labels())
         var inputModes: InputModeManager? = null

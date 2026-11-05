@@ -8,6 +8,7 @@ import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.PictureSupport
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
+import com.markedoe.ondo.core.library.RecentReleases
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
@@ -94,8 +95,8 @@ object UiMappers {
     }
 
     /**
-     * [kept]: what TMDb said and the device kept, by poster key ([OndoRepository.keptPosterFacts]); its votes, and those of
-     * the answers of this session, rank the carousel's best recent titles.
+     * [kept]: what TMDb said and the device kept, by poster key ([OndoRepository.keptPosterFacts]); its release dates and
+     * votes, and those of the answers of this session, pick and rank the carousel's titles.
      */
     fun showcase(state: OndoState, kept: Map<String, TitleMetadata> = emptyMap(), grouped: FilmVersions = films(state)): Showcase {
         val votes = HashMap<String, TmdbRating>()
@@ -105,7 +106,22 @@ object UiMappers {
         return Showcase(
             state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes, grouped,
             excludedMovieIds = byName.movies, excludedSeriesIds = byName.series,
+            kept = kept,
+            providerRelease = { item -> providerRelease(state, item) },
+            hasBackdrop = { item -> backdrop(state, item) != null },
         )
+    }
+
+    /**
+     * The provider's release date of a title whose details are known, when it is a full date ([RecentReleases.epochDay]):
+     * a movie's; a series' latest episode's, else its own (its first).
+     */
+    fun providerRelease(state: OndoState, item: ShowcaseItem): String? = when (item) {
+        is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]?.releaseDate
+        is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.let { details ->
+            details.seasons.asSequence().flatMap { it.episodes }.mapNotNull { episode -> episode.releaseDate?.takeIf { RecentReleases.epochDay(it) != null }?.take(10) }.maxOrNull()
+                ?: details.info.releaseDate
+        }
     }
 
     /**
@@ -410,7 +426,7 @@ object UiMappers {
                 is ShowcaseItem.MovieItem -> item.movie.plot
                 is ShowcaseItem.SeriesItem -> item.series.plot
             }
-            HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable, backdrop(state, item), details?.plot ?: plot)
+            HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable, backdrop(state, item) ?: kept[item.key]?.backdropUrl?.takeIf { it !in state.deadBackdrops }, details?.plot ?: plot)
         }
         val channelsById = visibleChannels(state, hidden).associateBy { it.id }
         val favoriteChannels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }

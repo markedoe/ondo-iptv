@@ -108,9 +108,35 @@ class SqliteMetadataStoreTest {
         val titles = store.titles(listOf("series:73375", "movie:9"))
         assertTrue("the series is kept", titles.containsKey("series:73375"))
         assertTrue("its credits are asked again", !MetadataFreshness.isFresh(titles.getValue("series:73375"), System.currentTimeMillis()))
-        assertTrue("a movie's are not", MetadataFreshness.isFresh(titles.getValue("movie:9"), System.currentTimeMillis()))
+        assertEquals("a movie's are not", now, titles.getValue("movie:9").fetchedAt)
         store.saveSeason("tv:73375:1", now, listOf(TmdbEpisode(1, "Pilot")))
         assertEquals(listOf(TmdbEpisode(1, "Pilot")), store.season("tv:73375:1")?.second)
+    }
+
+    /** A file of the fifth layout keeps its titles; they lack their release date, so they are asked again as they show. */
+    @Test
+    fun aFileOfTheFifthLayoutAsksForReleaseDates() {
+        val now = System.currentTimeMillis()
+        val file = context.getDatabasePath("fifth.sqlite").apply { parentFile?.mkdirs() }
+        android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(file, null).use { db ->
+            db.execSQL(
+                "CREATE TABLE title (key TEXT PRIMARY KEY, kind TEXT NOT NULL, tmdb_id INTEGER, backdrop TEXT, trailer TEXT, " +
+                    "vote_average REAL, vote_count INTEGER, fetched_at INTEGER NOT NULL, found INTEGER NOT NULL, genres TEXT, related TEXT, logo TEXT)",
+            )
+            db.execSQL("CREATE TABLE credit (title_key TEXT NOT NULL, person_key TEXT NOT NULL, name TEXT NOT NULL, role TEXT NOT NULL, position INTEGER NOT NULL, photo TEXT, PRIMARY KEY (title_key, role, person_key))")
+            db.execSQL("CREATE TABLE dead_image (url TEXT PRIMARY KEY, at INTEGER NOT NULL)")
+            db.execSQL("INSERT INTO title VALUES ('movie:9', 'movie', 9, NULL, NULL, 7.0, 300, $now, 1, '', '', NULL)")
+            db.version = 5
+        }
+        val store = SqliteMetadataStore(context, "fifth.sqlite")
+        val kept = store.titles(listOf("movie:9")).getValue("movie:9")
+        assertEquals(com.markedoe.ondo.core.library.TmdbRating(7.0, 300), kept.rating)
+        assertEquals(null, kept.releaseDate)
+        assertTrue("asked again", !MetadataFreshness.isFresh(kept, now))
+        store.save(listOf(kept.copy(releaseDate = "2026-11-02")))
+        assertEquals("2026-11-02", store.titles(listOf("movie:9")).getValue("movie:9").releaseDate)
+        store.save(listOf(kept.copy(key = "movie:harbor:2026", releaseDate = "2026-11-02")))
+        assertEquals("2026-11-02", store.namedTitles().single().releaseDate, "a poster's facts carry it")
     }
 
     /** A file of the first layout keeps its titles; they lack genres, so they are asked again as they show. */

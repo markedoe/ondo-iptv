@@ -73,7 +73,7 @@ class SearchNavigationTest {
         store.savePlaylists(listOf(Fixtures.playlist))
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
         store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content.copy(fetchedAt = System.currentTimeMillis()))
-        val repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main))
+        val repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main), metadata = com.markedoe.ondo.Fixtures.metadata())
         viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         compose.setContent {
             inputModes = LocalInputModeManager.current

@@ -86,7 +86,7 @@ class TelevisionLibraryTest {
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
         library?.let(store::saveLibrary)
         playlists.forEach { store.saveContent(it.id, Fixtures.content.copy(fetchedAt = System.currentTimeMillis())) }
-        repository = OndoRepository(store, FakeHttp(answers), CoroutineScope(SupervisorJob() + Dispatchers.Main))
+        repository = OndoRepository(store, FakeHttp(answers), CoroutineScope(SupervisorJob() + Dispatchers.Main), metadata = com.markedoe.ondo.Fixtures.metadata())
         viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
         compose.setContent {
