@@ -25,7 +25,7 @@ struct SeriesGridView: View {
                 if case .series(let series) = item { return series }
                 return nil
             }
-            return AppModel.sorted(row, by: rowSort)
+            return AppModel.sorted(row, by: rowSort, votes: model.ratingSortVotes(rowSort))
         default: return model.series(in: category, sort: model.settings.posterSort)
         }
     }
@@ -36,6 +36,9 @@ struct SeriesGridView: View {
         let tokens = TextNormalizer.normalize(filter).split(separator: " ")
         return base.filter { TextNormalizer.matches(normalizedText: TextNormalizer.normalize($0.name), queryTokens: tokens) }
     }
+
+    /// The order this grid shows: a row's own (`rowSort`), else the one chosen for every category.
+    private var sort: PosterSort { PseudoCategory.isRow(category.id) ? rowSort : model.settings.posterSort }
 
     var body: some View {
         let list = series
@@ -63,6 +66,11 @@ struct SeriesGridView: View {
         .searchable(text: $filter, prompt: Text("Search series"))
         .navigationTitle(category.id == PseudoCategory.all ? String(localized: "All Series") : category.name)
         .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu(rowSort: PseudoCategory.isRow(category.id) ? $rowSort : nil) } }
+        // Sorted by rating: TMDb's ratings the grid lacks are fetched in the background (`AppModel.fillRatingSort`).
+        .task(id: model.ratingFillID(category: category, sort: sort)) {
+            guard sort == .rating, category.id != PseudoCategory.favorites else { return }
+            await model.fillRatingSort(Self.series(category, model: model, rowSort: rowSort).map(ShowcaseItem.series))
+        }
     }
 }
 

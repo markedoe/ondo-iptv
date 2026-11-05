@@ -47,7 +47,7 @@ chaque changement de l'interface.
   dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom. Des pages noires, du blanc pour
   ce qui est choisi ; les cartes se soulèvent sous le pointeur, le focus du clavier ou le doigt.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
-  ou note, films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), **versions d'un film
+  ou note (celle de TMDb d'abord avec un jeton, voir TMDb plus bas), films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), **versions d'un film
   regroupées** (4K, Dolby Vision, HD, VOSTFR… : le film une fois, ses versions en badges sur sa fiche ;
   [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
@@ -127,6 +127,10 @@ chaque changement de l'interface.
   TMDb, trouve les personnes dans la recherche et leurs titres tout de suite, sans réseau. Une image du fournisseur
   cassée n'est plus essayée pendant 7 jours ; une image qui échoue sur une erreur réseau est réessayée une fois. Vider
   le cache efface le tout.
+  Triée par note, une grille place d'abord la note TMDb, pondérée par son nombre de votes (un 9,8 donné par quatre
+  votes ne passe pas en tête), puis les titres sans note TMDb, selon la note du fournisseur ; elle demande à TMDb en
+  arrière-plan jusqu'à 100 de ses titres jamais demandés, et se retrie deux fois, pas à chaque réponse. Sans jeton,
+  la note du fournisseur.
 - **Synchroniser sur ce réseau** (Réglages, désactivé tant qu'on ne l'active pas) : iPhone, iPad et Mac se
   connectent aux appareils Android du même réseau où Ondo est ouvert et gardent les mêmes playlists, Ma liste,
   collections, progression, jeton TMDb et clés des services de sous-titres (profil principal uniquement ; deux appareils Apple se synchronisent via un
@@ -216,6 +220,10 @@ chaque changement de l'interface.
   les fiches les affichent tout de suite, même hors ligne, et les personnes de ces titres se trouvent dans la
   recherche et sur leur page sans réseau. Une image du fournisseur qui ne mène nulle part n'est pas réessayée
   pendant 7 jours.
+  Triée par note, une grille place d'abord la note TMDb, pondérée par son nombre de votes (un 9,8 donné par quatre
+  votes ne passe pas en tête), puis les titres sans note TMDb, selon la note du fournisseur ; elle demande à TMDb en
+  arrière-plan jusqu'à 100 de ses titres jamais demandés, et se retrie deux fois, pas à chaque réponse. Sans jeton,
+  la note du fournisseur.
 - **Réglages** : playlists, catégories adultes masquées par défaut, langues et catégories, langue de
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur, jeton TMDb ; un écran d'accueil pour ajouter la première playlist
   (Ondo n'embarque ni chaîne ni démo).
