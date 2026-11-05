@@ -726,6 +726,8 @@ final class LocalSyncTests: XCTestCase {
         first.switchProfile(to: kids)
         first.isParentalUnlocked = true
         first.setHidden(true, category: adult)
+        // The parent is done: the Kids profile is locked again, as it is for the child.
+        first.lockParentalControl()
         await second.applySync(first.syncSnapshot())
         second.switchProfile(to: try XCTUnwrap(second.profiles.first { $0.id == kids.id }))
         let shownAt = second.syncStamp()

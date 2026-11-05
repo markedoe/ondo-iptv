@@ -66,12 +66,13 @@ final class HiddenLanguageTests: XCTestCase {
         return model
     }
 
-    /// Every list of titles, by its name: the names it shows.
+    /// Every list of titles, by its name: the names it shows. The tabs list the categories shown (`categories(for:)`),
+    /// as the screens do, and all of them: a category hidden on its own is not one of the tab's lists.
     private func surfaces(_ model: AppModel) -> [String: [String]] {
         func names(_ items: [ShowcaseItem]) -> [String] { items.map(\.title) }
-        let movieCategories = model.content.movieCategories.map { Optional($0) } + [nil]
-        let seriesCategories = model.content.seriesCategories.map { Optional($0) } + [nil]
-        let liveCategories = model.content.liveCategories.map { Optional($0) } + [nil]
+        let movieCategories = model.categories(for: .movie).map { Optional($0) } + [nil]
+        let seriesCategories = model.categories(for: .series).map { Optional($0) } + [nil]
+        let liveCategories = model.categories(for: .live).map { Optional($0) } + [nil]
         let anyMovie = model.content.movies.first { $0.name.hasPrefix("Portugal") }
         let anySeries = model.content.series.first { $0.name == "Classic Days" }
         var searched: [String] = []
