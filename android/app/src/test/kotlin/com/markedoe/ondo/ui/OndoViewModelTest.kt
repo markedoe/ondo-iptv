@@ -112,10 +112,11 @@ class OndoViewModelTest {
         }
     }
 
-    private fun TestScope.viewModel(): OndoViewModel {
+    /** A view model of the playlist [list] not added yet, once the saved state is read ([readyViewModel]). */
+    private suspend fun TestScope.viewModel(): OndoViewModel {
         val http = FakeHttp(mapOf(list to catalogue))
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        return track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        return track(readyViewModel(repository))
     }
 
     /** A provider's playlist of six series, saved earlier (restored without downloading). */
@@ -157,7 +158,7 @@ class OndoViewModelTest {
             }.encodeToByteArray()
         }
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        val viewModel = track(readyViewModel(repository))
         repository.addPlaylist("Home", list)
         val movie = viewModel.state.first { it.content.movies.isNotEmpty() }.content.movies.single()
         val item = ShowcaseItem.MovieItem(movie)
@@ -273,7 +274,7 @@ class OndoViewModelTest {
         }
         val kept = InMemoryMetadataStore()
         val first = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), metadata = kept)
-        val firstModel = track(OndoViewModel(first, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        val firstModel = track(readyViewModel(first))
         first.addPlaylist("Home", list)
         // The playlist fully read and saved (the next launch reads it from disk).
         val movie = firstModel.state.first { it.content.movies.isNotEmpty() && !it.isLoading }.content.movies.single()
@@ -320,7 +321,7 @@ class OndoViewModelTest {
             }.encodeToByteArray()
         }
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        val viewModel = track(readyViewModel(repository))
         repository.addPlaylist("Home", list)
         viewModel.state.first { it.content.movies.isNotEmpty() }
         backgroundScope.launch { viewModel.search.collect {} }
@@ -352,7 +353,7 @@ class OndoViewModelTest {
             }.encodeToByteArray()
         }
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        val viewModel = track(readyViewModel(repository))
         repository.addPlaylist("Home", list)
         viewModel.state.first { it.content.movies.isNotEmpty() }
         assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
@@ -503,7 +504,6 @@ class OndoViewModelTest {
     @Test
     fun theFirstPlaylistAddedBecomesActiveAndTheHomeFollows() = runTest {
         val viewModel = viewModel()
-        viewModel.state.first { it.isReady }
         viewModel.addPlaylist(PlaylistForm.M3u("Home", list, "")) {}
         val state = viewModel.state.first { it.content.movies.isNotEmpty() }
         assertEquals(list, state.activePlaylist?.url)
@@ -520,7 +520,6 @@ class OndoViewModelTest {
     @Test
     fun searchWaitsForTypingToPause() = runTest {
         val viewModel = viewModel()
-        viewModel.state.first { it.isReady }
         viewModel.addPlaylist(PlaylistForm.M3u("Home", list, "")) {}
         viewModel.state.first { it.content.movies.isNotEmpty() }
         viewModel.search.test {
@@ -537,7 +536,6 @@ class OndoViewModelTest {
     @Test
     fun playingAMovieSendsAPlayRequest() = runTest {
         val viewModel = viewModel()
-        viewModel.state.first { it.isReady }
         viewModel.addPlaylist(PlaylistForm.M3u("Home", list, "")) {}
         val movie = viewModel.state.first { it.content.movies.isNotEmpty() }.content.movies.single()
         viewModel.playRequests.test {
@@ -556,9 +554,7 @@ class OndoViewModelTest {
         val otherList = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",Other News\nhttp://other.example.com/news.m3u8\n" +
             "#EXTINF:-1 group-title=\"Sport\",Other Sport\nhttp://other.example.com/sport.m3u8\n"
         val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to otherList)), backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
-        repository.bootstrap()
-        viewModel.state.first { it.isReady }
+        val viewModel = track(readyViewModel(repository))
         assertTrue(repository.addPlaylist("Home", list).isSuccess)
         val home = viewModel.state.value.activePlaylistId
         val news = viewModel.state.value.content.liveCategories.single { it.name == "News" }.id
