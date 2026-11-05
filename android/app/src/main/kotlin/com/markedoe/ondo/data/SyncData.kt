@@ -132,6 +132,7 @@ object SyncData {
         state.library.history.filter(SyncKeys::syncs).map { it.key to it.isFinished },
         state.library.rowOrders,
         state.library.hiddenAt,
+        state.library.selections,
         state.household.collections,
         state.household.syncDeleted,
         state.settings.serviceKeys,
@@ -248,6 +249,7 @@ object SyncData {
         people = library.favorites.filter(SyncKeys::isPerson).map(SyncKeys::syncPerson),
         rows = library.rowOrders,
         hiddenCategories = library.hiddenRecords(travels),
+        selections = library.selections,
         deleted = library.syncDeleted,
     )
 
@@ -439,6 +441,7 @@ object SyncData {
             history = history.sortedByDescending { it.lastWatchedAt }.take(LibraryState.MAX_HISTORY),
             collections = collections,
             rowOrders = records.rows,
+            selections = records.selections,
             hiddenCategories = hidden.hiddenCategories,
             hiddenTags = hidden.hiddenTags,
             hiddenWords = hidden.hiddenWords,

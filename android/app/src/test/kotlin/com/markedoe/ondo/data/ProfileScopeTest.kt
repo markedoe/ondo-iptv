@@ -216,6 +216,11 @@ class ProfileScopeTest {
             set = { repository.createCollection("Weekend") },
             read = { library.collections.firstOrNull { it.name == "Weekend" }?.id },
         ),
+        PerProfile(
+            name = "selections",
+            set = { repository.saveSelection(null, "Nineties", listOf("decade:1990"), all = false, tabs = listOf("movie")) },
+            read = { library.selections.firstOrNull { it.name == "Nineties" }?.let { it.id to it.tags } },
+        ),
     )
 
     /** Two devices; the first with a playlist and a second profile, open, and the second told of both. */

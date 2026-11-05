@@ -74,6 +74,8 @@ import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
 import com.markedoe.ondo.ui.updatedAgoText
+import com.markedoe.ondo.ui.SelectionRow
+import com.markedoe.ondo.ui.selectionTitle
 
 data class HomeUiState(
     val playlistName: String,
@@ -94,6 +96,8 @@ data class HomeUiState(
      * hidden; null: the default order. The carousel stays at the top, above them.
      */
     val order: List<String>? = null,
+    /** The rows of the selections shown on Home, by row key (`sel:<id>`). */
+    val selections: Map<String, SelectionRow> = emptyMap(),
     val channels: List<ChannelRow> = emptyList(),
     val channelsAreFavorites: Boolean = false,
     val isLoading: Boolean = false,
@@ -115,7 +119,7 @@ data class HomeUiState(
                 RowOrder.HOME_NEW_SERIES -> newSeries.isNotEmpty()
                 RowOrder.TRENDING -> trending.isNotEmpty()
                 RowOrder.HOME_CHANNELS -> channels.isNotEmpty()
-                else -> false
+                else -> selections[key]?.items?.isNotEmpty() == true
             }
         }
 }
@@ -132,6 +136,8 @@ class HomeActions(
     val onSeeAllMyList: () -> Unit = {},
     /** See all of a row Ondo picks (New movies, New series): every title of the row, in its order. */
     val onSeeAllRow: (GridSource, Boolean) -> Unit = { _, _ -> },
+    /** See all of a selection's row: every title of it, in the day's order. */
+    val onSeeAllSelection: (String) -> Unit = {},
     val onSeeAllLive: () -> Unit = {},
     val onPlayChannel: (ChannelRow) -> Unit = {},
     val onPlaylists: () -> Unit = {},
@@ -195,6 +201,9 @@ fun HomeScreen(
                     RowOrder.HOME_NEW_SERIES -> PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions, "shelfNewSeries") { actions.onSeeAllRow(GridSource.NEW, true) }
                     RowOrder.TRENDING -> PosterShelf(stringResource(R.string.trending), state.trending, metrics, actions, "shelfTrending")
                     RowOrder.HOME_CHANNELS -> ChannelShelf(state, metrics, actions)
+                    else -> state.selections[key]?.let { row ->
+                        PosterShelf(selectionTitle(row), row.items, metrics, actions, "shelfSelection-${row.id}") { actions.onSeeAllSelection(row.id) }
+                    }
                 }
             }
         }

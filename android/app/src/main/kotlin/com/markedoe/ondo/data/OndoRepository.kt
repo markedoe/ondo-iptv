@@ -15,6 +15,7 @@ import com.markedoe.ondo.core.library.MetadataStore
 import com.markedoe.ondo.core.library.MetadataTitles
 import com.markedoe.ondo.core.library.RelatedTitle
 import com.markedoe.ondo.core.library.RowOrder
+import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbGenre
 import com.markedoe.ondo.core.library.TmdbItem
@@ -46,6 +47,7 @@ import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.playback.ProblemReport
 import com.markedoe.ondo.core.sync.SentSnapshot
 import com.markedoe.ondo.core.sync.SyncRows
+import com.markedoe.ondo.core.sync.SyncSelection
 import com.markedoe.ondo.core.sync.SyncClock
 import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncMerge
@@ -1166,6 +1168,52 @@ class OndoRepository(
         if (previous.order.isEmpty()) return
         val dated = previous.copy(order = emptyList(), updatedAt = stamp())
         updateLibrary { it.keepingRowOrder(dated) }
+    }
+
+    /**
+     * Saves a selection (Settings → Row order → New selection, docs/ROWS.md): [id] null makes a new one, whose row goes to
+     * the top of each tab it shows in; an edited one that now shows in another tab goes to the top of that tab too. The
+     * record is dated for sync. Returns its ID; null for a Kids profile, which cannot change its rows.
+     */
+    fun saveSelection(id: String?, name: String, tags: List<String>, all: Boolean, tabs: List<String>): String? {
+        if (_state.value.activeProfile.isKids) return null
+        val previous = id?.let { _state.value.library.selection(it) }
+        val record = SyncSelection.normalized(
+            listOf(
+                SyncSelection(
+                    id = previous?.id ?: java.util.UUID.randomUUID().toString().lowercase(),
+                    name = name.trim(),
+                    tags = tags,
+                    match = if (all) SyncSelection.ALL else SyncSelection.ANY,
+                    tabs = tabs,
+                    updatedAt = 0,
+                ),
+            ),
+        ).singleOrNull() ?: return null
+        if (previous != null && previous.copy(updatedAt = 0) == record) return record.id
+        val now = stamp()
+        val key = Selections.rowKey(record.id)
+        updateLibrary { library ->
+            record.tabs.filter { it !in previous?.tabs.orEmpty() }.fold(library.keepingSelection(record.copy(updatedAt = now))) { result, tab ->
+                val rows = result.rowOrder(tab)
+                if (rows != null && key in rows.order) result
+                else result.keepingRowOrder(SyncRows(tab, listOf(key) + rows?.order.orEmpty(), rows?.hidden.orEmpty(), now).normalized())
+            }
+        }
+        return record.id
+    }
+
+    /** Deletes a selection, its row taken out of each tab's order; remembered for sync. */
+    fun deleteSelection(id: String) {
+        if (_state.value.activeProfile.isKids) return
+        if (_state.value.library.selection(id) == null) return
+        val now = stamp()
+        val key = Selections.rowKey(id)
+        updateLibrary { library ->
+            library.rowOrders.filter { key in it.order || key in it.hidden }.fold(library.deletingSelection(id, now)) { result, rows ->
+                result.keepingRowOrder(rows.copy(order = rows.order - key, hidden = rows.hidden - key, updatedAt = now))
+            }
+        }
     }
 
     /** The version of a film the viewer chose on its page ([AppSettings.chosenVersions]), on this device only. */

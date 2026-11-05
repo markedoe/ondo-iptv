@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -50,11 +53,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.RowOrder
+import com.markedoe.ondo.core.sync.SyncSelection
+import com.markedoe.ondo.ui.selectionTitle
 import com.markedoe.ondo.ui.theme.ondoSwitchColors
 import kotlin.math.abs
 
-/** A row of the Home, Movies or Series tab in Settings → Row order: its key ([RowOrder]), the category's name (null: a built-in row), whether it is hidden. */
-data class RowOrderEntry(val key: String, val category: String?, val hidden: Boolean)
+/**
+ * A row of the Home, Movies or Series tab in Settings → Row order: its key ([RowOrder]), the category's name (null: a
+ * built-in row or a selection), whether it is hidden, and the selection it shows (null: another row).
+ */
+data class RowOrderEntry(val key: String, val category: String?, val hidden: Boolean, val selection: SyncSelection? = null)
 
 /** The rows of the Home, Movies and Series tabs, in the viewer's order. */
 data class RowOrderUiState(
@@ -95,6 +103,10 @@ class RowOrderActions(
     val onSave: (tab: String, arranged: List<String>, hidden: List<String>) -> Unit = { _, _, _ -> },
     /** Default order: the tab's rows in their default order again. */
     val onReset: (tab: String) -> Unit = {},
+    /** New selection: a row made of tags, shown in this tab at first. */
+    val onNewSelection: (tab: String) -> Unit = {},
+    /** A selection's row: its tags, name and tabs, to change or delete. */
+    val onEditSelection: (id: String, tab: String) -> Unit = { _, _ -> },
 )
 
 /** The name of a tab in Settings → Row order. */
@@ -107,9 +119,9 @@ fun tabName(tab: String): String = stringResource(
     },
 )
 
-/** The name of a row of the tab: a built-in row's, else its category's. */
+/** The name of a row of the tab: a built-in row's, a selection's, else its category's. */
 @Composable
-fun rowName(entry: RowOrderEntry, tab: String): String = entry.category ?: stringResource(
+fun rowName(entry: RowOrderEntry, tab: String): String = entry.selection?.let { selectionTitle(it.name, it.tags, emptyMap()) } ?: entry.category ?: stringResource(
     if (tab == RowOrder.HOME) {
         when (entry.key) {
             RowOrder.HOME_CONTINUE_MOVIES -> R.string.movies_in_progress
@@ -197,7 +209,12 @@ private fun LazyListScope.tab(
                 Text(tabName(syncTab), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             },
             trailingContent = {
-                TextButton(onClick = { actions.onReset(syncTab) }, modifier = Modifier.testTag("rowOrderDefault-$tab")) { Text(stringResource(R.string.row_order_default)) }
+                Row {
+                    TextButton(onClick = { actions.onNewSelection(syncTab) }, modifier = Modifier.testTag("newSelection-$tab")) {
+                        Text(stringResource(R.string.new_selection))
+                    }
+                    TextButton(onClick = { actions.onReset(syncTab) }, modifier = Modifier.testTag("rowOrderDefault-$tab")) { Text(stringResource(R.string.row_order_default)) }
+                }
             },
         )
     }
@@ -252,12 +269,19 @@ private fun LazyListScope.tab(
                 Icon(Icons.Rounded.DragHandle, contentDescription = null, modifier = handle.testTag("rowHandle-$tab-${entry.key}"))
             },
             trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                entry.selection?.let { selection ->
+                    IconButton(onClick = { actions.onEditSelection(selection.id, syncTab) }, modifier = Modifier.testTag("editSelection-$tab-${entry.key}")) {
+                        Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_selection))
+                    }
+                }
                 Switch(
                     checked = !entry.hidden,
                     onCheckedChange = { shown -> actions.save(syncTab, rows.map { if (it.key == entry.key) it.copy(hidden = !shown) else it }) },
                     colors = ondoSwitchColors(),
                     modifier = Modifier.testTag("rowSwitch-$tab-${entry.key}").semantics { contentDescription = name },
                 )
+                }
             },
             colors = if (dragging) ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest) else ListItemDefaults.colors(),
             tonalElevation = if (dragging) 6.dp else 0.dp,

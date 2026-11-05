@@ -453,6 +453,22 @@
     <string name="row_order_moving_tv">Haut et Bas déplacent la rangée. OK la pose, Retour la remet à sa place.</string>
     <string name="row_order_moving">En déplacement</string>
     <string name="row_order_default">Ordre par défaut</string>
+    <string name="new_selection">Nouvelle présélection</string>
+    <string name="edit_selection">Modifier la présélection</string>
+    <string name="delete_selection">Supprimer la présélection</string>
+    <string name="selection">Ma présélection</string>
+    <string name="selection_decade">Années %1$s</string>
+    <string name="selection_genres">Genres</string>
+    <string name="selection_awards">Récompenses</string>
+    <string name="selection_decades">Décennies</string>
+    <string name="selection_styles">Styles</string>
+    <string name="selection_hint">Choisissez des tags : votre présélection s’affiche en rangée des titres qui les ont, une nouvelle sélection chaque jour, les mieux notés plus souvent en tête.</string>
+    <string name="selection_name">Nom</string>
+    <string name="selection_shown_in">Affichée dans</string>
+    <string name="selection_all_tags">Tous les tags</string>
+    <string name="selection_all_tags_on">Un titre doit avoir chaque tag choisi</string>
+    <string name="selection_all_tags_off">Un titre doit avoir l’un des tags choisis</string>
+    <string name="selection_no_tags">Pas encore de tag : les genres viennent avec les films et séries que vous ouvrez.</string>
     <string name="row_shown">Affichée</string>
     <string name="row_hidden">Masquée</string>
     <string name="move_up">Monter</string>
@@ -460,7 +476,7 @@
     <string name="all_movies_count">Tous les films (%1$s)</string>
     <string name="all_series_count">Toutes les séries (%1$s)</string>
     <string name="help_rows_title">Ordonner les rangées de l’Accueil, Films et Séries</string>
-    <string name="help_rows_body">Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Titres primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, ou sur un téléviseur appuyez sur OK pour la prendre, Haut et Bas pour la déplacer, OK pour la poser et Retour pour annuler ; désactivez l’interrupteur d’une rangée pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils.\n\nLes rangées de l’Accueil (films et séries en cours, Ma liste, les nouveautés, Tendances et les chaînes) se règlent de la même façon, sous Accueil ; le carrousel reste en haut.</string>
+    <string name="help_rows_body">Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Titres primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, ou sur un téléviseur appuyez sur OK pour la prendre, Haut et Bas pour la déplacer, OK pour la poser et Retour pour annuler ; désactivez l’interrupteur d’une rangée pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils.\n\nLes rangées de l’Accueil (films et séries en cours, Ma liste, les nouveautés, Tendances et les chaînes) se règlent de la même façon, sous Accueil ; le carrousel reste en haut.\n\nNouvelle présélection, sous chaque onglet, crée une rangée à vous : choisissez des tags parmi les genres, récompenses, décennies et styles, un nom et les onglets où elle s’affiche. Un titre doit avoir l’un des tags, ou tous avec Tous les tags. La rangée est une nouvelle sélection chaque jour parmi ses titres, les mieux notés sur TMDb plus souvent en tête et les titres déjà vus à la fin, avec Tout voir au bout. Elle se déplace et se masque comme les autres rangées ; son crayon la modifie ou la supprime.</string>
     <!-- Profiles (docs/PROFILES.md) -->
     <string name="profile_main_name">Moi</string>
     <string name="whos_watching">Qui regarde ?</string>

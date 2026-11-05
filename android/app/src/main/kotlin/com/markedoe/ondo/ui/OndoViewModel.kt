@@ -117,11 +117,14 @@ class OndoViewModel(
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
-    val movies: StateFlow<VodUiState?> = state.map { UiMappers.vod(it, series = false, title = "") }
+    /** The device's date, again when it changes: a selection's row is a new pick every day. */
+    private val days: Flow<String> = minutes.map { SelectionRows.day(it) }.distinctUntilChanged()
+
+    val movies: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ -> UiMappers.vod(state, series = false, title = "", now = clock(), kept = kept) }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
-    val series: StateFlow<VodUiState?> = state.map { UiMappers.vod(it, series = true, title = "") }
+    val series: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ -> UiMappers.vod(state, series = true, title = "", now = clock(), kept = kept) }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
@@ -624,6 +627,17 @@ class OndoViewModel(
     fun setRowOrder(tab: String, arranged: List<String>, hidden: Collection<String>) = repository.setRowOrder(tab, arranged, hidden)
 
     fun resetRowOrder(tab: String) = repository.resetRowOrder(tab)
+
+    /** Saves a selection (Settings → Row order → New selection); [id] null makes a new one. */
+    fun saveSelection(id: String?, name: String, tags: List<String>, all: Boolean, tabs: List<String>) = repository.saveSelection(id, name, tags, all, tabs)
+
+    fun deleteSelection(id: String) = repository.deleteSelection(id)
+
+    /** The tags a selection can be made of, from the playlist's titles and what the device kept of them. */
+    suspend fun selectionChoices(): SelectionChoices {
+        val kept = repository.keptPosterFacts()
+        return withContext(computation) { SelectionRows.choices(state.value, kept) }
+    }
 
     fun setSyncOnLocalNetwork(on: Boolean) = repository.setSyncOnLocalNetwork(on)
 

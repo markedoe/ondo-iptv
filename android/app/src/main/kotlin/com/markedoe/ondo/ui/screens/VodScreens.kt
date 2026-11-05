@@ -70,6 +70,8 @@ import com.markedoe.ondo.core.model.MediaCategory
 import java.text.NumberFormat
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.GridSource
+import com.markedoe.ondo.ui.SelectionRow
+import com.markedoe.ondo.ui.selectionTitle
 import com.markedoe.ondo.ui.components.ContinueCard
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
@@ -120,6 +122,8 @@ data class VodUiState(
      * the default order. A key whose row is empty shows nothing.
      */
     val order: List<String>? = null,
+    /** The rows of the selections shown in the tab, by row key (`sel:<id>`). */
+    val selections: Map<String, SelectionRow> = emptyMap(),
     val series: Boolean = false,
 ) {
     /** The rows shown, in their order: those with titles. */
@@ -135,7 +139,7 @@ data class VodUiState(
                     RowOrder.NEW_RELEASES -> newReleases.isNotEmpty()
                     RowOrder.TRENDING -> trending.isNotEmpty()
                     RowOrder.AWARD_WINNERS -> awardWinners.isNotEmpty()
-                    else -> categories[key]?.items?.isNotEmpty() == true
+                    else -> (categories[key]?.items ?: selections[key]?.items)?.isNotEmpty() == true
                 }
             }
         }
@@ -149,7 +153,7 @@ data class VodUiState(
         RowOrder.NEW_RELEASES -> newReleases.firstOrNull()
         RowOrder.TRENDING -> trending.firstOrNull()
         RowOrder.AWARD_WINNERS -> awardWinners.firstOrNull()
-        else -> rows.firstOrNull { it.key == key }?.items?.firstOrNull()
+        else -> (rows.firstOrNull { it.key == key }?.items ?: selections[key]?.items)?.firstOrNull()
     }
 }
 
@@ -163,6 +167,8 @@ class VodActions(
     val onSeeAllMyList: () -> Unit = {},
     /** See all of a row Ondo picks (New, Award winners): every title of the row, in its order. */
     val onSeeAllRow: (GridSource) -> Unit = {},
+    /** See all of a selection's row: every title of it, in the day's order. */
+    val onSeeAllSelection: (String) -> Unit = {},
     val onSearch: () -> Unit = {},
     val onCategories: () -> Unit = {},
 )
@@ -311,8 +317,18 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                     if (television) item(key = "seeAll") { TvSeeAllCard(onClick = onSeeAll, tall = true, width = width, modifier = Modifier.focusMemory("awards:seeAll")) }
                 }
             }
-            // Keyed apart from the items above: a category's id is the provider's, any word.
-            else -> categoryRows[key]?.let { row ->
+            // A selection's row: the titles of its tags, a new pick every day.
+            else -> if (key in state.selections) state.selections.getValue(key).let { row ->
+                item(key = "sel:" + row.id) {
+                    val onSeeAll = { actions.onSeeAllSelection(row.id) }
+                    Shelf(selectionTitle(row), metrics, Modifier.row("sel:" + row.id).testTag("shelfSelection-${row.id}"), onSeeAll = onSeeAll) {
+                        itemsIndexed(row.items.take(rowLength), key = { _, it -> it.key }) { index, item ->
+                            PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "sel:${row.id}:${item.key}", initialFocus = first == key && index == 0)
+                        }
+                        if (television) item(key = "seeAll") { TvSeeAllCard(onClick = onSeeAll, tall = true, width = width, modifier = Modifier.focusMemory("sel:${row.id}:seeAll")) }
+                    }
+                }
+            } else categoryRows[key]?.let { row ->
                 item(key = "row:" + row.category.id) {
                     Shelf(row.category.name, metrics, Modifier.row("row:" + row.category.id).testTag("shelf:${row.category.id}"), onSeeAll = { actions.onCategory(row.category) }) {
                         itemsIndexed(row.items.take(rowLength), key = { _, it -> it.key }) { index, item ->

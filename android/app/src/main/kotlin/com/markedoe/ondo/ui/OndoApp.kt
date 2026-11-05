@@ -70,6 +70,7 @@ import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
+import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.ContentType
@@ -126,7 +127,11 @@ import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.RowOrderActions
 import com.markedoe.ondo.ui.screens.RowOrderScreen
+import com.markedoe.ondo.ui.screens.SelectionActions
+import com.markedoe.ondo.ui.screens.SelectionScreen
+import com.markedoe.ondo.ui.screens.SelectionUiState
 import com.markedoe.ondo.ui.tv.TvRowOrderScreen
+import com.markedoe.ondo.ui.tv.TvSelectionScreen
 import com.markedoe.ondo.ui.screens.WebPageScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
 import com.markedoe.ondo.ui.theme.OndoColors
@@ -301,6 +306,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                     page<Routes.Profiles>(TvMargins.NONE) { ProfilesDestination(viewModel, navController) }
                     page<Routes.ProfileEdit>(TvMargins.NONE, entry = false) { route -> ParentGated(viewModel, navController) { ProfileEditDestination(viewModel, navController, route.toRoute<Routes.ProfileEdit>().id) } }
                     page<Routes.RowOrder> { ParentGated(viewModel, navController) { RowOrderDestination(viewModel, navController) } }
+                    page<Routes.SelectionEdit> { route -> ParentGated(viewModel, navController) { SelectionDestination(viewModel, navController, route.toRoute()) } }
                     page<Routes.Help> {
                         val open = rememberPageOpener(navController)
                         HelpScreen(onBack = { navController.popBackStack() }, onSupport = { open(SUPPORT_URL) })
@@ -508,6 +514,7 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onOpenResume = { item -> viewModel.resumedTitle(item.key)?.let(navController::open) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = false, myList = true, anyType = true)) },
             onSeeAllRow = { source, series -> navController.navigate(Routes.Grid(series = series, source = source.name)) },
+            onSeeAllSelection = { id -> navController.navigate(Routes.Grid(series = false, anyType = true, selection = id, selectionTab = RowOrder.HOME)) },
             onSeeAllLive = { navController.openTab(TopLevel.LIVE) },
             onPlayChannel = viewModel::playChannel,
             onPlaylists = { navController.navigate(Routes.Settings) },
@@ -542,6 +549,9 @@ private fun VodDestination(viewModel: OndoViewModel, navController: NavHostContr
             onCategory = { category -> navController.navigate(Routes.Grid(series = series, categoryId = category?.id)) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = series, myList = true)) },
             onSeeAllRow = { source -> navController.navigate(Routes.Grid(series = series, source = source.name)) },
+            onSeeAllSelection = { id ->
+                navController.navigate(Routes.Grid(series = series, selection = id, selectionTab = if (series) RowOrder.SERIES else RowOrder.MOVIES))
+            },
             onSearch = { navController.openSearch(viewModel) },
             onCategories = { navController.navigate(Routes.Categories(if (series) "series" else "movie")) },
         ),
@@ -815,7 +825,9 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
     val state by viewModel.state.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf("") }
     val source = GridSource.of(route.source)
+    val selection = route.selection?.let { state.library.selection(it) }
     val title = when {
+        selection != null -> selectionTitle(selection.name, selection.tags, emptyMap())
         source == GridSource.NEW -> stringResource(if (route.series) R.string.new_series else R.string.new_movies)
         source == GridSource.AWARDS -> stringResource(R.string.award_winners)
         route.myList -> stringResource(R.string.my_list)
@@ -826,8 +838,10 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
     // A row's titles open in the row's own order, whatever the order chosen for the categories: another order chosen
     // here is this page's only.
     var rowSort by rememberSaveable { mutableStateOf(PosterSort.PLAYLIST) }
-    val sort = if (source != null) rowSort else state.settings.posterSort
-    val onSort: (PosterSort) -> Unit = if (source != null) ({ rowSort = it }) else viewModel::setPosterSort
+    // A selection's titles too: the day's pick, in its order.
+    val rowOrder = source != null || route.selection != null
+    val sort = if (rowOrder) rowSort else state.settings.posterSort
+    val onSort: (PosterSort) -> Unit = if (rowOrder) ({ rowSort = it }) else viewModel::setPosterSort
     // The filter applies once typing pauses: each key no longer looks through the whole catalogue.
     val query by produceState(filter, filter) {
         if (value != filter) {
@@ -835,7 +849,12 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             value = filter
         }
     }
-    val kept by keptForRatingSort(viewModel, "grid", state, sort)
+    val keptForSort by keptForRatingSort(viewModel, "grid", state, sort)
+    // A selection's titles are found by what the device kept of them (TMDb's genres and ratings), whatever the order.
+    val keptForSelection by produceKept("grid-selection", emptyMap<String, TitleMetadata>(), state.content, route.selection) {
+        if (route.selection != null) viewModel.keptPosterFacts() else emptyMap()
+    }
+    val kept = if (route.selection != null) keptForSelection else keptForSort
     // Off the main thread: sorting a hundred thousand titles must not freeze the screen while typing.
     val items by produceKept("grid", emptyList<ShowcaseItem>(), state, route, query, sort, kept) {
         withContext(Dispatchers.Default) {
@@ -851,7 +870,7 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
     }
     CompositionLocalProvider(
         LocalShowsMyList provides route.myList,
-        LocalPlaylistOrderLabel provides if (source != null) R.string.sort_default_order else R.string.sort_playlist_order,
+        LocalPlaylistOrderLabel provides if (rowOrder) R.string.sort_default_order else R.string.sort_playlist_order,
     ) {
         PosterGridScreen(
             title = title,
@@ -995,8 +1014,39 @@ private fun RowOrderDestination(viewModel: OndoViewModel, navController: NavHost
         onBack = { navController.popBackStack() },
         onSave = viewModel::setRowOrder,
         onReset = viewModel::resetRowOrder,
+        onNewSelection = { tab -> navController.navigate(Routes.SelectionEdit(id = null, tab = tab)) },
+        onEditSelection = { id, tab -> navController.navigate(Routes.SelectionEdit(id = id, tab = tab)) },
     )
     if (isTelevision()) TvRowOrderScreen(state, actions) else RowOrderScreen(state, actions)
+}
+
+/** A selection made of tags: a new one, or one to change or delete (Settings → Row order). */
+@Composable
+private fun SelectionDestination(viewModel: OndoViewModel, navController: NavHostController, route: Routes.SelectionEdit) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val choices by produceKept("selection-choices", null as SelectionChoices?, state.content, state.awards) { viewModel.selectionChoices() }
+    val ready = choices ?: return Loading()
+    val selection = route.id?.let { state.library.selection(it) }
+    val ui = SelectionUiState(
+        id = selection?.id,
+        name = selection?.name.orEmpty(),
+        tags = selection?.tags.orEmpty(),
+        all = selection?.matchesAll == true,
+        tabs = selection?.tabs ?: listOf(route.tab),
+        choices = ready,
+    )
+    val actions = SelectionActions(
+        onBack = { navController.popBackStack() },
+        onSave = { name, tags, all, tabs ->
+            viewModel.saveSelection(selection?.id, name, tags, all, tabs)
+            navController.popBackStack()
+        },
+        onDelete = {
+            selection?.let { viewModel.deleteSelection(it.id) }
+            navController.popBackStack()
+        },
+    )
+    if (isTelevision()) TvSelectionScreen(ui, actions) else SelectionScreen(ui, actions)
 }
 
 /** Opens a web page in the browser (nothing happens on a device without one). */

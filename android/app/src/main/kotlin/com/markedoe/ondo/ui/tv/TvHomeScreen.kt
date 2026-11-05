@@ -75,6 +75,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.GridSource
+import com.markedoe.ondo.ui.selectionTitle
 import com.markedoe.ondo.ui.TagSuggestion
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
@@ -121,6 +122,8 @@ fun TvHomeScreen(
     autoAdvance: Boolean = LocalCarouselAutoAdvance.current,
     preparingKey: String? = null,
 ) {
+    // The selections' names, read here: the rows below are no composable scope.
+    val selectionTitles = state.selections.mapValues { selectionTitle(it.value) }
     val titles = HomeTitles(
         movies = stringResource(R.string.movies_in_progress),
         series = stringResource(R.string.series_in_progress),
@@ -211,6 +214,13 @@ fun TvHomeScreen(
                         }
                         RowOrder.TRENDING -> tvShelf(titles.trending, "shelfTrending") {
                             items(state.trending, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("trending:${item.key}")) }
+                        }
+                        // A selection's row: the titles of its tags, a new pick every day.
+                        else -> state.selections[key]?.let { row ->
+                            tvShelf(selectionTitles[key].orEmpty(), "shelfSelection-${row.id}") {
+                                items(row.items, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("sel:${row.id}:${item.key}")) }
+                                item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onSeeAllSelection(row.id) }, tall = true, modifier = Modifier.focusMemory("sel:${row.id}:seeAll")) }
+                            }
                         }
                     }
                     if (!state.hasVod && state.channels.isEmpty() && !state.isLoading && !state.isRestoring) {

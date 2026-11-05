@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.model.HistoryEntry
 import com.markedoe.ondo.core.sync.SyncHidden
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncRows
+import com.markedoe.ondo.core.sync.SyncSelection
 import kotlinx.serialization.Serializable
 
 /** Kind of item in the library; a person (actor or director) is kept by name, whatever the playlist. */
@@ -147,7 +148,23 @@ data class LibraryState(
      * kinds this version does not know, kept to pass them on. Empty before hidden categories synced: the launch dates them.
      */
     val hiddenAt: Map<String, Long> = emptyMap(),
+    /**
+     * The rows this profile made of tags (Settings → Row order → New selection, `Selections`), each with the time it was
+     * last set; sync carries them (docs/SYNC.md, "Selections").
+     */
+    val selections: List<SyncSelection> = emptyList(),
 ) {
+    /** The selection of [id]; null when there is none. */
+    fun selection(id: String): SyncSelection? = selections.firstOrNull { it.id == id }
+
+    /** [record] kept for its ID, the records sorted by ID as a merge gives them. */
+    fun keepingSelection(record: SyncSelection): LibraryState =
+        copy(selections = (selections.filterNot { it.id == record.id } + record).sortedBy { it.id })
+
+    /** Without the selection of [id], remembered for sync at [now]. */
+    fun deletingSelection(id: String, now: Long): LibraryState =
+        copy(selections = selections.filterNot { it.id == id }).deleting(SyncSelection.KEY_PREFIX + id, now)
+
     /** The order saved for the Movies or the Series tab; null: the default order. */
     fun rowOrder(series: Boolean): SyncRows? = rowOrder(if (series) SyncRows.SERIES else SyncRows.MOVIES)
 

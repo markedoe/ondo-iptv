@@ -38,6 +38,11 @@ import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.RowOrderActions
 import com.markedoe.ondo.ui.tv.TvRowOrderScreen
+import com.markedoe.ondo.ui.tv.TvSelectionScreen
+import com.markedoe.ondo.ui.SelectionRows
+import com.markedoe.ondo.ui.screens.SelectionActions
+import com.markedoe.ondo.ui.screens.SelectionUiState
+import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
@@ -216,6 +221,23 @@ class TvScreenshots {
         moviesTab()
         focusFirstCard("shelfAll")
         capture("movies-all")
+    }
+
+    /** A new selection: its tags as chips the remote goes through, a genre and a decade chosen. */
+    @Test
+    fun selectionPage() {
+        val choices = SelectionRows.choices(state, emptyMap())
+        val tags = listOfNotNull(choices.genres.firstOrNull()?.first, choices.decades.firstOrNull()?.let(Selections::decade))
+        val ui = SelectionUiState(null, "", tags, false, listOf(RowOrder.MOVIES), choices)
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            OndoTheme { TelevisionFrame { TvSelectionScreen(ui, SelectionActions()) } }
+        }
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        compose.mainClock.autoAdvance = false
+        advance()
+        capture("selection")
     }
 
     /** Settings → Row order with a row picked up by the remote and moved down once: it shows in the accent colour. */

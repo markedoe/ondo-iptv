@@ -44,6 +44,9 @@ object Routes {
         val myList: Boolean = false,
         val anyType: Boolean = false,
         val source: String? = null,
+        /** A selection's titles (its ID), as its row in [selectionTab] (`home`, `movie`, `series`) picks them today. */
+        val selection: String? = null,
+        val selectionTab: String? = null,
     )
     @Serializable data object Settings
 
@@ -53,6 +56,9 @@ object Routes {
 
     /** Settings → Row order: the order of the rows of the Movies and Series tabs. */
     @Serializable data object RowOrder
+
+    /** A selection made of tags (Settings → Row order → New selection): [id] null makes one, shown in [tab] at first. */
+    @Serializable data class SelectionEdit(val id: String? = null, val tab: String = "movie")
     /** The profile switcher (the top bar's avatar), and a profile's page: [id] null adds one (docs/PROFILES.md). */
     @Serializable data object Profiles
     @Serializable data class ProfileEdit(val id: String? = null)

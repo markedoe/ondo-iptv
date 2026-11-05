@@ -453,6 +453,22 @@
     <string name="row_order_moving_tv">Arriba y Abajo mueven la fila. OK la suelta, Atrás la devuelve a su sitio.</string>
     <string name="row_order_moving">Moviéndose</string>
     <string name="row_order_default">Orden predeterminado</string>
+    <string name="new_selection">Nueva preselección</string>
+    <string name="edit_selection">Editar preselección</string>
+    <string name="delete_selection">Eliminar preselección</string>
+    <string name="selection">Mi preselección</string>
+    <string name="selection_decade">Años %1$s</string>
+    <string name="selection_genres">Géneros</string>
+    <string name="selection_awards">Premios</string>
+    <string name="selection_decades">Décadas</string>
+    <string name="selection_styles">Estilos</string>
+    <string name="selection_hint">Elige etiquetas: tu preselección aparece como una fila de los títulos que las tienen, una nueva selección cada día, con los mejor valorados más a menudo al principio.</string>
+    <string name="selection_name">Nombre</string>
+    <string name="selection_shown_in">Se muestra en</string>
+    <string name="selection_all_tags">Todas las etiquetas</string>
+    <string name="selection_all_tags_on">Un título necesita todas las etiquetas elegidas</string>
+    <string name="selection_all_tags_off">Un título necesita una de las etiquetas elegidas</string>
+    <string name="selection_no_tags">Aún no hay etiquetas: los géneros llegan con las películas y series que abres.</string>
     <string name="row_shown">Visible</string>
     <string name="row_hidden">Oculta</string>
     <string name="move_up">Subir</string>
@@ -460,7 +476,7 @@
     <string name="all_movies_count">Todas las películas (%1$s)</string>
     <string name="all_series_count">Todas las series (%1$s)</string>
     <string name="help_rows_title">Ordenar las filas de Inicio, Películas y Series</string>
-    <string name="help_rows_body">Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Títulos premiados y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla, o en un televisor pulsa OK para tomarla, Arriba y Abajo para moverla, OK para soltarla y Atrás para cancelar; desactiva el interruptor de una fila para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.\n\nLas filas de Inicio (películas y series en curso, Mi lista, las novedades, Tendencias y los canales) se ajustan igual, en Inicio; el carrusel se queda arriba.</string>
+    <string name="help_rows_body">Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Títulos premiados y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla, o en un televisor pulsa OK para tomarla, Arriba y Abajo para moverla, OK para soltarla y Atrás para cancelar; desactiva el interruptor de una fila para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.\n\nLas filas de Inicio (películas y series en curso, Mi lista, las novedades, Tendencias y los canales) se ajustan igual, en Inicio; el carrusel se queda arriba.\n\nNueva preselección, en cada pestaña, crea una fila propia: elige etiquetas entre géneros, premios, décadas y estilos, un nombre y las pestañas donde aparece. Un título necesita una de las etiquetas, o todas con Todas las etiquetas. La fila es una nueva selección cada día entre sus títulos, con los mejor valorados en TMDb más a menudo al principio y los títulos ya vistos al final, con Ver todo al final. Se mueve y se oculta como las demás filas; su lápiz la edita o la elimina.</string>
     <!-- Profiles (docs/PROFILES.md) -->
     <string name="profile_main_name">Yo</string>
     <string name="whos_watching">¿Quién está viendo?</string>

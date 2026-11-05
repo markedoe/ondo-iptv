@@ -1,5 +1,8 @@
 package com.markedoe.ondo.ui
 
+import com.markedoe.ondo.core.library.RowOrder
+import com.markedoe.ondo.core.sync.SyncSelection
+import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.epg.EpgIndex
@@ -566,6 +569,7 @@ class UiMappersTest {
      * titles, channels or people in:
      *  - Home: carousel, new movies, new series, trending, channels;
      *  - Movies and Series: rows and grids (every category);
+     *  - a selection's rows (Home, Movies, Series) and its See all grid;
      *  - Search: movies, series, channels and people, with and without filters;
      *  - pages reached from a title: person, genre, year, award, similar titles (movie and series);
      *  - Live TV and the guide;
@@ -577,7 +581,9 @@ class UiMappersTest {
     fun noListShowsTheTitlesOfAHiddenLanguage() {
         val marker = HiddenLanguage.MARKER
         val started = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, HiddenLanguage.started.id, title = HiddenLanguage.started.name, lastWatchedAt = 1)
-        val library = LibraryState()
+        // A selection of the decade the hidden titles came out in, on every tab.
+        val twenties = SyncSelection("twenties", "Twenties", listOf(Selections.decade(2024)), SyncSelection.ANY, listOf(RowOrder.HOME, RowOrder.MOVIES, RowOrder.SERIES), 1)
+        val library = LibraryState(selections = listOf(twenties))
             .recordStart(started).updateProgress(started.key, 600.0, 6_000.0, now = 2)
             .toggleFavorite(Favorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, HiddenLanguage.movie.id, HiddenLanguage.movie.name, addedAt = 3))
         val base = Fixtures.state(library, content = HiddenLanguage.content).copy(
@@ -607,6 +613,9 @@ class UiMappersTest {
                 "series rows" to UiMappers.vod(state, series = true, title = "").copy(continueWatching = emptyList()).toString(),
                 "movie grids" to (categories.map { UiMappers.grid(state, false, it, false, "") } + listOf(UiMappers.grid(state, false, null, false, ""))).toString(),
                 "series grids" to (seriesCategories.map { UiMappers.grid(state, true, it, false, "") } + listOf(UiMappers.grid(state, true, null, false, ""))).toString(),
+                "selection rows" to listOf(RowOrder.HOME, RowOrder.MOVIES, RowOrder.SERIES).map { SelectionRows.rows(state, it, Fixtures.NOW, emptyMap(), Int.MAX_VALUE) }.toString(),
+                "selection grids" to listOf(RowOrder.HOME, RowOrder.MOVIES, RowOrder.SERIES)
+                    .map { UiMappers.grid(state, it == RowOrder.SERIES, null, false, "", anyType = it == RowOrder.HOME, now = Fixtures.NOW, selection = twenties.id, selectionTab = it) }.toString(),
                 "my list" to UiMappers.myList(state, Fixtures.NOW).toString(),
                 "search" to listOf("a", "o", marker.lowercase(), "do mar", "tv", "carreira", "tony").joinToString { found(UiMappers.search(index, it, state, Fixtures.NOW)) },
                 "filtered search" to found(UiMappers.search(index, "", state, Fixtures.NOW, SearchFilters(fromYear = 2024, toYear = 2024))),
@@ -621,12 +630,12 @@ class UiMappersTest {
         }
         // Shown: every surface that can list them does, so the check below proves something.
         val shown = surfaces(base)
-        listOf("movies rows", "series rows", "movie grids", "series grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
+        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
             .forEach { assertTrue("$it lists the language while it is shown", marker in shown.getValue(it)) }
 
         // The titles named with the language in visible categories of no language, shown while the language is.
         val byName = HiddenLanguage.BY_NAME
-        listOf("movies rows", "series rows", "movie grids", "series grids", "search", "filtered search", "year", "live", "guide")
+        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "search", "filtered search", "year", "live", "guide")
             .forEach { assertTrue("$it lists the titles named with the language while it is shown", byName in shown.getValue(it)) }
 
         val byLanguage = base.copy(library = base.library.settingTagsHidden(listOf("PT"), hidden = true))
@@ -664,7 +673,7 @@ class UiMappersTest {
         val shownAgain = synced(hiddenHere, SyncSnapshot(device = "phone", deleted = mapOf(SyncKeys.hiddenTag("PT") to 10)))
         assertTrue(shownAgain.library.hiddenTags.isEmpty())
         val again = surfaces(shownAgain)
-        listOf("movies rows", "series rows", "movie grids", "series grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
+        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
             .forEach { assertTrue("$it lists the language once shown again on another device", marker in again.getValue(it)) }
     }
 

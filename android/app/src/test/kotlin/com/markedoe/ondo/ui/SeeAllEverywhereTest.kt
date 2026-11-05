@@ -22,6 +22,8 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.RowOrder
+import com.markedoe.ondo.core.library.Selections
+import com.markedoe.ondo.core.sync.SyncSelection
 import com.markedoe.ondo.core.library.TmdbItem
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.data.Favorite
@@ -86,6 +88,8 @@ class SeeAllEverywhereTest {
         .recordStart(episodeInProgress).updateProgress(episodeInProgress.key, 600.0, 2_700.0, now = 3)
         .toggleFavorite(Favorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, "Glass City", addedAt = 1))
         .toggleFavorite(Favorite(Fixtures.PLAYLIST_ID, ItemKind.SERIES, Fixtures.theArchive.id, "The Archive", addedAt = 2))
+        // A selection on every tab: the titles of the 2020s.
+        .keepingSelection(SyncSelection(SELECTION, "Twenties", listOf(Selections.decade(2020)), SyncSelection.ANY, listOf(RowOrder.HOME, RowOrder.MOVIES, RowOrder.SERIES), 4))
     private val state = Fixtures.state(library).copy(
         awards = awards,
         trending = listOf(
@@ -105,12 +109,14 @@ class SeeAllEverywhereTest {
         onCategory = { opened = Routes.Grid(series = series, categoryId = it?.id) },
         onSeeAllMyList = { opened = Routes.Grid(series = series, myList = true) },
         onSeeAllRow = { opened = Routes.Grid(series = series, source = it.name) },
+        onSeeAllSelection = { opened = Routes.Grid(series = series, selection = it, selectionTab = if (series) RowOrder.SERIES else RowOrder.MOVIES) },
     )
 
     private val homeActions = HomeActions(
         onSeeAllMyList = { opened = Routes.Grid(series = false, myList = true, anyType = true) },
         onSeeAllRow = { source, series -> opened = Routes.Grid(series = series, source = source.name) },
         onSeeAllLive = { opened = LIVE_TAB },
+        onSeeAllSelection = { opened = Routes.Grid(series = false, anyType = true, selection = it, selectionTab = RowOrder.HOME) },
     )
 
     /** The rows of [screen], from the top, with what their See all must open. */
@@ -125,6 +131,9 @@ class SeeAllEverywhereTest {
                 Row("shelfNewSeries", home.newSeries, home.newSeries.size, Routes.Grid(series = true, source = GridSource.NEW.name)),
                 Row("shelfTrending", home.trending, home.trending.size, null, TRENDING),
                 Row("shelfChannels", emptyList(), home.channels.size, LIVE_TAB),
+                home.selections.getValue(Selections.rowKey(SELECTION)).let { row ->
+                    Row("shelfSelection-$SELECTION", row.items, row.items.size, Routes.Grid(series = false, anyType = true, selection = SELECTION, selectionTab = RowOrder.HOME))
+                },
             )
         }
         Screen.MOVIES, Screen.SERIES -> {
@@ -140,6 +149,12 @@ class SeeAllEverywhereTest {
                     RowOrder.NEW_RELEASES -> Row("shelfNew", vod.newReleases, vod.newReleases.size, Routes.Grid(series = series, source = GridSource.NEW.name))
                     RowOrder.TRENDING -> Row("shelfTrending", vod.trending, vod.trending.size, null, TRENDING)
                     RowOrder.AWARD_WINNERS -> Row("shelfAwards", vod.awardWinners, vod.awardWinners.size, Routes.Grid(series = series, source = GridSource.AWARDS.name))
+                    Selections.rowKey(SELECTION) -> vod.selections.getValue(key).let { row ->
+                        Row(
+                            "shelfSelection-$SELECTION", row.items, row.items.size,
+                            Routes.Grid(series = series, selection = SELECTION, selectionTab = if (series) RowOrder.SERIES else RowOrder.MOVIES),
+                        )
+                    }
                     else -> {
                         val row = vod.rows.first { it.key == key }
                         Row("shelf:${row.category.id}", row.items, row.items.size, Routes.Grid(series = series, categoryId = row.category.id))
@@ -235,6 +250,9 @@ class SeeAllEverywhereTest {
     private companion object {
         /** Every surface with rows of titles; each is checked on a TV and on a phone. */
         val SURFACES = listOf(Screen.HOME, Screen.MOVIES, Screen.SERIES)
+
+        /** The selection shown on every tab. */
+        const val SELECTION = "twenties"
 
         /** Home's channel row: See all opens the Live tab. */
         const val LIVE_TAB = "live tab"

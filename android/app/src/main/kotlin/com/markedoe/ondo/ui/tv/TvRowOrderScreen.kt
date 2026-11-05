@@ -19,6 +19,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -113,6 +114,13 @@ fun TvRowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
                             modifier = Modifier.weight(1f),
                         )
                         Button(
+                            onClick = { actions.onNewSelection(syncTab) },
+                            enabled = moving == null,
+                            modifier = Modifier.padding(end = 12.dp).testTag("newSelection-$tab"),
+                            scale = ButtonDefaults.scale(focusedScale = 1.06f),
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
+                        ) { Text(stringResource(R.string.new_selection)) }
+                        Button(
                             onClick = { actions.onReset(syncTab) },
                             enabled = moving == null,
                             modifier = Modifier.testTag("rowOrderDefault-$tab"),
@@ -152,6 +160,7 @@ fun TvRowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
                         onToggle = {
                             actions.onSave(syncTab, rows.map { it.key }, rows.filter { if (it.key == entry.key) !it.hidden else it.hidden }.map { it.key })
                         },
+                        onEdit = entry.selection?.let { selection -> { actions.onEditSelection(selection.id, syncTab) } },
                     )
                 }
             }
@@ -174,6 +183,8 @@ private fun TvOrderRow(
     onOk: () -> Unit,
     onMove: (Int) -> Unit,
     onToggle: () -> Unit,
+    /** A selection's row: its page, to change or delete it. */
+    onEdit: (() -> Unit)? = null,
 ) {
     val bringIntoView = remember { BringIntoViewRequester() }
     // Moved, it stays in view.
@@ -228,6 +239,17 @@ private fun TvOrderRow(
             shape = ListItemDefaults.shape(shape),
             scale = ListItemDefaults.scale(focusedScale = if (picked) 1.04f else 1.02f),
         )
+        if (onEdit != null) {
+            Button(
+                onClick = onEdit,
+                enabled = !picked,
+                modifier = Modifier.padding(start = 12.dp).testTag("editSelection-$tag"),
+                scale = ButtonDefaults.scale(focusedScale = 1.06f),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_selection), modifier = Modifier.size(22.dp))
+            }
+        }
         TvSwitchRow(
             title = stringResource(if (entry.hidden) R.string.row_hidden else R.string.row_shown),
             subtitle = null,

@@ -11,11 +11,13 @@ import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
 import com.markedoe.ondo.core.library.RecentReleases
 import com.markedoe.ondo.core.library.RowOrder
+import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.library.WeightedRating
 import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.sync.SyncSelection
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
@@ -463,7 +465,8 @@ object UiMappers {
         val channels = favoriteChannels.ifEmpty { recentChannels }.ifEmpty { channelsById.values.take(ROW_LENGTH) }
         val savedOrder = state.library.rowOrder(RowOrder.HOME)
         // The viewer's order of Home's rows (Settings → Row order); a row they hid never shows.
-        val order = RowOrder.arrange(homeRowKeys(showcase.hasVod), savedOrder?.order.orEmpty(), savedOrder?.hidden.orEmpty())
+        val selections = SelectionRows.rows(state, RowOrder.HOME, now, kept, ROW_LENGTH)
+        val order = RowOrder.arrange(homeRowKeys(showcase.hasVod, selections.keys.toList()), savedOrder?.order.orEmpty(), savedOrder?.hidden.orEmpty())
             .filter { !it.hidden }.map { it.key }
         return HomeUiState(
             playlistName = state.activePlaylist?.name.orEmpty(),
@@ -477,6 +480,7 @@ object UiMappers {
             trending = showcase.trending(),
             hasVod = showcase.hasVod,
             order = order,
+            selections = selections,
             channels = channels.map { channelRow(it, state, now) },
             channelsAreFavorites = favoriteChannels.isNotEmpty(),
             isLoading = state.isLoading,
@@ -486,10 +490,15 @@ object UiMappers {
         )
     }
 
-    fun vod(state: OndoState, series: Boolean, title: String, now: Long = System.currentTimeMillis()): VodUiState =
-        trace(if (series) "Ondo.vod.series" else "Ondo.vod.movies") { vodState(state, series, title, now) }
+    fun vod(
+        state: OndoState,
+        series: Boolean,
+        title: String,
+        now: Long = System.currentTimeMillis(),
+        kept: Map<String, TitleMetadata> = emptyMap(),
+    ): VodUiState = trace(if (series) "Ondo.vod.series" else "Ondo.vod.movies") { vodState(state, series, title, now, kept) }
 
-    private fun vodState(state: OndoState, series: Boolean, title: String, now: Long): VodUiState {
+    private fun vodState(state: OndoState, series: Boolean, title: String, now: Long, kept: Map<String, TitleMetadata>): VodUiState {
         // What is hidden, worked out once for every row of the tab.
         val hidden = hiddenCategoryIds(state)
         val showcase = showcase(state, hidden = hidden)
@@ -519,8 +528,9 @@ object UiMappers {
         val rows = categories.mapNotNull { category -> byCategory[category.id]?.take(ROW_LENGTH)?.let { CategoryRow(category, it) } }
         val kind = if (series) ItemKind.SERIES else ItemKind.MOVIE
         val saved = state.library.rowOrder(series)
+        val selections = SelectionRows.rows(state, if (series) RowOrder.SERIES else RowOrder.MOVIES, now, kept, ROW_LENGTH)
         // The viewer's order (Settings → Row order); a row they hid never shows, nor one a hidden category or language left out.
-        val order = RowOrder.arrange(tabRowKeys(categories, series), saved?.order.orEmpty(), saved?.hidden.orEmpty())
+        val order = RowOrder.arrange(tabRowKeys(categories, series, selections.keys.toList()), saved?.order.orEmpty(), saved?.hidden.orEmpty())
             .filter { !it.hidden }.map { it.key }
         return VodUiState(
             title = title,
@@ -534,6 +544,7 @@ object UiMappers {
             newReleases = rowTitles(state, GridSource.NEW, series, now, ROW_LENGTH, showcase, hidden),
             trending = showcase.trending().filter { (it is ShowcaseItem.SeriesItem) == series },
             order = order,
+            selections = selections,
             series = series,
         )
     }
@@ -561,16 +572,24 @@ object UiMappers {
             }
         }
 
-    /** The keys of the rows of the Movies or Series tab ([RowOrder]): the built-in rows, then [categories] in their order. */
-    fun tabRowKeys(categories: List<MediaCategory>, series: Boolean): List<String> =
-        RowOrder.builtIns(series) + categories.map { RowOrder.categoryKey(it.id, it.name) }
+    /**
+     * The keys of the rows of the Movies or Series tab ([RowOrder]): the built-in rows, the [selections]' rows
+     * (`sel:<id>`), then [categories] in their order.
+     */
+    fun tabRowKeys(categories: List<MediaCategory>, series: Boolean, selections: List<String> = emptyList()): List<String> =
+        RowOrder.builtIns(series) + selections + categories.map { RowOrder.categoryKey(it.id, it.name) }
 
     /**
      * The keys of Home's rows ([RowOrder]) in their default order: the channels last, or right after My List on a
      * playlist without movies or series ([hasVod] false). No collections row: Android's Home has none (an order saved
      * on an Apple device keeps it in its place).
      */
-    fun homeRowKeys(hasVod: Boolean): List<String> = RowOrder.homeBuiltIns(hasVod, collections = false)
+    fun homeRowKeys(hasVod: Boolean, selections: List<String> = emptyList()): List<String> {
+        val builtIns = RowOrder.homeBuiltIns(hasVod, collections = false)
+        // The selections' rows (`sel:<id>`) before the channels when they come last.
+        val at = if (hasVod) builtIns.indexOf(RowOrder.HOME_CHANNELS).takeIf { it >= 0 } ?: builtIns.size else builtIns.size
+        return builtIns.take(at) + selections + builtIns.drop(at)
+    }
 
     /**
      * Settings → Row order: the rows of each tab in the viewer's order, hidden or not. The categories hidden in Settings
@@ -580,14 +599,20 @@ object UiMappers {
         val hidden = hiddenCategoryIds(state)
         val hasVod = state.content.movies.any { it.categoryId !in hidden } || state.content.series.any { it.categoryId !in hidden }
         val savedHome = state.library.rowOrder(RowOrder.HOME)
-        val home = RowOrder.arrange(homeRowKeys(hasVod), savedHome?.order.orEmpty(), savedHome?.hidden.orEmpty())
-            .map { RowOrderEntry(it.key, null, it.hidden) }
+        // The selections of each tab, by row key: named as the viewer named them.
+        fun selections(tab: String) = SelectionRows.of(state, tab).associateBy { Selections.rowKey(it.id) }
+        fun entry(row: RowOrder.Row, name: String?, selections: Map<String, SyncSelection>) = selections[row.key]
+            ?.let { RowOrderEntry(row.key, null, row.hidden, selection = it) } ?: RowOrderEntry(row.key, name, row.hidden)
+        val homeSelections = selections(RowOrder.HOME)
+        val home = RowOrder.arrange(homeRowKeys(hasVod, homeSelections.keys.toList()), savedHome?.order.orEmpty(), savedHome?.hidden.orEmpty())
+            .map { entry(it, null, homeSelections) }
         fun tab(series: Boolean): List<RowOrderEntry> {
             val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }.distinctBy { it.id }
             val names = categories.associate { RowOrder.categoryKey(it.id, it.name) to it.name }
             val saved = state.library.rowOrder(series)
-            return RowOrder.arrange(tabRowKeys(categories, series), saved?.order.orEmpty(), saved?.hidden.orEmpty())
-                .map { RowOrderEntry(it.key, names[it.key], it.hidden) }
+            val tabSelections = selections(if (series) RowOrder.SERIES else RowOrder.MOVIES)
+            return RowOrder.arrange(tabRowKeys(categories, series, tabSelections.keys.toList()), saved?.order.orEmpty(), saved?.hidden.orEmpty())
+                .map { entry(it, names[it.key], tabSelections) }
         }
         return RowOrderUiState(movies = tab(series = false), series = tab(series = true), home = home)
     }
@@ -631,10 +656,14 @@ object UiMappers {
         source: GridSource? = null,
         now: Long = System.currentTimeMillis(),
         kept: Map<String, TitleMetadata> = emptyMap(),
+        /** A selection's titles ([Routes.Grid.selection]), as its row in [selectionTab] picks them. */
+        selection: String? = null,
+        selectionTab: String? = null,
     ): List<ShowcaseItem> {
         val hidden = hiddenCategoryIds(state)
         val byName = CategoryFilter.hiddenTitles(state)
         val items: List<ShowcaseItem> = when {
+            selection != null -> state.library.selection(selection)?.let { SelectionRows.titles(state, it, selectionTab ?: RowOrder.MOVIES, now, kept, Int.MAX_VALUE) }.orEmpty()
             source != null -> rowTitles(state, source, series, now, Int.MAX_VALUE)
             myList -> showcase(state).myList().filter { anyType || (it is ShowcaseItem.SeriesItem) == series }
             series -> state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.SeriesItem(it) }
@@ -670,7 +699,10 @@ object UiMappers {
         sort: PosterSort = PosterSort.PLAYLIST,
         now: Long = System.currentTimeMillis(),
         kept: Map<String, TitleMetadata> = emptyMap(),
-    ): List<ShowcaseItem> = grid(state, route.series, route.categoryId, route.myList, filter, route.anyType, sort, GridSource.of(route.source), now, kept)
+    ): List<ShowcaseItem> = grid(
+        state, route.series, route.categoryId, route.myList, filter, route.anyType, sort, GridSource.of(route.source), now, kept, route.selection,
+        route.selectionTab,
+    )
 
     /**
      * Grid order. Release date: newest year first, titles without a year last, the latest addition first within a
