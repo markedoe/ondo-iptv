@@ -2,10 +2,11 @@
 
 Instantanés produits par les deux cœurs, chacun lu et fusionné par l’autre : la preuve qu’un appareil Android et un
 iPhone, un iPad ou un Mac synchronisent entre eux les profils, les données de chaque profil, l’ordre des rangées, les
-listes partagées, les catégories masquées et les suppressions, au-delà des exemples écrits à la main de `fixtures/sync`.
+listes partagées, les catégories masquées, les présélections et les suppressions, au-delà des exemples écrits à la main de `fixtures/sync`.
 
 Pour chaque scénario (`profiles`, `shared-lists`, `deletions`, `hidden` : les catégories, langues et styles masqués de
-chaque profil, masqués et réaffichés de part et d’autre), les deux appareils partent des mêmes données (ce qu’ils
+chaque profil, masqués et réaffichés de part et d’autre ; `selections` : les présélections de chaque profil, créées,
+modifiées et supprimées de part et d’autre), les deux appareils partent des mêmes données (ce qu’ils
 avaient après une session précédente), écrites de la même façon dans les deux cœurs, chaque instant étant donné par une
 `SyncClock` à une heure murale connue. Puis chacun change des choses de son côté, et ils ont une session, l’iPhone étant
 le client :

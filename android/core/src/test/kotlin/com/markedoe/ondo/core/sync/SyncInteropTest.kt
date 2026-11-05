@@ -46,6 +46,9 @@ class SyncInteropTest {
     @Test
     fun hiddenCategoriesSyncBetweenAndroidAndApple() = check("hidden")
 
+    @Test
+    fun selectionsSyncBetweenAndroidAndApple() = check("selections")
+
     /**
      * An iPhone shares a list; an older Android TV (which does not share lists) relays it to an iPad: the iPad keeps the
      * list where it was, never loses it.
@@ -243,6 +246,13 @@ object InteropScenarios {
     const val ROAD_TRIP = "c3c3c3c3-0000-4000-8000-000000000003"
     const val CARTOONS = "c4c4c4c4-0000-4000-8000-000000000004"
 
+    /** The selections of the selections scenario. */
+    const val NINETIES = "d1d1d1d1-0000-4000-8000-000000000001"
+    const val CANNES = "d2d2d2d2-0000-4000-8000-000000000002"
+    const val ANIME = "d3d3d3d3-0000-4000-8000-000000000003"
+    const val DOCS = "d4d4d4d4-0000-4000-8000-000000000004"
+    const val WESTERNS = "d5d5d5d5-0000-4000-8000-000000000005"
+
     /** A receiving device's clock in a session (`last` is not needed: the times stay within a day of the wall clock). */
     fun clock() = SyncClock()
 
@@ -335,6 +345,21 @@ object InteropScenarios {
                     profileData = listOf(SyncProfileData(SAM, hiddenCategories = listOf(manga)), SyncProfileData(KIDS, hiddenCategories = listOf(horror))),
                 )
             }
+            // Each profile's selections, and the main profile's Movies tab with one of them moved up.
+            "selections" -> {
+                val nineties = SyncSelection(NINETIES, "Nineties dramas", listOf("decade:1990", "genre:drama"), SyncSelection.ANY, listOf("home", "movie"), script.at(10))
+                val cannes = SyncSelection(CANNES, "Cannes", listOf("award:cannes"), SyncSelection.ALL, listOf("movie"), script.at(11))
+                val rows = SyncRows(SyncRows.MOVIES, listOf("sel:$NINETIES", "all", "continue"), emptyList(), script.at(12))
+                val anime = SyncSelection(ANIME, "Anime", listOf("style:manga"), SyncSelection.ANY, listOf("series"), script.at(20))
+                SyncSnapshot(
+                    device = "",
+                    playlists = listOf(home),
+                    rows = listOf(rows),
+                    selections = listOf(nineties, cannes),
+                    profiles = profiles,
+                    profileData = listOf(SyncProfileData(SAM, selections = listOf(anime))),
+                )
+            }
             // Sam's list, before the iPhone shares it.
             "old-relay-share" -> {
                 val first = item(HOME, "movie", "m1", "Northern Lights", script.at(20))
@@ -422,6 +447,18 @@ object InteropScenarios {
                         if (it.profile == KIDS) it.copy(hiddenCategories = it.hiddenCategories + SyncHidden.category(HOME, "live-7", t120)) else it
                     },
                 )
+            }
+            "selections" -> {
+                // The main profile renames Nineties dramas and deletes Cannes; Sam makes a selection of documentaries.
+                val t100 = script.at(100)
+                snapshot = snapshot.copy(selections = snapshot.selections.map { if (it.id == NINETIES) it.copy(name = "90s dramas", updatedAt = t100) else it })
+                val t110 = script.at(110)
+                snapshot = snapshot.copy(
+                    selections = snapshot.selections.filter { it.id != CANNES },
+                    deleted = snapshot.deleted + (SyncSelection.KEY_PREFIX + CANNES to t110),
+                )
+                val docs = SyncSelection(DOCS, "Documentaries", listOf("style:documentary"), SyncSelection.ANY, listOf("home"), script.at(120))
+                snapshot = snapshot.copy(profileData = snapshot.profileData.map { if (it.profile == SAM) it.copy(selections = it.selections + docs) else it })
             }
             "deletions" -> {
                 // The Sports playlist is deleted: its records go with it, in every profile.

@@ -1,8 +1,8 @@
 import Foundation
 
 /// What a device sends to sync on the local network: its playlists, My List and favourite channels, the people kept,
-/// lists, playback progress, the keys of outside services, the order of the rows of the Home, Movies and Series tabs and
-/// the hidden categories, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+/// lists, playback progress, the keys of outside services, the order of the rows of the Home, Movies and Series tabs,
+/// the hidden categories and the selections, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
 ///
 /// The same document as the Kotlin `SyncSnapshot` (android/core): both read the examples of `fixtures/sync`.
 public struct SyncSnapshot: Codable, Hashable, Sendable {
@@ -30,6 +30,9 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     /// The categories, languages and styles hidden; none from a device that does not sync them. Left out when empty, so a
     /// snapshot without any reads, and has the digest, as before.
     public var hiddenCategories: [SyncHidden]
+    /// The rows the viewer made of tags (docs/SYNC.md, "Selections"); none from a device that does not sync them. Left
+    /// out when empty, as `hiddenCategories`.
+    public var selections: [SyncSelection]
     /// The viewer profiles (docs/PROFILES.md, docs/SYNC.md "Profiles"); none from a device that does not sync them.
     public var profiles: [SyncProfile]
     /// The data of each profile other than the main one, whose data is the records above (an older device knows only
@@ -68,6 +71,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         keys: [SyncKey] = [],
         rows: [SyncRows] = [],
         hiddenCategories: [SyncHidden] = [],
+        selections: [SyncSelection] = [],
         profiles: [SyncProfile] = [],
         profileData: [SyncProfileData] = [],
         household: SyncHousehold? = nil,
@@ -91,6 +95,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         self.keys = keys
         self.rows = rows
         self.hiddenCategories = hiddenCategories
+        self.selections = selections
         self.profiles = profiles
         self.profileData = profileData
         self.household = household
@@ -104,7 +109,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, rows, hiddenCategories, profiles
+        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, rows, hiddenCategories, selections
+        case profiles
         case profileData, household
         case deleted, replaced, clock
         case digest, seen, probe, unchanged
@@ -126,6 +132,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         keys = try c.value(.keys, default: [])
         rows = try c.value(.rows, default: [])
         hiddenCategories = try c.value(.hiddenCategories, default: [])
+        selections = try c.value(.selections, default: [])
         profiles = try c.value(.profiles, default: [])
         profileData = try c.value(.profileData, default: [])
         household = try c.decodeIfPresent(SyncHousehold.self, forKey: .household)
@@ -154,6 +161,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         try c.encode(keys, forKey: .keys)
         try c.encode(rows, forKey: .rows)
         if !hiddenCategories.isEmpty { try c.encode(hiddenCategories, forKey: .hiddenCategories) }
+        if !selections.isEmpty { try c.encode(selections, forKey: .selections) }
         try c.encode(profiles, forKey: .profiles)
         try c.encode(profileData, forKey: .profileData)
         try c.encodeIfPresent(household, forKey: .household)
@@ -291,6 +299,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         times += keys.map(\.updatedAt)
         times += rows.map(\.updatedAt)
         times += hiddenCategories.map(\.hiddenAt)
+        times += selections.map(\.updatedAt)
         times += profiles.map(\.updatedAt)
         for bucket in profileData { times += bucket.records().times }
         if let household { times += household.records().times }
@@ -330,6 +339,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         copy.keys = keys.filter { past($0.updatedAt) }
         copy.rows = rows.filter { past($0.updatedAt) }
         copy.hiddenCategories = hiddenCategories.filter { past($0.hiddenAt) }
+        copy.selections = selections.filter { past($0.updatedAt) }
         copy.profiles = profiles.filter { past($0.updatedAt) }
         copy.profileData = profileData.map { SyncProfileData(profile: $0.profile, records: $0.records().withoutRecordsAfter(latest)) }
         copy.household = household.map { SyncHousehold(records: $0.records().withoutRecordsAfter(latest)) }.flatMap { $0.isEmpty ? nil : $0 }
@@ -369,6 +379,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         }
         copy.rows = SyncRows.capped(rows.map { $0.normalized() })
         copy.hiddenCategories = SyncHidden.normalized(hiddenCategories)
+        copy.selections = SyncSelection.normalized(selections)
         copy.profiles = SyncProfile.capped(profiles.map { profile in
             var profile = profile
             profile.id = profile.id.lowercased()
@@ -383,7 +394,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     }
 
     /// The key of a deleted record with its playlist or list ID in lowercase: `playlist:<id>`, `list:<id>`, and the
-    /// playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`; the name of `person:<name>` with A to Z in
+    /// playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`; the ID of `selection:<id>`; the name of `person:<name>` with A to Z in
     /// lowercase; the playlist of `hide:category:<playlist>|…`. The rest (the provider's item IDs, the service of `key:`, a
     /// hidden tag or word) keeps its case.
     static func lowercasingID(ofDeleted key: String) -> String {
@@ -406,7 +417,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             return list + "|" + String(item.unicodeScalars[..<bar]).lowercased() + String(item.unicodeScalars[bar...])
         }
         // The moves and deletions of shared lists (docs/SYNC.md, "Shared lists"): their space and list IDs.
-        for prefix in ["listmoved:", "sharedlistdeleted:"] where scalars.starts(with: prefix.unicodeScalars) {
+        for prefix in ["listmoved:", "sharedlistdeleted:", SyncSelection.keyPrefix] where scalars.starts(with: prefix.unicodeScalars) {
             return prefix + String(scalars.dropFirst(prefix.unicodeScalars.count)).lowercased()
         }
         for prefix in ["playlist:", "list:", "favorite:", "progress:", SyncProfile.keyPrefix] where scalars.starts(with: prefix.unicodeScalars) {
@@ -825,6 +836,99 @@ public struct SyncHidden: Codable, Hashable, Sendable {
     }
 }
 
+/// A row the viewer made of tags (docs/SYNC.md, "Selections"; `Selections` in the library): its `name`, its `tags`
+/// (`genre:drama`, `award:cannes`, `decade:1990`, `style:manga`; a kind a device does not know is kept and passed on),
+/// whether a title needs `match` `any` tag or `all` of them, and the tabs it shows in (`tabs`: `home`, `movie`, `series`).
+/// One record per selection, the whole of it set at once: the later `updatedAt` wins; deleting it adds `key` to
+/// `deleted`.
+public struct SyncSelection: Codable, Hashable, Sendable {
+    public static let keyPrefix = "selection:"
+    public static let any = "any"
+    public static let all = "all"
+    /// At most this many selections in a snapshot's list (each profile's), tags in one, and UTF-16 units in a field.
+    public static let maxSelections = 100
+    public static let maxTags = 200
+    public static let maxLength = 256
+
+    public var id: String
+    public var name: String
+    public var tags: [String]
+    public var match: String
+    public var tabs: [String]
+    public var updatedAt: Int64
+
+    public init(id: String, name: String = "", tags: [String] = [], match: String = SyncSelection.any, tabs: [String] = [],
+                updatedAt: Int64) {
+        self.id = id
+        self.name = name
+        self.tags = tags
+        self.match = match
+        self.tabs = tabs
+        self.updatedAt = updatedAt
+    }
+
+    enum CodingKeys: String, CodingKey { case id, name, tags, match, tabs, updatedAt }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.value(.name, default: "")
+        tags = try c.value(.tags, default: [])
+        match = try c.value(.match, default: Self.any)
+        tabs = try c.value(.tabs, default: [])
+        updatedAt = try c.decode(Int64.self, forKey: .updatedAt)
+    }
+
+    public var key: String { Self.keyPrefix + id }
+
+    /// Whether a title needs every tag.
+    public var matchesAll: Bool { match == Self.all }
+
+    /// The tie string of the merge (docs/SYNC.md, "Merge", rule 2): unambiguous, as no field holds a line feed.
+    var tie: String { ([name, match, String(tabs.count)] + tabs + tags).joined(separator: "\n") }
+
+    static func isValid(_ text: String) -> Bool {
+        text.utf16.count <= maxLength && !text.utf16.contains { $0 < 0x20 || $0 == 0x7F } && !SyncMerge.kotlinTrimmed(text).isEmpty
+    }
+
+    /// Valid, each once (the first) and sorted in UTF-16 code units, `maxTags` at most.
+    private static func cleaned(_ texts: [String]) -> [String] {
+        var seen = Set<[UInt16]>()
+        return Array(texts.filter { isValid($0) && seen.insert(Array($0.utf16)).inserted }.sorted { $0.isBefore($1) }.prefix(maxTags))
+    }
+
+    /// As every device keeps them: an ID valid (not blank, no control characters, `maxLength` UTF-16 units at most) in
+    /// lowercase; a name without control characters ("" past `maxLength`); a match valid, else `any`; tags and tabs
+    /// valid, each once and sorted (UTF-16 code units), `maxTags` at most; then `capped`.
+    static func normalized(_ records: [SyncSelection]) -> [SyncSelection] {
+        capped(records.filter { isValid($0.id) }.map { record in
+            var copy = record
+            let name = String(decoding: record.name.utf16.filter { $0 >= 0x20 && $0 != 0x7F }, as: UTF16.self)
+            copy.id = record.id.lowercased()
+            copy.name = name.utf16.count > maxLength ? "" : name
+            copy.match = isValid(record.match) ? record.match : any
+            copy.tags = cleaned(record.tags)
+            copy.tabs = cleaned(record.tabs)
+            return copy
+        })
+    }
+
+    /// `records` without those past the `maxSelections` keys changed last (the later time first, then the smaller key in
+    /// UTF-16 code units); the records kept stay in their order.
+    static func capped(_ records: [SyncSelection]) -> [SyncSelection] {
+        var latest: [[UInt16]: (key: String, time: Int64)] = [:]
+        for record in records {
+            let id = Array(record.key.utf16)
+            latest[id] = (record.key, max(latest[id]?.time ?? record.updatedAt, record.updatedAt))
+        }
+        guard latest.count > maxSelections else { return records }
+        let kept = Set(latest.values.sorted { first, second in
+            first.time != second.time ? first.time > second.time : first.key.isBefore(second.key)
+        }.prefix(maxSelections).map { Array($0.key.utf16) })
+        return records.filter { kept.contains(Array($0.key.utf16)) }
+    }
+}
+
 private extension KeyedDecodingContainer {
     /// The value of `key`, or `fallback` when the key is absent (an explicit `null` is an error, as in Kotlin).
     func value<T: Decodable>(_ key: Key, default fallback: T) throws -> T {
@@ -908,7 +1012,7 @@ public struct SyncProfile: Codable, Hashable, Sendable {
 }
 
 /// The data of a profile other than the main one (docs/SYNC.md, "Profiles"): its My List and favourite channels,
-/// progress, lists, people, order of rows and hidden categories, with what was deleted in it, by the same keys as the
+/// progress, lists, people, order of rows, hidden categories and selections, with what was deleted in it, by the same keys as the
 /// snapshot's own.
 public struct SyncProfileData: Codable, Hashable, Sendable {
     public var profile: String
@@ -919,10 +1023,13 @@ public struct SyncProfileData: Codable, Hashable, Sendable {
     public var rows: [SyncRows]
     /// Left out when empty, as the snapshot's own.
     public var hiddenCategories: [SyncHidden]
+    /// Left out when empty, as the snapshot's own.
+    public var selections: [SyncSelection]
     public var deleted: [String: Int64]
 
     public init(profile: String, favorites: [SyncFavorite] = [], progress: [SyncProgress] = [], lists: [SyncList] = [],
-                people: [SyncPerson] = [], rows: [SyncRows] = [], hiddenCategories: [SyncHidden] = [], deleted: [String: Int64] = [:]) {
+                people: [SyncPerson] = [], rows: [SyncRows] = [], hiddenCategories: [SyncHidden] = [],
+                selections: [SyncSelection] = [], deleted: [String: Int64] = [:]) {
         self.profile = profile
         self.favorites = favorites
         self.progress = progress
@@ -930,6 +1037,7 @@ public struct SyncProfileData: Codable, Hashable, Sendable {
         self.people = people
         self.rows = rows
         self.hiddenCategories = hiddenCategories
+        self.selections = selections
         self.deleted = deleted
     }
 
@@ -937,12 +1045,12 @@ public struct SyncProfileData: Codable, Hashable, Sendable {
     public init(profile: String, records: SyncSnapshot) {
         self.init(profile: profile, favorites: records.favorites, progress: records.progress, lists: records.lists,
                   people: records.people, rows: records.rows, hiddenCategories: records.hiddenCategories,
-                  deleted: records.deleted.filter { !$0.key.hasPrefix("playlist:") })
+                  selections: records.selections, deleted: records.deleted.filter { !$0.key.hasPrefix("playlist:") })
     }
 
-    enum CodingKeys: String, CodingKey { case profile, favorites, progress, lists, people, rows, hiddenCategories, deleted }
+    enum CodingKeys: String, CodingKey { case profile, favorites, progress, lists, people, rows, hiddenCategories, selections, deleted }
 
-    /// As the synthesized encoding, with `hiddenCategories` written only when not empty.
+    /// As the synthesized encoding, with `hiddenCategories` and `selections` written only when not empty.
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(profile, forKey: .profile)
@@ -952,6 +1060,7 @@ public struct SyncProfileData: Codable, Hashable, Sendable {
         try c.encode(people, forKey: .people)
         try c.encode(rows, forKey: .rows)
         if !hiddenCategories.isEmpty { try c.encode(hiddenCategories, forKey: .hiddenCategories) }
+        if !selections.isEmpty { try c.encode(selections, forKey: .selections) }
         try c.encode(deleted, forKey: .deleted)
     }
 
@@ -964,13 +1073,14 @@ public struct SyncProfileData: Codable, Hashable, Sendable {
         people = try c.value(.people, default: [])
         rows = try c.value(.rows, default: [])
         hiddenCategories = try c.value(.hiddenCategories, default: [])
+        selections = try c.value(.selections, default: [])
         deleted = try c.value(.deleted, default: [:])
     }
 
     /// Its records as a snapshot of their own (to merge, normalise, date them with the snapshot's rules).
     public func records(playlists: [SyncPlaylist] = [], deletedPlaylists: [String: Int64] = [:], replaced: [String: String] = [:]) -> SyncSnapshot {
         SyncSnapshot(device: "", playlists: playlists, favorites: favorites, progress: progress, lists: lists, people: people,
-                     rows: rows, hiddenCategories: hiddenCategories, deleted: deleted.merging(deletedPlaylists) { _, playlist in playlist },
+                     rows: rows, hiddenCategories: hiddenCategories, selections: selections, deleted: deleted.merging(deletedPlaylists) { _, playlist in playlist },
                      replaced: replaced)
     }
 }

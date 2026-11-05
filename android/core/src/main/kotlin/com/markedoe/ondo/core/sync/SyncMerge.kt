@@ -74,6 +74,9 @@ object SyncMerge {
                 // A "Show all" marker shows again every category of its playlist and type hidden before it.
                 .filter { hidden -> SyncHidden.shownAt(hidden.key, deleted)?.let { it >= hidden.hiddenAt } != true },
         )
+        // Each selection on its own: the later change wins, a deletion wins over a selection not changed since; a side
+        // without them (an older version) removes none.
+        val selections = SyncSelection.capped(pick(left.selections + right.selections, { it.key }, { it.updatedAt }, compareBy { it.tie }, deleted))
         val keptPlaylists = kept.sortedWith(compareBy<SyncPlaylist> { it.addedAt }.thenBy { it.id })
         // The profiles' buckets without the lists rule 9 placed, then those it placed in each, with its deletions.
         val buckets = (left.profileData + right.profileData).map { it.copy(lists = outside(it.lists.map(::mapped))) } +
@@ -95,6 +98,7 @@ object SyncMerge {
             keys = keys.sortedBy { it.service },
             rows = SyncRows.capped(rows).sortedBy { it.tab },
             hiddenCategories = hiddenCategories.sortedBy { it.key },
+            selections = selections.sortedBy { it.id },
             profiles = profiles,
             profileData = profileData,
             household = household,

@@ -31,6 +31,8 @@ final class SyncInteropTests: XCTestCase {
 
     func testHiddenCategoriesSyncBetweenAndroidAndApple() throws { try check("hidden") }
 
+    func testSelectionsSyncBetweenAndroidAndApple() throws { try check("selections") }
+
     /// An iPhone shares a list; an older Android TV (which does not share lists) relays it to an iPad: the iPad keeps the
     /// list where it was, never loses it.
     func testAListSharedBehindAnOlderAndroidDeviceIsNotLost() throws {
@@ -312,6 +314,12 @@ enum InteropScenarios {
     static let documentaries = "c2c2c2c2-0000-4000-8000-000000000002"
     static let roadTrip = "c3c3c3c3-0000-4000-8000-000000000003"
     static let cartoons = "c4c4c4c4-0000-4000-8000-000000000004"
+    /// The selections of the selections scenario.
+    static let nineties = "d1d1d1d1-0000-4000-8000-000000000001"
+    static let cannes = "d2d2d2d2-0000-4000-8000-000000000002"
+    static let anime = "d3d3d3d3-0000-4000-8000-000000000003"
+    static let docs = "d4d4d4d4-0000-4000-8000-000000000004"
+    static let westerns = "d5d5d5d5-0000-4000-8000-000000000005"
 
     /// Dates changes as a device does: each at `max(wall clock, last + 1)`.
     struct Script {
@@ -383,6 +391,19 @@ enum InteropScenarios {
             return SyncSnapshot(
                 device: "", playlists: [homePlaylist], hiddenCategories: [drama, portuguese], profiles: profiles,
                 profileData: [SyncProfileData(profile: sam, hiddenCategories: [manga]), SyncProfileData(profile: kids, hiddenCategories: [horror])]
+            )
+        case "selections":
+            // Each profile's selections, and the main profile's Movies tab with one of them moved up.
+            let ninetiesSelection = SyncSelection(id: nineties, name: "Nineties dramas", tags: ["decade:1990", "genre:drama"], match: SyncSelection.any,
+                                                  tabs: ["home", "movie"], updatedAt: script.at(10))
+            let cannesSelection = SyncSelection(id: cannes, name: "Cannes", tags: ["award:cannes"], match: SyncSelection.all, tabs: ["movie"],
+                                                updatedAt: script.at(11))
+            let rows = SyncRows(tab: SyncRows.movies, order: ["sel:\(nineties)", "all", "continue"], hidden: [], updatedAt: script.at(12))
+            let animeSelection = SyncSelection(id: anime, name: "Anime", tags: ["style:manga"], match: SyncSelection.any, tabs: ["series"],
+                                               updatedAt: script.at(20))
+            return SyncSnapshot(
+                device: "", playlists: [homePlaylist], rows: [rows], selections: [ninetiesSelection, cannesSelection], profiles: profiles,
+                profileData: [SyncProfileData(profile: sam, selections: [animeSelection])]
             )
         case "old-relay-share", "old-relay-take-back":
             // Sam's list (before the iPhone shares it), or the same list shared (before the iPhone takes it back).
@@ -466,6 +487,23 @@ enum InteropScenarios {
             let t118 = script.at(118)
             snapshot.hiddenCategories.removeAll { $0.kind == SyncHidden.category && $0.value.hasPrefix(home + "|movie-") }
             snapshot.deleted[SyncHidden.categoryKeyPrefix + home + "|movie" + SyncHidden.showAll] = t118
+        case "selections":
+            // Cannes gets another tag (before the Android device deletes it); Sam deletes Anime; the main profile makes a
+            // selection with a tag of a kind a later version may add; Nineties dramas becomes "all tags" (after the Android
+            // device renamed it: the later change wins, whole).
+            if let index = snapshot.selections.firstIndex(where: { $0.id == cannes }) {
+                snapshot.selections[index].tags = ["award:cannes", "decade:2010"]
+                snapshot.selections[index].updatedAt = script.at(105)
+            }
+            let samIndex = snapshot.profileData.firstIndex { $0.profile == sam } ?? 0
+            snapshot.profileData[samIndex].selections.removeAll { $0.id == anime }
+            snapshot.profileData[samIndex].deleted[SyncSelection.keyPrefix + anime] = script.at(115)
+            snapshot.selections.append(SyncSelection(id: westerns, name: "Westerns", tags: ["genre:western", "mood:calm"], match: SyncSelection.any,
+                                                     tabs: ["home"], updatedAt: script.at(118)))
+            if let index = snapshot.selections.firstIndex(where: { $0.id == nineties }) {
+                snapshot.selections[index].match = SyncSelection.all
+                snapshot.selections[index].updatedAt = script.at(125)
+            }
         case "old-relay-share":
             snapshot = SyncSharing.share(snapshot, list: movieNight, from: sam, removedAt: script.at(100), placedAt: script.at(101))
         case "old-relay-take-back":
