@@ -900,7 +900,7 @@ public struct SyncSelection: Codable, Hashable, Sendable {
     /// As every device keeps them: an ID valid (not blank, no control characters, `maxLength` UTF-16 units at most) in
     /// lowercase; a name without control characters ("" past `maxLength`); a match valid, else `any`; tags and tabs
     /// valid, each once and sorted (UTF-16 code units), `maxTags` at most; then `capped`.
-    static func normalized(_ records: [SyncSelection]) -> [SyncSelection] {
+    public static func normalized(_ records: [SyncSelection]) -> [SyncSelection] {
         capped(records.filter { isValid($0.id) }.map { record in
             var copy = record
             let name = String(decoding: record.name.utf16.filter { $0 >= 0x20 && $0 != 0x7F }, as: UTF16.self)

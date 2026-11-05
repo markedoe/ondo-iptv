@@ -25,12 +25,13 @@ struct SelectionEditorView: View {
 
     var body: some View {
         let choices = model.selectionChoices()
-        let groups: [(LocalizedStringKey, [String])] = [
+        let offered: [(LocalizedStringKey, [String])] = [
             ("Genres", choices.genres.map(\.tag)),
-            ("Awards", choices.awardGroups.map(Selections.award)),
-            ("Decades", choices.decades.map(Selections.decade)),
-            ("Styles", choices.styles.map(Selections.style)),
-        ].filter { !$0.1.isEmpty }
+            ("Awards", choices.awardGroups.map { Selections.award($0) }),
+            ("Decades", choices.decades.map { Selections.decade($0) }),
+            ("Styles", choices.styles.map { Selections.style($0) }),
+        ]
+        let groups = offered.filter { !$0.1.isEmpty }
         Form {
             Section {
                 Text("Choose tags: your selection shows as a row of the titles that have them, a new pick every day, the best rated more often first.")
