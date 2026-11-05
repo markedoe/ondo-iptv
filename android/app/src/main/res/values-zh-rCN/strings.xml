@@ -126,6 +126,7 @@
     <string name="film_version">版本</string>
     <string name="kind_movie">电影</string>
     <string name="kind_series">剧集</string>
+    <string name="hero_new_episode">新一集</string>
     <string name="kind_m3u">M3U 播放列表</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">第 %1$d 季</string>

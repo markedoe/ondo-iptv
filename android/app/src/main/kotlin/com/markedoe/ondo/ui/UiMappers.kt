@@ -72,6 +72,10 @@ data class Labels(
     val locale: Locale = Locale.getDefault(),
     /** The viewer's language and country codes, for the "show only your languages?" suggestion. */
     val viewerCodes: Set<String> = CategoryFilter.viewerCodes(listOf(locale)),
+    /** Why a series is in the carousel: "New episode", before the day it aired. */
+    val newEpisode: String = "New episode",
+    /** A day and a month in the viewer's language ("3 Nov", "Nov 3", "11月3日"): the carousel's release dates. */
+    val dayMonth: String = "d MMM",
 )
 
 /** Builds the screens' states from the app state. Pure functions, unit tested. */
@@ -418,6 +422,25 @@ object UiMappers {
         ).joinToString(" · ")
     }
 
+    /**
+     * The facts of a title in the carousel ([meta]), with the day it came out in place of its year, since the carousel
+     * goes by it: "Movie · 3 Nov · Drama · ★ 7.8"; a series says why it is there, "Series · New episode · 3 Nov · …"
+     * (its latest episode or season, not the year it started). Without a known day, [meta].
+     */
+    fun heroMeta(item: ShowcaseItem, state: OndoState, labels: Labels, releaseDay: Long?): String {
+        val day = releaseDay ?: return meta(item, state, labels)
+        val date = runCatching { java.time.format.DateTimeFormatter.ofPattern(labels.dayMonth, labels.locale) }
+            .getOrElse { java.time.format.DateTimeFormatter.ofPattern("d MMM", labels.locale) }
+            .format(java.time.LocalDate.ofEpochDay(day))
+        val year = item.year?.toString()
+        val facts = meta(item, state, labels).split(" · ").toMutableList()
+        val released = if (item is ShowcaseItem.SeriesItem) listOf(labels.newEpisode, date) else listOf(date)
+        // The year, right after the kind, gives way to the day.
+        if (year != null && facts.getOrNull(1) == year) facts.removeAt(1)
+        facts.addAll(1, released)
+        return facts.joinToString(" · ")
+    }
+
     fun home(state: OndoState, labels: Labels, now: Long, kept: Map<String, TitleMetadata> = emptyMap()): HomeUiState {
         val showcase = showcase(state, kept)
         val playlistId = state.activePlaylistId.orEmpty()
@@ -432,7 +455,7 @@ object UiMappers {
                 is ShowcaseItem.MovieItem -> item.movie.plot
                 is ShowcaseItem.SeriesItem -> item.series.plot
             }
-            HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable, backdrop(state, item) ?: kept[item.key]?.backdropUrl?.takeIf { it !in state.deadBackdrops }, details?.plot ?: plot)
+            HeroPage(item, heroMeta(item, state, labels, showcase.releaseDay(item)), isFavorite(state, item), resumable, backdrop(state, item) ?: kept[item.key]?.backdropUrl?.takeIf { it !in state.deadBackdrops }, details?.plot ?: plot)
         }
         val channelsById = visibleChannels(state, hidden).associateBy { it.id }
         val favoriteChannels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }

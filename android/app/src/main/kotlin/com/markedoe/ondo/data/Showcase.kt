@@ -148,7 +148,7 @@ class Showcase(
     private fun today(now: Long): Long = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
 
     /** The day the carousel counts a title's release from ([RecentReleases.releaseDay]): TMDb's, else the provider's full date. */
-    private fun releaseDay(item: ShowcaseItem): Long? = RecentReleases.releaseDay(kept[item.key]?.releaseDate, providerRelease(item))
+    fun releaseDay(item: ShowcaseItem): Long? = RecentReleases.releaseDay(kept[item.key]?.releaseDate, providerRelease(item))
 
     private fun hasArtwork(item: ShowcaseItem): Boolean =
         !item.posterUrl.isNullOrBlank() || !kept[item.key]?.backdropUrl.isNullOrBlank() || hasBackdrop(item)

@@ -197,8 +197,10 @@ class UiMappersTest {
         val home = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW, Fixtures.kept())
         assertEquals("Home", home.playlistName)
         assertEquals(6, home.hero.size)
-        assertEquals("Movie · 2025 · ★ 7.8", home.hero.first { it.item.title == "Northern Lights" }.meta)
-        assertEquals("Series · 2025 · Drama · ★ 8.2", home.hero.first { it.item.title == "Harbor Lights" }.meta)
+        // The day a title came out in place of its year; a series says why it is there.
+        assertEquals("Movie · 6 Oct · ★ 7.8", home.hero.first { it.item.title == "Northern Lights" }.meta)
+        assertEquals("Series · New episode · 8 Oct · Drama · ★ 8.2", home.hero.first { it.item.title == "Harbor Lights" }.meta)
+        assertEquals("Series · New episode · 5 Oct · Mystery · ★ 7.2", home.hero.first { it.item.title == "Blue Horizon" }.meta)
         assertTrue(home.hasVod)
         assertEquals(
             "new movies by release year",
@@ -213,7 +215,7 @@ class UiMappersTest {
     @Test
     fun ratingsUseTheUsersDecimalSeparator() {
         val hero = UiMappers.home(Fixtures.state(), Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW, Fixtures.kept()).hero
-        assertEquals("Film · 2025 · ★ 7,8", hero.first { it.item.title == "Northern Lights" }.meta)
+        assertEquals("Film · 6 oct. · ★ 7,8", hero.first { it.item.title == "Northern Lights" }.meta)
     }
 
     /** Both ratings side by side: the provider's, then TMDb's with its number of votes when TMDb gave them. */
@@ -223,10 +225,10 @@ class UiMappersTest {
         val kept = Fixtures.kept().mapValues { (_, title) -> title.copy(voteAverage = 7.0, voteCount = 100) }
         val key = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW, kept).hero.first { it.item.title == "Northern Lights" }.item.key
         val state = Fixtures.state().copy(tmdbRatings = mapOf(key to TmdbRating(7.346, 12345)))
-        assertEquals("Movie · 2025 · ★ 7.8 · TMDb 7.3 (12,345)", UiMappers.home(state, labels, Fixtures.NOW, kept).hero.first { it.item.title == "Northern Lights" }.meta)
-        assertEquals("Series · 2025 · Drama · ★ 8.2", UiMappers.home(state, labels, Fixtures.NOW, kept).hero.first { it.item.title == "Harbor Lights" }.meta)
+        assertEquals("Movie · 6 Oct · ★ 7.8 · TMDb 7.3 (12,345)", UiMappers.home(state, labels, Fixtures.NOW, kept).hero.first { it.item.title == "Northern Lights" }.meta)
+        assertEquals("Series · New episode · 8 Oct · Drama · ★ 8.2", UiMappers.home(state, labels, Fixtures.NOW, kept).hero.first { it.item.title == "Harbor Lights" }.meta)
         val french = UiMappers.home(state, Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW, kept).hero.first { it.item.title == "Northern Lights" }.meta
-        assertTrue(french, french.matches(Regex("Film · 2025 · ★ 7,8 · TMDb 7,3 \\(12[\\s\\u00A0\\u202F]345\\)")))
+        assertTrue(french, french.matches(Regex("Film · 6 oct\\. · ★ 7,8 · TMDb 7,3 \\(12[\\s\\u00A0\\u202F]345\\)")))
         assertNull(UiMappers.ratingFact(null, null, Locale.US))
         assertNull(UiMappers.ratingFact(0.0, null, Locale.US))
         assertEquals("★ 6.0", UiMappers.ratingFact(6.0, null, Locale.US))

@@ -43,7 +43,7 @@ interface changes.
 ### iPhone, iPad and Mac
 
 - **Home**: featured movies and series in a large rounded frame (title, facts and buttons inside it): the recent
-  releases, by release date (see the carousel below), movies and series in progress (one row each), My List, new releases, trending; live TV last; when the playlist was last
+  releases, by release date, each with the day it came out (see the carousel below), movies and series in progress (one row each), My List, new releases, trending; live TV last; when the playlist was last
   updated, above its name. Black pages, white for what is chosen; cards rise under the pointer, the keyboard focus
   or a finger.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating (TMDb's
@@ -134,7 +134,8 @@ interface changes.
   released in the last 7 days, series with an episode or a season out in the last 7 days (a series from 2014 with a
   new season this week is in, one with nothing new is not), nothing announced for later; the best first by TMDb's
   average vote weighted by the number of votes (with a TMDb token; 10 votes at least); 14, then 30, then 60 days when
-  fewer than 15 qualify; without votes, the newest releases by date; hidden when nothing came out in 60 days. Movies
+  fewer than 15 qualify; without votes, the newest releases by date; hidden when nothing came out in 60 days; each title says the day it came out (a series: "New episode" and
+  the day) in place of its year. Movies
   and series in progress (one row each; long-press a card, or hold OK on a TV, to take
   it out), My List, new releases, channels; when the playlist was last updated, above its name.
 - **Row order** (Settings): the rows of Home, Movies and Series in the order you choose, each shown or hidden (drag on

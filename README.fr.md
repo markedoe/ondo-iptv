@@ -43,7 +43,7 @@ chaque changement de l'interface.
 ### iPhone, iPad et Mac
 
 - **Accueil** : films et séries à la une dans un grand cadre arrondi (titre, informations et boutons à
-  l'intérieur) : les sorties récentes, selon leur date de sortie (voir le carrousel plus bas), films et séries en cours (une rangée chacun), Ma liste, nouveautés, tendances ; le direct en
+  l'intérieur) : les sorties récentes, selon leur date de sortie, chacune avec son jour de sortie (voir le carrousel plus bas), films et séries en cours (une rangée chacun), Ma liste, nouveautés, tendances ; le direct en
   dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom. Des pages noires, du blanc pour
   ce qui est choisi ; les cartes se soulèvent sous le pointeur, le focus du clavier ou le doigt.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
@@ -147,7 +147,8 @@ chaque changement de l'interface.
   7 derniers jours (une série de 2014 avec une nouvelle saison cette semaine y est, une série sans rien de nouveau
   non), rien d'annoncé pour plus tard ; les meilleurs d'abord selon la note moyenne de TMDb pondérée par le nombre de
   votes (avec un jeton TMDb ; 10 votes au moins) ; 14, puis 30, puis 60 jours quand moins de 15 titres sont retenus ;
-  sans votes, les sorties les plus récentes par date ; masqué quand rien n'est sorti en 60 jours. Films et séries en
+  sans votes, les sorties les plus récentes par date ; masqué quand rien n'est sorti en 60 jours ; chaque titre indique le jour de sa sortie (une série : « Nouvel
+  épisode » et le jour) au lieu de son année. Films et séries en
   cours (une rangée chacun ; appuyez longuement sur une carte, ou
   maintenez OK sur une TV, pour la retirer), Ma liste, nouveautés, chaînes ; la date de dernière mise à jour de la
   playlist, au-dessus de son nom.

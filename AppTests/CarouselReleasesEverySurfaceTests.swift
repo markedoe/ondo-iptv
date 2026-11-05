@@ -73,6 +73,12 @@ final class CarouselReleasesEverySurfaceTests: XCTestCase {
         model.recordStart(road)
         model.recordProgress(road, position: 600, duration: 6_000)
 
+        // Its facts say when a title came out in place of its year, and why a series is there (its latest episode).
+        let signal = try XCTUnwrap(model.carouselRelease(of: try item("The Last Signal")))
+        XCTAssertEqual(signal.count, 1)
+        XCTAssertFalse(signal[0].contains(String(Self.thisYear)), "a day and a month: \(signal)")
+        XCTAssertEqual(model.carouselRelease(of: try item("Blue Horizon"))?.first, "New episode")
+
         /// Every screen that shows Home's carousel: Home on iPhone, iPad and Mac (`HomeView`).
         let surfaces: [String: [ShowcaseItem]] = [
             "Home": model.heroItems(),

@@ -25,7 +25,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.TextNormalizer
-import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.GridSource
 import com.markedoe.ondo.ui.Routes
@@ -101,7 +100,7 @@ class TvScreenshots {
     private val catalogue = ShowcaseCatalogue.load(french = false)
     private val state = catalogue.state()
     private val now = ShowcaseCatalogue.NOW
-    private val labels = Labels("Movie", "Series", Locale.US)
+    private val labels = com.markedoe.ondo.appLabels("Movie", "Series", "New episode", Locale.US)
 
     /** What the app's view model would show of a title in the header: the demo's details (a copy's, its own title's). */
     private val headers = object : TitleHeaders {

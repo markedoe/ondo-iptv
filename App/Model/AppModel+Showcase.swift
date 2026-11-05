@@ -134,6 +134,17 @@ extension AppModel {
         RecentReleases.releaseDay(tmdb: tmdbTitle(for: item)?.releaseDate, provider: providerRelease(of: item))
     }
 
+    /// When a title of the carousel came out, as its facts say it in place of its year: "3 Nov", in the app's language;
+    /// a series says why it is there, "New episode · 3 Nov" (its latest episode or season, not the year it started). Nil
+    /// without a known day.
+    func carouselRelease(of item: ShowcaseItem) -> [String]? {
+        guard let day = releaseDay(of: item) else { return nil }
+        let style = Date.FormatStyle(timeZone: TimeZone(identifier: "UTC") ?? .current).day().month(.abbreviated)
+        let date = Date(timeIntervalSince1970: TimeInterval(day) * 86_400).formatted(style)
+        if case .series = item { return [String(localized: "New episode"), date] }
+        return [date]
+    }
+
     /// The provider's release date of a title whose details are known: a movie's; a series' latest episode's, else its
     /// own (its first).
     func providerRelease(of item: ShowcaseItem) -> String? {

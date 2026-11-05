@@ -8,7 +8,6 @@ import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.data.ItemKind
-import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.OndoNavigationFrame
 import com.markedoe.ondo.ui.TopLevel
 import com.markedoe.ondo.ui.UiMappers
@@ -71,7 +70,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
     }
 
     private val french get() = locale.startsWith("fr")
-    private val labels get() = if (french) Labels("Film", "Série", Locale.FRANCE) else Labels("Movie", "Series", Locale.US)
+    private val labels get() = if (french) com.markedoe.ondo.appLabels("Film", "Série", "Nouvel épisode", Locale.FRANCE) else com.markedoe.ondo.appLabels("Movie", "Series", "New episode", Locale.US)
 
     private val catalogue get() = ShowcaseCatalogue.load(french)
     private val state get() = catalogue.state()

@@ -251,10 +251,15 @@ private struct HeroPage: View {
         }
     }
 
-    /// "Movie · 2024 · Drama · 1 h 52 · ★ 7.8"
+    /// "Movie · 3 Nov · Drama · 1 h 52 · ★ 7.8": the day it came out in place of its year (the carousel goes by it), and
+    /// "Series · New episode · 3 Nov · …" for a series (`AppModel.carouselRelease`).
     private func facts(details: MediaDetails?) -> [String] {
         var parts = [String(localized: item.kindName)]
-        if let year = item.year { parts.append(String(year)) }
+        if let released = model.carouselRelease(of: item) {
+            parts += released
+        } else if let year = item.year {
+            parts.append(String(year))
+        }
         if let genre = (details?.genre ?? item.genre)?.split(separator: ",").first {
             parts.append(genre.trimmingCharacters(in: .whitespaces))
         }

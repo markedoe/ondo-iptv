@@ -151,6 +151,7 @@
     <string name="film_version">نسخة</string>
     <string name="kind_movie">فيلم</string>
     <string name="kind_series">مسلسل</string>
+    <string name="hero_new_episode">حلقة جديدة</string>
     <string name="kind_m3u">قائمة تشغيل M3U</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">الموسم %1$d</string>

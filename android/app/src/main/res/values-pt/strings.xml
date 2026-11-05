@@ -136,6 +136,7 @@
     <string name="film_version">Versão</string>
     <string name="kind_movie">Filme</string>
     <string name="kind_series">Série</string>
+    <string name="hero_new_episode">Novo episódio</string>
     <string name="kind_m3u">Playlist M3U</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Temporada %1$d</string>
