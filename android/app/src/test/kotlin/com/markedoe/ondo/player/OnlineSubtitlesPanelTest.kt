@@ -89,7 +89,8 @@ class OnlineSubtitlesPanelTest {
         compose.setContent {
             inputModes = LocalInputModeManager.current
             val scope = rememberCoroutineScope()
-            controls = remember { PlayerControls(scope) }
+            // A fixed time of day: the clock drawn at the top shows in the reference screenshot.
+            controls = remember { PlayerControls(scope, wallClock = { CLOCK_MS }) }
             val sleep = remember { SleepTimer(scope, now = { 0L }) {} }
             var scale by remember { mutableStateOf(VideoScale.FIT) }
             val online = remember { OnlineSubtitles(scope, source, SubtitleSearchHint("Copper Valley", 2018, 3, 3), listOf("en", "fr")) { loaded = it } }
@@ -181,5 +182,10 @@ class OnlineSubtitlesPanelTest {
         press(Key.DirectionCenter)
         assertEquals(listOf(listOf("en", "fr")), source.searched)
         compose.onNodeWithTag("onlineResult-0").assertExists()
+    }
+
+    private companion object {
+        /** 2025-10-09 08:53:20 UTC. */
+        const val CLOCK_MS = 1_760_000_000_000L
     }
 }

@@ -11,18 +11,34 @@ struct SeriesGridView: View {
     @Environment(AppModel.self) private var model
     let category: MediaCategory
     @State private var filter = ""
+    /// The order of a row's grid (New): the row's own until another is chosen here.
+    @State private var rowSort = PosterSort.playlist
+
+    /// The series of `category`'s grid: a category, All, My List, or every title of a row Ondo picks, in the row's order
+    /// (`rowSort`, `.playlist` keeping it).
+    @MainActor static func series(_ category: MediaCategory, model: AppModel, rowSort: PosterSort = .playlist) -> [Series] {
+        switch category.id {
+        case PseudoCategory.all: return model.series(in: nil, sort: model.settings.posterSort)
+        case PseudoCategory.favorites: return model.favorites(.series).compactMap { model.index.seriesByID[$0.reference.itemID] }
+        case let id where PseudoCategory.isRow(id):
+            let row = model.rowTitles(id, type: .series).compactMap { item -> Series? in
+                if case .series(let series) = item { return series }
+                return nil
+            }
+            return AppModel.sorted(row, by: rowSort, votes: model.ratingSortVotes(rowSort))
+        default: return model.series(in: category, sort: model.settings.posterSort)
+        }
+    }
 
     private var series: [Series] {
-        let base: [Series]
-        switch category.id {
-        case PseudoCategory.all: base = model.series(in: nil, sort: model.settings.posterSort)
-        case PseudoCategory.favorites: base = model.favorites(.series).compactMap { model.index.seriesByID[$0.reference.itemID] }
-        default: base = model.series(in: category, sort: model.settings.posterSort)
-        }
+        let base = Self.series(category, model: model, rowSort: rowSort)
         guard !filter.isEmpty else { return base }
         let tokens = TextNormalizer.normalize(filter).split(separator: " ")
         return base.filter { TextNormalizer.matches(normalizedText: TextNormalizer.normalize($0.name), queryTokens: tokens) }
     }
+
+    /// The order this grid shows: a row's own (`rowSort`), else the one chosen for every category.
+    private var sort: PosterSort { PseudoCategory.isRow(category.id) ? rowSort : model.settings.posterSort }
 
     var body: some View {
         let list = series
@@ -49,7 +65,12 @@ struct SeriesGridView: View {
         }
         .searchable(text: $filter, prompt: Text("Search series"))
         .navigationTitle(category.id == PseudoCategory.all ? String(localized: "All Series") : category.name)
-        .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu() } }
+        .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu(rowSort: PseudoCategory.isRow(category.id) ? $rowSort : nil) } }
+        // Sorted by rating: TMDb's ratings the grid lacks are fetched in the background (`AppModel.fillRatingSort`).
+        .task(id: model.ratingFillID(category: category, sort: sort)) {
+            guard sort == .rating, category.id != PseudoCategory.favorites else { return }
+            await model.fillRatingSort(Self.series(category, model: model, rowSort: rowSort).map(ShowcaseItem.series))
+        }
     }
 }
 
@@ -106,6 +127,7 @@ struct SeriesDetailView: View {
                     ExpandablePlot(text: plot)
                 }
                 InfoLines(details: details?.info, year: series.year, genre: details?.info.genre ?? series.genre)
+                AwardsList(awards: model.awards(for: series))
                 if let errorMessage {
                     Label(errorMessage, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.secondary)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds awards.json: films that won or competed for major film awards, from Wikidata (CC0).
+"""Builds awards.json: films and TV series that won or competed for major awards, from Wikidata (CC0).
 
 Run by hand to refresh the copies bundled with the apps, with `python3 -I tools/awards/generate_awards.py`: it
 writes the same file to the Apple app (App/Resources/awards.json) and to the Android app
@@ -7,8 +7,11 @@ writes the same file to the Apple app (App/Resources/awards.json) and to the And
 The "Awards data" workflow runs it once a month with `--output`, and publishes the result on the `awards-data`
 branch, where the apps fetch it (unless the viewer turns that off in Settings).
 
+Series are kept apart from films (`seriesAwards` and `series`, next to `awards` and `films`): the apps released
+before series had awards read only `awards` and `films`, so a newer file must leave those two as they were.
+
 Nothing about the viewer is ever sent: the apps only read this file. This script only asks Wikidata for the
-films of each award.
+films and series of each award.
 """
 import argparse
 import datetime
@@ -48,6 +51,23 @@ AWARDS = [
     ("golden-leopard", "Q1700510", "locarno"),
 ]
 
+# TV series awards: id, Wikidata item, group. The ids are not those of any film award (the apps look an id up in
+# both lists). Left out while Wikidata links (almost) no series to them (November 2026): Séries Mania (three
+# statements, a person among them), Canneseries (two, both people), the BAFTA TV mini-series award and the
+# International Emmy for comedy (no series).
+SERIES_AWARDS = [
+    ("emmy-drama-series", "Q989438", "emmys"),
+    ("emmy-comedy-series", "Q2110156", "emmys"),
+    ("emmy-limited-series", "Q20714679", "emmys"),
+    ("golden-globe-tv-drama", "Q1255198", "golden-globes"),
+    ("golden-globe-tv-comedy", "Q596294", "golden-globes"),
+    ("golden-globe-tv-limited", "Q265435", "golden-globes"),
+    ("bafta-tv-drama-series", "Q2925698", "bafta-tv"),
+    ("bafta-tv-international", "Q16985329", "bafta-tv"),
+    ("international-emmy-drama", "Q16146879", "international-emmys"),
+    ("peabody", "Q838121", "peabody"),
+]
+
 # (award id, English title, year of the award): must be found as a win, or the item is not the award we think.
 KNOWN = [
     ("palme-dor", "Pulp Fiction", 1994),
@@ -55,6 +75,10 @@ KNOWN = [
     ("cannes-grand-prix", "The Zone of Interest", 2023),
     ("oscar-best-picture", "Parasite", 2020),
     ("cesar-best-film", "Anatomy of a Fall", 2024),
+]
+KNOWN_SERIES = [
+    ("emmy-drama-series", "Breaking Bad", 2013),
+    ("emmy-drama-series", "The Sopranos", 2004),
 ]
 
 # Names clearer than Wikidata's label, shown without the festival's name next to them.
@@ -65,6 +89,9 @@ NAME_OVERRIDES = {
     ("cannes-grand-prix", "pt"): "Grande Prêmio de Cannes",
     ("cannes-grand-prix", "es"): "Gran Premio de Cannes",
     ("silver-bear-grand-jury", "pt"): "Urso de Prata, Grande Prêmio do Júri",
+    ("emmy-limited-series", "en"): "Primetime Emmy Award for Outstanding Limited or Anthology Series",
+    ("emmy-limited-series", "fr"): "Primetime Emmy Award de la meilleure mini-série ou anthologie",
+    ("bafta-tv-international", "fr"): "British Academy Television Award du meilleur programme international",
 }
 
 # Languages of the film titles kept for matching (playlists name films in their own language) and of the award
@@ -126,6 +153,23 @@ def films_of(award_qid: str) -> list:
     }}""")
 
 
+def series_of(award_qid: str) -> list:
+    """TV series (miniseries, sitcoms, web and animated series included; not a film, a season or an episode). Their
+    year is the first one Wikidata gives (start time, or first release); their TMDb id is the TV one."""
+    return sparql(f"""
+    SELECT ?film ?kind ?when ?released ?tmdb WHERE {{
+      {{ ?film p:P166 ?statement . ?statement ps:P166 wd:{award_qid} . BIND("won" AS ?kind) }}
+      UNION
+      {{ ?film p:P1411 ?statement . ?statement ps:P1411 wd:{award_qid} . BIND("nominated" AS ?kind) }}
+      # Up from each title's types (the other way round, through every subclass of film, times out).
+      FILTER EXISTS {{ ?film wdt:P31 ?type . ?type wdt:P279* wd:Q5398426 . hint:Prior hint:gearing "forward" . }}
+      FILTER NOT EXISTS {{ ?film wdt:P31 ?filmType . ?filmType wdt:P279* wd:Q11424 . hint:Prior hint:gearing "forward" . }}
+      OPTIONAL {{ ?statement pq:P585 ?when }}
+      OPTIONAL {{ {{ ?film wdt:P580 ?released }} UNION {{ ?film wdt:P577 ?released }} }}
+      OPTIONAL {{ ?film wdt:P4983 ?tmdb }}
+    }}""")
+
+
 def labels(items: list, languages: list, with_original: bool) -> dict:
     found = {}
     filter_languages = ", ".join(f'"{language}"' for language in languages)
@@ -143,42 +187,33 @@ def labels(items: list, languages: list, with_original: bool) -> dict:
     return found
 
 
-def main() -> None:
-    global CACHE, PAUSE
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--cache", type=pathlib.Path, help="keep Wikidata's answers in this folder (to resume a run)")
-    parser.add_argument("--pause", type=float, default=PAUSE, help="seconds between two queries (Wikidata may ask for 60)")
-    parser.add_argument("--output", type=pathlib.Path, action="append",
-                        help="write the file here instead of the two copies in the repository (repeatable)")
-    arguments = parser.parse_args()
-    CACHE, PAUSE = arguments.cache, arguments.pause
-    if CACHE:
-        CACHE.mkdir(parents=True, exist_ok=True)
-    films: dict = {}
-    for award_id, award_qid, _ in AWARDS:
-        rows = films_of(award_qid)
+def collect(awards: list, query) -> dict:
+    """Titles by Wikidata item: their years, TMDb id and (award, year, won) entries."""
+    found: dict = {}
+    for award_id, award_qid, _ in awards:
+        rows = query(award_qid)
         print(f"{award_id}: {len(rows)} rows", file=sys.stderr)
         for row in rows:
-            film = films.setdefault(qid(row, "film"), {"released": set(), "tmdb": None, "awards": set()})
+            title = found.setdefault(qid(row, "film"), {"released": set(), "tmdb": None, "awards": set()})
             released = year_of(row, "released")
             if released:
-                film["released"].add(released)
+                title["released"].add(released)
             if "tmdb" in row and row["tmdb"]["value"].isdigit():
-                film["tmdb"] = int(row["tmdb"]["value"])
+                title["tmdb"] = int(row["tmdb"]["value"])
             won = row["kind"]["value"] == "won"
             when = year_of(row, "when")
-            film["awards"].add((award_id, when, won))
-
+            title["awards"].add((award_id, when, won))
     # A win also listed as a nomination for the same year is only a win.
-    for film in films.values():
-        wins = {(award, when) for award, when, won in film["awards"] if won}
-        film["awards"] = {(award, when, won) for award, when, won in film["awards"] if won or (award, when) not in wins}
+    for title in found.values():
+        wins = {(award, when) for award, when, won in title["awards"] if won}
+        title["awards"] = {(award, when, won) for award, when, won in title["awards"] if won or (award, when) not in wins}
+    return found
 
-    titles = labels(sorted(films), TITLE_LANGUAGES, with_original=True)
-    names = labels([award_qid for _, award_qid, _ in AWARDS], [language for options in NAME_LANGUAGES.values() for language in options], with_original=False)
 
-    awards_out = []
-    for award_id, award_qid, group in AWARDS:
+def award_names(awards: list) -> list:
+    names = labels([award_qid for _, award_qid, _ in awards], [language for options in NAME_LANGUAGES.values() for language in options], with_original=False)
+    result = []
+    for award_id, award_qid, group in awards:
         by_language = names.get(award_qid, {})
         localized = {}
         for app_language, options in NAME_LANGUAGES.items():
@@ -190,38 +225,69 @@ def main() -> None:
                 localized[app_language] = value[:1].upper() + value[1:]
         if "en" not in localized:
             raise SystemExit(f"no English name for {award_id}")
-        awards_out.append({"id": award_id, "group": group, "names": localized})
+        result.append({"id": award_id, "group": group, "names": localized})
+    return result
 
-    films_out = []
-    for film_qid, film in films.items():
-        film_titles = sorted({title for values in titles.get(film_qid, {}).values() for title in values})
-        if not film_titles:
+
+def entries(found: dict) -> list:
+    titles = labels(sorted(found), TITLE_LANGUAGES, with_original=True)
+    result = []
+    for item, title in found.items():
+        item_titles = sorted({value for values in titles.get(item, {}).values() for value in values})
+        if not item_titles:
             continue
-        entry = {"titles": film_titles}
-        if film["released"]:
-            entry["year"] = min(film["released"])
-        if film["tmdb"]:
-            entry["tmdb"] = film["tmdb"]
-        entry["awards"] = sorted([[award, when or entry.get("year") or 0, 1 if won else 0] for award, when, won in film["awards"]],
+        entry = {"titles": item_titles}
+        if title["released"]:
+            entry["year"] = min(title["released"])
+        if title["tmdb"]:
+            entry["tmdb"] = title["tmdb"]
+        entry["awards"] = sorted([[award, when or entry.get("year") or 0, 1 if won else 0] for award, when, won in title["awards"]],
                                  key=lambda item: (-item[1], item[0]))
-        films_out.append(entry)
-    films_out.sort(key=lambda entry: (entry["titles"][0].casefold(), entry.get("year", 0)))
+        result.append(entry)
+    result.sort(key=lambda entry: (entry["titles"][0].casefold(), entry.get("year", 0)))
+    return result
 
-    for award_id, title, year in KNOWN:
-        if not any(title in film["titles"] and [award_id, year, 1] in film["awards"] for film in films_out):
-            raise SystemExit(f"check failed: {title} should have won {award_id} in {year}")
 
+def check_known(known: list, found: list, what: str) -> None:
+    for award_id, title, year in known:
+        if not any(title in entry["titles"] and [award_id, year, 1] in entry["awards"] for entry in found):
+            raise SystemExit(f"check failed: the {what} {title} should have won {award_id} in {year}")
+
+
+def main() -> None:
+    global CACHE, PAUSE
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--cache", type=pathlib.Path, help="keep Wikidata's answers in this folder (to resume a run)")
+    parser.add_argument("--pause", type=float, default=PAUSE, help="seconds between two queries (Wikidata may ask for 60)")
+    parser.add_argument("--output", type=pathlib.Path, action="append",
+                        help="write the file here instead of the two copies in the repository (repeatable)")
+    arguments = parser.parse_args()
+    CACHE, PAUSE = arguments.cache, arguments.pause
+    if CACHE:
+        CACHE.mkdir(parents=True, exist_ok=True)
+    if {award_id for award_id, _, _ in AWARDS} & {award_id for award_id, _, _ in SERIES_AWARDS}:
+        raise SystemExit("a series award has the id of a film award")
+
+    films_out = entries(collect(AWARDS, films_of))
+    series_out = entries(collect(SERIES_AWARDS, series_of))
+    check_known(KNOWN, films_out, "film")
+    check_known(KNOWN_SERIES, series_out, "series")
+
+    # `awards` and `films` keep the shape the apps already released read; series come after, in keys they ignore.
     document = {
         "source": "Wikidata (CC0 1.0), generated by tools/awards/generate_awards.py",
         "generated": datetime.date.today().isoformat(),
-        "awards": awards_out,
+        "awards": award_names(AWARDS),
         "films": films_out,
+        "seriesAwards": award_names(SERIES_AWARDS),
+        "series": series_out,
     }
     text = json.dumps(document, ensure_ascii=False, separators=(",", ":"), sort_keys=False) + "\n"
     for output in arguments.output or OUTPUTS:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(text, encoding="utf-8")
-    print(f"{len(films_out)} films, {len(awards_out)} awards, {len(text.encode()) // 1024} KB", file=sys.stderr)
+    print(f"{len(films_out)} films, {len(series_out)} series, {len(document['awards'])} + {len(document['seriesAwards'])} awards, "
+          f"{len(text.encode()) // 1024} KB", file=sys.stderr)
 
 
 if __name__ == "__main__":

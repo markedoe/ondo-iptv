@@ -19,7 +19,8 @@ final class RowOrderTests: XCTestCase {
     func testWithoutASavedOrderTheRowsKeepTheirDefaultOrder() {
         let current = RowOrder.builtIns(series: false) + [action, drama]
         XCTAssertEqual(keys(RowOrder.arrange(current: current, order: [], hidden: [])), current)
-        XCTAssertEqual(RowOrder.builtIns(series: true), ["all", "continue", "mylist", "new", "trending"])
+        // Series have their award winners too, under the same key as movies.
+        XCTAssertEqual(RowOrder.builtIns(series: true), ["all", "continue", "mylist", "new", "trending", "awards"])
     }
 
     func testTheSavedOrderAppliesAndNewCategoriesGoToTheEnd() {

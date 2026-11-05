@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """The awards data shipped in both apps: the same file, well formed, and still naming the awards we think.
 
+Series sit in `seriesAwards` and `series`, apart from `awards` and `films`: the apps released before series had awards
+read only those two, so a series award must never appear there (it would show a series as a film).
+
 App/Resources/awards.json (Apple) and android/app/src/main/assets/awards.json (Android) are written together by
 tools/awards/generate_awards.py; a copy edited or regenerated alone would make the apps disagree.
 
@@ -15,15 +18,14 @@ COPIES = ["App/Resources/awards.json", "android/app/src/main/assets/awards.json"
 APP_LANGUAGES = {"en", "fr", "es", "pt", "zh-Hans", "ar", "hi"}
 # A win that must be found: if not, an award id points at the wrong Wikidata item.
 KNOWN_WIN = ("Pulp Fiction", "palme-dor", 1994)
+KNOWN_SERIES_WIN = ("Breaking Bad", "emmy-drama-series", 2013)
 
 
-def problems_of(document: dict) -> list:
-    problems = []
-    awards = document.get("awards") or []
-    ids = set()
+def awards_problems(awards: list, what: str) -> tuple:
+    problems, ids = [], set()
     for award in awards:
         if not award.get("id") or not award.get("group"):
-            problems.append(f"award without id or group: {award}")
+            problems.append(f"{what} without id or group: {award}")
             continue
         ids.add(award["id"])
         names = award.get("names") or {}
@@ -32,19 +34,43 @@ def problems_of(document: dict) -> list:
         unknown = set(names) - APP_LANGUAGES
         if unknown:
             problems.append(f"{award['id']}: names in languages the apps do not use: {sorted(unknown)}")
+    return problems, ids
+
+
+def entries_problems(titles: list, ids: set) -> list:
+    problems = []
+    for title in titles:
+        if not title.get("titles"):
+            problems.append(f"title without a name: {title}")
+        for entry in title.get("awards") or []:
+            if not (isinstance(entry, list) and len(entry) == 3 and entry[0] in ids and isinstance(entry[1], int) and entry[2] in (0, 1)):
+                problems.append(f"{(title.get('titles') or ['?'])[0]}: bad award entry {entry}")
+    return problems
+
+
+def problems_of(document: dict) -> list:
+    problems, ids = awards_problems(document.get("awards") or [], "award")
     if not ids:
         problems.append("no awards")
     films = document.get("films") or []
     if not films:
         problems.append("no films")
-    for film in films:
-        if not film.get("titles"):
-            problems.append(f"film without a title: {film}")
-        for entry in film.get("awards") or []:
-            if not (isinstance(entry, list) and len(entry) == 3 and entry[0] in ids and isinstance(entry[1], int) and entry[2] in (0, 1)):
-                problems.append(f"{(film.get('titles') or ['?'])[0]}: bad award entry {entry}")
+    # A film entry naming a series award would be one the released apps show as a film's.
+    problems += entries_problems(films, ids)
     title, award_id, year = KNOWN_WIN
     if ids and not any(title in film.get("titles", []) and [award_id, year, 1] in film.get("awards", []) for film in films):
+        problems.append(f"{title} should have won {award_id} in {year}")
+
+    series_problems, series_ids = awards_problems(document.get("seriesAwards") or [], "series award")
+    problems += series_problems
+    if ids & series_ids:
+        problems.append(f"ids both of a film and of a series award: {sorted(ids & series_ids)}")
+    series = document.get("series") or []
+    if not series_ids or not series:
+        problems.append("no series awards or no series")
+    problems += entries_problems(series, series_ids)
+    title, award_id, year = KNOWN_SERIES_WIN
+    if series_ids and not any(title in show.get("titles", []) and [award_id, year, 1] in show.get("awards", []) for show in series):
         problems.append(f"{title} should have won {award_id} in {year}")
     return problems
 

@@ -42,6 +42,7 @@
     <string name="filter">筛选</string>
     <string name="sort">排序</string>
     <string name="sort_playlist_order">播放列表顺序</string>
+    <string name="sort_default_order">默认顺序</string>
     <string name="sort_release_date">上映日期</string>
     <string name="sort_rating">评分</string>
     <string name="sort_by">排序：%1$s</string>
@@ -174,7 +175,7 @@
     <string name="error_load_provider">服务商没有发送播放列表。请检查地址和你的订阅。</string>
     <string name="error_load_format">这不是 Ondo 能读取的播放列表（M3U、Xtream Codes、XSPF 或 JSON）。</string>
     <string name="awards">奖项</string>
-    <string name="award_winners">获奖电影</string>
+    <string name="award_winners">获奖作品</string>
     <string name="award_winner">获奖，%1$s</string>
     <string name="award_in_competition">参赛，%1$s</string>
     <string name="award_nominated">提名，%1$s</string>
@@ -192,7 +193,7 @@
     <string name="my_list_people_hint">在演员或导演的页面上使用“我的片单”，即可在这里找到他们。</string>
     <string name="help_mylist_title">我的片单</string>
     <string name="help_mylist_body">在电影或剧集页面上，“我的片单”可将其放在手边。在“直播”中，长按频道即可将其添加到我的片单。“直播”会先显示我的片单中的频道。\n\n“我的片单”标签页汇集你的电影、剧集和频道；搜索是每个页面顶部的放大镜。\n\n合集是你自己的分组，例如“周末”或“儿童”：在电影或剧集页面上使用“合集”，然后在“我的片单”的“合集”中找到它们。\n\n保存在“我的片单”中的人物会显示照片。</string>
-    <string name="help_search_body">“电影”“剧集”和“直播”会显示服务商的分类。搜索（每个页面顶部的放大镜）会查找频道、电影和剧集。在搜索中，筛选按钮可只保留所选年份上映的电影和剧集，或某个电影节或颁奖典礼的电影。\n\n在分类中，排序按钮可按播放列表顺序、名称、添加日期、上映日期或评分排列海报。在电视上，排序位于分类名称末尾、海报上方的按钮中：在第一排按“上”即可到达。电影页面会显示其获奖和电影节入选情况。在电影或剧集页面上点按导演或演员的名字，即可查看其在你的播放列表中的其他电影和剧集：剧集总能找到，电影只在你打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片，并可使用与分类相同的排序按钮。搜索也能按姓名找到演员和导演。搜索可在标题的任意位置找到关键词（“dust”能找到“Stardust”）：先显示完全匹配的标题，再是以该词开头的标题，然后是含有以该词开头的单词的标题，最后是其他结果。名称本身带有已隐藏语言标签（如 |DE|）的标题和频道会像已隐藏的分类一样被排除。在电视上，搜索打开时键盘已弹出。</string>
+    <string name="help_search_body">“电影”“剧集”和“直播”会显示服务商的分类。搜索（每个页面顶部的放大镜）会查找频道、电影和剧集。在搜索中，筛选按钮可只保留所选年份上映的电影和剧集，或某个电影节或颁奖典礼的电影和剧集。\n\n在分类中，排序按钮可按播放列表顺序、名称、添加日期、上映日期或评分排列海报。在电视上，排序位于分类名称末尾、海报上方的按钮中：在第一排按“上”即可到达。电影页面会显示其获奖和电影节入选情况，剧集页面会显示其获奖情况。在电影或剧集页面上点按导演或演员的名字，即可查看其在你的播放列表中的其他电影和剧集：剧集总能找到，电影只在你打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片，并可使用与分类相同的排序按钮。搜索也能按姓名找到演员和导演。搜索可在标题的任意位置找到关键词（“dust”能找到“Stardust”）：先显示完全匹配的标题，再是以该词开头的标题，然后是含有以该词开头的单词的标题，最后是其他结果。名称本身带有已隐藏语言标签（如 |DE|）的标题和频道会像已隐藏的分类一样被排除。在电视上，搜索打开时键盘已弹出。</string>
     <string name="search_filters">筛选</string>
     <string name="filter_from">从</string>
     <string name="filter_to">到</string>
@@ -218,6 +219,10 @@
     <string name="award_group_european_film_awards">欧洲电影奖</string>
     <string name="award_group_san_sebastian">圣塞巴斯蒂安电影节</string>
     <string name="award_group_locarno">洛迦诺电影节</string>
+    <string name="award_group_emmys">黄金时段艾美奖</string>
+    <string name="award_group_bafta_tv">英国电影学院电视奖</string>
+    <string name="award_group_international_emmys">国际艾美奖</string>
+    <string name="award_group_peabody">皮博迪奖</string>
     <string name="person_nothing_title">此播放列表中没有相关内容</string>
     <string name="person_nothing">此播放列表中没有已知包含 %1$s 的电影或剧集。</string>
     <string name="person_opened_pages">电影只会在你打开过的页面中查找。</string>
@@ -426,7 +431,7 @@
     <string name="all_movies_count">所有电影（%1$s）</string>
     <string name="all_series_count">所有剧集（%1$s）</string>
     <string name="help_rows_title">调整“电影”和“剧集”的行顺序</string>
-    <string name="help_rows_body">“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖电影”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动；在电视上，按“确定”拿起，按“上”和“下”移动，按“确定”放下，按“返回”取消；关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。</string>
+    <string name="help_rows_body">“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖作品”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动；在电视上，按“确定”拿起，按“上”和“下”移动，按“确定”放下，按“返回”取消；关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。</string>
     <!-- Profiles (docs/PROFILES.md) -->
     <string name="profile_main_name">我</string>
     <string name="whos_watching">谁在观看？</string>

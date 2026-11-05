@@ -44,6 +44,10 @@ enum AwardGroup {
         case "european-film-awards": return String(localized: "European Film Awards")
         case "san-sebastian": return String(localized: "San Sebastián Film Festival")
         case "locarno": return String(localized: "Locarno Film Festival")
+        case "emmys": return String(localized: "Primetime Emmy Awards")
+        case "bafta-tv": return String(localized: "BAFTA TV Awards")
+        case "international-emmys": return String(localized: "International Emmy Awards")
+        case "peabody": return String(localized: "Peabody Awards")
         default: return group
         }
     }
@@ -90,12 +94,14 @@ extension AppModel {
     private func use(_ catalogue: AwardsCatalogue) {
         AwardsCatalogue.current = catalogue
         let movies = content.movies
+        let shows = content.series
         let playlistID = activePlaylist?.id
         awardsTask?.cancel()
         awardsTask = Task {
-            let awards = await Task.detached { catalogue.match(movies) }.value
+            let awards = await Task.detached { (catalogue.match(movies), catalogue.matchSeries(shows)) }.value
             guard !Task.isCancelled, activePlaylist?.id == playlistID else { return }
-            movieAwards = awards
+            movieAwards = awards.0
+            seriesAwards = awards.1
         }
     }
 
@@ -106,9 +112,18 @@ extension AppModel {
 
     /// Awards and festival selections of a movie, wins first then the most recent.
     func awards(for movie: Movie) -> [MovieAward] {
+        awards(movieAwards[movie.id] ?? [])
+    }
+
+    /// Awards of a series, wins first then the most recent.
+    func awards(for series: Series) -> [MovieAward] {
+        awards(seriesAwards[series.id] ?? [])
+    }
+
+    private func awards(_ entries: [AwardsCatalogue.Entry]) -> [MovieAward] {
         let catalogue = AwardsCatalogue.current
         let language = awardsLanguage
-        return (movieAwards[movie.id] ?? []).compactMap { entry in
+        return entries.compactMap { entry in
             guard let award = catalogue.award(entry.awardID) else { return nil }
             return MovieAward(
                 id: "\(entry.awardID)-\(entry.year)",
@@ -134,11 +149,21 @@ extension AppModel {
         return Array(films.distinct(winners.sorted { ($0.1, $0.0.name) > ($1.1, $1.0.name) }.map(\.0)).prefix(limit))
     }
 
-    /// The festivals and ceremonies some movie of the playlist took part in (the search filter's choices).
+    /// Series of the playlist that won an award, the most recent award first.
+    func seriesAwardWinners(limit: Int = 20) -> [Series] {
+        let excluded = exclusions
+        let winners = seriesAwards.compactMap { id, entries -> (Series, Int)? in
+            guard let win = entries.first(where: \.won), let show = index.seriesByID[id], !excluded.contains(show) else { return nil }
+            return (show, win.year)
+        }
+        return Array(winners.sorted { ($0.1, $0.0.name) > ($1.1, $1.0.name) }.map(\.0).prefix(limit))
+    }
+
+    /// The festivals and ceremonies some movie or series of the playlist took part in (the search filter's choices).
     func awardGroups() -> [String] {
         let catalogue = AwardsCatalogue.current
         var present = Set<String>()
-        for entries in movieAwards.values {
+        for entries in Array(movieAwards.values) + Array(seriesAwards.values) {
             for entry in entries {
                 if let group = catalogue.award(entry.awardID)?.group { present.insert(group) }
             }
@@ -150,6 +175,14 @@ extension AppModel {
     func movie(_ movie: Movie, hasAwardIn group: String, winnersOnly: Bool) -> Bool {
         let catalogue = AwardsCatalogue.current
         return (movieAwards[movie.id] ?? []).contains { entry in
+            (!winnersOnly || entry.won) && catalogue.award(entry.awardID)?.group == group
+        }
+    }
+
+    /// Whether a series won (or, unless `winnersOnly`, was nominated for) an award of this ceremony.
+    func series(_ series: Series, hasAwardIn group: String, winnersOnly: Bool) -> Bool {
+        let catalogue = AwardsCatalogue.current
+        return (seriesAwards[series.id] ?? []).contains { entry in
             (!winnersOnly || entry.won) && catalogue.award(entry.awardID)?.group == group
         }
     }

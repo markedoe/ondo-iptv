@@ -10,7 +10,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   playback items), tested with the same cases as the Swift tests.
 - **App** `android/app` (Compose, Material 3, type-safe Navigation, tab bar or rail depending on the screen):
   home (carousel, Movies in Progress, Series in Progress, My List, New Movies, New Series, channels),
-  Movies and Series tabs (Continue Watching, My List, Award winners in Movies, one row per category, filterable
+  Movies and Series tabs (Continue Watching, My List, Award winners, one row per category, filterable
   grids), a long press that takes a card in progress out of Home or Continue Watching (a menu on a phone, OK held
   and a question on a TV: `ui/components/Shelves.kt`; a series whose last episode watched was finished goes on with the
   next one, a card that stays until that one is started), movie and series pages (Resume, From Start, next episode,
@@ -54,7 +54,10 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   again, the next row comes up whole and the header follows. The rows are always the tab's page: no category is
   chosen above them. A category's titles open from the See all card at the end of its row, as a page over the rows:
   Back comes back to the same row and card, the rows scrolled as they were, and the tab chosen on the bar (OK on it,
-  or another tab then this one) shows its rows again. The top bar holds the tabs, Search and Settings only, no
+  or another tab then this one) shows its rows again. Every row that can hold more than it shows ends with See all,
+  New movies, New series and Award winners included (on Home too): their page lists all the row's titles in the row's
+  own order ("Default order" in Sort; another order chosen there is that page's only). Continue watching (resume
+  cards) and Trending (always whole) have none. The top bar holds the tabs, Search and Settings only, no
   playlist line (Settings → Playlists says when each was updated); which categories show is in Settings → Languages
   and categories. A category's titles and the genre, year and award pages on a TV start with their posters right
   under the header: no Back row (the remote's Back goes back), the page's name on one line above the first row, no
@@ -65,7 +68,11 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   Up from the first row reaches, with a Hide watched chip for movies (`TvSortMenu.kt`); Down from the tab never lands
   on them): playlist order (on those pages, their own order),
   name, date added, release date or rating. A genre's titles found through TMDb are sorted with the others
-  (`UiMappers.browse`).
+  (`UiMappers.browse`). By rating, with the viewer's TMDb token: TMDb's rating weighted by its number of votes first
+  (`WeightedRating.ratingOrder`, the carousel's m = 200 and C = 6.5 without its 50-vote floor), then the titles TMDb
+  has no rating for by the provider's, ties by title; the page asks TMDb in the background for up to 100 of its titles
+  never asked about, two at a time at the pace of the other requests, and sorts again twice: after 20 ratings and
+  at the end (`RatingFill`). Without a token, the provider's rating as before.
 - **TV posters**: holding OK on a poster adds the title to My List or takes it out (a short message says which), and a check mark
   marks the titles in My List. In My List, the people kept get their photo (filled from their page or from the titles
   kept on the device).
@@ -181,7 +188,8 @@ channels, `example.com` addresses):
   with a row focused, the path tab → Down → Down on Movies and on Series (`movies-tab-focused`, `movies-down-1`,
   `movies-down-2`, `series-…`), a category's titles from the tab then Down (`grid-category`, `grid-down-1`), their
   sort chips reached with Up (`grid-sort-chips`) and deep in a long grid (`grid-down-3`), the rows after Back from a
-  category's titles, the focus on its See all card (`rows-after-back`), a genre's titles (`browse-genre`), Home with the remote in its rows).
+  category's titles, the focus on its See all card (`rows-after-back`), the New movies row's See all card
+  (`movies-new-see-all`) and the page it opens with its sort chips (`grid-new`, `grid-new-sort-chips`), a genre's titles (`browse-genre`), Home with the remote in its rows).
 
 The *Android* workflow compares every screenshot with its reference (`./gradlew :app:verifyRoborazziDebug`); at most
 0.1 % of the pixels may differ (anti-aliasing, `screenshots/Baselines.kt`). A screenshot that changed fails the run:
@@ -202,7 +210,9 @@ Series with the header on the focused title before its wait, a top bar of tabs, 
 name whole on its line, a category's and a genre's titles with no row of their own above the posters, Down from the
 tab on the first poster and never on a sort chip, the order chosen with the Sort chip reached by Up from the first row,
 a category's grid five posters a row scrolled by whole rows down and up, and a Movies row about five posters across);
-`TelevisionFocusTest` (See all opens a category's titles and Back comes back to the same row and card, scrolled as
+`SeeAllEverywhereTest` (every row of Home, Movies and Series, on a TV and on a phone: See all where the
+row can hold more than it shows, opening the grid that starts with the row's titles in its order; the rows without one
+named with the reason); `TelevisionFocusTest` (See all opens a category's titles and Back comes back to the same row and card, scrolled as
 before; another tab then Movies again shows the rows; Ondo started anew shows the rows).
 
 ### Before changing a TV screen (regressions checklist)

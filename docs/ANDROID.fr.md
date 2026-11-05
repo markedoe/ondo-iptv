@@ -10,7 +10,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   éléments de lecture), testé avec les mêmes cas que les tests Swift.
 - **App** `android/app` (Compose, Material 3, Navigation type-safe, barre d'onglets ou rail selon l'écran) :
   accueil (carrousel, Films en cours, Séries en cours, Ma liste, Nouveaux films, Nouvelles séries, chaînes),
-  onglets Films et Séries (Continuer à regarder, Ma liste, Films primés dans Films, une rangée par catégorie,
+  onglets Films et Séries (Continuer à regarder, Ma liste, Titres primés, une rangée par catégorie,
   grilles filtrables), un appui long qui retire une carte en cours de l'Accueil ou de Continuer à regarder (un menu
   sur un téléphone, OK maintenu et une question sur une TV : `ui/components/Shelves.kt` ; une série dont le dernier
   épisode vu a été fini continue avec le suivant, une carte qui reste jusqu'à ce qu'il soit commencé), fiches film et série
@@ -60,7 +60,11 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   rangées sont toujours la page de l'onglet : aucune catégorie n'est choisie au-dessus. Les titres d'une catégorie
   s'ouvrent depuis la carte Tout voir au bout de sa rangée, comme une page par-dessus les rangées : Retour revient à
   la même rangée et à la même carte, les rangées défilées comme avant, et l'onglet choisi dans la barre (OK dessus, ou
-  un autre onglet puis celui-ci) montre de nouveau ses rangées. La barre du haut ne porte que les onglets, Recherche et
+  un autre onglet puis celui-ci) montre de nouveau ses rangées. Chaque rangée qui peut contenir plus qu'elle n'affiche
+  finit par Tout voir, Nouveaux films, Nouvelles séries et Titres primés compris (sur l'Accueil aussi) : leur page
+  liste tous les titres de la rangée dans l'ordre de la rangée (« Ordre par défaut » dans Trier ; un autre ordre choisi
+  là ne vaut que pour cette page). Continuer à regarder (des cartes de reprise) et Tendances (toujours complète) n'en
+  ont pas. La barre du haut ne porte que les onglets, Recherche et
   Réglages, aucune ligne de playlist (Réglages → Playlists indique quand chacune a été mise à jour) ; les catégories
   montrées se choisissent dans Réglages → Langues et catégories. Les titres d'une catégorie et les pages de genre,
   d'année et de prix sur TV commencent par leurs affiches juste sous l'en-tête : pas de rangée Retour (le Retour de la
@@ -72,7 +76,12 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   bout de la ligne du nom de la page, que Haut depuis la première rangée atteint, avec une puce Masquer les films déjà
   vus pour les films (`TvSortMenu.kt`) ; Bas depuis l'onglet ne s'y arrête jamais) : ordre de la playlist
   (sur ces pages, leur propre ordre), nom, date d'ajout, date de sortie ou note. Les titres d'un genre trouvés via
-  TMDb sont triés avec les autres (`UiMappers.browse`).
+  TMDb sont triés avec les autres (`UiMappers.browse`). Par note, avec le jeton TMDb de l'utilisateur : la note TMDb
+  pondérée par son nombre de votes d'abord (`WeightedRating.ratingOrder`, les m = 200 et C = 6,5 du carrousel sans
+  son minimum de 50 votes), puis les titres sans note TMDb selon la note du fournisseur, à égalité par titre ; la page
+  demande à TMDb en arrière-plan jusqu'à 100 de ses titres jamais demandés, deux à la fois au rythme des autres
+  requêtes, et se retrie deux fois : après 20 notes et à la fin (`RatingFill`). Sans jeton, la note du fournisseur
+  comme avant.
 - **Affiches sur TV** : maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
   court message dit lequel), et une coche marque les titres de Ma liste. Dans Ma liste, les personnes gardées ont
   leur photo (complétée depuis leur page ou les titres gardés sur l'appareil).
@@ -210,7 +219,8 @@ libres, chaînes inventées, adresses `example.com`) :
   (`movies-tab-focused`, `movies-down-1`, `movies-down-2`, `series-…`), les titres d'une catégorie depuis l'onglet
   puis Bas (`grid-category`, `grid-down-1`), leurs puces de tri atteintes avec Haut (`grid-sort-chips`) et loin dans
   une longue grille (`grid-down-3`), les rangées après Retour depuis les titres d'une catégorie, le focus sur sa carte
-  Tout voir (`rows-after-back`), les titres d'un genre (`browse-genre`), Accueil avec la télécommande dans ses
+  Tout voir (`rows-after-back`), la carte Tout voir de la rangée Nouveaux films (`movies-new-see-all`) et la page
+  qu'elle ouvre avec ses puces de tri (`grid-new`, `grid-new-sort-chips`), les titres d'un genre (`browse-genre`), Accueil avec la télécommande dans ses
   rangées).
 
 Le workflow *Android* compare chaque capture à sa référence (`./gradlew :app:verifyRoborazziDebug`) ; au plus 0,1 %
@@ -234,7 +244,10 @@ onglets, Recherche et Réglages, le nom d'une catégorie entier sur sa ligne, le
 sans rangée à eux au-dessus des affiches, Bas depuis l'onglet sur la première affiche et jamais sur une puce de tri,
 l'ordre choisi avec la puce Tri atteinte par Haut depuis la première rangée, la grille d'une catégorie à cinq affiches
 par rangée qui défile par rangées entières vers le bas et vers le haut, et une rangée de Films d'environ cinq affiches
-de large) ; `TelevisionFocusTest` (Tout voir ouvre les titres d'une catégorie et Retour revient à la même rangée et à
+de large) ; `SeeAllEverywhereTest` (chaque rangée de l'Accueil, de Films et de
+Séries, sur une TV et sur un téléphone : Tout voir là où la rangée peut contenir plus qu'elle n'affiche, qui ouvre la
+grille commençant par les titres de la rangée dans son ordre ; les rangées sans Tout voir nommées avec la raison) ;
+`TelevisionFocusTest` (Tout voir ouvre les titres d'une catégorie et Retour revient à la même rangée et à
 la même carte, défilées comme avant ; un autre onglet puis Films de nouveau montre les rangées ; Ondo relancé montre
 les rangées).
 

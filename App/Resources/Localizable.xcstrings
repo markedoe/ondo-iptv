@@ -3362,37 +3362,37 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Films primés"
+            "value": "Titres primés"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Películas premiadas"
+            "value": "Títulos premiados"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filmes premiados"
+            "value": "Títulos premiados"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "获奖电影"
+            "value": "获奖作品"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "أفلام فائزة بجوائز"
+            "value": "أعمال فائزة بجوائز"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "पुरस्कार विजेता फ़िल्में"
+            "value": "पुरस्कार विजेता टाइटल"
           }
         }
       }
@@ -11506,7 +11506,7 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:\u200e. إخفاء رمز يُخفي كل فئاته في جميع قوائم التشغيل، بما فيها الفئات التي تُضاف لاحقًا. وتُخفى أيضًا الأفلام والمسلسلات والقنوات التي يبدأ اسمها نفسه بهذا الرمز، أيًّا كانت فئتها."
+            "value": "يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:‎. إخفاء رمز يُخفي كل فئاته في جميع قوائم التشغيل، بما فيها الفئات التي تُضاف لاحقًا. وتُخفى أيضًا الأفلام والمسلسلات والقنوات التي يبدأ اسمها نفسه بهذا الرمز، أيًّا كانت فئتها."
           }
         },
         "hi": {
@@ -11546,7 +11546,7 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:\u200e. يُخفي زر التصفية في الأفلام والمسلسلات والبث المباشر (وأيضًا في الإعدادات، اللغات والفئات) لغة أو بلدًا بالكامل دفعة واحدة، في جميع قوائم التشغيل؛ وتتبع الفئات التي يضيفها المزوّد لاحقًا القاعدة نفسها. وتُخفى أيضًا الأفلام والمسلسلات والقنوات التي يبدأ اسمها نفسه بهذا الرمز، مثل \u200e|PT| Concerto ao Vivo، أيًّا كانت فئتها.\n\nتعمل الأنماط بالطريقة نفسها مع كلمات أسماء الفئات: أخفِ «مانغا وأنمي» أو «الأطفال» أو «وثائقيات»، أو كلمة من اختيارك مثل Bollywood. تُحتسب أسماء الفئات فقط، لا نوع كل فيلم.\n\nيمكنك أيضًا إخفاء الفئات واحدة تلو الأخرى هناك، أو من قائمة الفئة (بالضغط المطوّل، أو Control مع النقر على Mac). يظهر عدد الفئات المخفية في آخر القائمة لتعيدها متى شئت."
+            "value": "يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:‎. يُخفي زر التصفية في الأفلام والمسلسلات والبث المباشر (وأيضًا في الإعدادات، اللغات والفئات) لغة أو بلدًا بالكامل دفعة واحدة، في جميع قوائم التشغيل؛ وتتبع الفئات التي يضيفها المزوّد لاحقًا القاعدة نفسها. وتُخفى أيضًا الأفلام والمسلسلات والقنوات التي يبدأ اسمها نفسه بهذا الرمز، مثل ‎|PT| Concerto ao Vivo، أيًّا كانت فئتها.\n\nتعمل الأنماط بالطريقة نفسها مع كلمات أسماء الفئات: أخفِ «مانغا وأنمي» أو «الأطفال» أو «وثائقيات»، أو كلمة من اختيارك مثل Bollywood. تُحتسب أسماء الفئات فقط، لا نوع كل فيلم.\n\nيمكنك أيضًا إخفاء الفئات واحدة تلو الأخرى هناك، أو من قائمة الفئة (بالضغط المطوّل، أو Control مع النقر على Mac). يظهر عدد الفئات المخفية في آخر القائمة لتعيدها متى شئت."
           }
         },
         "hi": {
@@ -12237,42 +12237,42 @@
         }
       }
     },
-    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose, or the movies of a festival or ceremony (Winners Only, if you like). The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With your TMDb API Read Access Token (Settings), all of them are found; without it, movies only among the pages you have already opened. Genres, the year and awards open the titles of your playlist that share them the same way. Search finds actors and directors by name too.": {
+    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose, or the movies and series of a festival or ceremony (Winners Only, if you like). The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With your TMDb API Read Access Token (Settings), all of them are found; without it, movies only among the pages you have already opened. Genres, the year and awards open the titles of your playlist that share them the same way. Search finds actors and directors by name too.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez, ou les films d’un festival ou d’une cérémonie (Lauréats seulement, si vous voulez). Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec votre « Jeton d'accès en lecture à l'API » TMDb (Réglages), tous sont trouvés ; sans lui, les films seulement parmi les fiches que vous avez déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent. La recherche trouve aussi les acteurs et réalisateurs par leur nom."
+            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez, ou les films et séries d’un festival ou d’une cérémonie (Lauréats seulement, si vous voulez). Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec votre « Jeton d'accès en lecture à l'API » TMDb (Réglages), tous sont trouvés ; sans lui, les films seulement parmi les fiches que vous avez déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent. La recherche trouve aussi les acteurs et réalisateurs par leur nom."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas de un festival o una ceremonia (Solo ganadoras, si quieres). Las cuadrículas se ordenan por orden de la playlist, nombre, fecha de incorporación, fecha de estreno o puntuación.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu playlist. Con tu «API Read Access Token» de TMDb (Ajustes) se encuentran todas; sin él, las películas solo entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu playlist que los comparten. La búsqueda también encuentra actores y directores por su nombre."
+            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas y series de un festival o una ceremonia (Solo ganadoras, si quieres). Las cuadrículas se ordenan por orden de la playlist, nombre, fecha de incorporación, fecha de estreno o puntuación.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu playlist. Con tu «API Read Access Token» de TMDb (Ajustes) se encuentran todas; sin él, las películas solo entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu playlist que los comparten. La búsqueda también encuentra actores y directores por su nombre."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher, ou os filmes de um festival ou cerimônia (Só os vencedores, se quiser). As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou avaliação.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com seu “API Read Access Token” do TMDb (Ajustes), todos são encontrados; sem ele, os filmes só entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham. A busca também encontra atores e diretores pelo nome."
+            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher, ou os filmes e séries de um festival ou cerimônia (Só os vencedores, se quiser). As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou avaliação.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com seu “API Read Access Token” do TMDb (Ajustes), todos são encontrados; sem ele, os filmes só entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham. A busca também encontra atores e diretores pelo nome."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“电影”“剧集”和“直播”会显示服务商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集，或某个电影节或颁奖典礼的电影（也可选择“仅获奖作品”）。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。添加你的 TMDb“API Read Access Token”（“设置”）后可找到全部作品；没有时，电影只在你已打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。搜索也能按姓名找到演员和导演。"
+            "value": "“电影”“剧集”和“直播”会显示服务商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集，或某个电影节或颁奖典礼的电影和剧集（也可选择“仅获奖作品”）。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。添加你的 TMDb“API Read Access Token”（“设置”）后可找到全部作品；没有时，电影只在你已打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。搜索也能按姓名找到演员和导演。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها، أو أفلام مهرجان أو حفل توزيع جوائز (الفائزة فقط، إن أردت). تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. مع «API Read Access Token» الخاص بك من TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث عن الأفلام فقط في الصفحات التي فتحتها من قبل. وبالطريقة نفسها، تفتح الأنواع والسنة والجوائز عناوين قائمة التشغيل التي تشترك فيها. ويجد البحث أيضًا الممثلين والمخرجين بأسمائهم."
+            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها، أو أفلام ومسلسلات مهرجان أو حفل توزيع جوائز (الفائزة فقط، إن أردت). تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. مع «API Read Access Token» الخاص بك من TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث عن الأفلام فقط في الصفحات التي فتحتها من قبل. وبالطريقة نفسها، تفتح الأنواع والسنة والجوائز عناوين قائمة التشغيل التي تشترك فيها. ويجد البحث أيضًا الممثلين والمخرجين بأسمائهم."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है, या किसी फ़ेस्टिवल या समारोह की फ़िल्में (चाहें तो केवल विजेता)। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। अपने TMDb “API Read Access Token” (सेटिंग्स) के साथ सब मिलती हैं; उसके बिना, फ़िल्में केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं। इसी तरह, शैलियाँ, वर्ष और पुरस्कार आपकी प्लेलिस्ट के वे शीर्षक खोलते हैं जिनमें वे समान हैं। खोज में अभिनेता और निर्देशक भी नाम से मिलते हैं।"
+            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है, या किसी फ़ेस्टिवल या समारोह की फ़िल्में और सीरीज़ (चाहें तो केवल विजेता)। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। अपने TMDb “API Read Access Token” (सेटिंग्स) के साथ सब मिलती हैं; उसके बिना, फ़िल्में केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं। इसी तरह, शैलियाँ, वर्ष और पुरस्कार आपकी प्लेलिस्ट के वे शीर्षक खोलते हैं जिनमें वे समान हैं। खोज में अभिनेता और निर्देशक भी नाम से मिलते हैं।"
           }
         }
       }
@@ -14746,7 +14746,7 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "على themoviedb.org: حسابك ← Settings\u200f ← API. انسخ «API Read Access Token» (الأطول)؛ ويعمل «API Key» أيضًا. يستخدم هذا المنتج TMDB API، لكنه غير معتمد أو مصدَّق من TMDB."
+            "value": "على themoviedb.org: حسابك ← Settings‏ ← API. انسخ «API Read Access Token» (الأطول)؛ ويعمل «API Key» أيضًا. يستخدم هذا المنتج TMDB API، لكنه غير معتمد أو مصدَّق من TMDB."
           }
         },
         "hi": {
@@ -26323,6 +26323,46 @@
         }
       }
     },
+    "Default order": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordre par défaut"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orden predeterminado"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordem padrão"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认顺序"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الترتيب الافتراضي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डिफ़ॉल्ट क्रम"
+          }
+        }
+      }
+    },
     "All Movies (%@)": {
       "localizations": {
         "fr": {
@@ -26488,25 +26528,25 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Films primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, et désactivez son interrupteur pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils."
+            "value": "Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Titres primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, et désactivez son interrupteur pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Películas premiadas y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla y desactiva su interruptor para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos."
+            "value": "Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Títulos premiados y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla y desactiva su interruptor para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "As abas Filmes e Séries começam com Todos os filmes (ou Todas as séries): as últimas adições e depois Ver tudo, que abre o catálogo inteiro com sua ordenação e Ocultar filmes assistidos. Depois vêm Continuar assistindo, Minha lista, as novidades, Em alta, Filmes premiados e cada categoria do seu provedor.\n\nAjustes → Ordem das fileiras escolhe a ordem e quais aparecem: arraste uma fileira para movê-la e desative o botão para ocultá-la. Ordem padrão devolve as fileiras como elas vêm. Uma categoria nova na sua playlist vai para o fim; a que o seu provedor remove guarda o lugar para quando voltar. Idiomas e categorias ocultos continuam ocultos, seja qual for a ordem. Com a sincronização nesta rede, a ordem vale nos seus outros dispositivos."
+            "value": "As abas Filmes e Séries começam com Todos os filmes (ou Todas as séries): as últimas adições e depois Ver tudo, que abre o catálogo inteiro com sua ordenação e Ocultar filmes assistidos. Depois vêm Continuar assistindo, Minha lista, as novidades, Em alta, Títulos premiados e cada categoria do seu provedor.\n\nAjustes → Ordem das fileiras escolhe a ordem e quais aparecem: arraste uma fileira para movê-la e desative o botão para ocultá-la. Ordem padrão devolve as fileiras como elas vêm. Uma categoria nova na sua playlist vai para o fim; a que o seu provedor remove guarda o lugar para quando voltar. Idiomas e categorias ocultos continuam ocultos, seja qual for a ordem. Com a sincronização nesta rede, a ordem vale nos seus outros dispositivos."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖电影”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动，关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。"
+            "value": "“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖作品”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动，关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。"
           }
         },
         "ar": {
@@ -26518,7 +26558,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़िल्में और सीरीज़ टैब सभी फ़िल्में (या सभी सीरीज़) से शुरू होते हैं: सबसे नई जोड़ी गई चीज़ें, फिर सभी देखें, जो पूरा कैटलॉग उसकी छँटाई और देखी गई फ़िल्में छिपाएँ के साथ खोलता है। उसके बाद देखना जारी रखें, मेरी सूची, नए टाइटल, ट्रेंडिंग, पुरस्कार विजेता फ़िल्में और आपके प्रदाता की हर श्रेणी आती है।\n\nसेटिंग्स → पंक्तियों का क्रम उनका क्रम और कौन-सी दिखें, यह तय करता है: किसी पंक्ति को खींचकर हटाएँ, और उसे छिपाने के लिए उसका स्विच बंद करें। डिफ़ॉल्ट क्रम पंक्तियों को वैसे ही लौटा देता है जैसे वे आती हैं। आपकी प्लेलिस्ट में नई श्रेणी अंत में जाती है; जिसे आपका प्रदाता हटाता है, वह लौटने तक अपनी जगह रखती है। छिपी भाषाएँ और श्रेणियाँ, क्रम कुछ भी हो, छिपी रहती हैं। इस नेटवर्क पर सिंक चालू होने पर क्रम आपके दूसरे डिवाइस पर भी लागू होता है।"
+            "value": "फ़िल्में और सीरीज़ टैब सभी फ़िल्में (या सभी सीरीज़) से शुरू होते हैं: सबसे नई जोड़ी गई चीज़ें, फिर सभी देखें, जो पूरा कैटलॉग उसकी छँटाई और देखी गई फ़िल्में छिपाएँ के साथ खोलता है। उसके बाद देखना जारी रखें, मेरी सूची, नए टाइटल, ट्रेंडिंग, पुरस्कार विजेता टाइटल और आपके प्रदाता की हर श्रेणी आती है।\n\nसेटिंग्स → पंक्तियों का क्रम उनका क्रम और कौन-सी दिखें, यह तय करता है: किसी पंक्ति को खींचकर हटाएँ, और उसे छिपाने के लिए उसका स्विच बंद करें। डिफ़ॉल्ट क्रम पंक्तियों को वैसे ही लौटा देता है जैसे वे आती हैं। आपकी प्लेलिस्ट में नई श्रेणी अंत में जाती है; जिसे आपका प्रदाता हटाता है, वह लौटने तक अपनी जगह रखती है। छिपी भाषाएँ और श्रेणियाँ, क्रम कुछ भी हो, छिपी रहती हैं। इस नेटवर्क पर सिंक चालू होने पर क्रम आपके दूसरे डिवाइस पर भी लागू होता है।"
           }
         }
       }
@@ -26679,6 +26719,166 @@
           "stringUnit": {
             "state": "translated",
             "value": "आपके डिवाइसों के बीच अधिकतम 16 प्रोफ़ाइल सिंक होती हैं; बाकी इसी डिवाइस पर रहती हैं। नई जोड़ने के लिए कोई एक डिलीट करें।"
+          }
+        }
+      }
+    },
+    "Primetime Emmy Awards": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primetime Emmy Awards"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premios Primetime Emmy"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prêmios Primetime Emmy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黄金时段艾美奖"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جوائز إيمي برايم تايم"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्राइमटाइम एमी पुरस्कार"
+          }
+        }
+      }
+    },
+    "BAFTA TV Awards": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BAFTA TV"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premios BAFTA TV"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BAFTA TV"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "英国电影学院电视奖"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جوائز بافتا التلفزيونية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बाफ़्टा टीवी पुरस्कार"
+          }
+        }
+      }
+    },
+    "International Emmy Awards": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "International Emmy Awards"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premios Emmy Internacional"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prêmios Emmy Internacional"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "国际艾美奖"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جوائز إيمي الدولية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अंतरराष्ट्रीय एमी पुरस्कार"
+          }
+        }
+      }
+    },
+    "Peabody Awards": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prix Peabody"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premios Peabody"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prêmios Peabody"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "皮博迪奖"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جوائز بيبودي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पीबॉडी पुरस्कार"
           }
         }
       }

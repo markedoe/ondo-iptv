@@ -14,6 +14,7 @@ import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.OndoRepository
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.SavedPlaylist
 import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.ui.components.HeroPage
@@ -363,6 +364,69 @@ class OndoViewModelTest {
         testScheduler.advanceTimeBy(OndoViewModel.PREPARE_START_DELAY_MS * 2)
         testScheduler.runCurrent()
         assertTrue("on: the new titles asked ahead", asked.isNotEmpty())
+    }
+
+    /**
+     * A grid sorted by rating: with the viewer's token, the TMDb ratings it lacks are asked in the background (each title
+     * once, "not found" included) and the grid sorts by them; without a token nothing is asked.
+     */
+    @Test
+    fun aGridSortedByRatingAsksTmdbForTheRatingsItLacks() = runTest {
+        val films = """
+            #EXTM3U
+            #EXTINF:6000 group-title="Movies | Drama",Bright Side (2021)
+            http://provider.example.com/bright.mp4
+            #EXTINF:6000 group-title="Movies | Drama",Long Road (2020)
+            http://provider.example.com/road.mp4
+            #EXTINF:6000 group-title="Movies | Drama",Quiet Water (2019)
+            http://provider.example.com/quiet.mp4
+        """.trimIndent()
+        val searched = mutableListOf<String>()
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
+                url == list -> films
+                url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
+                url.startsWith("https://api.themoviedb.org/3/trending") -> """{"results":[]}"""
+                url.startsWith("https://api.themoviedb.org/3/search/movie?") -> {
+                    searched += url
+                    when {
+                        url.contains("quiet", ignoreCase = true) -> """{"results":[{"id":11,"title":"Quiet Water","release_date":"2019-03-01"}]}"""
+                        url.contains("long", ignoreCase = true) -> """{"results":[{"id":12,"title":"Long Road","release_date":"2020-03-01"}]}"""
+                        else -> """{"results":[]}"""
+                    }
+                }
+                url.startsWith("https://api.themoviedb.org/3/movie/11?") -> """{"id":11,"title":"Quiet Water","vote_average":8.4,"vote_count":9000}"""
+                url.startsWith("https://api.themoviedb.org/3/movie/12?") -> """{"id":12,"title":"Long Road","vote_average":6.1,"vote_count":3000}"""
+                else -> throw HttpException.BadStatus(404)
+            }.encodeToByteArray()
+        }
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
+        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        repository.addPlaylist("Home", list)
+        viewModel.state.first { it.content.movies.isNotEmpty() }
+        suspend fun grid() = UiMappers.grid(viewModel.state.value, false, null, false, "", sort = PosterSort.RATING, kept = viewModel.keptPosterFacts()).map { it.title }
+        suspend fun fill() {
+            val job = launch { viewModel.fillRatingSort(UiMappers.grid(viewModel.state.value, false, null, false, "", sort = PosterSort.RATING)) }
+            testScheduler.advanceTimeBy(10_000)
+            testScheduler.runCurrent()
+            assertTrue("the fill ended", job.isCompleted)
+        }
+
+        fill()
+        assertTrue("no token: nothing asked, $searched", searched.isEmpty())
+        assertEquals(0, viewModel.ratingSortVersion.value)
+
+        assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
+        // Nothing known yet: the provider gives no rating, by title.
+        assertEquals(listOf("Bright Side", "Long Road", "Quiet Water"), grid())
+        fill()
+        assertEquals("each title asked once: $searched", 3, searched.size)
+        assertEquals("fewer than a batch: sorted again once, at the end", 1, viewModel.ratingSortVersion.value)
+        assertEquals(listOf("Quiet Water", "Long Road", "Bright Side"), grid())
+        // Back on the grid: every title has TMDb's answer (Bright Side's "not found" too), nothing is asked again.
+        fill()
+        assertEquals(3, searched.size)
+        assertEquals(1, viewModel.ratingSortVersion.value)
     }
 
     @Test

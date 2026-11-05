@@ -108,6 +108,8 @@ final class AppModel {
     private(set) var categoryTags = CategoryTagIndex()
     /// Awards and festival selections of the catalogue's movies, by movie id (bundled data, matched on the device).
     var movieAwards: [String: [AwardsCatalogue.Entry]] = [:]
+    /// TV series awards of the catalogue's series, by series id (matched among awarded series only, never films).
+    var seriesAwards: [String: [AwardsCatalogue.Entry]] = [:]
     @ObservationIgnored var awardsTask: Task<Void, Never>?
     /// Actors and directors of the series lists (movie lists give no cast), for search: built once the catalogue is
     /// on screen (`apply`). Read when a search runs, so not observed.
@@ -672,6 +674,7 @@ final class AppModel {
         peopleIndex = PeopleIndex()
         categoryTags = CategoryTagIndex()
         movieAwards = [:]
+        seriesAwards = [:]
         epg = .empty
         phase = .idle
         epgPhase = .idle
@@ -730,6 +733,7 @@ final class AppModel {
                 peopleIndex = PeopleIndex()
                 categoryTags = CategoryTagIndex()
                 movieAwards = [:]
+                seriesAwards = [:]
             }
         } else {
             hasCache = !content.isEmpty
@@ -815,9 +819,12 @@ final class AppModel {
         buildPeopleIndex(from: edited, for: playlist)
         awardsTask?.cancel()
         awardsTask = Task {
-            let awards = await Task.detached { [catalogue = AwardsCatalogue.current] in catalogue.match(edited.movies) }.value
+            let awards = await Task.detached { [catalogue = AwardsCatalogue.current] in
+                (catalogue.match(edited.movies), catalogue.matchSeries(edited.series))
+            }.value
             guard !Task.isCancelled, activePlaylist?.id == playlist.id else { return }
-            movieAwards = awards
+            movieAwards = awards.0
+            seriesAwards = awards.1
         }
     }
 

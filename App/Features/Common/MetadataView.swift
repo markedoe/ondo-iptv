@@ -29,7 +29,7 @@ struct MetadataView: View {
                 Section("Series (\(results.series.count))") {
                     ForEach(results.series) { series in
                         NavigationLink(value: series) {
-                            SearchResultRow(title: series.name, subtitle: series.year.map(String.init), imageURL: series.coverURL,
+                            SearchResultRow(title: series.name, subtitle: subtitle(of: series), imageURL: series.coverURL,
                                             icon: "play.rectangle.on.rectangle")
                         }
                     }
@@ -63,6 +63,16 @@ struct MetadataView: View {
     /// The award's year and outcome for an award, the release year otherwise.
     private func subtitle(of movie: Movie) -> String? {
         guard let entry = model.entry(of: movie, for: route) else { return movie.year.map(String.init) }
+        return outcome(entry)
+    }
+
+    /// The award's year and outcome for an award, the year first aired otherwise.
+    private func subtitle(of series: Series) -> String? {
+        guard let entry = model.entry(of: series, for: route) else { return series.year.map(String.init) }
+        return outcome(entry)
+    }
+
+    private func outcome(_ entry: AwardsCatalogue.Entry) -> String {
         let year = String(entry.year)
         if entry.won { return String(localized: "Winner, \(year)") }
         let isFestival = AwardsCatalogue.current.award(entry.awardID).map { AwardsCatalogue.festivals.contains($0.group) } ?? false

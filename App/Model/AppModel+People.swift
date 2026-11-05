@@ -208,7 +208,7 @@ extension AppModel {
         search(query, releasedIn: years, awardGroup: nil, winnersOnly: false)
     }
 
-    /// Search limited to release years and/or to the movies of a festival or ceremony (`awardGroup`, see
+    /// Search limited to release years and/or to the movies and series of a festival or ceremony (`awardGroup`, see
     /// `AwardsCatalogue`); an empty query lists everything that matches, newest first.
     func search(_ query: String, releasedIn years: ClosedRange<Int>?, awardGroup: String?, winnersOnly: Bool) -> SearchResults {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
@@ -228,8 +228,9 @@ extension AppModel {
             return year.map(years.contains) ?? false
         }
         if let awardGroup {
-            // Awards are given to films: series are left out.
-            return SearchResults(movies: movies.filter { released($0.year) && movie($0, hasAwardIn: awardGroup, winnersOnly: winnersOnly) })
+            // Films by their film awards, series by their series awards (a ceremony can have both: the Golden Globes).
+            return SearchResults(movies: movies.filter { released($0.year) && movie($0, hasAwardIn: awardGroup, winnersOnly: winnersOnly) },
+                                 series: series.filter { released($0.year) && self.series($0, hasAwardIn: awardGroup, winnersOnly: winnersOnly) })
         }
         return SearchResults(movies: movies.filter { released($0.year) }, series: series.filter { released($0.year) })
     }

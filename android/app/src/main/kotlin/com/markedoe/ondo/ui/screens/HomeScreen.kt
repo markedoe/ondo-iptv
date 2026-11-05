@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.Profile
+import com.markedoe.ondo.ui.GridSource
 import com.markedoe.ondo.ui.TagSuggestion
 import com.markedoe.ondo.ui.components.CardShape
 import com.markedoe.ondo.ui.components.ChannelLogo
@@ -108,6 +109,8 @@ class HomeActions(
     /** Long press on a "Continue watching" card, Go to: the movie's page, or the series' of the episode. */
     val onOpenResume: (ResumeItem) -> Unit = {},
     val onSeeAllMyList: () -> Unit = {},
+    /** See all of a row Ondo picks (New movies, New series): every title of the row, in its order. */
+    val onSeeAllRow: (GridSource, Boolean) -> Unit = { _, _ -> },
     val onSeeAllLive: () -> Unit = {},
     val onPlayChannel: (ChannelRow) -> Unit = {},
     val onPlaylists: () -> Unit = {},
@@ -161,25 +164,25 @@ fun HomeScreen(
         }
         val (resumeSeries, resumeMovies) = state.continueWatching.partition { it.isSeries }
         if (resumeMovies.isNotEmpty()) {
-            item { ResumeShelf(stringResource(R.string.movies_in_progress), resumeMovies, metrics, actions, preparingKey) }
+            item { ResumeShelf(stringResource(R.string.movies_in_progress), resumeMovies, metrics, actions, preparingKey, "shelfResumeMovies") }
         }
         if (resumeSeries.isNotEmpty()) {
-            item { ResumeShelf(stringResource(R.string.series_in_progress), resumeSeries, metrics, actions, preparingKey) }
+            item { ResumeShelf(stringResource(R.string.series_in_progress), resumeSeries, metrics, actions, preparingKey, "shelfResumeSeries") }
         }
         if (state.myList.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.my_list), state.myList, metrics, actions, actions.onSeeAllMyList) }
+            item { PosterShelf(stringResource(R.string.my_list), state.myList, metrics, actions, "shelfMyList", actions.onSeeAllMyList) }
         }
         if (!hasVod) {
             item { ChannelShelf(state, metrics, actions) }
         }
         if (state.newMovies.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.new_movies), state.newMovies, metrics, actions) }
+            item { PosterShelf(stringResource(R.string.new_movies), state.newMovies, metrics, actions, "shelfNewMovies") { actions.onSeeAllRow(GridSource.NEW, false) } }
         }
         if (state.newSeries.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions) }
+            item { PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions, "shelfNewSeries") { actions.onSeeAllRow(GridSource.NEW, true) } }
         }
         if (state.trending.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.trending), state.trending, metrics, actions) }
+            item { PosterShelf(stringResource(R.string.trending), state.trending, metrics, actions, "shelfTrending") }
         }
         if (hasVod) {
             item { ChannelShelf(state, metrics, actions) }
@@ -199,8 +202,8 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMetrics, actions: HomeActions, preparingKey: String?) {
-    Shelf(title, metrics) {
+private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMetrics, actions: HomeActions, preparingKey: String?, tag: String) {
+    Shelf(title, metrics, Modifier.testTag(tag)) {
         items(items, key = { it.key }) {
             ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey, onRemove = if (it.upNext) null else ({ actions.onRemoveResume(it) }), onOpen = if (it.hasPage) ({ actions.onOpenResume(it) }) else null)
         }
@@ -208,8 +211,8 @@ private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMe
 }
 
 @Composable
-private fun PosterShelf(title: String, items: List<ShowcaseItem>, metrics: ShelfMetrics, actions: HomeActions, onSeeAll: (() -> Unit)? = null) {
-    Shelf(title, metrics, onSeeAll = onSeeAll) {
+private fun PosterShelf(title: String, items: List<ShowcaseItem>, metrics: ShelfMetrics, actions: HomeActions, tag: String, onSeeAll: (() -> Unit)? = null) {
+    Shelf(title, metrics, Modifier.testTag(tag), onSeeAll = onSeeAll) {
         items(items, key = { it.key }) { item ->
             PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "$title:${item.key}")
         }
@@ -222,6 +225,7 @@ private fun ChannelShelf(state: HomeUiState, metrics: ShelfMetrics, actions: Hom
     Shelf(
         title = stringResource(if (state.channelsAreFavorites) R.string.favorite_channels else R.string.live_tv),
         metrics = metrics,
+        modifier = Modifier.testTag("shelfChannels"),
         onSeeAll = actions.onSeeAllLive,
     ) {
         items(state.channels, key = { it.channel.id }) { row -> ChannelTile(row) { actions.onPlayChannel(row) } }

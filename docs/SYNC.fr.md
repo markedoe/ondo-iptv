@@ -191,8 +191,8 @@ instantané sans `keys` (d’un appareil qui ne les synchronise pas) ne retire r
 **Rangées** (l’ordre des rangées d’un onglet, Réglages → Ordre des rangées) — `{"tab", "order", "hidden",
 "updatedAt"}`. `tab` vaut `movie` ou `series` ; `order` liste les rangées de l’onglet par clé, dans l’ordre choisi ;
 `hidden` les clés des rangées masquées. La clé d’une rangée est `all` (Tous les films ou Toutes les séries), `continue`
-(Continuer à regarder), `mylist`, `new` (nouveaux films ou séries), `trending`, `awards` (films primés, Films
-seulement), ou `cat:<id de la catégorie>|<nom>` pour une catégorie du fournisseur : son identifiant tel que la playlist
+(Continuer à regarder), `mylist`, `new` (nouveaux films ou séries), `trending`, `awards` (titres primés : films dans Films, séries
+dans Séries), ou `cat:<id de la catégorie>|<nom>` pour une catégorie du fournisseur : son identifiant tel que la playlist
 le donne (`movie-12`, sans caractères de contrôle ni `|`), puis son nom sans espaces autour, chaque suite d’espaces et
 de caractères de contrôle réduite à une espace, A à Z en minuscules (les autres lettres gardent leur casse). Un
 appareil retrouve une catégorie par la même clé, sinon par son identifiant, sinon par son nom : une catégorie que le
