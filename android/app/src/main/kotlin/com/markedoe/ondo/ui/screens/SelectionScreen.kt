@@ -56,19 +56,26 @@ data class SelectionUiState(
     val tabs: List<String>,
     val choices: SelectionChoices,
 ) {
-    /** The groups of tags offered, each with its title: the genres, awards, decades and styles. */
+    /**
+     * The groups of tags offered, each with its title: the genres, awards, decades and styles of the playlist, and after
+     * them the tags of the selection the playlist no longer offers (a category hidden, another playlist), so that they
+     * can be taken out.
+     */
     val groups: List<Pair<Int, List<String>>>
         get() = listOf(
-            R.string.selection_genres to choices.genres.map { it.first },
-            R.string.selection_awards to choices.awardGroups.map(Selections::award),
-            R.string.selection_decades to choices.decades.map(Selections::decade),
-            R.string.selection_styles to choices.styles.map(Selections::style),
-        ).filter { it.second.isNotEmpty() }
+            R.string.selection_genres to (Selections.GENRE to choices.genres.map { it.first }),
+            R.string.selection_awards to (Selections.AWARD to choices.awardGroups.map(Selections::award)),
+            R.string.selection_decades to (Selections.DECADE to choices.decades.map(Selections::decade)),
+            R.string.selection_styles to (Selections.STYLE to choices.styles.map(Selections::style)),
+        ).map { (title, offered) ->
+            val (kind, list) = offered
+            title to list + tags.filter { it.startsWith(kind) && Selections.isKnown(it) && it !in list }
+        }.filter { it.second.isNotEmpty() }
 }
 
 class SelectionActions(
     val onBack: () -> Unit = {},
-    /** Saves it: its name (the tags' names when none was typed), tags, whether a title needs all of them, and tabs. */
+    /** Saves it: its name ("" when none was typed: the tags' names show), tags, whether a title needs all of them, and tabs. */
     val onSave: (name: String, tags: List<String>, all: Boolean, tabs: List<String>) -> Unit = { _, _, _, _ -> },
     val onDelete: () -> Unit = {},
 )
@@ -113,7 +120,8 @@ fun SelectionScreen(state: SelectionUiState, actions: SelectionActions) {
             },
             actions = {
                 TextButton(
-                    onClick = { actions.onSave(title, draft.tags, draft.all, draft.tabs) },
+                    // The name typed, or none: the tags' names then, in each viewer's language.
+                    onClick = { actions.onSave(draft.name.trim(), draft.tags, draft.all, draft.tabs) },
                     enabled = draft.canSave,
                     modifier = Modifier.testTag("saveSelection"),
                 ) { Text(stringResource(R.string.save)) }

@@ -67,11 +67,17 @@ object SelectionRows {
             awards === state.awards && movieDetails === state.movieDetails && seriesDetails === state.seriesDetails
     }
 
-    @Volatile private var cached: Pair<Source, Tagged>? = null
+    /**
+     * The last few worked out, the latest first: Home and the tabs, and a selection's grid, read what the device kept at
+     * different moments, and one slot would make them work out the whole catalogue again in turn.
+     */
+    @Volatile private var cached: List<Pair<Source, Tagged>> = emptyList()
+
+    private const val CACHED = 3
 
     /** The tags of the catalogue's titles; worked out again only when the catalogue or what is known of it changes. */
     fun tagged(state: OndoState, kept: Map<String, TitleMetadata>): Tagged {
-        cached?.let { (source, tagged) -> if (source.isFor(state, kept)) return tagged }
+        cached.firstOrNull { it.first.isFor(state, kept) }?.let { return it.second }
         val names = HashMap<String, String>()
         fun genres(vararg fields: String?, tmdb: TitleMetadata?): Set<String> {
             val result = HashSet<String>()
@@ -101,7 +107,9 @@ object SelectionRows {
             )
         }
         val tagged = Tagged(facts, names)
-        cached = Source(state.content, kept, state.awards, state.movieDetails, state.seriesDetails) to tagged
+        val source = Source(state.content, kept, state.awards, state.movieDetails, state.seriesDetails)
+        // Those of another catalogue go: a TV's memory holds no second copy of it.
+        cached = (listOf(source to tagged) + cached.filter { it.first.content === state.content }).take(CACHED)
         return tagged
     }
 

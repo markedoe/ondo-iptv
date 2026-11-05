@@ -35,9 +35,12 @@ extension AppModel {
     /// The tags of every title of the catalogue: its genres (the provider's, from the list or the pages opened), the
     /// festivals and ceremonies of its awards, its year, and the styles of its category's name.
     func selectionTags() -> SelectionTags {
+        // The genres of the pages opened count, not only how many there are: a page opened again can bring others.
+        let movieGenres = movieDetailsCache.reduce(0) { $0 &+ ($1.key.hashValue ^ ($1.value.genre?.hashValue ?? 0)) }
+        let seriesGenres = seriesDetailsCache.reduce(0) { $0 &+ ($1.key.hashValue ^ ($1.value.info.genre?.hashValue ?? 0)) }
         let key = [String(content.fetchedAt.timeIntervalSince1970), activePlaylist?.id.uuidString ?? "", String(content.movies.count),
-                   String(content.series.count), String(movieDetailsCache.count), String(seriesDetailsCache.count), String(movieAwards.count),
-                   String(seriesAwards.count)].joined(separator: "|")
+                   String(content.series.count), String(movieDetailsCache.count), String(movieGenres), String(seriesDetailsCache.count),
+                   String(seriesGenres), String(movieAwards.count), String(seriesAwards.count)].joined(separator: "|")
         if let cached = selectionTagsCache, cached.key == key { return cached }
         var names: [String: String] = [:]
         func genres(_ fields: [String?]) -> Set<String> {
@@ -74,18 +77,40 @@ extension AppModel {
         return tags
     }
 
-    /// The day a selection's pick is for: the device's own date ("2026-11-05").
+    /// The day a selection's pick is for: the device's own date in the Gregorian calendar ("2026-11-05"), whatever
+    /// calendar the device shows (a Buddhist or Japanese one would give another year, and another pick than Android's).
+    /// `calendar`: only its time zone counts.
     nonisolated static func selectionDay(_ date: Date, calendar: Calendar = .current) -> String {
-        let parts = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = calendar.timeZone
+        let parts = gregorian.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04ld-%02ld-%02ld", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
     /// The titles of `selection` in `tab`, the first `limit` of the day's order (`Selections.dailyOrder`): movies in
     /// Movies, series in Series, both on Home; each film once; hidden, locked and Kids-hidden categories, hidden languages
     /// and movies hidden as watched left out, as every row; the titles watched last.
-    func selectionTitles(_ selection: SyncSelection, tab: String, limit: Int = .max, now: Date = Date()) -> [ShowcaseItem] {
+    func selectionTitles(_ selection: SyncSelection, tab: String, limit: Int = .max, now: Date? = nil) -> [ShowcaseItem] {
         guard selection.tags.contains(where: Selections.isKnown) else { return [] }
+        // Read for SwiftUI: a new day draws the rows again.
+        _ = selectionToday
+        let day = Self.selectionDay(now ?? Date())
         let tags = selectionTags()
+        // Worked out once for what the row depends on, not at every redraw: the catalogue and what is known of it, the
+        // selection, the day, what is hidden, what was watched, and TMDb's ratings known.
+        let lastWatched = library.history.map(\.lastWatchedAt).max()?.timeIntervalSince1970 ?? 0
+        let cacheKey = [tags.key, selection.id, String(selection.updatedAt), selection.tags.joined(separator: ","), selection.match, tab,
+                        String(limit), day, excludedCategoryIDs.sorted().joined(separator: ","), hiddenTags.sorted().joined(separator: ","),
+                        String(settings.hideWatchedMovies), String(settings.groupVersions), String(library.history.count), String(lastWatched),
+                        String(tmdbMetadata.titles.count)].joined(separator: "|")
+        if let cached = selectionTitlesCache[cacheKey] { return cached }
+        let titles = pickSelectionTitles(selection, tab: tab, limit: limit, day: day, tags: tags)
+        if selectionTitlesCache.count > 32 { selectionTitlesCache.removeAll() }
+        selectionTitlesCache[cacheKey] = titles
+        return titles
+    }
+
+    private func pickSelectionTitles(_ selection: SyncSelection, tab: String, limit: Int, day: String, tags: SelectionTags) -> [ShowcaseItem] {
         let all = selection.matchesAll
         func matches(_ id: String) -> Bool { tags.facts[id].map { Selections.matches(tags: selection.tags, all: all, facts: $0) } ?? false }
         let excluded = exclusions
@@ -112,7 +137,7 @@ extension AppModel {
         let ordered = Selections.dailyOrder(
             candidates,
             selectionID: selection.id,
-            day: Self.selectionDay(now),
+            day: day,
             key: { item in
                 switch item {
                 case .movie(let movie): return "movie:" + movie.id
@@ -155,6 +180,22 @@ extension AppModel {
             decades: Selections.decades(movies.map(\.year) + series.map(\.year)),
             styles: CategoryStyles.order.filter { styles.contains($0) }
         )
+    }
+
+    /// The tags a selection's page offers, by group (genres, awards, decades, styles; the empty ones left out): the
+    /// playlist's (`selectionChoices`), then those of `saved` (the selection's) it no longer offers (a category hidden,
+    /// another playlist), so that they can be taken out.
+    func selectionTagGroups(keeping saved: [String]) -> [(kind: String, tags: [String])] {
+        let choices = selectionChoices()
+        let offered: [(String, [String])] = [
+            (Selections.genrePrefix, choices.genres.map(\.tag)),
+            (Selections.awardPrefix, choices.awardGroups.map { Selections.award($0) }),
+            (Selections.decadePrefix, choices.decades.map { Selections.decade($0) }),
+            (Selections.stylePrefix, choices.styles.map { Selections.style($0) }),
+        ]
+        return offered.map { kind, list in
+            (kind: kind, tags: list + saved.filter { $0.hasPrefix(kind) && Selections.isKnown($0) && !list.contains($0) })
+        }.filter { !$0.tags.isEmpty }
     }
 
     /// A tag's name: a genre's as the titles name it, a festival's or ceremony's, a decade ("1990s"), a style's.

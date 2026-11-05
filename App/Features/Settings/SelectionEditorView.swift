@@ -24,14 +24,10 @@ struct SelectionEditorView: View {
     private static let tabs = [SyncRows.home, SyncRows.movies, SyncRows.series]
 
     var body: some View {
-        let choices = model.selectionChoices()
-        let offered: [(LocalizedStringKey, [String])] = [
-            ("Genres", choices.genres.map(\.tag)),
-            ("Awards", choices.awardGroups.map { Selections.award($0) }),
-            ("Decades", choices.decades.map { Selections.decade($0) }),
-            ("Styles", choices.styles.map { Selections.style($0) }),
-        ]
-        let groups = offered.filter { !$0.1.isEmpty }
+        let saved = editing.id.flatMap { model.selection($0) }?.tags ?? []
+        let groups: [(LocalizedStringKey, [String])] = model.selectionTagGroups(keeping: saved).map { group in
+            (Self.groupTitle(group.kind), group.tags)
+        }
         Form {
             Section {
                 Text("Choose tags: your selection shows as a row of the titles that have them, a new pick every day, the best rated more often first.")
@@ -95,7 +91,8 @@ struct SelectionEditorView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
-                    model.saveSelection(id: editing.id, name: model.selectionName(name: name, tags: tags), tags: tags, all: all, tabs: tabs)
+                    // The name typed, or none: the tags' names then, in each viewer's language.
+                    model.saveSelection(id: editing.id, name: name, tags: tags, all: all, tabs: tabs)
                     dismiss()
                 }
                 .disabled(tags.isEmpty || tabs.isEmpty)
@@ -116,6 +113,16 @@ struct SelectionEditorView: View {
             tabs = selection.tabs
         } else {
             tabs = [editing.tab]
+        }
+    }
+
+    /// A group of tags' title, by the kind of its tags.
+    private static func groupTitle(_ kind: String) -> LocalizedStringKey {
+        switch kind {
+        case Selections.genrePrefix: return "Genres"
+        case Selections.awardPrefix: return "Awards"
+        case Selections.decadePrefix: return "Decades"
+        default: return "Styles"
         }
     }
 

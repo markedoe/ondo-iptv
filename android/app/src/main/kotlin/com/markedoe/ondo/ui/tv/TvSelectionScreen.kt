@@ -117,7 +117,7 @@ fun TvSelectionScreen(state: SelectionUiState, actions: SelectionActions) {
             item(key = "buttons") {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     TvActionButton(
-                        onClick = { actions.onSave(title, draft.tags, draft.all, draft.tabs) },
+                        onClick = { actions.onSave(draft.name.trim(), draft.tags, draft.all, draft.tabs) },
                         enabled = draft.canSave,
                         prominent = true,
                         modifier = Modifier.testTag("saveSelection"),

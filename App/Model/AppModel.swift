@@ -200,6 +200,10 @@ final class AppModel {
     /// What each title is tagged with for the selections, worked out once per catalogue and what is known of it
     /// (AppModel+Selections).
     @ObservationIgnored var selectionTagsCache: SelectionTags?
+    /// The selections' rows of titles worked out, by what they depend on (AppModel+Selections).
+    @ObservationIgnored var selectionTitlesCache: [String: [ShowcaseItem]] = [:]
+    /// The day the selections' rows are picked for: set again when the date changes (`RootView`), so they are drawn anew.
+    var selectionToday = AppModel.selectionDay(Date())
     /// When each title's details came from the provider: those are the ones kept on disk (AppModel+StoredDetails).
     @ObservationIgnored var movieDetailsFetchedAt: [String: Date] = [:]
     @ObservationIgnored var seriesDetailsFetchedAt: [String: Date] = [:]

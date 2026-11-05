@@ -12,6 +12,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -185,10 +186,45 @@ class SelectionAppTest {
         assertEquals(listOf("genre:drama", "decade:2020"), selection.tags)
         assertEquals(SyncSelection.ALL, selection.match)
         assertEquals(listOf(RowOrder.MOVIES), selection.tabs)
-        // Named after its tags, none typed.
-        assertEquals("Drama · 2020s", selection.name)
+        // No name typed: none saved, and the row is named after its tags, in the viewer's language.
+        assertEquals("", selection.name)
         compose.onNodeWithTag("vod").performScrollToNode(hasTestTag("shelfSelection-new"))
         assertTrue(compose.onAllNodesWithTag("shelfSelection-new").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(compose.onAllNodesWithText("Drama · 2020s").fetchSemanticsNodes().isNotEmpty())
+    }
+
+    /**
+     * Home and the tabs (what the device kept, read as the catalogue arrived) and a selection's grid (read when it opens)
+     * each find their titles' tags worked out once: going from one to the other does not go through the catalogue again.
+     */
+    @Test
+    fun theTagsOfTheCatalogueAreWorkedOutOnceForEachReading() {
+        val state = state()
+        val home = mapOf("m-1" to Fixtures.released(Fixtures.content).getValue("m-1"))
+        val grid = HashMap(home)
+        val first = SelectionRows.tagged(state, home)
+        val other = SelectionRows.tagged(state, grid)
+        assertTrue(first === SelectionRows.tagged(state, home))
+        assertTrue(other === SelectionRows.tagged(state, grid))
+        assertFalse(first === other)
+    }
+
+    /**
+     * A tag of the selection the playlist no longer offers (its titles hidden, or of another playlist) still shows among
+     * the chips, chosen, so that it can be taken out.
+     */
+    @Test
+    fun aTagNoLongerOfferedCanStillBeTakenOut() {
+        val choices = SelectionRows.choices(state(), emptyMap())
+        assertFalse(Selections.decade(1950) in choices.decades.map(Selections::decade))
+        val ui = SelectionUiState("s9", "Old", listOf(Selections.decade(1950), Selections.decade(2020)), false, listOf(RowOrder.MOVIES), choices)
+        assertTrue(ui.groups.flatMap { it.second }.contains(Selections.decade(1950)))
+        var saved: List<String>? = null
+        compose.setContent { OndoTheme { SelectionScreen(ui, SelectionActions(onSave = { _, tags, _, _ -> saved = tags })) } }
+        compose.onNodeWithTag("selectionList").performScrollToNode(hasTestTag("tag-decade:1950"))
+        compose.onNodeWithTag("tag-decade:1950").performClick()
+        compose.onNodeWithTag("saveSelection").performClick()
+        compose.runOnIdle { assertEquals(listOf(Selections.decade(2020)), saved) }
     }
 
     /** On a TV, the remote reaches every chip: OK chooses one, and Save saves the selection. */

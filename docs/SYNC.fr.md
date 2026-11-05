@@ -298,13 +298,13 @@ seul appareil, ne sont pas envoyées.
 
 **Présélections** (des rangées que le spectateur compose de tags : Réglages → Ordre des rangées → Nouvelle
 présélection) — `{"id", "name", "tags", "match", "tabs", "updatedAt"}`. `id` est un UUID en minuscules ; `name` le nom
-donné (les noms des tags quand aucun n’a été saisi) ; `tags` les tags qui choisissent un titre : `genre:<nom>` (un genre,
+donné (vide quand aucun n’a été saisi : chaque appareil montre alors les noms des tags, dans sa langue) ; `tags` les tags qui choisissent un titre : `genre:<nom>` (un genre,
 son nom tel que les deux applications normalisent le texte : en minuscules, sans accents, mots séparés d’une espace ; les
 genres du fournisseur, et sur Android ceux de TMDb gardés sur l’appareil), `award:<groupe>` (un festival ou une cérémonie
 du fichier des récompenses : `cannes`, `oscars`, `emmys`… ; un titre qui y a une récompense ou une sélection),
 `decade:<première année>` (`decade:1990`), `style:<style>` (un style des noms de catégories : `manga`, `kids`,
 `documentary`…) ; `match` vaut `any` (un titre qui a l’un des tags) ou `all` (qui a chacun d’eux) ; `tabs` les onglets où
-elle s’affiche (`home`, `movie`, `series` : sur l’Accueil ses films et ses séries ensemble). Un tag d’un genre qu’un
+elle s’affiche (`home`, `movie`, `series` : sur l’Accueil ses films et ses séries ensemble). Un tag d’une sorte qu’un
 appareil ne connaît pas est gardé et transmis, et laissé de côté dans les deux modes (sans tag restant, la rangée est
 vide). Dans chaque onglet, la rangée de la présélection est `sel:<id>` dans l’ordre de l’onglet (**Rangées**) : une
 nouvelle présélection, et une qui s’affiche désormais dans un autre onglet, va en tête de l’ordre de cet onglet ; une

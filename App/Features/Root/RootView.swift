@@ -81,6 +81,12 @@ struct RootView: View {
             #endif
             await model.updateAwardsIfNeeded()
         }
+        // At midnight (or on coming back the next day), the selections' rows are a new pick.
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
+                model.selectionToday = AppModel.selectionDay(Date())
+            }
+        }
     }
 }
 

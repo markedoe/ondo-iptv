@@ -54,6 +54,11 @@ final class SelectionAppTests: XCTestCase {
         let pulp = try XCTUnwrap(model.content.movies.first { $0.name == "Pulp Fiction" })
         model.movieDetailsCache[pulp.id] = MediaDetails(title: "Pulp Fiction", genre: "Crime, Drama")
         XCTAssertEqual(names(model, [Selections.genre("Crime")!]), ["Pulp Fiction"])
+        // The same page opened again with other genres: the tags follow, though no page was added.
+        model.movieDetailsCache[pulp.id] = MediaDetails(title: "Pulp Fiction", genre: "Thriller")
+        XCTAssertEqual(names(model, [Selections.genre("Thriller")!]), ["Pulp Fiction"])
+        XCTAssertEqual(names(model, [Selections.genre("Crime")!]), [])
+        model.movieDetailsCache[pulp.id] = MediaDetails(title: "Pulp Fiction", genre: "Crime, Drama")
         // Any tag, or all of them.
         XCTAssertEqual(names(model, [Selections.award("cannes"), Selections.decade(2025)]), ["Pulp Fiction", "Northern Lights"])
         XCTAssertEqual(names(model, [Selections.award("cannes"), Selections.decade(2025)], all: true), [])
@@ -64,6 +69,15 @@ final class SelectionAppTests: XCTestCase {
         XCTAssertTrue(choices.awardGroups.contains("cannes"))
         XCTAssertEqual(choices.styles, ["manga"])
         XCTAssertEqual(choices.genres.map(\.name), ["Crime", "Drama"])
+    }
+
+    /// A tag of the selection the playlist no longer offers still shows on its page, so that it can be taken out.
+    func testATagNoLongerOfferedStillShowsOnTheSelectionsPage() async throws {
+        let model = try await device()
+        let groups = model.selectionTagGroups(keeping: [Selections.decade(1950), Selections.decade(1990), "mood:calm"])
+        let decades = try XCTUnwrap(groups.first { $0.kind == Selections.decadePrefix })
+        XCTAssertEqual(decades.tags, [Selections.decade(2020), Selections.decade(2000), Selections.decade(1990), Selections.decade(1950)])
+        XCTAssertFalse(groups.flatMap(\.tags).contains("mood:calm"))
     }
 
     func testTheRowIsANewPickEachDayAndLeavesOutAHiddenCategory() async throws {
@@ -77,6 +91,9 @@ final class SelectionAppTests: XCTestCase {
         let week = (1...7).map { model.selectionTitles(selection, tab: SyncRows.movies, now: day.addingTimeInterval(Double($0) * 86_400)).map(\.title) }
         XCTAssertTrue(week.contains { $0 != today })
         XCTAssertEqual(AppModel.selectionDay(day, calendar: Calendar(identifier: .gregorian).with(timeZone: "UTC")), "2025-10-09")
+        // Whatever calendar the device shows: the Gregorian date, as on Android.
+        XCTAssertEqual(AppModel.selectionDay(day, calendar: Calendar(identifier: .buddhist).with(timeZone: "UTC")), "2025-10-09")
+        XCTAssertEqual(AppModel.selectionDay(day, calendar: Calendar(identifier: .japanese).with(timeZone: "UTC")), "2025-10-09")
         // A hidden category leaves its titles out, as every row.
         let anime = try XCTUnwrap(model.categories(for: .movie).first { $0.name.contains("Anime") })
         model.setHidden(true, category: anime)

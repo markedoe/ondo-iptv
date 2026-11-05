@@ -265,8 +265,8 @@ applies. Categories that look adult stay hidden in a Kids profile whatever the l
 playlist, on its device only, are not sent.
 
 **Selections** (rows the viewer makes of tags: Settings → Row order → New selection) — `{"id", "name", "tags",
-"match", "tabs", "updatedAt"}`. `id` is a UUID in lowercase; `name` the name the viewer gave (the tags' names when they
-typed none); `tags` the tags a title is picked by: `genre:<name>` (a genre, its name as both apps normalise text: lowercase,
+"match", "tabs", "updatedAt"}`. `id` is a UUID in lowercase; `name` the name the viewer gave (empty when they
+typed none: each device then shows the tags' names, in its own language); `tags` the tags a title is picked by: `genre:<name>` (a genre, its name as both apps normalise text: lowercase,
 without accents, words separated by one space; the provider's genres, and on Android TMDb's kept on the device),
 `award:<group>` (a festival or ceremony of the awards file: `cannes`, `oscars`, `emmys`…; a title with an award or a
 selection there), `decade:<first year>` (`decade:1990`), `style:<style>` (a style of the category names: `manga`,
