@@ -133,6 +133,9 @@ final class AppModel {
     /// Non-blocking error shown as a banner when a refresh fails but cached data is available.
     var bannerMessage: String?
     var isParentalUnlocked = false
+    /// The Live TV category chosen this session (My List, All, Recently Watched or a category); nil until the viewer
+    /// chooses one, and again after a profile or playlist change: Live TV then opens on `liveLandingID`.
+    var liveChoiceID: String?
 
     /// Drives the full-screen player on iOS and the player windows on macOS.
     var playbackRequest: PlaybackSession?
@@ -403,7 +406,10 @@ final class AppModel {
         let left = activeProfile.id
         let opened = otherLibraries.removeValue(forKey: profile.id)
             ?? (userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
-        if left != profile.id { otherLibraries[left] = library }
+        if left != profile.id {
+            otherLibraries[left] = library
+            liveChoiceID = nil
+        }
         updateSettings { $0.activeProfileID = profile.id }
         library = opened
         if isReady { advanceSyncClockToStoredData() }
@@ -703,6 +709,7 @@ final class AppModel {
 
     func activate(_ playlist: Playlist, forceRefresh: Bool = false) async {
         let switching = content.isEmpty || activePlaylist?.id != playlist.id || index.channelsByID.isEmpty
+        if activePlaylist?.id != playlist.id { liveChoiceID = nil }
         startDetails(for: playlist.id)
         updateSettings { $0.activePlaylistID = playlist.id }
         loadStoredDetails(for: playlist)

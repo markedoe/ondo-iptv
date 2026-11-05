@@ -71,7 +71,10 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Live TV filter: one category, the favourites, or everything. */
+/**
+ * Live TV filter: one category, the favourites, or everything. No filter at all (null in [OndoViewModel.liveFilter]):
+ * the viewer has chosen nothing yet, and Live TV opens on My List, or on all channels while My List has none.
+ */
 data class LiveFilter(val categoryId: String? = null, val favoritesOnly: Boolean = false)
 
 /**
@@ -127,8 +130,8 @@ class OndoViewModel(
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
-    private val _liveFilter = MutableStateFlow(LiveFilter())
-    val liveFilter: StateFlow<LiveFilter> = _liveFilter.asStateFlow()
+    private val _liveFilter = MutableStateFlow<LiveFilter?>(null)
+    val liveFilter: StateFlow<LiveFilter?> = _liveFilter.asStateFlow()
 
     init {
         // A film's versions are grouped as soon as a catalogue arrives, in the background, once (UiMappers.films).
@@ -139,21 +142,25 @@ class OndoViewModel(
     }
 
     init {
-        // Another playlist opens on all its channels: a category chosen on the previous one is not carried over.
+        // Another playlist, or another profile, opens Live TV anew (My List, else all channels): the choice made on the
+        // previous one is not carried over. Within one, the choice stays while the viewer goes from tab to tab.
         viewModelScope.launch {
-            state.map { it.activePlaylistId }.distinctUntilChanged().drop(1).collect { _liveFilter.value = LiveFilter() }
+            state.map { it.activePlaylistId }.distinctUntilChanged().drop(1).collect { _liveFilter.value = null }
+        }
+        viewModelScope.launch {
+            state.map { it.activeProfile.id }.distinctUntilChanged().drop(1).collect { _liveFilter.value = null }
         }
     }
 
     val live: StateFlow<LiveUiState?> = combine(state, _liveFilter, minutes) { state, filter, now ->
-        UiMappers.live(state, filter.categoryId, filter.favoritesOnly, now)
+        UiMappers.live(state, filter?.categoryId, filter?.favoritesOnly, now)
     }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
     /** The TV guide of the channels chosen on Live TV. */
     val guide: StateFlow<GuideUiState?> = combine(state, _liveFilter, minutes) { state, filter, now ->
-        UiMappers.guide(state, filter.categoryId, filter.favoritesOnly, now)
+        UiMappers.guide(state, filter?.categoryId, filter?.favoritesOnly, now)
     }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)

@@ -73,8 +73,12 @@ final class AppStoreScreenshots: XCTestCase {
             capture("03-series")
         }
 
-        // Live TV: channels with what is on now.
+        // Live TV: channels with what is on now. On iPhone it opens on My List over the categories: Back, then All.
         open(section: 3, sidebarIndex: 3)
+        if !isPad {
+            let back = app.navigationBars.buttons.matching(NSPredicate(format: "label == 'Live TV' OR label == 'TV en direct'")).firstMatch
+            if back.waitForExistence(timeout: 5) { back.tap() }
+        }
         openAllCategory()
         capture("04-channels")
 

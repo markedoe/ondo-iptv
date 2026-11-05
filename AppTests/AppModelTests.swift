@@ -135,6 +135,48 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(model.favoriteChannels().count, 1)
     }
 
+    /// Live TV opens on My List while it has channels that show, else on all channels; the choice made stays for the
+    /// session, and another profile opens on its own My List again. iPhone (opened over the categories) and iPad and
+    /// Mac (selected beside them) both open on `liveLandingID`.
+    func testLiveTVOpensOnMyListAndAnotherProfileStartsAgain() async throws {
+        let model = try await modelWithPlaylist()
+        let sport = try XCTUnwrap(model.content.channels.first { $0.name == "Test Sport" })
+        let sports = try XCTUnwrap(model.content.liveCategories.first { $0.name == "Sports" })
+        XCTAssertNil(model.liveLandingID, "no favourite channel: all channels, never an empty My List")
+
+        model.toggleFavorite(sport)
+        XCTAssertEqual(model.liveLandingID, PseudoCategory.favorites)
+
+        // Hidden stays hidden: My List's only channel in a hidden category, all channels again.
+        model.setHidden(true, category: sports)
+        XCTAssertNil(model.liveLandingID)
+        model.setHidden(false, category: sports)
+        XCTAssertEqual(model.liveLandingID, PseudoCategory.favorites)
+
+        // A choice made stays for the session; a category that is no longer shown gives way to My List.
+        model.liveChoiceID = PseudoCategory.all
+        XCTAssertEqual(model.liveLandingID, PseudoCategory.all)
+        model.liveChoiceID = sports.id
+        XCTAssertEqual(model.liveLandingID, sports.id)
+        model.setHidden(true, category: sports)
+        XCTAssertNil(model.liveLandingID, "the category chosen is hidden, and so is My List's channel")
+        model.setHidden(false, category: sports)
+
+        // Another profile: nothing chosen, and its My List is empty: all channels.
+        model.liveChoiceID = PseudoCategory.all
+        let me = model.activeProfile
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: "star.fill", isKids: false, pin: nil)
+        model.switchProfile(to: guest)
+        XCTAssertNil(model.liveChoiceID)
+        XCTAssertNil(model.liveLandingID)
+        model.liveChoiceID = PseudoCategory.recent
+
+        // Back to the first profile: My List again, not the All chosen before.
+        model.switchProfile(to: me)
+        XCTAssertNil(model.liveChoiceID)
+        XCTAssertEqual(model.liveLandingID, PseudoCategory.favorites)
+    }
+
     func testParentalPINLocksAdultCategories() async throws {
         let model = try await modelWithPlaylist()
         let adult = try XCTUnwrap(model.content.liveCategories.first { $0.looksAdult })

@@ -183,6 +183,30 @@ final class OndoUITests: XCTestCase {
         snapshot("01-welcome")
     }
 
+    /// With favourite channels (the showcase library adds four, once the guide has loaded), Live TV opens on My List
+    /// over its categories; Back reaches them, and the tab stays where the viewer left it.
+    func testLiveTVOpensOnMyList() {
+        launch(["-uitest-reset", "-uitest-fixture", "-uitest-showcase"])
+        let liveTab = app.tabBars.buttons["Live TV"]
+        XCTAssertTrue(liveTab.waitForExistence(timeout: 30), "main interface")
+        liveTab.tap()
+        // The showcase's favourites arrive a few seconds after launch: Live TV follows My List until a choice is made.
+        XCTAssertTrue(app.navigationBars["My List"].waitForExistence(timeout: 30), "Live TV opens on My List")
+        XCTAssertTrue(app.staticTexts["Ondo News"].firstMatch.waitForExistence(timeout: 10), "My List's channels")
+        snapshot("03a-live-my-list")
+        let back = app.navigationBars.buttons["Live TV"]
+        XCTAssertTrue(back.waitForExistence(timeout: 5), "the categories, one Back away")
+        back.tap()
+        let all = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'All'")).firstMatch
+        XCTAssertTrue(all.waitForExistence(timeout: 10), "categories")
+        all.tap()
+        XCTAssertTrue(app.navigationBars["All"].waitForExistence(timeout: 10), "all channels")
+        // Another tab and back: the choice made stays.
+        app.tabBars.buttons["Home"].tap()
+        liveTab.tap()
+        XCTAssertTrue(app.navigationBars["All"].waitForExistence(timeout: 10), "the choice made stays")
+    }
+
     func testBrowseGuideAndPlay() throws {
         launch(["-uitest-reset", "-uitest-fixture"])
 
@@ -195,6 +219,8 @@ final class OndoUITests: XCTestCase {
         liveTab.tap()
         let all = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'All'")).firstMatch
         XCTAssertTrue(all.waitForExistence(timeout: 15), "categories")
+        // No favourite channel in this fixture: Live TV opens on its categories, not on an empty My List.
+        XCTAssertFalse(app.navigationBars["My List"].exists, "no empty My List on opening")
         snapshot("03-live-categories")
         all.tap()
 

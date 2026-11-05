@@ -10,15 +10,12 @@ import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.ui.CategoryFilter
 import com.markedoe.ondo.ui.MovieAwards
 import com.markedoe.ondo.ui.UiMappers
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.LinkedBlockingDeque
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -116,82 +113,93 @@ class OndoRepositoryTest {
         assertTrue(repository.state.value.playlists.isEmpty())
     }
 
-    /** Runs the repository's file and network work only when the test says so: the test acts between two of its steps. */
+    /**
+     * Runs the repository's work only when the test says so: the test acts between two of its steps. Nothing runs on
+     * another thread, so a step is there or not, at once: a test never waits on a clock for one.
+     */
     private class StepDispatcher : CoroutineDispatcher() {
-        private val tasks = LinkedBlockingQueue<Runnable>()
+        // Thread-safe: work the repository hands to the system's own threads (files) comes back here from them.
+        private val tasks = LinkedBlockingDeque<Runnable>()
 
         override fun dispatch(context: CoroutineContext, block: Runnable) {
-            tasks.add(block)
+            tasks.addLast(block)
         }
 
-        /**
-         * The next step, once it is there (parsing runs on the test's own [parsingThread], and sends its result here).
-         * The wait is long: on a busy machine, the first parse in a test JVM (class loading, a cold JIT) has taken over
-         * 10 seconds.
-         */
-        fun runNext() = requireNotNull(tasks.poll(60, TimeUnit.SECONDS)) { "no step came" }.run()
+        val queued: Int get() = tasks.size
 
-        /** Waits until [count] steps are there: parsing on other threads ends in any order and at any time. */
-        fun awaitQueued(count: Int) {
-            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
-            while (tasks.size < count) {
-                check(System.nanoTime() < deadline) { "only ${tasks.size} of $count steps came" }
-                Thread.sleep(5)
-            }
-        }
+        fun runNext() = requireNotNull(tasks.pollFirst()) { "no step is there" }.run()
+
+        /** The step that came last first: two parses that end in the other order. */
+        fun runLast() = requireNotNull(tasks.pollLast()) { "no step is there" }.run()
 
         fun runAll() {
-            while (true) (tasks.poll() ?: return).run()
+            while (true) (tasks.pollFirst() ?: return).run()
         }
     }
 
     /**
-     * A thread of the test's own for parsing: on the shared `Dispatchers.Default`, work other tests of the same JVM left
-     * running could hold the parse, and its step, past any wait.
+     * A parse that ends before the step that asked for it lets go (a fast parse on a thread of its own can): the step
+     * goes on with its result at once, and nothing comes back as a step of its own.
      */
-    private fun TestScope.parsingThread() = java.util.concurrent.Executors.newSingleThreadExecutor().asCoroutineDispatcher()
-        .also { thread -> backgroundScope.coroutineContext.job.invokeOnCompletion { thread.close() } }
-
-    /** Runs the test's tasks (background ones included) and the steps until [done]. */
-    private fun TestScope.runSteps(io: StepDispatcher, done: () -> Boolean) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
-        while (!done()) {
-            check(System.nanoTime() < deadline) { "the repository never got there" }
-            testScheduler.runCurrent()
-            io.runAll()
-        }
+    private object ParseEndsFirst : CoroutineDispatcher() {
+        override fun dispatch(context: CoroutineContext, block: Runnable) = block.run()
     }
 
-    /** A playlist that arrives by sync while an added one is being saved stays, in memory and on disk. */
-    @Test
-    fun aPlaylistSyncedWhileAnotherIsAddedIsKept() = runTest {
+    /** Runs the test's tasks (background ones included), the steps and the parses until [done]. */
+    private fun TestScope.runSteps(io: StepDispatcher, parsing: StepDispatcher? = null, done: () -> Boolean) {
+        repeat(1_000) {
+            if (done()) return
+            testScheduler.runCurrent()
+            parsing?.runAll()
+            io.runAll()
+        }
+        check(done()) { "the repository never got there" }
+    }
+
+    /**
+     * A playlist that arrives by sync while an added one is being saved stays, in memory and on disk. The parse may end
+     * after the download step let go ([parseEndsFirst] false: its result comes back as a step) or before (true: the step
+     * goes on at once); on a real thread either happens.
+     */
+    private fun syncedWhileAdding(parseEndsFirst: Boolean) = runTest {
         val io = StepDispatcher()
-        val parsing = parsingThread()
+        val parsing = if (parseEndsFirst) null else StepDispatcher()
         val other = "http://provider.example.com/other.m3u"
         val repository = OndoRepository(
-            AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io, parsing = parsing,
+            AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io,
+            parsing = parsing ?: ParseEndsFirst,
         )
         repository.bootstrap()
         runSteps(io) { repository.state.value.isReady }
         val adding = launch { repository.addPlaylist("Home", list) }
         testScheduler.runCurrent() // the add asks for its download
-        io.runNext() // downloaded, parsing
-        io.runNext() // parsed
-        testScheduler.runCurrent() // the add saves its playlists, on the writer
+        io.runNext() // downloaded; the parse is handed over (or already done)
+        parsing?.runNext() // parsed
+        if (io.queued > 0) io.runNext() // the parse's result, back as a step of its own
+        assertEquals("nothing else waits on the steps", 0, io.queued)
+        testScheduler.runCurrent() // the add saves its catalogue, on the writer
         val synced = SyncPlaylist(id = "from-phone", name = "Phone", kind = SyncPlaylist.M3U, url = other, addedAt = clock, updatedAt = clock)
         assertNotNull(repository.mergeSync(SyncSnapshot(device = "phone", playlists = listOf(synced)), "TV"))
-        runSteps(io) { adding.isCompleted }
+        runSteps(io, parsing) { adding.isCompleted }
         assertEquals(setOf("Home", "Phone"), repository.state.value.playlists.map { it.name }.toSet())
         assertEquals("Home", repository.state.value.activePlaylist?.name)
         io.runAll()
         assertEquals(setOf("Home", "Phone"), AppStore(folder.root).loadPlaylists().map { it.name }.toSet())
     }
 
-    /** Two playlists added at once (a second tap on Save while the first loads): both stay, in memory and on disk. */
     @Test
-    fun twoPlaylistsAddedAtOnceAreBothKept() = runTest {
+    fun aPlaylistSyncedWhileAnotherIsAddedIsKept() = syncedWhileAdding(parseEndsFirst = false)
+
+    @Test
+    fun aPlaylistSyncedWhileAnotherIsAddedIsKeptWhenTheParseEndsFirst() = syncedWhileAdding(parseEndsFirst = true)
+
+    /**
+     * Two playlists added at once (a second tap on Save while the first loads): both stay, in memory and on disk,
+     * whichever parse ends first.
+     */
+    private fun twoAddedAtOnce(secondParsedFirst: Boolean) = runTest {
         val io = StepDispatcher()
-        val parsing = parsingThread()
+        val parsing = StepDispatcher()
         val other = "http://provider.example.com/other.m3u"
         val repository = OndoRepository(
             AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io, parsing = parsing,
@@ -201,17 +209,26 @@ class OndoRepositoryTest {
         val first = launch { assertTrue(repository.addPlaylist("Home", list).isSuccess) }
         val second = launch { assertTrue(repository.addPlaylist("Office", other).isSuccess) }
         testScheduler.runCurrent() // both ask for their download
-        io.awaitQueued(2)
+        assertEquals(2, io.queued)
         io.runNext()
-        io.runNext() // both downloaded, parsing on other threads
-        io.awaitQueued(2) // both parsed: each continues on the steps' dispatcher
+        io.runNext() // both downloaded, both parses handed over
+        assertEquals(2, parsing.queued)
+        if (secondParsedFirst) parsing.runLast() else parsing.runNext()
+        parsing.runNext() // both parsed: each continues on the steps' dispatcher
+        assertEquals(2, io.queued)
         io.runNext()
         io.runNext() // each has read the playlists and saves its catalogue on the writer
-        runSteps(io) { first.isCompleted && second.isCompleted }
+        runSteps(io, parsing) { first.isCompleted && second.isCompleted }
         assertEquals(setOf("Home", "Office"), repository.state.value.playlists.map { it.name }.toSet())
         io.runAll()
         assertEquals(setOf("Home", "Office"), AppStore(folder.root).loadPlaylists().map { it.name }.toSet())
     }
+
+    @Test
+    fun twoPlaylistsAddedAtOnceAreBothKept() = twoAddedAtOnce(secondParsedFirst = false)
+
+    @Test
+    fun twoPlaylistsAddedAtOnceAreBothKeptWhicheverParseEndsFirst() = twoAddedAtOnce(secondParsedFirst = true)
 
     /** A catalogue too large for the device's memory (an entry-level TV) is an error on screen, not a stop of the app. */
     @Test

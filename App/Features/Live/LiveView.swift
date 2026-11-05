@@ -1,16 +1,56 @@
 import SwiftUI
 import IPTVCore
 
+/// Live TV opens on My List while it has channels (else on all channels): selected beside the categories on iPad and
+/// Mac, opened over them on iPhone, where Back leads to the other choices. The choice made stays for the session; a
+/// profile or playlist change opens on My List again.
 struct LiveView: View {
     @Environment(AppModel.self) private var model
+    @Environment(NavigationRouter.self) private var router: NavigationRouter?
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
+    /// The profile and playlist Live TV last opened for.
+    @State private var landedFor: String?
+    /// iPhone: My List was opened over the categories for this profile and playlist; Back from it is the viewer's.
+    @State private var opened = false
+
+    private var sideBySide: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return sizeClass == .regular
+        #endif
+    }
+
+    private var session: String {
+        "\(model.activeProfile.id.uuidString)|\(model.activePlaylist?.id.uuidString ?? "")"
+    }
+
+    private var pseudoCategories: [MediaCategory] {
+        [PseudoCategory.favorites(.live), PseudoCategory.all(.live), PseudoCategory.recent(.live)]
+    }
+
+    private var landing: MediaCategory? {
+        guard let id = model.liveLandingID else { return nil }
+        return pseudoCategories.first { $0.id == id } ?? model.categories(for: .live).first { $0.id == id }
+    }
 
     var body: some View {
         CategoryBrowser(
             type: .live,
-            pseudoCategories: [PseudoCategory.all(.live), PseudoCategory.favorites(.live), PseudoCategory.recent(.live)]
+            pseudoCategories: pseudoCategories,
+            landing: landing,
+            onOpen: { model.liveChoiceID = $0.id }
         ) { category in
             ChannelListView(category: category)
         }
+        // Another profile or playlist: the categories' selection starts again.
+        .id(session)
+        .onAppear(perform: land)
+        .onChange(of: session) { land() }
+        // Channels added to My List later (sync, another tab) before anything was chosen: Live TV opens on them.
+        .onChange(of: landing?.id) { land() }
         .navigationTitle("Live TV")
         .toolbar {
             #if os(iOS)
@@ -27,6 +67,19 @@ struct LiveView: View {
                 CategoryFilterButton(type: .live)
             }
         }
+    }
+
+    /// On iPhone, My List (or the choice made) over the categories, once for a profile and playlist: as soon as there
+    /// is one, while the viewer has chosen nothing and nothing is open over the categories.
+    private func land() {
+        if landedFor != session {
+            if landedFor != nil && !sideBySide { router?.path = NavigationPath() }
+            landedFor = session
+            opened = false
+        }
+        guard !sideBySide, !opened, model.liveChoiceID == nil, router?.path.isEmpty == true, let landing else { return }
+        router?.push(landing)
+        opened = true
     }
 }
 

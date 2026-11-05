@@ -125,7 +125,8 @@ extension HelpTopic {
             id: "my-list", title: "My List and Collections", systemImage: "list.star",
             body: """
             Add to My List keeps a movie, a series or a channel at hand. On iPhone, My List is a tab with Movies, \
-            Series, Channels and Collections; on iPad and Mac, it is in the sidebar.
+            Series, Channels and Collections; on iPad and Mac, it is in the sidebar. Live TV opens on the channels in \
+            My List.
 
             Collections are your own groups, such as Weekend or Kids: use Collection on a movie or series page, or \
             Add to Collection in a menu.

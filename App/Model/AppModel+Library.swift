@@ -137,6 +137,19 @@ extension AppModel {
         return favorites(.live).compactMap { index.channelsByID[$0.reference.itemID] }.filter { !hidden.contains($0.id) }
     }
 
+    /// What Live TV opens on: the category chosen this session while it is still shown and open, else My List while it
+    /// has channels (hidden and locked ones left out); nil: nothing chosen and My List empty, so all channels.
+    var liveLandingID: String? {
+        if let chosen = liveChoiceID {
+            switch chosen {
+            case PseudoCategory.all, PseudoCategory.favorites, PseudoCategory.recent: return chosen
+            default:
+                if let category = categories(for: .live).first(where: { $0.id == chosen }), !isLocked(category) { return chosen }
+            }
+        }
+        return favoriteChannels().isEmpty ? nil : PseudoCategory.favorites
+    }
+
     func moveFavorites(_ type: ContentType, fromOffsets source: IndexSet, toOffset destination: Int) {
         guard let playlist = activePlaylist else { return }
         let move = Self.storedMove(visible: favorites(type), stored: library.favorites(playlistID: playlist.id, type: type),

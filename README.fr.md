@@ -66,7 +66,7 @@ chaque changement de l'interface.
   c'est désactivé dans les Réglages ([tools/awards](tools/awards/README.fr.md)).
 - **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
   XSPF, JSON ; plusieurs playlists, actualisation automatique.
-- **TV en direct** : catégories, numéros, logos, programme en cours + progression, Ma liste, récents, recherche ;
+- **TV en direct** : s’ouvre sur Ma liste ; catégories, numéros, logos, programme en cours + progression, récents, recherche ;
   chaînes masquées, renommées ou renumérotées.
 - **Guide TV** : XMLTV (gzip), guide du fournisseur et/ou URL personnalisées, grille aux titres
   « collants », fiche programme, décalage horaire, repli sur l'EPG court Xtream, **association manuelle
@@ -158,7 +158,7 @@ chaque changement de l'interface.
   épisode suivant, saisons, la bande-annonce du fournisseur sur YouTube, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
   films et séries (les séries toujours, les films parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
   partagent.
-- **TV en direct** : catégories, Ma liste, programme en cours et suivant.
+- **TV en direct** : s’ouvre sur Ma liste ; catégories, programme en cours et suivant.
 - **Recherche** (la loupe d'Accueil, Films, Séries, TV en direct et Ma liste ; sur une TV, dans la barre du haut après
   les onglets, une page à part que Retour ferme) : chaînes, films, séries et **acteurs et réalisateurs par leur nom**, filtrables
   par années de sortie ou par festival / cérémonie (lauréats seulement, au choix) ; pas de recherche dans les

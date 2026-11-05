@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmarks
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CalendarViewDay
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
@@ -39,7 +40,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.markedoe.ondo.ui.tv.isTelevision
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +63,7 @@ import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ProgressBar
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.tv.LocalHeldOk
+import com.markedoe.ondo.ui.tv.TvChip
 import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
@@ -67,6 +75,8 @@ data class LiveUiState(
     val showingFavorites: Boolean = false,
     val channels: List<ChannelRow> = emptyList(),
     val favoriteIds: Set<String> = emptySet(),
+    /** My List has channels that show (hidden categories and languages left out): Live TV opens on them. */
+    val hasFavorites: Boolean = false,
 )
 
 class LiveActions(
@@ -79,7 +89,10 @@ class LiveActions(
     val onGuide: () -> Unit = {},
 )
 
-/** Live TV: category chips and channels with what is on now (long press, or OK held on a remote: favourite). */
+/**
+ * Live TV: the choice of channels at the top (My List first, where the tab opens while it has channels, then all of
+ * them and the categories), and the channels with what is on now (long press, or OK held on a remote: My List).
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LiveScreen(state: LiveUiState, actions: LiveActions) {
@@ -87,6 +100,10 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
     val television = isTelevision()
     // On a TV, the channel the remote is on is shown large beside the list: what is on, how far, what comes next.
     var focusedId by remember { mutableStateOf<String?>(null) }
+    // The choice shown at the top, where Up from the channels goes.
+    val selectedChoice = remember { FocusRequester() }
+    // While the remote is on the choices, the channels that a new choice brings leave it there.
+    var onChoices by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
     // On a TV the list takes the left of the screen, the channel the remote is on the right; the chips above both.
     val listWidth = if (television) 0.56f else 1f
@@ -114,9 +131,19 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
         item {
             TvRow {
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    // On a TV, room for the focused choice, grown, and its ring.
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = if (television) 6.dp else 0.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.testTag("liveChips"),
+                    modifier = Modifier
+                        .testTag("liveChips")
+                        .onFocusChanged { onChoices = it.hasFocus }
+                        // Up from the channels reaches the choice shown, not the chip that happens to lie above.
+                        .focusProperties {
+                            onEnter = {
+                                if (requestedFocusDirection == FocusDirection.Up) runCatching { selectedChoice.requestFocus() }
+                            }
+                        }
+                        .focusGroup(),
                 ) {
                     // On a TV the top bar holds Search; the guide and the categories come first here.
                     if (television) {
@@ -137,21 +164,49 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                             )
                         }
                     }
-                    item {
-                        FilterChip(selected = state.selectedCategoryId == null && !state.showingFavorites, onClick = { actions.onCategory(null) }, label = { Text(stringResource(R.string.all)) })
-                    }
-                    item {
-                        FilterChip(
+                    // The choices: My List first, then all channels and the categories.
+                    item(key = "choice:favorites") {
+                        LiveChoice(
+                            stringResource(R.string.my_list),
                             selected = state.showingFavorites,
+                            television = television,
                             onClick = actions.onFavorites,
-                            label = { Text(stringResource(R.string.my_list)) },
-                            leadingIcon = { Icon(Icons.Rounded.Bookmarks, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                            icon = Icons.Rounded.Bookmarks,
+                            modifier = Modifier.testTag("liveMyList").then(choiceFocus(state.showingFavorites, selectedChoice)),
+                        )
+                    }
+                    item(key = "choice:all") {
+                        val selected = state.selectedCategoryId == null && !state.showingFavorites
+                        LiveChoice(
+                            stringResource(R.string.all),
+                            selected = selected,
+                            television = television,
+                            onClick = { actions.onCategory(null) },
+                            modifier = Modifier.testTag("liveAll").then(choiceFocus(selected, selectedChoice)),
                         )
                     }
                     items(state.categories, key = { it.id }) { category ->
-                        FilterChip(selected = state.selectedCategoryId == category.id, onClick = { actions.onCategory(category.id) }, label = { Text(category.name, maxLines = 1) })
+                        val selected = !state.showingFavorites && state.selectedCategoryId == category.id
+                        LiveChoice(
+                            category.name,
+                            selected = selected,
+                            television = television,
+                            onClick = { actions.onCategory(category.id) },
+                            modifier = choiceFocus(selected, selectedChoice),
+                        )
                     }
                 }
+            }
+        }
+        // My List has no channel yet: how to add one, under the choices (once there are some, the tab opens on them).
+        if (!state.hasFavorites && !state.showingFavorites && state.channels.isNotEmpty()) {
+            item(key = "myListHint") {
+                Text(
+                    stringResource(if (television) R.string.live_hint_my_list_tv else R.string.live_hint_my_list),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(listWidth).padding(start = 16.dp, end = 16.dp, top = 8.dp).testTag("liveMyListHint"),
+                )
             }
         }
         itemsIndexed(state.channels, key = { _, it -> it.channel.id }) { index, row ->
@@ -160,7 +215,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                     .fillMaxWidth(listWidth)
                     // A remote: the frame shows the channel; holding OK toggles My List, as a long press does.
                     .focusFrame(RoundedCornerShape(12.dp), grow = 1.02f)
-                    .focusMemory("channel:${row.channel.id}", initial = index == 0)
+                    .focusMemory("channel:${row.channel.id}", initial = index == 0 && !onChoices)
                     .onFocusChanged { if (it.isFocused) focusedId = row.channel.id }
                     .clip(RoundedCornerShape(12.dp))
                     // TalkBack offers the long press under this name ("double-tap and hold to …").
@@ -218,6 +273,44 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
         }
     }
     }
+}
+
+/**
+ * The way a choice takes the focus: the choice shown through [selectedChoice] (where Up from the channels goes), the
+ * others through their own. Always a requester, only its target changing: a modifier added or taken away as the choice
+ * changes would rebuild the chip's focus, and the remote on it would lose it.
+ */
+@Composable
+private fun choiceFocus(selected: Boolean, selectedChoice: FocusRequester): Modifier {
+    val own = remember { FocusRequester() }
+    return Modifier.focusRequester(if (selected) selectedChoice else own)
+}
+
+/**
+ * One choice of channels at the top of Live TV. On a phone, a filter chip. On a TV, the TV's chip: the choice shown is
+ * white with a check mark, the one the remote is on grows inside a ring (both at once: the white chip ringed).
+ */
+@Composable
+private fun LiveChoice(
+    text: String,
+    selected: Boolean,
+    television: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+) {
+    if (!television) {
+        FilterChip(
+            selected = selected,
+            onClick = onClick,
+            label = { Text(text, maxLines = 1) },
+            leadingIcon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(18.dp)) } },
+            modifier = modifier,
+        )
+        return
+    }
+    // The TV's chips: the shown one white with a check mark, the one the remote is on ringed and grown (TvChip).
+    TvChip(text, onClick = onClick, modifier = modifier, selected = selected, icon = if (selected) Icons.Rounded.Check else icon)
 }
 
 /** The channel the remote is on, large: its logo, name, what is on now and how far it is, what comes next. */

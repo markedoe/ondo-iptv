@@ -553,9 +553,14 @@ private fun LiveDestination(viewModel: OndoViewModel, navController: NavHostCont
         state = state,
         actions = LiveActions(
             onCategory = { viewModel.setLiveFilter(LiveFilter(categoryId = it)) },
-            onFavorites = { viewModel.setLiveFilter(LiveFilter(favoritesOnly = !filter.favoritesOnly)) },
+            onFavorites = { viewModel.setLiveFilter(LiveFilter(favoritesOnly = true)) },
             onPlay = viewModel::playChannel,
-            onToggleFavorite = viewModel::toggleFavorite,
+            onToggleFavorite = { row ->
+                // The first channel added (or the last one taken out) does not move the page from under the viewer:
+                // the channels shown become the choice, until the next opening.
+                if (filter == null) viewModel.setLiveFilter(LiveFilter(favoritesOnly = state.showingFavorites))
+                viewModel.toggleFavorite(row)
+            },
             onCategories = { navController.navigate(Routes.Categories("live")) },
             onSearch = { navController.openSearch(viewModel) },
             onGuide = { navController.navigate(Routes.Guide) },
