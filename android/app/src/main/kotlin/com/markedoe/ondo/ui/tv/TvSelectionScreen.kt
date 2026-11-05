@@ -23,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.FilterChip
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -143,6 +144,7 @@ private fun ChipGroup(title: String, chips: @Composable () -> Unit) {
 }
 
 /** A chip the remote reaches: OK chooses it or leaves it. */
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun TvChip(label: String, selected: Boolean, tag: String, onClick: () -> Unit) {
     FilterChip(selected = selected, onClick = onClick, modifier = Modifier.testTag(tag)) { Text(label, maxLines = 1) }
