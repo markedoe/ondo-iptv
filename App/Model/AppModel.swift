@@ -227,6 +227,9 @@ final class AppModel {
     /// list); screens that show cached details (hero, continue watching) read this instead, so a backdrop
     /// or a plot that arrives after them appears.
     var detailsRevision = 0
+    /// Bumped when the open profile's rows or selections change (here or by sync): they are kept in `syncState`, which is
+    /// not observed, so the screens that show them read this (`profileRowOrders`, `profileSelections`).
+    var rowsRevision = 0
     @ObservationIgnored private var shortEPGRequested = Set<String>()
     /// Playlist channels per guide channel, rebuilt when the catalogue or the guide changes.
     @ObservationIgnored var channelsByGuideIDCache: (key: String, map: [String: [Channel]], guideIDs: [String: String])?

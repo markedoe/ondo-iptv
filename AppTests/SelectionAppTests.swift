@@ -1,4 +1,5 @@
 import XCTest
+import Observation
 import IPTVCore
 @testable import Ondo
 
@@ -124,6 +125,32 @@ final class SelectionAppTests: XCTestCase {
         XCTAssertNotNil(model.syncSnapshot().deleted[SyncSelection.keyPrefix + id])
         _ = await phone.applySync(model.syncSnapshot())
         XCTAssertNil(phone.selection(id))
+    }
+
+    /// The rows and selections are kept where SwiftUI does not observe them (`syncState`): a screen that shows them
+    /// (Settings → Row Order, the tabs) is told when they change, here or by sync.
+    func testScreensShowingTheRowsAreToldWhenASelectionChanges() async throws {
+        let model = try await device()
+        final class Flag: @unchecked Sendable { var changed = false }
+        func observed(_ read: @escaping () -> Void, _ change: () -> Void) -> Bool {
+            let flag = Flag()
+            withObservationTracking { read() } onChange: { flag.changed = true }
+            change()
+            return flag.changed
+        }
+        var id: String?
+        XCTAssertTrue(observed({ _ = model.arrangedRows(.movie) }, {
+            id = model.saveSelection(id: nil, name: "", tags: [Selections.decade(1990)], all: false, tabs: [SyncRows.movies])
+        }), "Row Order and the Movies tab redraw with the new selection")
+        let saved = try XCTUnwrap(id)
+        XCTAssertTrue(observed({ _ = model.profileSelections }, { model.deleteSelection(saved) }), "and when it is deleted")
+        let brought = SyncSelection(id: "s2", tags: [Selections.decade(2020)], tabs: [SyncRows.home], updatedAt: Date().syncMilliseconds)
+        let received = SyncSnapshot(device: "phone", selections: [brought])
+        let flag = Flag()
+        withObservationTracking { _ = model.profileSelections } onChange: { flag.changed = true }
+        _ = await model.applySync(received)
+        XCTAssertTrue(flag.changed, "and when sync brings one")
+        XCTAssertEqual(model.selection("s2")?.tabs, [SyncRows.home])
     }
 
     func testEachProfileHasItsOwnAndAKidsProfileCannotMakeOne() async throws {

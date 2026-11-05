@@ -15,7 +15,8 @@ struct SelectionTags {
 extension AppModel {
     /// The open profile's selections.
     var profileSelections: [SyncSelection] {
-        activeProfile.isMain ? syncState.selections : (syncState.profileStates[activeProfile.id.uuidString.lowercased()]?.selections ?? [])
+        _ = rowsRevision
+        return activeProfile.isMain ? syncState.selections : (syncState.profileStates[activeProfile.id.uuidString.lowercased()]?.selections ?? [])
     }
 
     /// The selection of `id` in the open profile.
@@ -303,6 +304,7 @@ extension AppModel {
     }
 
     private func keepSelections(_ records: [SyncSelection]) {
+        rowsRevision += 1
         if activeProfile.isMain {
             syncState.selections = records
         } else {

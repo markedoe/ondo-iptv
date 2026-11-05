@@ -1037,6 +1037,7 @@ extension AppModel {
         syncState.people = latest.people
         syncState.rowOrders = latest.rows
         syncState.selections = latest.selections
+        rowsRevision += 1
         syncState.otherHidden = SyncMapping.otherHidden(latest.hiddenCategories)
         syncState.listPeople = SyncMapping.listPeople(latest)
         let time = syncNow(now).syncMilliseconds

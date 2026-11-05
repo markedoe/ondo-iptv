@@ -17,7 +17,8 @@ extension AppModel {
 
     /// The open profile's records.
     private var profileRowOrders: [SyncRows] {
-        activeProfile.isMain ? syncState.rowOrders : (syncState.profileStates[activeProfile.id.uuidString.lowercased()]?.rowOrders ?? [])
+        _ = rowsRevision
+        return activeProfile.isMain ? syncState.rowOrders : (syncState.profileStates[activeProfile.id.uuidString.lowercased()]?.rowOrders ?? [])
     }
 
     /// The keys of the rows of a tab in their default order: the built-in rows, the `selections`' rows (`sel:<id>`),
@@ -80,6 +81,7 @@ extension AppModel {
 
     /// `record` kept for its tab in the open profile, without saving yet.
     func keepRowOrderRecord(_ record: SyncRows) {
+        rowsRevision += 1
         // Sorted by tab in UTF-16 code units, as a merge gives them: the same records compare equal.
         let records = (profileRowOrders.filter { $0.tab != record.tab } + [record])
             .sorted { $0.tab.utf16.lexicographicallyPrecedes($1.tab.utf16) }

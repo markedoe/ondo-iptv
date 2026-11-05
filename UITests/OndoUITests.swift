@@ -353,8 +353,9 @@ final class OndoUITests: XCTestCase {
         app.buttons["saveSelection"].firstMatch.tap()
         sleep(1)
         // Its row in the list of the Movies tab's rows, then back to Home: Settings closes.
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'editSelection-movie-'")).firstMatch.waitForExistence(timeout: 5),
-                      "the selection among the rows")
+        let edit = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'editSelection-movie-'")).firstMatch
+        for _ in 0..<4 where !edit.waitForExistence(timeout: 2) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(edit.exists, "the selection among the rows")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         let done = app.buttons["Done"].firstMatch
         if done.waitForExistence(timeout: 3) { done.tap() } else { app.swipeDown(velocity: .fast) }
