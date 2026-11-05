@@ -120,60 +120,80 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(model.nextEpisode(in: series, details: details)?.episode.code, "S01E02")
     }
 
-    func testHeroPutsContinueWatchingFirstWithoutDuplicates() async throws {
+    /// What TMDb said of a title, as the store keeps it: released `daysAgo` days ago (a series: its latest episode), with
+    /// a backdrop and, when given, its votes. The carousel is picked again.
+    private func release(_ item: ShowcaseItem, in model: AppModel, daysAgo: Int, votes: (Double, Int)? = nil, backdrop: Bool = true) {
+        let date = RecentReleases.dayString(RecentReleases.today(.now) - daysAgo)
+        for key in model.metadataKeys(for: item) {
+            model.tmdbMetadata.titles[key] = TitleMetadata(
+                key: key, kind: MetadataKey.kind(item.contentType), backdropURL: backdrop ? URL(string: "https://example.com/backdrop.jpg") : nil,
+                voteAverage: votes?.0, voteCount: votes?.1, fetchedAt: .now, releaseDate: date
+            )
+        }
+        model.tmdbMetadata.carouselRevision += 1
+    }
+
+    /// The carousel goes by release date, not by the day the provider added a title nor by what is being watched: the
+    /// recent releases, best first by TMDb's votes weighted by their number (the rule itself is tested in IPTVCore).
+    func testTheCarouselShowsTheBestRatedRecentReleases() async throws {
         let model = try await model()
         let road = try movie("Long Road", in: model)
         try await watch(model.downloadItem(for: road), in: model, fraction: 0.2, duration: 6_000)
-
         let bright = try movie("Bright Side", in: model)
         let quiet = try movie("Quiet Water", in: model)
         let harbor = try XCTUnwrap(model.content.series.first)
+        XCTAssertTrue(model.heroItems(limit: 5).isEmpty, "no release date known: no carousel, rather than older titles")
 
-        let hero = model.heroItems(limit: 5)
-        XCTAssertEqual(hero, [.movie(road), .movie(bright), .series(harbor), .movie(quiet)],
-                       "what is being watched comes first, then new releases (movies and series), never twice")
-        XCTAssertEqual(model.heroItems(limit: 2).count, 2)
+        release(.movie(road), in: model, daysAgo: 800, votes: (9.5, 50_000))
+        release(.movie(bright), in: model, daysAgo: 2, votes: (7.8, 5_000))
+        release(.movie(quiet), in: model, daysAgo: 5, votes: (8.0, 300))
+        release(.series(harbor), in: model, daysAgo: 1, votes: (7.0, 100))
+        XCTAssertEqual(model.heroItems(limit: 5), [.movie(bright), .movie(quiet), .series(harbor)],
+                       "by weighted rating; an old film, however well rated or being watched, stays out")
+        XCTAssertEqual(model.heroItems(limit: 2), [.movie(bright), .movie(quiet)])
     }
 
-    /// The carousel's best recent source needs the provider's date added (an M3U list gives none) and TMDb's votes; the
-    /// ranking itself (weighted rating, 50 votes at least, the four-day window) is tested in IPTVCore.
-    func testBestRecentNeedsTheDateAddedAndTMDbVotes() async throws {
+    func testAnOldSeriesWithANewSeasonIsInAndOneWithNothingNewIsOut() async throws {
+        let model = try await model(with: Self.releases)
+        let horror = try XCTUnwrap(model.content.movieCategories.first { $0.name.contains("Horror") })
+        model.setHidden(true, category: horror)
+        func series(_ name: String) throws -> ShowcaseItem { .series(try XCTUnwrap(model.content.series.first { $0.name == name })) }
+        try release(series("Old Show"), in: model, daysAgo: 3)
+        try release(series("New Show"), in: model, daysAgo: 90)
+        release(.movie(try movie("This Year Film", in: model)), in: model, daysAgo: 2)
+        release(.movie(try movie("Coming Soon", in: model)), in: model, daysAgo: -30)
+        release(.movie(try movie("Hidden New Film", in: model)), in: model, daysAgo: 1)
+        release(.movie(try movie("Old Classic", in: model)), in: model, daysAgo: 1, backdrop: false)
+        XCTAssertEqual(model.heroItems(limit: 5).map(\.title), ["This Year Film", "Old Show"],
+                       "the newest by date (no votes): a series from three years ago with a new season is in; one with nothing new for three months, a release to come, a hidden category and a title without artwork are out")
+    }
+
+    func testTheProvidersFullReleaseDateCountsAndAYearAloneDoesNot() async throws {
         let model = try await model()
-        XCTAssertTrue(model.bestRecent().isEmpty, "no TMDb data: the source is empty")
         let bright = try movie("Bright Side", in: model)
-        let key = try XCTUnwrap(MetadataKey.title(.movie, name: bright.name, year: bright.year))
-        model.tmdbMetadata.titles[key] = TitleMetadata(key: key, kind: "movie", voteAverage: 7.8, voteCount: 5_000, fetchedAt: Date())
-        XCTAssertTrue(model.recentlyAdded().isEmpty, "an M3U list gives no date added")
-        XCTAssertTrue(model.bestRecent().isEmpty)
-        XCTAssertEqual(model.heroItems(limit: 5).first, .movie(bright), "the carousel falls back to new releases")
+        let quiet = try movie("Quiet Water", in: model)
+        let backdrop = URL(string: "https://example.com/backdrop.jpg")
+        model.movieDetailsCache[bright.id] = MediaDetails(title: bright.name, releaseDate: RecentReleases.dayString(RecentReleases.today(.now) - 1), backdropURL: backdrop)
+        model.movieDetailsCache[quiet.id] = MediaDetails(title: quiet.name, releaseDate: String(Self.thisYear), backdropURL: backdrop)
+        model.tmdbMetadata.carouselRevision += 1
+        XCTAssertEqual(model.heroItems(limit: 5), [.movie(bright)])
     }
 
-    /// Old films with posters and no date added: no best recent title, no new release, yet the carousel is not empty.
+    /// Old films with posters, nothing released lately: no carousel (Home starts with its rows).
     private static let oldWithPosters = """
     #EXTM3U
     #EXTINF:5400 tvg-logo="http://127.0.0.1:9/a.png" group-title="Movies | Drama",Old Film A (2010)
     http://127.0.0.1:9/a.mp4
     #EXTINF:5400 tvg-logo="http://127.0.0.1:9/b.png" group-title="Movies | Drama",Old Film B (2011)
     http://127.0.0.1:9/b.mp4
-    #EXTINF:5400 group-title="Movies | Drama",Old Film C (2012)
-    http://127.0.0.1:9/c.mp4
     """
 
-    func testACatalogueWithoutVotesOrRecentReleasesStillShowsACarousel() async throws {
+    func testACatalogueWithoutRecentReleasesHasNoCarousel() async throws {
         let model = try await model(with: Self.oldWithPosters)
-        XCTAssertTrue(model.bestRecent().isEmpty)
-        XCTAssertTrue(model.newReleases().isEmpty)
-        let hero = model.heroItems(limit: 5).map(\.title)
-        XCTAssertEqual(hero, ["Old Film A", "Old Film B"], "the playlist's order, titles with artwork only")
-    }
-
-    func testATenFromTenVotesTitleIsStillNotRankedFirst() async throws {
-        let model = try await model(with: Self.oldWithPosters)
-        let second = try movie("Old Film B", in: model)
-        let key = try XCTUnwrap(MetadataKey.title(.movie, name: second.name, year: second.year))
-        model.tmdbMetadata.titles[key] = TitleMetadata(key: key, kind: "movie", voteAverage: 10, voteCount: 10, fetchedAt: Date())
-        XCTAssertTrue(model.bestRecent().isEmpty, "ten votes do not qualify")
-        XCTAssertEqual(model.heroItems(limit: 5).first?.title, "Old Film A")
+        XCTAssertTrue(model.heroItems(limit: 5).isEmpty)
+        release(.movie(try movie("Old Film B", in: model)), in: model, daysAgo: 400, votes: (9, 20_000))
+        XCTAssertTrue(model.heroItems(limit: 5).isEmpty, "released over 60 days ago")
+        XCTAssertTrue(model.releasesToAsk().isEmpty, "old titles nobody changed lately are not asked about")
     }
 
     func testMoviesAndSeriesInProgressAreApart() async throws {
@@ -198,8 +218,6 @@ final class ShowcaseTests: XCTestCase {
                        "this year's and last year's releases, newest first; not an old, undated, upcoming or hidden title")
         XCTAssertEqual(model.newSeries().map(\.title), ["New Show"], "series in their own row; not an old one")
         XCTAssertEqual(model.newMovies(limit: 1).map(\.title), ["This Year Film"])
-        XCTAssertEqual(model.newReleases().map(\.title), ["This Year Film", "New Show", "Last Year Film"],
-                       "the carousel alternates movies and series")
 
         let inThreeYears = try XCTUnwrap(Calendar.current.date(byAdding: .year, value: 3, to: .now))
         XCTAssertTrue(model.newMovies(now: inThreeYears).isEmpty, "the same titles are no longer new three years later")
@@ -226,6 +244,7 @@ final class ShowcaseTests: XCTestCase {
     func testWatchedMoviesCanBeHiddenWhereMoviesAreBrowsed() async throws {
         let model = try await model()
         let quiet = try movie("Quiet Water", in: model)
+        release(.movie(quiet), in: model, daysAgo: 3)
         let road = try movie("Long Road", in: model)
         let drama = try XCTUnwrap(model.content.movieCategories.first { $0.id == quiet.categoryID })
         try await watch(model.downloadItem(for: quiet), in: model, fraction: 0.99, duration: 5_400)
@@ -234,6 +253,7 @@ final class ShowcaseTests: XCTestCase {
         // Off by default. These lists are kept in a cache from now on: hiding must still apply to them.
         XCTAssertEqual(model.movies(in: drama, sort: .name).map(\.name), ["Long Road", "Quiet Water"])
         XCTAssertTrue(model.newMovies().contains(.movie(quiet)))
+        XCTAssertTrue(model.heroItems().contains(.movie(quiet)))
 
         model.updateSettings { $0.hideWatchedMovies = true }
         XCTAssertEqual(model.movies(in: drama, sort: .name).map(\.name), ["Long Road"], "a category's row and grid; a movie in progress stays")

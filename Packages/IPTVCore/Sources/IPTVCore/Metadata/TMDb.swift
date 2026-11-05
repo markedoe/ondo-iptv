@@ -176,7 +176,8 @@ public struct TMDbClient: Sendable {
             voteCount: details.voteCount,
             trailerKey: trailer,
             directors: TMDbCredit.unique(directors),
-            cast: Array(TMDbCredit.unique(cast).prefix(series ? TMDbTitleInfo.seriesCastLimit : TMDbTitleInfo.castLimit))
+            cast: Array(TMDbCredit.unique(cast).prefix(series ? TMDbTitleInfo.seriesCastLimit : TMDbTitleInfo.castLimit)),
+            releaseDate: details.carouselDate(series: series)
         )
     }
 
@@ -288,9 +289,11 @@ public struct TMDbTitleInfo: Hashable, Sendable {
     public var trailerKey: String?
     public var directors: [TMDbCredit]
     public var cast: [TMDbCredit]
+    /// "2026-11-02": a movie's release, a series' latest episode or season (`TMDbClient.titleInfo`); nil when TMDb gives none.
+    public var releaseDate: String?
 
     public init(tmdbID: Int, backdropURL: URL? = nil, voteAverage: Double? = nil, voteCount: Int? = nil, trailerKey: String? = nil,
-                directors: [TMDbCredit] = [], cast: [TMDbCredit] = []) {
+                directors: [TMDbCredit] = [], cast: [TMDbCredit] = [], releaseDate: String? = nil) {
         self.tmdbID = tmdbID
         self.backdropURL = backdropURL
         self.voteAverage = voteAverage
@@ -298,6 +301,7 @@ public struct TMDbTitleInfo: Hashable, Sendable {
         self.trailerKey = trailerKey
         self.directors = directors
         self.cast = cast
+        self.releaseDate = releaseDate
     }
 }
 
@@ -363,14 +367,31 @@ struct TMDbTitleDetails: Decodable {
     var aggregateCredits: Credits?
     /// A series' creators: its directors.
     var createdBy: [TMDbCredit]?
+    /// A movie's release; a series' first, latest and latest episode's air dates, and its seasons'.
+    var releaseDate: String?
+    var firstAirDate: String?
+    var lastAirDate: String?
+    var lastEpisodeAirDate: String?
+    var seasonAirDates: [String] = []
 
     enum CodingKeys: String, CodingKey {
-        case id, credits
+        case id, credits, seasons
         case aggregateCredits = "aggregate_credits"
         case backdropPath = "backdrop_path"
         case voteAverage = "vote_average"
         case voteCount = "vote_count"
         case createdBy = "created_by"
+        case releaseDate = "release_date"
+        case firstAirDate = "first_air_date"
+        case lastAirDate = "last_air_date"
+        case lastEpisode = "last_episode_to_air"
+    }
+
+    /// An episode or a season, for its air date only (anything else in it, or a malformed one, is no date).
+    private struct Aired: Decodable {
+        var airDate: String?
+        enum CodingKeys: String, CodingKey { case airDate = "air_date" }
+        init(from decoder: Decoder) throws { airDate = try? decoder.container(keyedBy: CodingKeys.self).decodeIfPresent(String.self, forKey: .airDate) }
     }
 
     init(from decoder: Decoder) throws {
@@ -382,6 +403,20 @@ struct TMDbTitleDetails: Decodable {
         credits = try? c.decodeIfPresent(Credits.self, forKey: .credits)
         aggregateCredits = try? c.decodeIfPresent(Credits.self, forKey: .aggregateCredits)
         createdBy = try? c.decodeIfPresent([TMDbCredit].self, forKey: .createdBy)
+        releaseDate = try? c.decodeIfPresent(String.self, forKey: .releaseDate)
+        firstAirDate = try? c.decodeIfPresent(String.self, forKey: .firstAirDate)
+        lastAirDate = try? c.decodeIfPresent(String.self, forKey: .lastAirDate)
+        lastEpisodeAirDate = (try? c.decodeIfPresent(Aired.self, forKey: .lastEpisode))?.airDate
+        seasonAirDates = ((try? c.decodeIfPresent([Aired].self, forKey: .seasons)) ?? []).compactMap(\.airDate)
+    }
+
+    /// The date the carousel counts the title's release from (`RecentReleases`): a movie's `release_date`; for a series,
+    /// its latest episode's (`last_episode_to_air`, `last_air_date`), else its latest season's, else its first
+    /// (`first_air_date`). A full date only; nil when TMDb gives none.
+    func carouselDate(series: Bool) -> String? {
+        func dates(_ values: [String?]) -> [String] { values.compactMap { $0 }.filter { RecentReleases.epochDay($0) != nil } }
+        guard series else { return dates([releaseDate]).first }
+        return dates([lastEpisodeAirDate, lastAirDate]).max() ?? dates(seasonAirDates).max() ?? dates([firstAirDate]).first
     }
 }
 

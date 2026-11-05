@@ -251,14 +251,24 @@ enum UITestFixture {
         }
     }
 
+    /// The titles out lately, in days before today (a series: its latest episode): Home's carousel features them, as it
+    /// goes by release date. Blue Horizon is an older series with a new season.
+    static let releasedDaysAgo = ["Harbor Lights": 1, "Glass City": 2, "Northern Lights": 3, "The Last Signal": 4, "Iron Tide": 5, "Blue Horizon": 6]
+
+    private static func releaseDate(daysAgo: Int) -> String {
+        RecentReleases.dayString(RecentReleases.today(.now) - daysAgo)
+    }
+
     @MainActor
     private static func injectDetails(into model: AppModel) {
         let folder = artworkFolder
+        defer { model.tmdbMetadata.carouselRevision += 1 }
         for movie in model.content.movies {
             guard let info = movies.first(where: { $0.title == movie.name }) else { continue }
             model.movieDetailsCache[movie.id] = MediaDetails(
                 title: info.title, plot: info.plot, cast: info.cast, director: info.director, genre: info.genre,
-                releaseDate: String(info.year), durationSeconds: info.minutes * 60, rating: info.rating,
+                releaseDate: releasedDaysAgo[info.title].map { releaseDate(daysAgo: $0) } ?? String(info.year),
+                durationSeconds: info.minutes * 60, rating: info.rating,
                 posterURL: movie.posterURL, backdropURL: folder.appendingPathComponent("backdrop-\(info.slug).png")
             )
         }
@@ -267,6 +277,7 @@ enum UITestFixture {
             var episodeIndex = 0
             let grouped = Dictionary(grouping: show.episodes, by: \.season)
             var seasons: [Season] = []
+            let last = grouped.keys.max()
             for number in grouped.keys.sorted() {
                 let titles = info.seasons.indices.contains(number - 1) ? info.seasons[number - 1] : []
                 var episodes: [Episode] = []
@@ -278,6 +289,10 @@ enum UITestFixture {
                     copy.posterURL = folder.appendingPathComponent("still-\(info.slug)-\(episodeIndex).png")
                     episodeIndex += 1
                     episodes.append(copy)
+                }
+                // The latest episode of a series out lately aired then.
+                if number == last, let days = releasedDaysAgo[info.title], !episodes.isEmpty {
+                    episodes[episodes.count - 1].releaseDate = releaseDate(daysAgo: days)
                 }
                 seasons.append(Season(number: number, name: String(localized: "Season \(number)"), episodes: episodes))
             }

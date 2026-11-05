@@ -35,6 +35,11 @@ struct HomeView: View {
         .task(id: "\(model.content.fetchedAt.timeIntervalSince1970)-\(model.hasTMDbKey)") {
             await model.loadTrending()
         }
+        // The carousel's release dates: what the store kept at once, then (with a TMDb token) those it lacks, in the
+        // background at TMDb's pace, while Home is on screen.
+        .task(id: "carousel-\(model.content.fetchedAt.timeIntervalSince1970)-\(model.hasTMDbKey)") {
+            await model.fillCarouselReleases()
+        }
         .task(id: prefetchKey(hero)) {
             await prefetchDetails(hero)
         }
@@ -326,8 +331,7 @@ struct HomeView: View {
     /// (with a TMDb token) what TMDb knows of them, ahead of the rows' cards.
     private func prefetchDetails(_ hero: [ShowcaseItem]) async {
         let resume = firstResumeCards().compactMap { model.showcaseItem(for: $0) }
-        // The titles added in the last days are asked about too: the carousel ranks them by TMDb's votes.
-        model.prefetchMetadata(hero + resume + model.recentTitlesToRank())
+        model.prefetchMetadata(hero + resume)
         for item in hero + resume where model.cachedDetails(for: item) == nil {
             guard !Task.isCancelled else { return }
             _ = await model.loadDetails(for: item)

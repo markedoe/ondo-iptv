@@ -85,7 +85,7 @@ final class HiddenLanguageTests: XCTestCase {
             "carousel": names(model.heroItems(limit: 20)),
             "new movies": names(model.newMovies(limit: 50)),
             "new series": names(model.newSeries(limit: 50)),
-            "recently added": names(model.recentlyAdded()),
+            "carousel candidates": names(model.releasesToAsk()),
             "movies": movieCategories.flatMap { model.movies(in: $0, sort: .name).map(\.name) },
             "series": seriesCategories.flatMap { model.series(in: $0, sort: .name).map(\.name) },
             "live": liveCategories.flatMap { model.channels(in: $0).map(\.name) },
@@ -109,10 +109,19 @@ final class HiddenLanguageTests: XCTestCase {
         let item = try XCTUnwrap(model.downloadItem(for: concert))
         model.recordStart(item)
         model.recordProgress(item, position: 1_200, duration: 6_000)
+        // Every title released yesterday, with artwork: the carousel would feature them all.
+        let yesterday = RecentReleases.dayString(RecentReleases.today(.now) - 1)
+        for title in model.content.movies.map(ShowcaseItem.movie) + model.content.series.map(ShowcaseItem.series) {
+            for key in model.metadataKeys(for: title) {
+                model.tmdbMetadata.titles[key] = TitleMetadata(key: key, kind: MetadataKey.kind(title.contentType),
+                                                               backdropURL: URL(string: "https://example.com/backdrop.jpg"), fetchedAt: .now, releaseDate: yesterday)
+            }
+        }
+        model.tmdbMetadata.carouselRevision += 1
 
         // Shown: the lists that can list them do, so the checks below prove something.
         let shown = surfaces(model)
-        for list in ["movies", "series", "live", "search", "year", "my list", "favourite channels"] {
+        for list in ["carousel", "carousel candidates", "movies", "series", "live", "search", "year", "my list", "favourite channels"] {
             XCTAssertTrue(shown[list, default: []].contains { $0.contains("Saudade") || $0.contains("Carreira") }, "\(list) lists the language while it is shown")
         }
         for list in ["movies", "series", "live", "search", "year"] {

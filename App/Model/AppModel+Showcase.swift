@@ -77,7 +77,7 @@ enum ShowcaseItem: Identifiable, Hashable {
     }
 }
 
-/// What the home screen features: continue watching first, then the best recent titles, trending titles and new releases.
+/// What the home screen features: the recent releases (the carousel), new movies and series, trending titles.
 extension AppModel {
     /// New movies: released this year or last year, by release year and not by the date the provider
     /// added them (an old film added yesterday is not new). Newest first, then the latest additions, then
@@ -115,18 +115,6 @@ extension AppModel {
             + "\(content.series.count)|\(exclusions.hashValue)|\(window.lowerBound)"
     }
 
-    /// New movies and series alternating (the carousel).
-    func newReleases(limit: Int = 20, now: Date = .now) -> [ShowcaseItem] {
-        let movies = newMovies(limit: limit, now: now)
-        let series = newSeries(limit: limit, now: now)
-        var items: [ShowcaseItem] = []
-        for index in 0..<max(movies.count, series.count) where items.count < limit {
-            if index < movies.count { items.append(movies[index]) }
-            if index < series.count, items.count < limit { items.append(series[index]) }
-        }
-        return items
-    }
-
     /// This year and last year.
     private static func releaseWindow(_ now: Date) -> ClosedRange<Int> {
         let thisYear = Calendar.current.component(.year, from: now)
@@ -140,80 +128,99 @@ extension AppModel {
         return a.title.localizedStandardCompare(b.title) == .orderedAscending
     }
 
-    /// The movies and series the provider added in the last `WeightedRating.recentDays` days (its own date, which an M3U
-    /// list does not give), without anything from a hidden or locked category or a movie hidden as watched.
-    func recentlyAdded(now: Date = .now) -> [ShowcaseItem] {
-        // Home asks several times per redraw: the catalogue is gone through once an hour. The list is kept a day wider than
-        // the window, and cut exactly below.
-        let hour = Int(now.timeIntervalSince1970 / 3600)
-        let wide = now.addingTimeInterval(-TimeInterval(WeightedRating.recentDays + 1) * 24 * 3600)
-        let all = cachedList(newKey("recent", (hour...hour))) { () -> [ShowcaseItem] in
-            let movies = self.movies(in: nil, sort: .playlist, includingWatched: true).filter { ($0.addedAt ?? .distantPast) >= wide }
-            let series = self.series(in: nil, sort: .playlist).filter { ($0.addedAt ?? .distantPast) >= wide }
-            return movies.map(ShowcaseItem.movie) + series.map(ShowcaseItem.series)
+    /// The day the carousel counts a title's release from (`RecentReleases.releaseDay`): TMDb's, else the provider's full
+    /// date from a page already opened.
+    func releaseDay(of item: ShowcaseItem) -> Int? {
+        RecentReleases.releaseDay(tmdb: tmdbTitle(for: item)?.releaseDate, provider: providerRelease(of: item))
+    }
+
+    /// The provider's release date of a title whose details are known: a movie's; a series' latest episode's, else its
+    /// own (its first).
+    func providerRelease(of item: ShowcaseItem) -> String? {
+        switch item {
+        case .movie(let movie): return movieDetailsCache[movie.id]?.releaseDate
+        case .series(let series):
+            guard let details = seriesDetailsCache[series.id] else { return nil }
+            let latest = details.seasons.flatMap(\.episodes).compactMap(\.releaseDate)
+                .filter { RecentReleases.epochDay($0) != nil }.map { String($0.prefix(10)) }.max()
+            return latest ?? details.info.releaseDate
+        }
+    }
+
+    /// A poster, or a backdrop to show (TMDb's or the provider's).
+    private func hasArtwork(_ item: ShowcaseItem) -> Bool {
+        item.posterURL != nil || tmdbTitle(for: item)?.backdropURL != nil || cachedDetails(for: item)?.backdropURL != nil
+    }
+
+    /// The movies and series whose release TMDb is asked about for the carousel (`RecentReleases.mayBeRecent`: released
+    /// this year or last year, or changed by the provider in the last `RecentReleases.widest` days, as a series with a new
+    /// season), the latest changed first; nothing from a hidden or locked category, a hidden language or a movie hidden as
+    /// watched. The carousel's fill asks those it needs (`fillCarouselReleases`), a bounded number.
+    func releasesToAsk(now: Date = .now) -> [ShowcaseItem] {
+        let today = RecentReleases.today(now)
+        let all = cachedList(newKey("release-ask", today...today)) { () -> [ShowcaseItem] in
+            let movies: [ShowcaseItem] = self.movies(in: nil, sort: .playlist, includingWatched: true)
+                .filter { RecentReleases.mayBeRecent(year: $0.year, addedAt: $0.addedAt, today: today) }.map(ShowcaseItem.movie)
+            let series: [ShowcaseItem] = self.series(in: nil, sort: .playlist)
+                .filter { RecentReleases.mayBeRecent(year: $0.year, addedAt: $0.addedAt, today: today) }.map(ShowcaseItem.series)
+            let items = movies + series
+            // Titles without a date keep the playlist's order, after the others (the offset breaks the tie).
+            return self.distinctFilms(items).enumerated().sorted { a, b in
+                let x = a.element.addedAt ?? .distantPast, y = b.element.addedAt ?? .distantPast
+                return x != y ? x > y : a.offset < b.offset
+            }.map(\.element)
         }
         let watched = hiddenWatchedMovieIDs()
+        guard !watched.isEmpty else { return all }
         return all.filter { item in
-            guard let added = item.addedAt, WeightedRating.isRecent(added, now: now) else { return false }
             if case .movie(let movie) = item { return !watched.contains(movie.id) }
             return true
         }
     }
 
-    /// The best rated titles the provider added in the last four days, by TMDb's average vote weighted by the number of
-    /// votes (`WeightedRating`: at least 50 votes to qualify, ties to the latest added, then the title). A title whose
-    /// votes are not known yet is left out, so without TMDb data the list is empty. Each film once whatever its copies.
-    func bestRecent(limit: Int = 15, now: Date = .now) -> [ShowcaseItem] {
-        var byID: [String: ShowcaseItem] = [:]
-        let candidates = recentlyAdded(now: now).compactMap { item -> WeightedRating.Candidate? in
-            guard let votes = tmdbTitle(for: item)?.votes, let added = item.addedAt else { return nil }
-            byID[item.id] = item
-            return WeightedRating.Candidate(id: item.id, title: item.title, average: votes.average, votes: votes.count, addedAt: added)
+    /// The carousel's candidates read at most (`fillCarouselReleases`).
+    static let carouselCandidates = 2_000
+
+    /// Home's carousel goes by release date (`RecentReleases`), which TMDb gives: what the store kept of the titles that
+    /// may have been released lately (`releasesToAsk`) is read at once, then, with the viewer's TMDb token, those whose
+    /// date it does not know, or whose provider changed them since TMDb was asked (a series' new episode), are fetched in
+    /// the background, `RatingFill.limit` at most, at the pace of the other requests; the carousel is picked again twice,
+    /// not at each answer. Stops when Home goes (its task is cancelled).
+    func fillCarouselReleases(now: Date = .now) async {
+        let state = tmdbMetadata
+        let items = Array(releasesToAsk(now: now).prefix(Self.carouselCandidates))
+        guard !items.isEmpty else { return }
+        await readStoredMetadata(items.flatMap { metadataKeys(for: $0) })
+        state.carouselRevision += 1
+        guard !Task.isCancelled, hasTMDbKey, !isTMDbKeyRefused, !state.isPaused else { return }
+        let ask = RatingFill.toAsk(items) { item in
+            if state.attempted.contains(item.id) || state.prefetching[item.id] != nil || state.opened[item.id] != nil { return true }
+            let kept = tmdbTitle(for: item)
+            return !RecentReleases.needsAsking(kept: kept != nil, found: kept?.status == .found, releaseDate: kept?.releaseDate,
+                                               fetchedAt: kept?.fetchedAt ?? .distantPast, addedAt: item.addedAt)
         }
-        var seen = Set<String>()
-        var result: [ShowcaseItem] = []
-        for candidate in WeightedRating.bestRecent(candidates, now: now) where result.count < limit {
-            guard let item = byID[candidate.id] else { continue }
-            let film = item.title.trimmingCharacters(in: .whitespaces).lowercased() + "|" + (item.year.map(String.init) ?? "")
-            if seen.insert(film).inserted { result.append(item) }
-        }
-        return result
+        guard !ask.isEmpty else { return }
+        let byID = Dictionary(ask.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        await RatingFill.run(
+            ask.map(\.id),
+            fetch: { [weak self] id in await self?.fetchRelease(byID[id]) ?? false },
+            resort: { [weak self] in await self?.carouselAnswered() }
+        )
     }
 
-    /// The last resort of the carousel: the movies and series with artwork, the latest added first (then by title); in
-    /// the playlist's order when the provider gives no date added. Nothing from a hidden or locked category, a hidden
-    /// language or a movie hidden as watched (`exclusions`).
-    func latestWithArtwork(limit: Int = 15) -> [ShowcaseItem] {
-        let all = cachedList(newKey("latest-art", 0...0)) { () -> [ShowcaseItem] in
-            let items = (self.movies(in: nil, sort: .playlist, includingWatched: true).map(ShowcaseItem.movie)
-                + self.series(in: nil, sort: .playlist).map(ShowcaseItem.series)).filter { $0.posterURL != nil }
-            // Titles without a date keep the playlist's order (the offset breaks the tie).
-            return items.enumerated().sorted { a, b in
-                switch (a.element.addedAt, b.element.addedAt) {
-                case (nil, nil): return a.offset < b.offset
-                case (nil, _): return false
-                case (_, nil): return true
-                case let (x?, y?):
-                    if x != y { return x > y }
-                    return a.element.title.localizedStandardCompare(b.element.title) == .orderedAscending
-                }
-            }.map(\.element)
-        }
-        let watched = hiddenWatchedMovieIDs()
-        var seen = Set<String>()
-        var result: [ShowcaseItem] = []
-        for item in all where result.count < limit {
-            if case .movie(let movie) = item, watched.contains(movie.id) { continue }
-            let film = item.title.trimmingCharacters(in: .whitespaces).lowercased() + "|" + (item.year.map(String.init) ?? "")
-            if seen.insert(film).inserted { result.append(item) }
-        }
-        return result
+    /// One title of the carousel's fill: asked unless something else did meanwhile; true when TMDb gave its release date.
+    private func fetchRelease(_ item: ShowcaseItem?) async -> Bool {
+        let state = tmdbMetadata
+        guard let item, hasTMDbKey, !isTMDbKeyRefused, !state.isPaused, !state.attempted.contains(item.id),
+              state.prefetching[item.id] == nil, state.opened[item.id] == nil else { return false }
+        state.queue.remove(item.id)
+        state.waiting[item.id] = nil
+        await fetchTMDbMetadata(for: item, paced: true)
+        return !(tmdbTitle(for: item)?.releaseDate ?? "").isEmpty
     }
 
-    /// The recent titles to ask TMDb about (their votes are what `bestRecent` ranks by): the best rated by the provider
-    /// first, at most `limit`.
-    func recentTitlesToRank(limit: Int = 30, now: Date = .now) -> [ShowcaseItem] {
-        Array(recentlyAdded(now: now).sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }.prefix(limit))
+    private func carouselAnswered() {
+        tmdbMetadata.carouselRevision += 1
     }
 
     /// Movies and series of the user's favourites (My List), most recently added first.
@@ -233,29 +240,38 @@ extension AppModel {
         }
     }
 
-    /// Up to `limit` titles for the hero carousel, without duplicates: what is being watched, the best recent titles,
-    /// the trending ones, then the new releases.
+    /// Up to `limit` titles for the hero carousel, by release date and not by the day the provider added them
+    /// (`RecentReleases.pick`): the titles released in the last 7 days (a movie's release, a series' latest episode or
+    /// season), best first by TMDb's weighted rating, the window widening to 14, 30 then 60 days while fewer than `limit`
+    /// qualify; with no votes, the newest releases by date; with no recent release, none (Home shows no carousel). Only
+    /// titles with artwork, nothing from a hidden or locked category, a hidden language or a movie hidden as watched; each
+    /// film once. Picked again when the carousel's fill brought dates (`TMDbMetadata.carouselRevision`).
     func heroItems(limit: Int = 5, now: Date = .now) -> [ShowcaseItem] {
-        var items: [ShowcaseItem] = []
-        func append(_ item: ShowcaseItem) {
-            if items.count < limit, !items.contains(item) { items.append(item) }
-        }
-        // Continue watching keeps a started title whose own name carries a hidden language; the carousel does not.
-        let excluded = exclusions
-        for entry in continueWatching().prefix(2) {
-            if let item = showcaseItem(for: entry), !excluded.contains(item) { append(item) }
-        }
-        for item in bestRecent(limit: limit, now: now) { append(item) }
-        for match in trendingTitles() {
-            switch match {
-            case .movie(let movie, _): append(.movie(movie))
-            case .series(let series, _): append(.series(series))
+        let today = RecentReleases.today(now)
+        let watched = hiddenWatchedMovieIDs()
+        let key = newKey("hero", today...today) + "|\(limit)|\(watched.hashValue)|\(tmdbMetadata.carouselRevision)|\(films.isGrouped)"
+        return cachedList(key) { () -> [ShowcaseItem] in
+            let movies: [ShowcaseItem] = self.movies(in: nil, sort: .playlist, includingWatched: true).filter { !watched.contains($0.id) }.map(ShowcaseItem.movie)
+            let series: [ShowcaseItem] = self.series(in: nil, sort: .playlist).map(ShowcaseItem.series)
+            let shown = movies + series
+            var released: [String: Int] = [:]
+            let recent = shown.filter { item in
+                guard let day = self.releaseDay(of: item), (0..<RecentReleases.widest).contains(today - day) else { return false }
+                released[item.id] = day
+                return true
             }
+            var byID: [String: ShowcaseItem] = [:]
+            var seen = Set<String>()
+            let candidates = self.distinctFilms(recent).compactMap { item -> RecentReleases.Candidate? in
+                let film = item.title.trimmingCharacters(in: .whitespaces).lowercased() + "|" + (item.year.map(String.init) ?? "")
+                guard seen.insert(film).inserted else { return nil }
+                byID[item.id] = item
+                let votes = self.tmdbTitle(for: item)?.votes
+                return RecentReleases.Candidate(id: item.id, title: item.title, released: released[item.id], average: votes?.average,
+                                                votes: votes?.count ?? 0, categoryID: item.categoryID, hasArtwork: self.hasArtwork(item))
+            }
+            return RecentReleases.pick(candidates, today: today, size: limit).compactMap { byID[$0.id] }
         }
-        for item in newReleases(limit: limit * 2, now: now) { append(item) }
-        // Never empty while the catalogue has titles with artwork (no TMDb votes, nothing released lately).
-        for item in latestWithArtwork(limit: limit) { append(item) }
-        return distinctFilms(items)
     }
 
     /// Trending titles as Home shows them: without the movies hidden as watched.

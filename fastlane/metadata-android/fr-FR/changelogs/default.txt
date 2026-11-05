@@ -3,7 +3,7 @@
 • Une carte par film ; ses versions (4K, DV, VOSTFR) sur sa page
 • Titres épurés, avec le logo du film sur TV
 • Marqué vu au générique de fin ou à 10 minutes de la fin
-• Carrousel d'accueil classé par les votes TMDb
+• Carrousel d'accueil : les dernières sorties, classées par les votes TMDb
 • Langues masquées appliquées partout
 • Synchronisation entre appareils plus fiable
 • Nombreuses corrections

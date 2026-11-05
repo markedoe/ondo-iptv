@@ -45,6 +45,9 @@ final class TMDbMetadata {
     @ObservationIgnored var sortVotes: [String: (average: Double, count: Int)] = [:]
     /// Changes when `sortVotes` does: the grids sorted by rating sort again.
     var sortRevision = 0
+    /// Changes when the carousel's fill read or brought release dates (`AppModel.fillCarouselReleases`): Home's carousel
+    /// is picked again.
+    var carouselRevision = 0
 }
 
 extension AppModel {

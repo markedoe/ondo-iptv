@@ -157,6 +157,42 @@ final class TMDbTests: XCTestCase {
         XCTAssertTrue(http.sent.isEmpty)
     }
 
+    /// The date the carousel counts a release from comes with the same call: a movie's release; a series' latest episode
+    /// (a 2014 series with a new season this week is new), else its latest season, else its first air date.
+    func testTheReleaseDateComesWithTheTitle() async throws {
+        let http = MockHTTPClient()
+        func route(_ kind: String, _ id: Int, _ body: String) {
+            http.routes["https://api.themoviedb.org/3/\(kind)/\(id)?"] = Data(body.utf8)
+            http.routes["https://api.themoviedb.org/3/\(kind)/\(id)/videos?"] = Data(#"{"results":[]}"#.utf8)
+        }
+        route("movie", 1, #"{"id":1,"title":"Harbor","release_date":"2026-11-02"}"#)
+        route("movie", 2, #"{"id":2,"title":"Dock","release_date":""}"#)
+        route("tv", 3, #"{"id":3,"name":"Old Harbor","first_air_date":"2014-03-01","last_air_date":"2026-11-01","last_episode_to_air":{"air_date":"2026-11-03"},"seasons":[{"air_date":"2014-03-01"},{"air_date":"2026-10-27"},{"air_date":"2027-02-01"}]}"#)
+        route("tv", 4, #"{"id":4,"name":"Port","first_air_date":"2014-03-01","seasons":[{"air_date":"2014-03-01"},{"air_date":"2016-05-01"}]}"#)
+        route("tv", 5, #"{"id":5,"name":"Pilot","first_air_date":"2026-11-04"}"#)
+        route("tv", 6, #"{"id":6,"name":"Rumour","first_air_date":"2026"}"#)
+        let client = TMDbClient(credential: "KEY", http: http)
+        func date(_ type: ContentType, _ id: Int) async throws -> String? {
+            try await client.titleInfo(of: type, tmdbID: String(id), title: "x", year: nil)?.releaseDate
+        }
+        let movie = try await date(.movie, 1)
+        XCTAssertEqual(movie, "2026-11-02")
+        let none = try await date(.movie, 2)
+        XCTAssertNil(none)
+        let latest = try await date(.series, 3)
+        XCTAssertEqual(latest, "2026-11-03", "the latest episode, not an announced season")
+        let season = try await date(.series, 4)
+        XCTAssertEqual(season, "2016-05-01", "the latest season")
+        let pilot = try await date(.series, 5)
+        XCTAssertEqual(pilot, "2026-11-04", "a brand-new series: its first air date")
+        let rumour = try await date(.series, 6)
+        XCTAssertNil(rumour, "a year alone is not a date")
+        // Kept with the title: empty when TMDb gives none.
+        let kept = TitleMetadata(key: "movie:dock:", kind: "movie", info: TMDbTitleInfo(tmdbID: 2), fetchedAt: Date())
+        XCTAssertEqual(kept.releaseDate, "")
+        XCTAssertNil(TitleMetadata(key: "movie:x:", kind: "movie", info: nil, fetchedAt: Date()).releaseDate)
+    }
+
     /// A title's backdrop, votes, trailer and credits on TMDb: by id or by title and year, never another title's.
     func testATitlesInfoIsFoundByIDOrByTitle() async throws {
         let http = MockHTTPClient()

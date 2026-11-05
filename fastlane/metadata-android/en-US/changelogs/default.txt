@@ -3,7 +3,7 @@
 • One card per film; its versions (4K, DV, VOSTFR) on its page
 • Clean titles, with the film's logo on TV
 • Marked as watched at the end credits or 10 minutes from the end
-• Home carousel ranked by TMDb votes
+• Home carousel: the latest releases, ranked by TMDb votes
 • Hidden languages apply everywhere
 • More reliable sync between devices
 • Many fixes

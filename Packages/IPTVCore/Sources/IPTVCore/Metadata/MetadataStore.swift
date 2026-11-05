@@ -58,9 +58,11 @@ public enum MetadataFreshness {
     /// An image address that led nowhere.
     public static let deadImage: TimeInterval = 7 * 24 * 3600
 
-    /// Whether `title` need not be fetched again. A date in the future (the clock was changed) is not trusted.
+    /// Whether `title` need not be fetched again. A date in the future (the clock was changed) is not trusted; a title
+    /// kept before release dates were is asked again.
     public static func isFresh(_ title: TitleMetadata, now: Date = Date()) -> Bool {
-        isFresh(title.fetchedAt, maxAge: title.status == .found ? found : notFound, now: now)
+        if title.status == .found, title.releaseDate == nil { return false }
+        return isFresh(title.fetchedAt, maxAge: title.status == .found ? found : notFound, now: now)
     }
 
     public static func isFresh(_ date: Date?, maxAge: TimeInterval, now: Date = Date()) -> Bool {
@@ -87,9 +89,12 @@ public struct TitleMetadata: Codable, Hashable, Sendable {
     public var voteCount: Int?
     public var fetchedAt: Date
     public var status: Status
+    /// The date the carousel counts its release from (`TMDbTitleInfo.releaseDate`): empty when TMDb gives none, nil when
+    /// kept before release dates were.
+    public var releaseDate: String?
 
     public init(key: String, kind: String, tmdbID: Int? = nil, backdropURL: URL? = nil, trailerKey: String? = nil,
-                voteAverage: Double? = nil, voteCount: Int? = nil, fetchedAt: Date, status: Status = .found) {
+                voteAverage: Double? = nil, voteCount: Int? = nil, fetchedAt: Date, status: Status = .found, releaseDate: String? = nil) {
         self.key = key
         self.kind = kind
         self.tmdbID = tmdbID
@@ -99,12 +104,14 @@ public struct TitleMetadata: Codable, Hashable, Sendable {
         self.voteCount = voteCount
         self.fetchedAt = fetchedAt
         self.status = status
+        self.releaseDate = releaseDate
     }
 
     /// TMDb's answer, under `key`.
     public init(key: String, kind: String, info: TMDbTitleInfo?, fetchedAt: Date) {
         self.init(key: key, kind: kind, tmdbID: info?.tmdbID, backdropURL: info?.backdropURL, trailerKey: info?.trailerKey,
-                  voteAverage: info?.voteAverage, voteCount: info?.voteCount, fetchedAt: fetchedAt, status: info == nil ? .notFound : .found)
+                  voteAverage: info?.voteAverage, voteCount: info?.voteCount, fetchedAt: fetchedAt, status: info == nil ? .notFound : .found,
+                  releaseDate: info.map { $0.releaseDate ?? "" })
     }
 
     /// "★ 7.1 (12,345)" needs both: a rating TMDb's users gave, and how many gave it.

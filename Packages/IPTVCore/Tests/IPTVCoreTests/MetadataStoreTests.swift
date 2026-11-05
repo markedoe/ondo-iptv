@@ -1,5 +1,8 @@
 import XCTest
 @testable import IPTVCore
+#if canImport(SQLite3) && canImport(Darwin)
+import SQLite3
+#endif
 
 /// What TMDb said, kept between launches: the keys, how long an answer is trusted, the people index, and the stores.
 final class MetadataStoreTests: XCTestCase {
@@ -32,13 +35,18 @@ final class MetadataStoreTests: XCTestCase {
     func testAnAnswerIsTrustedThirtyDaysANotFoundSevenAndNothingFromTheFuture() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         func title(_ age: TimeInterval, _ status: TitleMetadata.Status) -> TitleMetadata {
-            TitleMetadata(key: "movie:1", kind: "movie", fetchedAt: now.addingTimeInterval(-age), status: status)
+            TitleMetadata(key: "movie:1", kind: "movie", fetchedAt: now.addingTimeInterval(-age), status: status, releaseDate: "")
         }
         XCTAssertTrue(MetadataFreshness.isFresh(title(29 * day, .found), now: now))
         XCTAssertFalse(MetadataFreshness.isFresh(title(31 * day, .found), now: now))
         XCTAssertTrue(MetadataFreshness.isFresh(title(6 * day, .notFound), now: now))
         XCTAssertFalse(MetadataFreshness.isFresh(title(8 * day, .notFound), now: now), "TMDb is asked again sooner")
         XCTAssertFalse(MetadataFreshness.isFresh(title(-day, .found), now: now), "a date in the future is not trusted")
+        var undated = title(day, .found)
+        undated.releaseDate = nil
+        XCTAssertFalse(MetadataFreshness.isFresh(undated, now: now), "kept before release dates were: asked again")
+        undated.status = .notFound
+        XCTAssertTrue(MetadataFreshness.isFresh(undated, now: now))
         XCTAssertTrue(MetadataFreshness.isFresh(now.addingTimeInterval(-6 * day), maxAge: MetadataFreshness.deadImage, now: now))
         XCTAssertFalse(MetadataFreshness.isFresh(now.addingTimeInterval(-8 * day), maxAge: MetadataFreshness.deadImage, now: now))
     }
@@ -109,6 +117,30 @@ final class MetadataStoreTests: XCTestCase {
         rebuilt.save([TitleMetadata(key: "movie:1", kind: "movie", fetchedAt: Date())])
         XCTAssertEqual(rebuilt.titles(["movie:1"]).count, 1)
     }
+
+    /// A file of the second version keeps its titles; they lack their release date, so they are asked again as they show.
+    func testAFileOfTheSecondVersionKeepsItsTitles() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("MetadataStoreTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let file: URL
+        do {
+            let store = try SQLiteMetadataStore(directory: folder)
+            store.save([TitleMetadata(key: "movie:9", kind: "movie", tmdbID: 9, voteAverage: 7, voteCount: 300, fetchedAt: Date(), releaseDate: "2026-11-02")])
+            file = store.fileURL
+        }
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(file.path, &db), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(db, "ALTER TABLE title DROP COLUMN release_date", nil, nil, nil), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(db, "PRAGMA user_version = 2", nil, nil, nil), SQLITE_OK)
+        sqlite3_close(db)
+        let store = try SQLiteMetadataStore(directory: folder)
+        let kept = try XCTUnwrap(store.titles(["movie:9"])["movie:9"], "the title is kept")
+        XCTAssertEqual(kept.voteCount, 300)
+        XCTAssertNil(kept.releaseDate)
+        XCTAssertFalse(MetadataFreshness.isFresh(kept), "asked again")
+        store.save([TitleMetadata(key: "movie:9", kind: "movie", fetchedAt: Date(), releaseDate: "2026-11-02")])
+        XCTAssertEqual(try SQLiteMetadataStore(directory: folder).titles(["movie:9"])["movie:9"]?.releaseDate, "2026-11-02")
+    }
     #endif
 
     /// What every store must do.
@@ -130,6 +162,11 @@ final class MetadataStoreTests: XCTestCase {
         XCTAssertEqual(read["movie:603"]?.voteCount, 12_345, file: file, line: line)
         XCTAssertEqual(read["movie:603"]?.fetchedAt, old, file: file, line: line)
         XCTAssertEqual(read["series:nothing:"]?.status, .notFound, file: file, line: line)
+        XCTAssertNil(read["movie:603"]?.releaseDate, "kept before release dates", file: file, line: line)
+        store.save([TitleMetadata(key: "movie:dated:", kind: "movie", fetchedAt: now, releaseDate: "2026-11-02"),
+                     TitleMetadata(key: "movie:undated:", kind: "movie", fetchedAt: now, releaseDate: "")])
+        XCTAssertEqual(store.titles(["movie:dated:"])["movie:dated:"]?.releaseDate, "2026-11-02", file: file, line: line)
+        XCTAssertEqual(store.titles(["movie:undated:"])["movie:undated:"]?.releaseDate, "", "TMDb gave none", file: file, line: line)
         store.save([TitleMetadata(key: "movie:603", kind: "movie", tmdbID: 603, backdropURL: backdrop, trailerKey: "trailerEN01", fetchedAt: now)])
         read = store.titles(["movie:603"])
         XCTAssertEqual(read["movie:603"]?.trailerKey, "trailerEN01", file: file, line: line)

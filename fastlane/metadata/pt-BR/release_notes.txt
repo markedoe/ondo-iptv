@@ -1,5 +1,6 @@
 • Um novo visual em preto e cinza, sempre escuro: os títulos em destaque em uma moldura arredondada no Início, cartões que se elevam sob o ponteiro, o foco ou um toque, o formato em um selo com contorno.
 • Com o seu token do TMDb: a página de um título mostra as fotos do elenco em uma fileira e o trailer quando o seu provedor não fornece nenhum, a nota do provedor e a do TMDb lado a lado com o número de votos, e as respostas do TMDb ficam guardadas no seu dispositivo, então as páginas abrem na hora da próxima vez.
+• O Início destaca os últimos lançamentos: os filmes recém-lançados e as séries com um novo episódio ou temporada, primeiro os mais bem avaliados com o seu token do TMDb.
 • Sincronizar nesta rede também envia o seu token do TMDb para os seus outros dispositivos.
 • As categorias marcadas com QC passam a se chamar Quebec, nos sete idiomas do app.
 • As playlists salvas em Windows-1252 ou UTF-16 são lidas como foram escritas; os guias de TV com falhas comuns não interrompem mais o carregamento, e os guias grandes usam menos memória.

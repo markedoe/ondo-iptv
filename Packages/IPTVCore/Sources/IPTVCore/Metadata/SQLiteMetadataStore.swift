@@ -6,15 +6,17 @@ import SQLite3
 /// left out of backups. It only holds what can be fetched again, so a file of another schema version, or one that
 /// cannot be read, is deleted and made again.
 ///
-/// Tables: `title` (key, kind, tmdb_id, backdrop_url, trailer_key, vote_average, vote_count, fetched_at, status),
+/// Tables: `title` (key, kind, tmdb_id, backdrop_url, trailer_key, vote_average, vote_count, fetched_at, status,
+/// release_date),
 /// `credit` (title_key, person_key, display_name, role, position, photo_url), `person` (person_key, display_name,
 /// tmdb_id, photo_url, fetched_at), `person_title` (person_key, title_key: the local people index) and `dead_image`
 /// (url, failed_at), `season` (key, fetched_at, episodes: TMDb's episodes of a season, `SeasonEpisodes.encode`). Dates are
 /// seconds since 1970.
 public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
     /// Bumped when the tables change, or when what was kept must be asked again: 2 keeps the seasons' episodes, and a
-    /// series' cast of every season (its credits kept before were its latest season's only).
-    static let schemaVersion: Int32 = 2
+    /// series' cast of every season (its credits kept before were its latest season's only); 3, the titles' release
+    /// dates (a file of version 2 keeps what it holds, its titles asked again as they show: `MetadataFreshness`).
+    static let schemaVersion: Int32 = 3
 
     public let fileURL: URL
     /// One connection, used by one call at a time.
@@ -64,6 +66,16 @@ public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
         sqlite3_busy_timeout(handle, 2_000)
         var version: Int32 = 0
         try run("PRAGMA user_version") { version = sqlite3_column_int($0, 0) }
+        if version == 2 {
+            // The release dates join the titles kept: nothing else changed, nothing is dropped.
+            do {
+                try run("ALTER TABLE title ADD COLUMN release_date TEXT")
+                try run("PRAGMA user_version = \(Self.schemaVersion)")
+                version = Self.schemaVersion
+            } catch {
+                version = 0
+            }
+        }
         if version != Self.schemaVersion {
             // Another version's tables (or none yet): the cache starts again.
             for table in Self.tables {
@@ -77,7 +89,7 @@ public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
     private func createTables() throws {
         try run("""
             CREATE TABLE title (key TEXT PRIMARY KEY NOT NULL, kind TEXT NOT NULL, tmdb_id INTEGER, backdrop_url TEXT,
-            trailer_key TEXT, vote_average REAL, vote_count INTEGER, fetched_at REAL NOT NULL, status TEXT NOT NULL)
+            trailer_key TEXT, vote_average REAL, vote_count INTEGER, fetched_at REAL NOT NULL, status TEXT NOT NULL, release_date TEXT)
             """)
         try run("""
             CREATE TABLE credit (title_key TEXT NOT NULL, person_key TEXT NOT NULL, display_name TEXT NOT NULL,
@@ -126,7 +138,7 @@ public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
         var found: [String: TitleMetadata] = [:]
         locked {
             for chunk in Self.chunks(Array(Set(keys))) {
-                let sql = "SELECT key, kind, tmdb_id, backdrop_url, trailer_key, vote_average, vote_count, fetched_at, status FROM title "
+                let sql = "SELECT key, kind, tmdb_id, backdrop_url, trailer_key, vote_average, vote_count, fetched_at, status, release_date FROM title "
                     + "WHERE key IN (\(Self.placeholders(chunk.count)))"
                 try run(sql, chunk.map { Value.text($0) }) { row in
                     guard let key = Self.text(row, 0) else { return }
@@ -139,7 +151,8 @@ public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
                         voteAverage: Self.double(row, 5),
                         voteCount: Self.int(row, 6),
                         fetchedAt: Date(timeIntervalSince1970: Self.double(row, 7) ?? 0),
-                        status: TitleMetadata.Status(rawValue: Self.text(row, 8) ?? "") ?? .notFound
+                        status: TitleMetadata.Status(rawValue: Self.text(row, 8) ?? "") ?? .notFound,
+                        releaseDate: Self.text(row, 9)
                     )
                 }
             }
@@ -153,11 +166,12 @@ public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
             try transaction {
                 for title in titles {
                     try run("""
-                        INSERT OR REPLACE INTO title (key, kind, tmdb_id, backdrop_url, trailer_key, vote_average, vote_count, fetched_at, status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT OR REPLACE INTO title (key, kind, tmdb_id, backdrop_url, trailer_key, vote_average, vote_count, fetched_at, status,
+                        release_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, [.text(title.key), .text(title.kind), .integer(title.tmdbID.map(Int64.init)), .text(title.backdropURL?.absoluteString),
                               .text(title.trailerKey), .real(title.voteAverage), .integer(title.voteCount.map(Int64.init)),
-                              .real(title.fetchedAt.timeIntervalSince1970), .text(title.status.rawValue)])
+                              .real(title.fetchedAt.timeIntervalSince1970), .text(title.status.rawValue), .text(title.releaseDate)])
                 }
             }
         }

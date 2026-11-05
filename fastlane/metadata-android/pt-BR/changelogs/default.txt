@@ -3,7 +3,7 @@
 • Um card por filme; suas versões (4K, DV, VOSTFR) na página dele
 • Títulos limpos, com o logo do filme na TV
 • Marcado como assistido nos créditos finais ou a 10 minutos do fim
-• Carrossel da tela inicial classificado pelos votos do TMDb
+• Carrossel: lançamentos, pelos votos do TMDb
 • Idiomas ocultos valem em todo lugar
 • Sincronização entre dispositivos mais confiável
 • Várias correções
