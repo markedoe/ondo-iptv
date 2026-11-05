@@ -12,16 +12,17 @@ final class CatalogueCleaningCostTests: XCTestCase {
 
     func testTheCatalogueIsCleanedWithoutCompilingAPatternPerTitle() {
         let names = titles(3_000)
-        _ = CatalogueMatcher.displayTitle("warm up (2020) [x] |y|")
+        // Each pattern is compiled the first time a title needs it (here, or in a test that ran before): once per process.
+        for name in names { _ = CatalogueMatcher.displayTitle(name) }
         let compiled = CatalogueMatcher.compiledPatterns.count
+        XCTAssertLessThanOrEqual(compiled, 6, "patterns compiled once, not per title")
         let searched = CatalogueMatcher.foundationSearches.count
         let versions = FilmVersions.of(names.enumerated().map { index, name in
             Movie(id: "\(index)", name: name, categoryID: "c", streamURL: URL(string: "http://example.com/\(index).mkv")!)
         })
         XCTAssertGreaterThan(versions.groupCount, 0)
         for name in names { _ = CatalogueMatcher.displayTitle(name) }
-        XCTAssertEqual(CatalogueMatcher.compiledPatterns.count, compiled, "patterns compiled once, not per title")
-        XCTAssertLessThanOrEqual(compiled, 6)
+        XCTAssertEqual(CatalogueMatcher.compiledPatterns.count, compiled, "no pattern compiled again")
         XCTAssertEqual(CatalogueMatcher.foundationSearches.count, searched, "ASCII titles searched byte by byte")
         // A title that is not ASCII is still searched as Foundation does (combining accents, other scripts).
         XCTAssertEqual(CatalogueMatcher.displayTitle("|FR| Le Rêve (MULTI)"), "Le Rêve")
