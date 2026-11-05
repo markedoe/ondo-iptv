@@ -136,7 +136,7 @@ class SqliteMetadataStoreTest {
         store.save(listOf(kept.copy(releaseDate = "2026-11-02")))
         assertEquals("2026-11-02", store.titles(listOf("movie:9")).getValue("movie:9").releaseDate)
         store.save(listOf(kept.copy(key = "movie:harbor:2026", releaseDate = "2026-11-02")))
-        assertEquals("2026-11-02", store.namedTitles().single().releaseDate, "a poster's facts carry it")
+        assertEquals("a poster's facts carry it", "2026-11-02", store.namedTitles().single().releaseDate)
     }
 
     /** A file of the first layout keeps its titles; they lack genres, so they are asked again as they show. */
