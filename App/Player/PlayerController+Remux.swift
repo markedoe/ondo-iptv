@@ -85,6 +85,15 @@ extension PlayerController {
     /// (which has no HDR, Dolby Atmos or Picture in Picture).
     func remuxServerFailed(_ server: RemuxServer, _ failure: String) {
         guard remuxServer === server, item != nil else { return }
+        if state == .ended {
+            // Nothing is left to play: the provider is not reached again (subscriptions often allow a single
+            // connection) and the film does not end a second time. Playing it again starts a new remux.
+            note("remux server failed (\(failure)) after the end: the remux starts again when the film is played")
+            stopRemux()
+            player.replaceCurrentItem(with: nil)
+            remuxStoppedAfterTheEnd = true
+            return
+        }
         note("remux server failed (\(failure)): the remux starts again")
         keepPositionForFallback()
         loadCurrentCandidate()
@@ -109,6 +118,7 @@ extension PlayerController {
     func stopRemux() {
         remuxTask?.cancel()
         remuxTask = nil
+        remuxStoppedAfterTheEnd = false
         #if os(iOS)
         remuxServer?.stop()
         remuxServer = nil

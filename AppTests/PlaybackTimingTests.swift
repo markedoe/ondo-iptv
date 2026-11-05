@@ -172,6 +172,67 @@ final class PlaybackTimingTests: XCTestCase {
         XCTAssertLessThan(controller.currentTime, 39, "not at the end of the film")
     }
 
+    /// The same with the film playing: it starts again where it was, playing. It opens at 25 s of the 40 s film and its
+    /// server stops as soon as the picture moves, which leaves the restart about 14 s before the end.
+    func testTheRemuxStartsAgainPlayingWhenItsServerStopsDuringTheFilm() async throws {
+        let server = try filmServer()
+        let base = try await server.start()
+        let controller = PlayerController()
+        controller.isMuted = true
+        defer { controller.stop() }
+        var item = film(at: base.appendingPathComponent("movie/viewer/secret/47.mkv"))
+        item.startPosition = 25
+        controller.load(item)
+        try await wait(seconds: 45) { logged(controller, "picture moving after ") != nil }
+        let first = try XCTUnwrap(controller.remuxServer, controller.log.entries.map(\.event).joined(separator: "\n"))
+        controller.remuxServerFailed(first, "test")
+        try await wait(seconds: 45) { controller.remuxServer.map { $0 !== first } == true && controller.state == .playing }
+        let log = controller.log.entries.map(\.event)
+        XCTAssertTrue(log.contains { $0.hasPrefix("remux server failed") }, log.joined(separator: "\n"))
+        XCTAssertEqual(controller.engineName, "AVPlayer (MKV remuxed)", log.joined(separator: "\n"))
+        XCTAssertEqual(controller.state, .playing, log.joined(separator: "\n"))
+        XCTAssertGreaterThanOrEqual(controller.currentTime, 15, "it starts again where it was")
+        XCTAssertLessThan(controller.currentTime, 39, "not at the end of the film")
+    }
+
+    /// A remuxed film that ended, then its server taken back (the phone locked on the end of the film): nothing is
+    /// opened again (the provider is not reached) and the film does not end twice. Playing it again starts a new remux
+    /// from the beginning, with the system player, not VLC.
+    func testAFilmThatEndedIsNotOpenedAgainWhenItsServerStopsAndReplaysRemuxed() async throws {
+        let server = try filmServer()
+        let base = try await server.start()
+        let controller = PlayerController()
+        controller.isMuted = true
+        defer { controller.stop() }
+        var ends = 0
+        controller.onEnded = { _ in ends += 1 }
+        var item = film(at: base.appendingPathComponent("movie/viewer/secret/48.mkv"))
+        item.startPosition = 35
+        controller.load(item)
+        try await wait(seconds: 45) { controller.state == .ended }
+        let opened = controller.log.entries.map(\.event)
+        XCTAssertEqual(controller.state, .ended, opened.joined(separator: "\n"))
+        XCTAssertEqual(ends, 1, opened.joined(separator: "\n"))
+        let first = try XCTUnwrap(controller.remuxServer, opened.joined(separator: "\n"))
+        let attempts = opened.filter { $0.hasPrefix("address ") }.count
+
+        controller.remuxServerFailed(first, "test")
+        var log = controller.log.entries.map(\.event)
+        XCTAssertEqual(controller.state, .ended, log.joined(separator: "\n"))
+        XCTAssertNil(controller.remuxServer, log.joined(separator: "\n"))
+        XCTAssertEqual(log.filter { $0.hasPrefix("address ") }.count, attempts, "nothing opened again: " + log.joined(separator: "\n"))
+        XCTAssertEqual(ends, 1, "the film ends once")
+
+        controller.play()
+        try await wait(seconds: 45) { controller.remuxServer != nil && controller.state == .playing }
+        log = controller.log.entries.map(\.event)
+        XCTAssertEqual(controller.state, .playing, log.joined(separator: "\n"))
+        XCTAssertEqual(controller.engineName, "AVPlayer (MKV remuxed)", log.joined(separator: "\n"))
+        XCTAssertTrue(log.last { $0.hasPrefix("address ") }?.hasSuffix("with the system player (MKV remuxed)") == true, log.joined(separator: "\n"))
+        XCTAssertLessThan(controller.currentTime, 10, "it plays again from the beginning")
+        XCTAssertEqual(ends, 1, log.joined(separator: "\n"))
+    }
+
     /// A server that sends the whole file instead of its parts cannot serve the remux: VLC plays the film. (The
     /// server sends parts to VLC: without them, VLC itself opens this MKV only some of the time.)
     func testVLCPlaysAnMKVFilmTheRemuxCannotRead() async throws {
