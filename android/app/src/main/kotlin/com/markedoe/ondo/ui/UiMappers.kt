@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui
 
+import androidx.tracing.trace
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.CategoryTags
@@ -97,13 +98,18 @@ object UiMappers {
      * [kept]: what TMDb said and the device kept, by poster key ([OndoRepository.keptPosterFacts]); its votes, and those of
      * the answers of this session, rank the carousel's best recent titles.
      */
-    fun showcase(state: OndoState, kept: Map<String, TitleMetadata> = emptyMap(), grouped: FilmVersions = films(state)): Showcase {
+    fun showcase(
+        state: OndoState,
+        kept: Map<String, TitleMetadata> = emptyMap(),
+        grouped: FilmVersions = films(state),
+        hidden: Set<String> = hiddenCategoryIds(state),
+    ): Showcase {
         val votes = HashMap<String, TmdbRating>()
         kept.forEach { (key, title) -> title.rating?.let { votes[key] = it } }
         votes.putAll(state.tmdbRatings)
         val byName = CategoryFilter.hiddenTitles(state)
         return Showcase(
-            state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes, grouped,
+            state.content, state.library, state.activePlaylistId.orEmpty(), hidden, state.settings.hideWatchedMovies, state.trending, votes, grouped,
             excludedMovieIds = byName.movies, excludedSeriesIds = byName.series,
         )
     }
@@ -441,9 +447,13 @@ object UiMappers {
         )
     }
 
-    fun vod(state: OndoState, series: Boolean, title: String, now: Long = System.currentTimeMillis()): VodUiState {
-        val showcase = showcase(state)
+    fun vod(state: OndoState, series: Boolean, title: String, now: Long = System.currentTimeMillis()): VodUiState =
+        trace(if (series) "Ondo.vod.series" else "Ondo.vod.movies") { vodState(state, series, title, now) }
+
+    private fun vodState(state: OndoState, series: Boolean, title: String, now: Long): VodUiState {
+        // What is hidden, worked out once for every row of the tab.
         val hidden = hiddenCategoryIds(state)
+        val showcase = showcase(state, hidden = hidden)
         // A panel can list a category twice (same id): one chip and one row each.
         val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }.distinctBy { it.id }
         val watched = hiddenMovieIds(state)
@@ -479,10 +489,10 @@ object UiMappers {
             continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).filter { it.kind == kind }.map { resume(it, state) },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
-            awardWinners = rowTitles(state, GridSource.AWARDS, series, now, ROW_LENGTH, showcase),
+            awardWinners = rowTitles(state, GridSource.AWARDS, series, now, ROW_LENGTH, showcase, hidden),
             all = all,
             allCount = allCount,
-            newReleases = rowTitles(state, GridSource.NEW, series, now, ROW_LENGTH, showcase),
+            newReleases = rowTitles(state, GridSource.NEW, series, now, ROW_LENGTH, showcase, hidden),
             trending = showcase.trending().filter { (it is ShowcaseItem.SeriesItem) == series },
             order = order,
             series = series,
@@ -493,13 +503,21 @@ object UiMappers {
      * The first [limit] titles of a row Ondo picks ([source]), in the row's order: the row shows the first ones, its See
      * all grid every one ([grid]). Hidden categories and languages, and movies hidden as watched, stay out of both.
      */
-    fun rowTitles(state: OndoState, source: GridSource, series: Boolean, now: Long, limit: Int, showcase: Showcase = showcase(state)): List<ShowcaseItem> =
+    fun rowTitles(
+        state: OndoState,
+        source: GridSource,
+        series: Boolean,
+        now: Long,
+        limit: Int,
+        showcase: Showcase? = null,
+        hidden: Set<String> = hiddenCategoryIds(state),
+    ): List<ShowcaseItem> =
         when (source) {
-            GridSource.NEW -> if (series) showcase.newSeries(now, limit) else showcase.newMovies(now, limit)
+            GridSource.NEW -> (showcase ?: showcase(state, hidden = hidden)).let { if (series) it.newSeries(now, limit) else it.newMovies(now, limit) }
             GridSource.AWARDS -> if (series) {
-                MovieAwards.seriesWinners(state, hiddenCategoryIds(state), limit, CategoryFilter.hiddenTitles(state).series).map { ShowcaseItem.SeriesItem(it) }
+                MovieAwards.seriesWinners(state, hidden, limit, CategoryFilter.hiddenTitles(state).series).map { ShowcaseItem.SeriesItem(it) }
             } else {
-                MovieAwards.winners(state, hiddenCategoryIds(state), limit, hiddenMovieIds(state) + CategoryFilter.hiddenTitles(state).movies, films(state))
+                MovieAwards.winners(state, hidden, limit, hiddenMovieIds(state), films(state), alsoLeftOut = CategoryFilter.hiddenTitles(state).movies)
                     .map { ShowcaseItem.MovieItem(it) }
             }
         }

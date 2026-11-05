@@ -2,6 +2,7 @@ package com.markedoe.ondo.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.tracing.trace
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.FilmVersions
@@ -134,10 +135,18 @@ class OndoViewModel(
     val liveFilter: StateFlow<LiveFilter?> = _liveFilter.asStateFlow()
 
     init {
-        // A film's versions are grouped as soon as a catalogue arrives, in the background, once (UiMappers.films).
+        // As soon as a catalogue (or a newer awards file) arrives, in the background, once: a film's versions are grouped
+        // (UiMappers.films, which Home needs first), then its movies and series are matched with the awards (MovieAwards),
+        // which the Movies and Series tabs need: their first opening would otherwise wait for that whole match.
         viewModelScope.launch(computation) {
-            state.map { it.content to it.settings.groupVersions }.distinctUntilChanged { a, b -> a.first === b.first && a.second == b.second }
-                .collect { (content, group) -> if (group && content.movies.isNotEmpty()) UiMappers.films(content) }
+            state.map { Triple(it.content, it.settings.groupVersions, it.awards) }
+                .distinctUntilChanged { a, b -> a.first === b.first && a.second == b.second && a.third === b.third }
+                .collect { (content, group, awards) ->
+                    trace("Ondo.prepareCatalogue") {
+                        if (group && content.movies.isNotEmpty()) UiMappers.films(content)
+                        MovieAwards.prepare(content, awards)
+                    }
+                }
         }
     }
 
