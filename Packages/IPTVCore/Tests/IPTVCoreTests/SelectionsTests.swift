@@ -56,7 +56,7 @@ final class SelectionsTests: XCTestCase {
         XCTAssertEqual(Selections.draw("a"), 0.010753497314070604)
         XCTAssertEqual(Selections.draw("s1|2026-11-05|movie:42"), 0.8617043371713481)
         for seed in ["", "x", "s1|2026-11-06|series:7"] {
-            XCTAssertTrue((0..<1).contains(Selections.draw(seed)))
+            XCTAssertTrue((0.0..<1.0).contains(Selections.draw(seed)))
         }
     }
 
@@ -67,8 +67,11 @@ final class SelectionsTests: XCTestCase {
     }
 
     private func titles() -> [Title] {
-        (0..<30).map { index in
-            Title(id: "movie:\(index)", rating: index % 3 == 0 ? nil : (5.0 + Double(index % 5), 50 * (index + 1)))
+        (0..<30).map { (index: Int) -> Title in
+            let average: Double = 5.0 + Double(index % 5)
+            let votes: Int = 50 * (index + 1)
+            let rating: (average: Double, count: Int)? = index % 3 == 0 ? nil : (average, votes)
+            return Title(id: "movie:\(index)", rating: rating)
         }
     }
 

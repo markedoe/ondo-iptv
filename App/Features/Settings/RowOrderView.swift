@@ -42,22 +42,27 @@ struct RowOrderView: View {
             .accessibilityIdentifier("newSelection-\(tab)")
     }
 
-    /// A selection's row: its name, and a button that opens it to change or delete it.
+    /// A selection's name, in its row.
     @ViewBuilder
     private func selectionLabel(_ key: String, tab: String) -> some View {
         if let id = Selections.id(ofRow: key), let selection = model.selection(id) {
-            HStack {
-                Text(verbatim: model.selectionName(selection))
-                Spacer()
-                Button {
-                    editing = SelectionEditing(id: id, tab: tab)
-                } label: {
-                    Image(systemName: "pencil")
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(Text("Edit Selection"))
-                .accessibilityIdentifier("editSelection-\(tab)-\(id)")
+            Text(verbatim: model.selectionName(selection))
+        }
+    }
+
+    /// A selection's row: a button before its switch that opens it to change or delete it. Outside the switch, whose
+    /// label is one element for VoiceOver (a button in it could not be reached).
+    @ViewBuilder
+    private func editButton(_ key: String, tab: String) -> some View {
+        if let id = Selections.id(ofRow: key), model.selection(id) != nil {
+            Button {
+                editing = SelectionEditing(id: id, tab: tab)
+            } label: {
+                Image(systemName: "pencil")
             }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(Text("Edit Selection"))
+            .accessibilityIdentifier("editSelection-\(tab)-\(id)")
         }
     }
 
@@ -67,16 +72,19 @@ struct RowOrderView: View {
         let tab = SyncRows.home
         return Section {
             ForEach(rows, id: \.key) { row in
-                Toggle(isOn: Binding(
-                    get: { !row.hidden },
-                    set: { shown in
-                        model.setRowOrder(tab: tab, arranged: rows.map(\.key),
-                                          hidden: rows.filter { $0.key == row.key ? !shown : $0.hidden }.map(\.key))
+                HStack {
+                    editButton(row.key, tab: tab)
+                    Toggle(isOn: Binding(
+                        get: { !row.hidden },
+                        set: { shown in
+                            model.setRowOrder(tab: tab, arranged: rows.map(\.key),
+                                              hidden: rows.filter { $0.key == row.key ? !shown : $0.hidden }.map(\.key))
+                        }
+                    )) {
+                        if Selections.id(ofRow: row.key) != nil { selectionLabel(row.key, tab: tab) } else { homeName(row.key) }
                     }
-                )) {
-                    if Selections.id(ofRow: row.key) != nil { selectionLabel(row.key, tab: tab) } else { homeName(row.key) }
+                    .accessibilityIdentifier("row-\(tab)-\(row.key)")
                 }
-                .accessibilityIdentifier("row-\(tab)-\(row.key)")
             }
             .onMove { from, to in
                 var moved = rows
@@ -117,20 +125,23 @@ struct RowOrderView: View {
         let rows = model.arrangedRows(type, categories: categories)
         return Section {
             ForEach(rows, id: \.key) { row in
-                Toggle(isOn: Binding(
-                    get: { !row.hidden },
-                    set: { shown in
-                        model.setRowOrder(type, arranged: rows.map(\.key),
-                                          hidden: rows.filter { $0.key == row.key ? !shown : $0.hidden }.map(\.key))
+                HStack {
+                    editButton(row.key, tab: AppModel.rowTab(type))
+                    Toggle(isOn: Binding(
+                        get: { !row.hidden },
+                        set: { shown in
+                            model.setRowOrder(type, arranged: rows.map(\.key),
+                                              hidden: rows.filter { $0.key == row.key ? !shown : $0.hidden }.map(\.key))
+                        }
+                    )) {
+                        if Selections.id(ofRow: row.key) != nil {
+                            selectionLabel(row.key, tab: AppModel.rowTab(type))
+                        } else {
+                            name(row.key, type: type, category: names[row.key])
+                        }
                     }
-                )) {
-                    if Selections.id(ofRow: row.key) != nil {
-                        selectionLabel(row.key, tab: AppModel.rowTab(type))
-                    } else {
-                        name(row.key, type: type, category: names[row.key])
-                    }
+                    .accessibilityIdentifier("row-\(AppModel.rowTab(type))-\(row.key)")
                 }
-                .accessibilityIdentifier("row-\(AppModel.rowTab(type))-\(row.key)")
             }
             .onMove { from, to in
                 var moved = rows
