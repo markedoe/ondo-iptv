@@ -25,7 +25,7 @@ struct SelectionEditorView: View {
 
     var body: some View {
         let saved = editing.id.flatMap { model.selection($0) }?.tags ?? []
-        let groups: [(LocalizedStringKey, [String])] = model.selectionTagGroups(keeping: saved).map { group in
+        let groups: [(LocalizedStringKey, [String])] = model.selectionTagGroups(keeping: saved).map { (group: (kind: String, tags: [String])) -> (LocalizedStringKey, [String]) in
             (Self.groupTitle(group.kind), group.tags)
         }
         Form {
