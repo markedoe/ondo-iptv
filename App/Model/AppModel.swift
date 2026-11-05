@@ -197,6 +197,9 @@ final class AppModel {
     /// TMDb backdrops and dead provider backdrops (AppModel+Backdrops).
     let backdrops = BackdropStore()
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]
+    /// What each title is tagged with for the selections, worked out once per catalogue and what is known of it
+    /// (AppModel+Selections).
+    @ObservationIgnored var selectionTagsCache: SelectionTags?
     /// When each title's details came from the provider: those are the ones kept on disk (AppModel+StoredDetails).
     @ObservationIgnored var movieDetailsFetchedAt: [String: Date] = [:]
     @ObservationIgnored var seriesDetailsFetchedAt: [String: Date] = [:]

@@ -168,6 +168,9 @@ final class ProfileScopeTests: XCTestCase {
             PerProfile(name: "lists",
                        set: { _ = $0.createList(named: "Weekend") },
                        read: { model in Self.found(model.library.customLists.first { $0.name == "Weekend" }?.id) }),
+            PerProfile(name: "selections",
+                       set: { _ = $0.saveSelection(id: nil, name: "Nineties", tags: ["decade:1990"], all: false, tabs: [SyncRows.movies]) },
+                       read: { model in Self.found(model.profileSelections.first { $0.name == "Nineties" }.map { [$0.id] + $0.tags }) }),
         ]
     }
 

@@ -20,9 +20,10 @@ extension AppModel {
         activeProfile.isMain ? syncState.rowOrders : (syncState.profileStates[activeProfile.id.uuidString.lowercased()]?.rowOrders ?? [])
     }
 
-    /// The keys of the rows of a tab in their default order: the built-in rows, then `categories` as they come.
-    static func tabRowKeys(_ type: ContentType, categories: [MediaCategory]) -> [String] {
-        RowOrder.builtIns(series: type == .series) + categories.map { RowOrder.categoryKey(id: $0.id, name: $0.name) }
+    /// The keys of the rows of a tab in their default order: the built-in rows, the `selections`' rows (`sel:<id>`),
+    /// then `categories` as they come.
+    static func tabRowKeys(_ type: ContentType, categories: [MediaCategory], selections: [String] = []) -> [String] {
+        RowOrder.builtIns(series: type == .series) + selections + categories.map { RowOrder.categoryKey(id: $0.id, name: $0.name) }
     }
 
     /// Whether the open profile may change its order: not a kids profile.
@@ -32,7 +33,8 @@ extension AppModel {
     /// language) are not among them: they never show, whatever the order.
     func arrangedRows(_ type: ContentType, categories: [MediaCategory]? = nil) -> [RowOrder.Row] {
         let saved = savedRowOrder(type)
-        return RowOrder.arrange(current: Self.tabRowKeys(type, categories: categories ?? self.categories(for: type)),
+        return RowOrder.arrange(current: Self.tabRowKeys(type, categories: categories ?? self.categories(for: type),
+                                                         selections: selectionRowKeys(in: Self.rowTab(type))),
                                 order: saved?.order ?? [], hidden: saved?.hidden ?? [])
     }
 
@@ -71,6 +73,13 @@ extension AppModel {
     }
 
     private func keepRowOrder(_ record: SyncRows) {
+        keepRowOrderRecord(record)
+        saveSyncState()
+        syncSoon()
+    }
+
+    /// `record` kept for its tab in the open profile, without saving yet.
+    func keepRowOrderRecord(_ record: SyncRows) {
         // Sorted by tab in UTF-16 code units, as a merge gives them: the same records compare equal.
         let records = (profileRowOrders.filter { $0.tab != record.tab } + [record])
             .sorted { $0.tab.utf16.lexicographicallyPrecedes($1.tab.utf16) }
@@ -82,8 +91,6 @@ extension AppModel {
             profile.rowOrders = records
             syncState.profileStates[id] = profile
         }
-        saveSyncState()
-        syncSoon()
     }
 
     // MARK: - Home
@@ -91,13 +98,19 @@ extension AppModel {
     /// Whether the playlist has movies or series to show: without, Home's channels come right after My List.
     var homeHasVOD: Bool { !content.movies.isEmpty || !content.series.isEmpty }
 
-    /// The keys of Home's rows in their default order (`RowOrder.homeBuiltIns`): on Apple devices, with the collections.
-    static func homeRowKeys(hasVOD: Bool) -> [String] { RowOrder.homeBuiltIns(hasVOD: hasVOD, collections: true) }
+    /// The keys of Home's rows in their default order (`RowOrder.homeBuiltIns`): on Apple devices, with the collections;
+    /// the `selections`' rows (`sel:<id>`) before the channels when they come last.
+    static func homeRowKeys(hasVOD: Bool, selections: [String] = []) -> [String] {
+        let builtIns = RowOrder.homeBuiltIns(hasVOD: hasVOD, collections: true)
+        let at = hasVOD ? (builtIns.firstIndex(of: RowOrder.homeChannels) ?? builtIns.count) : builtIns.count
+        return Array(builtIns[..<at]) + selections + Array(builtIns[at...])
+    }
 
     /// Home's rows in the viewer's order, hidden or not (Settings → Row order). The carousel stays above them.
     func arrangedHomeRows() -> [RowOrder.Row] {
         let saved = savedRowOrder(tab: SyncRows.home)
-        return RowOrder.arrange(current: Self.homeRowKeys(hasVOD: homeHasVOD), order: saved?.order ?? [], hidden: saved?.hidden ?? [])
+        return RowOrder.arrange(current: Self.homeRowKeys(hasVOD: homeHasVOD, selections: selectionRowKeys(in: SyncRows.home)),
+                                order: saved?.order ?? [], hidden: saved?.hidden ?? [])
     }
 
     /// The keys of the rows Home shows, in their order: those the viewer hid are left out on iPhone, iPad and Mac alike
@@ -125,6 +138,9 @@ extension AppModel {
         case PseudoCategory.newReleases: return type == .series ? newSeries(limit: limit) : newMovies(limit: limit)
         case PseudoCategory.awardWinners:
             return type == .movie ? awardWinners(limit: limit).map(ShowcaseItem.movie) : seriesAwardWinners(limit: limit).map(ShowcaseItem.series)
+        case let id where id.hasPrefix(PseudoCategory.selectionPrefix):
+            guard let picked = self.selection(String(id.dropFirst(PseudoCategory.selectionPrefix.count))) else { return [] }
+            return selectionTitles(picked, tab: Self.selectionTab(type), limit: limit)
         default: return []
         }
     }

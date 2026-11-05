@@ -1,6 +1,6 @@
 import Foundation
 
-/// A selection: a row the viewer makes of tags (docs/ROWS.md, "Selections"): genres, awards, decades and styles, a title
+/// A selection: a row the viewer makes of tags (docs/SYNC.md, "Selections"): genres, awards, decades and styles, a title
 /// matching any of them (or all of them), shown in the Home, Movies or Series tab as a new pick every day. The same tags,
 /// rules and tests as the Kotlin `Selections` (android/core); the selections sync (`SyncSelection`, docs/SYNC.md,
 /// "Selections").

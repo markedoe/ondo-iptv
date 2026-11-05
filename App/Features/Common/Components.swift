@@ -403,6 +403,8 @@ enum PseudoCategory {
     /// Rows of titles Ondo picks: their "See All" grid lists every title of the row, in the row's order.
     static let newReleases = "__new__"
     static let awardWinners = "__awards__"
+    /// A selection's row (`__sel__:<id>`): its titles of the day, in their order.
+    static let selectionPrefix = "__sel__:"
 
     static func all(_ type: ContentType) -> MediaCategory {
         MediaCategory(id: all, name: String(localized: "All"), type: type)
@@ -424,9 +426,14 @@ enum PseudoCategory {
         MediaCategory(id: awardWinners, name: String(localized: "Award Winners"), type: type)
     }
 
-    /// Whether `id` is a row Ondo picks (`newReleases`, `awardWinners`), whose grid keeps the row's own order.
+    /// A selection's grid in the Movies or Series tab, named as the selection.
+    static func selection(_ id: String, name: String, type: ContentType) -> MediaCategory {
+        MediaCategory(id: selectionPrefix + id, name: name, type: type)
+    }
+
+    /// Whether `id` is a row Ondo picks (`newReleases`, `awardWinners`, a selection), whose grid keeps the row's own order.
     static func isRow(_ id: String) -> Bool {
-        id == newReleases || id == awardWinners
+        id == newReleases || id == awardWinners || id.hasPrefix(selectionPrefix)
     }
 }
 

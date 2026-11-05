@@ -47,7 +47,7 @@ data class SelectionChoices(
 }
 
 /**
- * The selections' rows (docs/ROWS.md, "Selections"): each title's tags (its genres, the provider's and TMDb's kept on the
+ * The selections' rows (docs/SYNC.md, "Selections"): each title's tags (its genres, the provider's and TMDb's kept on the
  * device; the festivals and ceremonies of its awards; its year; the styles of its category's name), the titles of a
  * selection in a tab, hidden categories, languages and the movies hidden as watched left out as in every row, in the
  * day's order ([Selections.dailyOrder]).

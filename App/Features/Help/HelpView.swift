@@ -120,6 +120,12 @@ extension HelpTopic {
 
             Home’s rows (movies and series in progress, My List, the new titles, Trending, your collections and the \
             channels) are set the same way, under Home; the carousel stays at the top.
+
+            New Selection, beside each tab’s name, makes a row of your own: choose tags among genres, awards, \
+            decades and styles, a name, and the tabs it shows in. A title needs one of the tags, or all of them with \
+            All Tags. The row is a new pick every day among its titles, the best rated on TMDb more often first and \
+            the titles you have watched last, with See All at its end. It moves and hides like the other rows; its \
+            pencil changes or deletes it.
             """
         ),
         HelpTopic(

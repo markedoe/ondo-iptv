@@ -26563,46 +26563,6 @@
         }
       }
     },
-    "The Movies and Series tabs start with All Movies (or All Series): the latest additions, then See All, which opens the whole catalogue with its sort and Hide watched movies. Then come Continue Watching, My List, the new titles, Trending, Award Winners and each category of your provider.\n\nSettings → Row Order sets their order and which ones show: drag a row to move it, and turn its switch off to hide it. Default Order puts the rows back as they come. A category new to your playlist goes to the end; one your provider removes keeps its place for when it comes back. Hidden languages and categories stay hidden whatever the order. With Sync on this network, the order follows on your other devices.\n\nHome’s rows (movies and series in progress, My List, the new titles, Trending, your collections and the channels) are set the same way, under Home; the carousel stays at the top.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Titres primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, et désactivez son interrupteur pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils.\n\nLes rangées de l’Accueil (films et séries en cours, Ma liste, les nouveautés, Tendances, vos collections et les chaînes) se règlent de la même façon, sous Accueil ; le carrousel reste en haut."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Títulos premiados y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla y desactiva su interruptor para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.\n\nLas filas de Inicio (películas y series en curso, Mi lista, las novedades, Tendencias, tus colecciones y los canales) se ajustan igual, en Inicio; el carrusel se queda arriba."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As abas Filmes e Séries começam com Todos os filmes (ou Todas as séries): as últimas adições e depois Ver tudo, que abre o catálogo inteiro com sua ordenação e Ocultar filmes assistidos. Depois vêm Continuar assistindo, Minha lista, as novidades, Em alta, Títulos premiados e cada categoria do seu provedor.\n\nAjustes → Ordem das fileiras escolhe a ordem e quais aparecem: arraste uma fileira para movê-la e desative o botão para ocultá-la. Ordem padrão devolve as fileiras como elas vêm. Uma categoria nova na sua playlist vai para o fim; a que o seu provedor remove guarda o lugar para quando voltar. Idiomas e categorias ocultos continuam ocultos, seja qual for a ordem. Com a sincronização nesta rede, a ordem vale nos seus outros dispositivos.\n\nAs fileiras de Início (filmes e séries em andamento, Minha lista, as novidades, Em alta, suas coleções e os canais) se ajustam do mesmo jeito, em Início; o carrossel fica no topo."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖作品”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动，关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。\n\n“首页”的各行（正在观看的电影和剧集、“我的片单”、新片、“热门”、你的合集和频道）也在“首页”下以同样方式设置；轮播始终在顶部。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تبدأ علامتا التبويب الأفلام والمسلسلات بصف كل الأفلام (أو كل المسلسلات): أحدث الإضافات، ثم عرض الكل الذي يفتح الكتالوج كاملًا مع الترتيب وإخفاء الأفلام التي شاهدتها. بعدها تأتي متابعة المشاهدة وقائمتي والجديد والرائج والأفلام الفائزة بجوائز وكل فئة من فئات مزوّدك.\n\nتحدد الإعدادات ← ترتيب الصفوف ترتيبها والصفوف المعروضة: اسحب صفًا لنقله، وأوقف مفتاحه لإخفائه. يعيد الترتيب الافتراضي الصفوف كما تأتي. تذهب الفئة الجديدة في قائمة التشغيل إلى النهاية؛ وتحتفظ الفئة التي يزيلها مزوّدك بمكانها حتى تعود. تبقى اللغات والفئات المخفية مخفية مهما كان الترتيب. مع المزامنة على هذه الشبكة، ينتقل الترتيب إلى أجهزتك الأخرى.\n\nتُضبط صفوف الرئيسية (الأفلام والمسلسلات قيد المشاهدة، وقائمتي، والجديد، والرائج، ومجموعاتك، والقنوات) بالطريقة نفسها، تحت الرئيسية؛ ويبقى العرض الدوّار في الأعلى."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "फ़िल्में और सीरीज़ टैब सभी फ़िल्में (या सभी सीरीज़) से शुरू होते हैं: सबसे नई जोड़ी गई चीज़ें, फिर सभी देखें, जो पूरा कैटलॉग उसकी छँटाई और देखी गई फ़िल्में छिपाएँ के साथ खोलता है। उसके बाद देखना जारी रखें, मेरी सूची, नए टाइटल, ट्रेंडिंग, पुरस्कार विजेता टाइटल और आपके प्रदाता की हर श्रेणी आती है।\n\nसेटिंग्स → पंक्तियों का क्रम उनका क्रम और कौन-सी दिखें, यह तय करता है: किसी पंक्ति को खींचकर हटाएँ, और उसे छिपाने के लिए उसका स्विच बंद करें। डिफ़ॉल्ट क्रम पंक्तियों को वैसे ही लौटा देता है जैसे वे आती हैं। आपकी प्लेलिस्ट में नई श्रेणी अंत में जाती है; जिसे आपका प्रदाता हटाता है, वह लौटने तक अपनी जगह रखती है। छिपी भाषाएँ और श्रेणियाँ, क्रम कुछ भी हो, छिपी रहती हैं। इस नेटवर्क पर सिंक चालू होने पर क्रम आपके दूसरे डिवाइस पर भी लागू होता है।\n\nहोम की पंक्तियाँ (देखी जा रही फ़िल्में और सीरीज़, मेरी सूची, नए टाइटल, ट्रेंडिंग, आपके संग्रह और चैनल) भी इसी तरह, होम के नीचे सेट होती हैं; कैरोसेल सबसे ऊपर रहता है।"
-          }
-        }
-      }
-    },
     "Always open this profile": {
       "localizations": {
         "fr": {
@@ -26919,6 +26879,566 @@
           "stringUnit": {
             "state": "translated",
             "value": "पीबॉडी पुरस्कार"
+          }
+        }
+      }
+    },
+    "New Selection": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvelle présélection"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nueva preselección"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nova pré-seleção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建精选"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تشكيلة جديدة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नया चयन"
+          }
+        }
+      }
+    },
+    "Edit Selection": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier la présélection"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar preselección"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar pré-seleção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑精选"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعديل التشكيلة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चयन बदलें"
+          }
+        }
+      }
+    },
+    "Delete Selection": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer la présélection"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar preselección"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir pré-seleção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除精选"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف التشكيلة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चयन हटाएँ"
+          }
+        }
+      }
+    },
+    "My Selection": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ma présélection"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mi preselección"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minha pré-seleção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的精选"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تشكيلتي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरा चयन"
+          }
+        }
+      }
+    },
+    "%@s": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Années %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Años %@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anos %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@年代"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سنوات %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ का दशक"
+          }
+        }
+      }
+    },
+    "Genres": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genres"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Géneros"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gêneros"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "类型"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأنواع"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जॉनर"
+          }
+        }
+      }
+    },
+    "Decades": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décennies"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décadas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décadas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年代"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العقود"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "दशक"
+          }
+        }
+      }
+    },
+    "Shown In": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affichée dans"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se muestra en"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exibida em"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示于"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر في"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यहाँ दिखे"
+          }
+        }
+      }
+    },
+    "All Tags": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les tags"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas las etiquetas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas as tags"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部标签"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كل الوسوم"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सभी टैग"
+          }
+        }
+      }
+    },
+    "A title needs every tag chosen": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un titre doit avoir chaque tag choisi"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un título necesita todas las etiquetas elegidas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um título precisa de todas as tags escolhidas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作品须带有所选的每个标签"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجب أن يحمل العنوان كل الوسوم المختارة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टाइटल में चुना हुआ हर टैग होना चाहिए"
+          }
+        }
+      }
+    },
+    "A title needs one of the tags chosen": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un titre doit avoir l’un des tags choisis"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un título necesita una de las etiquetas elegidas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um título precisa de uma das tags escolhidas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作品带有所选标签之一即可"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يكفي أن يحمل العنوان أحد الوسوم المختارة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टाइटल में चुने हुए टैग में से एक होना काफ़ी है"
+          }
+        }
+      }
+    },
+    "No tags yet: genres come with the movies and series you open.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore de tag : les genres viennent avec les films et séries que vous ouvrez."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay etiquetas: los géneros llegan con las películas y series que abres."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há tags: os gêneros chegam com os filmes e séries que você abre."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无标签：打开影片和剧集后会带来它们的类型。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا وسوم بعد: تأتي الأنواع مع الأفلام والمسلسلات التي تفتحها."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी कोई टैग नहीं: आप जो फ़िल्में और सीरीज़ खोलते हैं, उनके साथ जॉनर आते हैं।"
+          }
+        }
+      }
+    },
+    "Choose tags: your selection shows as a row of the titles that have them, a new pick every day, the best rated more often first.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez des tags : votre présélection s’affiche en rangée des titres qui les ont, une nouvelle sélection chaque jour, les mieux notés plus souvent en tête."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige etiquetas: tu preselección aparece como una fila de los títulos que las tienen, una nueva selección cada día, con los mejor valorados más a menudo al principio."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha tags: sua pré-seleção aparece como uma fileira dos títulos que as têm, uma nova escolha a cada dia, com os mais bem avaliados no início com mais frequência."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择标签：你的精选会以一行显示带有这些标签的作品，每天重新挑选，评分高的作品更常排在前面。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اختر وسومًا: تظهر تشكيلتك صفًا من العناوين التي تحملها، باختيار جديد كل يوم، والأعلى تقييمًا في المقدمة أكثر."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टैग चुनें: आपका चयन उन टैग वाले टाइटल की एक पंक्ति के रूप में दिखता है, हर दिन नया चुनाव, सबसे अच्छी रेटिंग वाले अक्सर पहले।"
+          }
+        }
+      }
+    },
+    "The Movies and Series tabs start with All Movies (or All Series): the latest additions, then See All, which opens the whole catalogue with its sort and Hide watched movies. Then come Continue Watching, My List, the new titles, Trending, Award Winners and each category of your provider.\n\nSettings → Row Order sets their order and which ones show: drag a row to move it, and turn its switch off to hide it. Default Order puts the rows back as they come. A category new to your playlist goes to the end; one your provider removes keeps its place for when it comes back. Hidden languages and categories stay hidden whatever the order. With Sync on this network, the order follows on your other devices.\n\nHome’s rows (movies and series in progress, My List, the new titles, Trending, your collections and the channels) are set the same way, under Home; the carousel stays at the top.\n\nNew Selection, beside each tab’s name, makes a row of your own: choose tags among genres, awards, decades and styles, a name, and the tabs it shows in. A title needs one of the tags, or all of them with All Tags. The row is a new pick every day among its titles, the best rated on TMDb more often first and the titles you have watched last, with See All at its end. It moves and hides like the other rows; its pencil changes or deletes it.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Titres primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, et désactivez son interrupteur pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils.\n\nLes rangées de l’Accueil (films et séries en cours, Ma liste, les nouveautés, Tendances, vos collections et les chaînes) se règlent de la même façon, sous Accueil ; le carrousel reste en haut.\n\nNouvelle présélection, à côté du nom de chaque onglet, crée une rangée à vous : choisissez des tags parmi les genres, récompenses, décennies et styles, un nom et les onglets où elle s’affiche. Un titre doit avoir l’un des tags, ou tous avec Tous les tags. La rangée est une nouvelle sélection chaque jour parmi ses titres, les mieux notés sur TMDb plus souvent en tête et les titres déjà vus à la fin, avec Tout voir au bout. Elle se déplace et se masque comme les autres rangées ; son crayon la modifie ou la supprime."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Títulos premiados y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla y desactiva su interruptor para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.\n\nLas filas de Inicio (películas y series en curso, Mi lista, las novedades, Tendencias, tus colecciones y los canales) se ajustan igual, en Inicio; el carrusel se queda arriba.\n\nNueva preselección, junto al nombre de cada pestaña, crea una fila propia: elige etiquetas entre géneros, premios, décadas y estilos, un nombre y las pestañas donde aparece. Un título necesita una de las etiquetas, o todas con Todas las etiquetas. La fila es una nueva selección cada día entre sus títulos, con los mejor valorados en TMDb más a menudo al principio y los títulos ya vistos al final, con Ver todo al final. Se mueve y se oculta como las demás filas; su lápiz la edita o la elimina."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As abas Filmes e Séries começam com Todos os filmes (ou Todas as séries): as últimas adições e depois Ver tudo, que abre o catálogo inteiro com sua ordenação e Ocultar filmes assistidos. Depois vêm Continuar assistindo, Minha lista, as novidades, Em alta, Títulos premiados e cada categoria do seu provedor.\n\nAjustes → Ordem das fileiras escolhe a ordem e quais aparecem: arraste uma fileira para movê-la e desative o botão para ocultá-la. Ordem padrão devolve as fileiras como elas vêm. Uma categoria nova na sua playlist vai para o fim; a que o seu provedor remove guarda o lugar para quando voltar. Idiomas e categorias ocultos continuam ocultos, seja qual for a ordem. Com a sincronização nesta rede, a ordem vale nos seus outros dispositivos.\n\nAs fileiras de Início (filmes e séries em andamento, Minha lista, as novidades, Em alta, suas coleções e os canais) se ajustam do mesmo jeito, em Início; o carrossel fica no topo.\n\nNova pré-seleção, ao lado do nome de cada aba, cria uma fileira sua: escolha tags entre gêneros, prêmios, décadas e estilos, um nome e as abas onde ela aparece. Um título precisa de uma das tags, ou de todas com Todas as tags. A fileira é uma nova escolha a cada dia entre seus títulos, com os mais bem avaliados no TMDb no início com mais frequência e os títulos já assistidos no fim, com Ver tudo no final. Ela se move e se oculta como as outras fileiras; o lápis dela a edita ou exclui."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖作品”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动，关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。\n\n“首页”的各行（正在观看的电影和剧集、“我的片单”、新片、“热门”、你的合集和频道）也在“首页”下以同样方式设置；轮播始终在顶部。\n\n每个标签页名称旁的“新建精选”可创建你自己的一行：从类型、奖项、年代和风格中选择标签，起个名称，并选择显示它的标签页。作品带有其中一个标签即可，开启“全部标签”则须全部带有。这一行每天从其作品中重新挑选，TMDb 评分高的更常排在前面，已看过的作品排在最后，末尾有“查看全部”。它可以像其他行一样移动和隐藏；点它的铅笔可编辑或删除。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تبدأ علامتا التبويب الأفلام والمسلسلات بصف كل الأفلام (أو كل المسلسلات): أحدث الإضافات، ثم عرض الكل الذي يفتح الكتالوج كاملًا مع الترتيب وإخفاء الأفلام التي شاهدتها. بعدها تأتي متابعة المشاهدة وقائمتي والجديد والرائج والأفلام الفائزة بجوائز وكل فئة من فئات مزوّدك.\n\nتحدد الإعدادات ← ترتيب الصفوف ترتيبها والصفوف المعروضة: اسحب صفًا لنقله، وأوقف مفتاحه لإخفائه. يعيد الترتيب الافتراضي الصفوف كما تأتي. تذهب الفئة الجديدة في قائمة التشغيل إلى النهاية؛ وتحتفظ الفئة التي يزيلها مزوّدك بمكانها حتى تعود. تبقى اللغات والفئات المخفية مخفية مهما كان الترتيب. مع المزامنة على هذه الشبكة، ينتقل الترتيب إلى أجهزتك الأخرى.\n\nتُضبط صفوف الرئيسية (الأفلام والمسلسلات قيد المشاهدة، وقائمتي، والجديد، والرائج، ومجموعاتك، والقنوات) بالطريقة نفسها، تحت الرئيسية؛ ويبقى العرض الدوّار في الأعلى.\n\nتنشئ تشكيلة جديدة، بجانب اسم كل علامة تبويب، صفًا خاصًا بك: اختر وسومًا من الأنواع والجوائز والعقود والأساليب، واسمًا، وعلامات التبويب التي يظهر فيها. يكفي أن يحمل العنوان أحد الوسوم، أو كلها مع كل الوسوم. الصف اختيار جديد كل يوم من عناوينه، والأعلى تقييمًا على TMDb في المقدمة أكثر، والعناوين التي شاهدتها في النهاية، مع عرض الكل في آخره. يُنقل ويُخفى مثل الصفوف الأخرى؛ وقلمه يعدّله أو يحذفه."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िल्में और सीरीज़ टैब सभी फ़िल्में (या सभी सीरीज़) से शुरू होते हैं: सबसे नई जोड़ी गई चीज़ें, फिर सभी देखें, जो पूरा कैटलॉग उसकी छँटाई और देखी गई फ़िल्में छिपाएँ के साथ खोलता है। उसके बाद देखना जारी रखें, मेरी सूची, नए टाइटल, ट्रेंडिंग, पुरस्कार विजेता टाइटल और आपके प्रदाता की हर श्रेणी आती है।\n\nसेटिंग्स → पंक्तियों का क्रम उनका क्रम और कौन-सी दिखें, यह तय करता है: किसी पंक्ति को खींचकर हटाएँ, और उसे छिपाने के लिए उसका स्विच बंद करें। डिफ़ॉल्ट क्रम पंक्तियों को वैसे ही लौटा देता है जैसे वे आती हैं। आपकी प्लेलिस्ट में नई श्रेणी अंत में जाती है; जिसे आपका प्रदाता हटाता है, वह लौटने तक अपनी जगह रखती है। छिपी भाषाएँ और श्रेणियाँ, क्रम कुछ भी हो, छिपी रहती हैं। इस नेटवर्क पर सिंक चालू होने पर क्रम आपके दूसरे डिवाइस पर भी लागू होता है।\n\nहोम की पंक्तियाँ (देखी जा रही फ़िल्में और सीरीज़, मेरी सूची, नए टाइटल, ट्रेंडिंग, आपके संग्रह और चैनल) भी इसी तरह, होम के नीचे सेट होती हैं; कैरोसेल सबसे ऊपर रहता है।\n\nहर टैब के नाम के पास नया चयन आपकी अपनी एक पंक्ति बनाता है: जॉनर, पुरस्कार, दशक और स्टाइल में से टैग चुनें, एक नाम, और वे टैब जिनमें यह दिखे। टाइटल में टैग में से एक होना काफ़ी है, या सभी टैग के साथ सभी। यह पंक्ति हर दिन अपने टाइटल में से नया चुनाव है, TMDb पर सबसे अच्छी रेटिंग वाले अक्सर पहले और देखे जा चुके टाइटल आख़िर में, अंत में सभी देखें के साथ। यह दूसरी पंक्तियों की तरह हिलती और छिपती है; इसकी पेंसिल इसे बदलती या हटाती है।"
           }
         }
       }

@@ -57,6 +57,7 @@ struct MetadataView: View {
         case .festival(let group): return AwardGroup.name(group)
         case .year(let year): return String(localized: "Released in \(String(year))")
         case .genre(let genre): return genre
+        case .selection(let id): return model.selection(id).map { model.selectionName($0) } ?? String(localized: "My Selection")
         }
     }
 

@@ -1171,7 +1171,7 @@ class OndoRepository(
     }
 
     /**
-     * Saves a selection (Settings → Row order → New selection, docs/ROWS.md): [id] null makes a new one, whose row goes to
+     * Saves a selection (Settings → Row order → New selection, docs/SYNC.md): [id] null makes a new one, whose row goes to
      * the top of each tab it shows in; an edited one that now shows in another tab goes to the top of that tab too. The
      * record is dated for sync. Returns its ID; null for a Kids profile, which cannot change its rows.
      */

@@ -30,6 +30,9 @@ struct SyncState: Codable, Equatable {
     /// The order of the rows of the Movies and Series tabs and the rows hidden (Settings → Row order, `RowOrder`), one
     /// record per tab with the time it was set: here rather than in the settings, as sync carries it (docs/SYNC.md, "Rows").
     var rowOrders: [SyncRows] = []
+    /// The rows the viewer made of tags (Settings → Row order → New Selection, `Selections`), each with the time it was
+    /// last set: here with the order of the rows, as sync carries them (docs/SYNC.md, "Selections").
+    var selections: [SyncSelection] = []
     /// The hidden records of kinds this app does not know (docs/SYNC.md, "Hidden categories"), as other devices sent them:
     /// kept only to pass them on. The hidden categories, tags and words themselves are in the library.
     var otherHidden: [SyncHidden] = []
@@ -59,7 +62,7 @@ struct SyncState: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, subtitleKeysUpdatedAt, people, listPeople, deleted, replaced, lastSyncedAt, peers
-        case learned, clock, rowOrders, profileStates, profilesMatched, household, otherHidden, hiddenDated
+        case learned, clock, rowOrders, profileStates, profilesMatched, household, otherHidden, hiddenDated, selections
     }
 
     init(from decoder: Decoder) throws {
@@ -78,6 +81,7 @@ struct SyncState: Codable, Equatable {
         learned = (try? c.decodeIfPresent([String: Int64].self, forKey: .learned)) ?? [:]
         clock = (try? c.decodeIfPresent(Int64.self, forKey: .clock)) ?? 0
         rowOrders = (try? c.decodeIfPresent([SyncRows].self, forKey: .rowOrders)) ?? []
+        selections = (try? c.decodeIfPresent([SyncSelection].self, forKey: .selections)) ?? []
         profileStates = (try? c.decodeIfPresent([String: ProfileSyncState].self, forKey: .profileStates)) ?? [:]
         profilesMatched = (try? c.decodeIfPresent(Bool.self, forKey: .profilesMatched)) ?? false
         otherHidden = (try? c.decodeIfPresent([SyncHidden].self, forKey: .otherHidden)) ?? []
@@ -103,6 +107,7 @@ struct SyncState: Codable, Equatable {
         state.people = profile.people
         state.listPeople = profile.listPeople
         state.rowOrders = profile.rowOrders
+        state.selections = profile.selections
         state.otherHidden = profile.otherHidden
         state.deleted = profile.deleted
         return state
@@ -151,6 +156,7 @@ struct ProfileSyncState: Codable, Equatable {
     var people: [SyncPerson] = []
     var listPeople: [String: [SyncPerson]] = [:]
     var rowOrders: [SyncRows] = []
+    var selections: [SyncSelection] = []
     var otherHidden: [SyncHidden] = []
     var deleted: [String: Int64] = [:]
     /// When this device learned each deletion made in that profile elsewhere (kept from then, as the main one's).
@@ -158,13 +164,14 @@ struct ProfileSyncState: Codable, Equatable {
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case people, listPeople, rowOrders, otherHidden, deleted, learned }
+    enum CodingKeys: String, CodingKey { case people, listPeople, rowOrders, selections, otherHidden, deleted, learned }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         people = (try? c.decodeIfPresent([SyncPerson].self, forKey: .people)) ?? []
         listPeople = (try? c.decodeIfPresent([String: [SyncPerson]].self, forKey: .listPeople)) ?? [:]
         rowOrders = (try? c.decodeIfPresent([SyncRows].self, forKey: .rowOrders)) ?? []
+        selections = (try? c.decodeIfPresent([SyncSelection].self, forKey: .selections)) ?? []
         otherHidden = (try? c.decodeIfPresent([SyncHidden].self, forKey: .otherHidden)) ?? []
         deleted = (try? c.decodeIfPresent([String: Int64].self, forKey: .deleted)) ?? [:]
         learned = (try? c.decodeIfPresent([String: Int64].self, forKey: .learned)) ?? [:]
@@ -175,6 +182,7 @@ struct ProfileSyncState: Codable, Equatable {
         people = bucket.people
         listPeople = SyncMapping.listPeople(bucket.records())
         rowOrders = bucket.rows
+        selections = bucket.selections
         otherHidden = SyncMapping.otherHidden(bucket.hiddenCategories)
         deleted = bucket.deleted
         learned = bucket.deleted.reduce(into: [:]) { learned, entry in
@@ -330,6 +338,7 @@ enum SyncMapping {
             keys: keys(tmdbKey: tmdbKey, subtitleKeys: subtitleKeys, state: state),
             rows: state.rowOrders,
             hiddenCategories: hiddenRecords(library, others: state.otherHidden),
+            selections: state.selections,
             deleted: deleted,
             replaced: state.replaced,
             clock: now.syncMilliseconds
@@ -725,6 +734,7 @@ extension AppModel {
         syncClock.advance(to: syncState.tmdbKeyUpdatedAt)
         syncClock.advance(to: syncState.subtitleKeysUpdatedAt.values.max())
         syncClock.advance(to: syncState.rowOrders.map(\.updatedAt).max())
+        syncClock.advance(to: syncState.selections.map(\.updatedAt).max())
         syncClock.advance(to: profiles.map(\.updatedAt).max())
         let libraries = syncLibraries()
         syncClock.advance(to: SyncMapping.latestTime(playlists: playlists, library: libraries.main, state: syncState, profiles: profiles,
@@ -1026,6 +1036,7 @@ extension AppModel {
                                                previous: syncState.household, now: syncNow(now).syncMilliseconds)
         syncState.people = latest.people
         syncState.rowOrders = latest.rows
+        syncState.selections = latest.selections
         syncState.otherHidden = SyncMapping.otherHidden(latest.hiddenCategories)
         syncState.listPeople = SyncMapping.listPeople(latest)
         let time = syncNow(now).syncMilliseconds

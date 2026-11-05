@@ -27,7 +27,7 @@ ce qui a été terminé), les clés de services extérieurs saisies dans les Ré
 le compte OpenSubtitles avec l’interrupteur d’Addic7ed), l’ordre des
 rangées des onglets Accueil, Films et Séries avec les rangées masquées (Réglages → Ordre des rangées), et les profils (nom,
 couleur, avatar, Enfant) avec, pour chaque profil, sa liste, ses chaînes favorites, ses personnes, ses listes, sa
-progression, son ordre des rangées et ses catégories, langues et styles masqués (docs/PROFILES.fr.md), et les listes
+progression, son ordre des rangées, ses présélections et ses catégories, langues et styles masqués (docs/PROFILES.fr.md), et les listes
 partagées avec tous les profils.
 
 Restent sur chaque appareil : les autres réglages, les chaînes masquées et les modifications de chaînes, les
@@ -132,6 +132,7 @@ appareils Android.
   "keys": [ … ],
   "rows": [ … ],
   "hiddenCategories": [ … ],
+  "selections": [ … ],
   "profiles": [ … ],
   "profileData": [ … ],
   "household": { "lists": [ … ], "deleted": { … } },
@@ -295,6 +296,35 @@ session à l’autre, comme pour l’interrupteur Enfant ; un masquage reçu s�
 pour adultes restent masquées dans un profil Enfant quoi que dise la liste. Les catégories d’une playlist fichier, sur son
 seul appareil, ne sont pas envoyées.
 
+**Présélections** (des rangées que le spectateur compose de tags : Réglages → Ordre des rangées → Nouvelle
+présélection) — `{"id", "name", "tags", "match", "tabs", "updatedAt"}`. `id` est un UUID en minuscules ; `name` le nom
+donné (les noms des tags quand aucun n’a été saisi) ; `tags` les tags qui choisissent un titre : `genre:<nom>` (un genre,
+son nom tel que les deux applications normalisent le texte : en minuscules, sans accents, mots séparés d’une espace ; les
+genres du fournisseur, et sur Android ceux de TMDb gardés sur l’appareil), `award:<groupe>` (un festival ou une cérémonie
+du fichier des récompenses : `cannes`, `oscars`, `emmys`… ; un titre qui y a une récompense ou une sélection),
+`decade:<première année>` (`decade:1990`), `style:<style>` (un style des noms de catégories : `manga`, `kids`,
+`documentary`…) ; `match` vaut `any` (un titre qui a l’un des tags) ou `all` (qui a chacun d’eux) ; `tabs` les onglets où
+elle s’affiche (`home`, `movie`, `series` : sur l’Accueil ses films et ses séries ensemble). Un tag d’un genre qu’un
+appareil ne connaît pas est gardé et transmis, et laissé de côté dans les deux modes (sans tag restant, la rangée est
+vide). Dans chaque onglet, la rangée de la présélection est `sel:<id>` dans l’ordre de l’onglet (**Rangées**) : une
+nouvelle présélection, et une qui s’affiche désormais dans un autre onglet, va en tête de l’ordre de cet onglet ; une
+présélection supprimée le quitte. Sa rangée est une nouvelle sélection chaque jour, la même sur chaque appareil à la même
+date : la clé de chaque titre est sa note pondérée TMDb (m = 200, C = 6,5, au moins 10 votes ; sinon 6,5) plus 2 fois un
+nombre tiré de `<id de la présélection>|<aaaa-mm-jj>|<movie|series>:<id du fournisseur>` (FNV-1a 64 bits de ses octets
+UTF-8, finaliseur de SplitMix64, ses 53 bits de poids fort sur 2^53), la plus haute d’abord, puis selon cette chaîne ; les
+films vus jusqu’au bout et les séries commencées viennent à la fin. Clé : `selection:<id>` ; instant : `updatedAt` (posé
+à chaque enregistrement). L’élément entier est un seul changement ; le supprimer ajoute sa clé à `deleted`. Chaîne de
+départage (règle 2) : `name`, `match`, le nombre de `tabs` en décimal, les onglets, puis les tags, joints par un saut de
+ligne. Les lecteurs écartent une présélection dont l’`id` est vide, contient un caractère de contrôle ou dépasse 256
+unités UTF-16, mettent son `id` en minuscules (et celui des clés `selection:` de `deleted`), retirent les caractères de
+contrôle de `name` (et le laissent vide au-delà de 256 unités UTF-16), lisent un `match` vide ou contenant un caractère
+de contrôle comme `any`, gardent les tags et onglets valides (comme les clés de rangées, 256 unités UTF-16 au plus) une
+fois chacun, triés en unités de code UTF-16, 200 au plus, et gardent les 100 présélections changées en dernier
+(l’`updatedAt` le plus tardif d’abord, puis la plus petite clé). La liste est omise quand elle est vide, dans
+l’instantané et dans `profileData`. Un instantané sans `selections` (une version antérieure) n’en retire aucune. Chaque
+profil a les siennes : celles du profil principal sont `selections`, celles d’un autre profil sont dans son
+`profileData`. Un profil Enfant ne peut pas changer les siennes.
+
 **Profils** (docs/PROFILES.fr.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` est un UUID
 en minuscules ; celui du profil principal est `00000000-0000-0000-0000-000000000001`. `symbol` vaut `initial`, un nom
 d’icône ou un emoji. Jamais de code : le code d’un profil reste sur son appareil. Clé : `profile:<id>` ; instant :
@@ -304,7 +334,7 @@ crée, « Moi ») n’est pas envoyé. Supprimer un profil ajoute `profile:<id>`
 jamais supprimé (une suppression de celui-ci est ignorée). Les lecteurs gardent au plus 16 profils : le principal,
 puis par ID.
 
-**Données de profil** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "hiddenCategories"?, "deleted"?}` : les
+**Données de profil** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "hiddenCategories"?, "selections"?, "deleted"?}` : les
 éléments d’un profil autre que le principal, selon les mêmes règles que ceux de l’instantané lui-même, avec ce qui a
 été supprimé dans ce profil. Les éléments du profil principal sont ceux de l’instantané lui-même : un appareil plus
 ancien, qui ne connaît pas les profils, lit et écrit les données du profil principal, ignore `profiles` et
@@ -408,7 +438,9 @@ change rien.
    - clé : `value` ;
    - rangées : le nombre de clés d’`order` en décimal, un saut de ligne, puis les clés d’`order` et de `hidden` jointes
      par un saut de ligne (aucune clé n’en contient) ;
-   - catégorie masquée : aucune (deux éléments de même clé et de même instant sont les mêmes).
+   - catégorie masquée : aucune (deux éléments de même clé et de même instant sont les mêmes) ;
+   - présélection : `name`, `match`, le nombre de `tabs` en décimal, les onglets, puis les tags, joints par un saut de
+     ligne.
 3. Un élément dont l’instant n’est pas postérieur à l’instant de suppression de sa clé est écarté (à instants
    égaux, la suppression gagne).
 4. **La même playlist ajoutée deux fois** (sur deux appareils avant qu’ils se synchronisent) : les playlists de
@@ -423,7 +455,7 @@ change rien.
    inconnue (une playlist fichier d’un autre appareil) est gardé.
 6. Le résultat range les playlists par `addedAt` puis `id`, les favoris par `addedAt` puis clé, les progressions
    par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, les personnes par `addedAt` puis clé, les clés par
-   `service`, les rangées par `tab`, et les catégories masquées par clé.
+   `service`, les rangées par `tab`, les catégories masquées par clé, et les présélections par `id`.
 7. **Les listes se fusionnent partie par partie.** Une liste reste sauf si `list:<id>` est supprimé au plus tôt à
    son `updatedAt` le plus tardif, qu’elle garde. Son nom est celui au `renamedAt` le plus tardif (puis le plus petit
    nom). Ses éléments sont ceux de l’un ou l’autre côté, un par clé, l’`addedAt` le plus tardif gagnant (puis le plus

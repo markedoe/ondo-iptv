@@ -6,6 +6,8 @@ import IPTVCore
 /// a tab's rows back as they come.
 struct RowOrderView: View {
     @Environment(AppModel.self) private var model
+    /// The selection being made or changed, in a sheet.
+    @State private var editing: SelectionEditing?
 
     var body: some View {
         List {
@@ -24,6 +26,39 @@ struct RowOrderView: View {
         #endif
         .navigationTitle("Row Order")
         .accessibilityIdentifier("rowOrder")
+        .sheet(item: $editing) { editing in
+            NavigationStack { SelectionEditorView(editing: editing) }
+                #if os(macOS)
+                .frame(minWidth: 520, minHeight: 560)
+                #endif
+        }
+    }
+
+    /// New Selection, in a tab's header.
+    private func newSelection(_ tab: String) -> some View {
+        Button("New Selection") { editing = SelectionEditing(id: nil, tab: tab) }
+            .font(.footnote)
+            .textCase(nil)
+            .accessibilityIdentifier("newSelection-\(tab)")
+    }
+
+    /// A selection's row: its name, and a button that opens it to change or delete it.
+    @ViewBuilder
+    private func selectionLabel(_ key: String, tab: String) -> some View {
+        if let id = Selections.id(ofRow: key), let selection = model.selection(id) {
+            HStack {
+                Text(verbatim: model.selectionName(selection))
+                Spacer()
+                Button {
+                    editing = SelectionEditing(id: id, tab: tab)
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(Text("Edit Selection"))
+                .accessibilityIdentifier("editSelection-\(tab)-\(id)")
+            }
+        }
     }
 
     /// Home's rows (below its carousel, which stays at the top).
@@ -39,7 +74,7 @@ struct RowOrderView: View {
                                           hidden: rows.filter { $0.key == row.key ? !shown : $0.hidden }.map(\.key))
                     }
                 )) {
-                    homeName(row.key)
+                    if Selections.id(ofRow: row.key) != nil { selectionLabel(row.key, tab: tab) } else { homeName(row.key) }
                 }
                 .accessibilityIdentifier("row-\(tab)-\(row.key)")
             }
@@ -52,6 +87,7 @@ struct RowOrderView: View {
             HStack {
                 Text("Home")
                 Spacer()
+                newSelection(tab)
                 Button("Default Order") { model.resetRowOrder(tab: tab) }
                     .font(.footnote)
                     .textCase(nil)
@@ -88,7 +124,11 @@ struct RowOrderView: View {
                                           hidden: rows.filter { $0.key == row.key ? !shown : $0.hidden }.map(\.key))
                     }
                 )) {
-                    name(row.key, type: type, category: names[row.key])
+                    if Selections.id(ofRow: row.key) != nil {
+                        selectionLabel(row.key, tab: AppModel.rowTab(type))
+                    } else {
+                        name(row.key, type: type, category: names[row.key])
+                    }
                 }
                 .accessibilityIdentifier("row-\(AppModel.rowTab(type))-\(row.key)")
             }
@@ -101,6 +141,7 @@ struct RowOrderView: View {
             HStack {
                 type == .movie ? Text("Movies") : Text("Series")
                 Spacer()
+                newSelection(AppModel.rowTab(type))
                 Button("Default Order") { model.resetRowOrder(type) }
                     .font(.footnote)
                     .textCase(nil)

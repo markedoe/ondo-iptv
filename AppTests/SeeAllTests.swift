@@ -53,6 +53,10 @@ final class SeeAllTests: XCTestCase {
         await model.awardsTask?.value
         let horror = try XCTUnwrap(model.categories(for: .movie).first { $0.name.contains("Horror") })
         model.setHidden(true, category: horror)
+        // A selection on every tab: this decade's titles.
+        let selectionID = try XCTUnwrap(model.saveSelection(id: nil, name: "This decade", tags: [Selections.decade(Self.thisYear)], all: false,
+                                                            tabs: [SyncRows.home, SyncRows.movies, SyncRows.series]))
+        let selection = try XCTUnwrap(model.selection(selectionID))
 
         for surface in Surface.allCases {
             switch surface {
@@ -78,10 +82,14 @@ final class SeeAllTests: XCTestCase {
                 let type: ContentType = surface == .series ? .series : .movie
                 let categories = model.categories(for: type)
                 XCTAssertFalse(categories.isEmpty)
-                let keys = RowOrder.builtIns(series: type == .series) + categories.map { RowOrder.categoryKey(id: $0.id, name: $0.name) }
+                let keys = RowOrder.builtIns(series: type == .series) + [Selections.rowKey(selectionID)]
+                    + categories.map { RowOrder.categoryKey(id: $0.id, name: $0.name) }
+                XCTAssertEqual(Set(model.arrangedRows(type).map(\.key)), Set(keys), "\(surface): every row is checked")
                 for key in keys {
                     let place = "\(surface) \(key)"
-                    let category = categories.first { RowOrder.categoryKey(id: $0.id, name: $0.name) == key }
+                    let category = key == Selections.rowKey(selectionID)
+                        ? PseudoCategory.selection(selectionID, name: model.selectionName(selection), type: type)
+                        : categories.first { RowOrder.categoryKey(id: $0.id, name: $0.name) == key }
                     let route = VODBrowser.seeAll(key, type: type, category: category)
                     switch key {
                     case RowOrder.all:
@@ -94,6 +102,9 @@ final class SeeAllTests: XCTestCase {
                         try assertGrid(route, shows: model.rowTitles(PseudoCategory.newReleases, type: type, limit: 20), type: type, model: model, place)
                     case RowOrder.awardWinners:
                         try assertGrid(route, shows: model.rowTitles(PseudoCategory.awardWinners, type: type, limit: 20), type: type, model: model, place)
+                    case Selections.rowKey(selectionID):
+                        try assertGrid(route, shows: model.selectionTitles(selection, tab: AppModel.selectionTab(type), limit: 20), type: type,
+                                       model: model, place)
                     default:
                         let category = try XCTUnwrap(category, place)
                         try assertGrid(route, shows: VODBrowser.items(in: category, type: type, model: model), type: type, model: model, place)
@@ -101,6 +112,14 @@ final class SeeAllTests: XCTestCase {
                 }
             }
         }
+
+        // Home's selection row: See All lists its movies and series, each in the row's order.
+        let homeRow = model.selectionTitles(selection, tab: SyncRows.home, limit: 20)
+        let page = model.titles(for: .selection(selectionID))
+        XCTAssertFalse(homeRow.isEmpty)
+        XCTAssertEqual(page.movies.map { ShowcaseItem.movie($0).id }, homeRow.filter { $0.contentType == .movie }.map(\.id))
+        XCTAssertEqual(page.series.map { ShowcaseItem.series($0).id }, homeRow.filter { $0.contentType == .series }.map(\.id))
+        XCTAssertFalse(homeRow.map(\.title).contains("Hidden New Film"))
 
         // The hidden category's new movie is in neither the row nor its grid.
         let newGrid = MovieGridView.movies(PseudoCategory.newReleases(.movie), model: model).map(\.name)

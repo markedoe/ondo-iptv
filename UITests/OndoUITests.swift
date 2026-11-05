@@ -326,6 +326,46 @@ final class OndoUITests: XCTestCase {
         snapshot("13-settings")
     }
 
+    // MARK: - Selections
+
+    /// Settings → Row Order → New Selection under Movies: a decade's chip, saved; the Movies tab then shows its row,
+    /// whose See All opens its titles.
+    func testANewSelectionShowsAsARowOfTheMoviesTab() {
+        launch(["-uitest-reset", "-uitest-fixture"])
+        XCTAssertTrue(app.tabBars.buttons["Movies"].waitForExistence(timeout: 30), "main interface")
+        let settings = app.buttons["Settings"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 10), "settings button")
+        settings.tap()
+        let rowOrder = app.buttons["rowOrderRow"].firstMatch
+        for _ in 0..<6 where !(rowOrder.exists && rowOrder.isHittable) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(rowOrder.waitForExistence(timeout: 5), "Row Order in Settings")
+        rowOrder.tap()
+        let newSelection = app.buttons["newSelection-movie"].firstMatch
+        for _ in 0..<8 where !(newSelection.exists && newSelection.isHittable) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(newSelection.waitForExistence(timeout: 5), "New Selection under Movies")
+        newSelection.tap()
+        let year = Calendar.current.component(.year, from: .now)
+        let decade = app.buttons["tag-decade:\(year - year % 10)"].firstMatch
+        for _ in 0..<6 where !(decade.exists && decade.isHittable) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(decade.waitForExistence(timeout: 5), "this decade's chip")
+        decade.tap()
+        snapshot("14-new-selection")
+        app.buttons["saveSelection"].firstMatch.tap()
+        sleep(1)
+        // Its row in the list of the Movies tab's rows, then back to Home: Settings closes.
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'editSelection-movie-'")).firstMatch.waitForExistence(timeout: 5),
+                      "the selection among the rows")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let done = app.buttons["Done"].firstMatch
+        if done.waitForExistence(timeout: 3) { done.tap() } else { app.swipeDown(velocity: .fast) }
+        app.tabBars.buttons["Movies"].tap()
+        let shelf = app.otherElements["shelf-selection"].firstMatch
+        let anyShelf = app.descendants(matching: .any).matching(identifier: "shelf-selection").firstMatch
+        for _ in 0..<6 where !(shelf.exists || anyShelf.exists) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(anyShelf.waitForExistence(timeout: 10), "the selection's row in Movies")
+        snapshot("15-selection-row")
+    }
+
     // MARK: - Languages chosen from Home's suggestion
 
     /// Home's "Show only your languages?": a language turned off from "Choose…", then Ondo left and opened again.

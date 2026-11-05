@@ -161,7 +161,20 @@ struct VODBrowser: View {
                 }
             }
         default:
-            if let category = categories[key] {
+            if let id = Selections.id(ofRow: key) {
+                if let selection = model.selection(id) {
+                    // A selection's row: its titles of the day; "See All" opens them all, in their order.
+                    let titles = model.selectionTitles(selection, tab: AppModel.selectionTab(type), limit: Self.rowLength)
+                    if !titles.isEmpty {
+                        Shelf(category: PseudoCategory.selection(id, name: model.selectionName(selection), type: type), metrics: metrics) {
+                            ForEach(titles) { item in
+                                ShowcasePoster(item: item, width: metrics.posterWidth)
+                            }
+                        }
+                        .accessibilityIdentifier("shelf-selection")
+                    }
+                }
+            } else if let category = categories[key] {
                 // A category whose movies are all hidden as watched has no row.
                 let titles = items(in: category)
                 if !titles.isEmpty {

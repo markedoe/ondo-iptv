@@ -150,7 +150,23 @@ struct HomeView: View {
             }
         case RowOrder.homeCollections: customLists(metrics: metrics)
         case RowOrder.homeChannels: liveShelves(metrics: metrics, emphasised: !model.homeHasVOD)
-        default: EmptyView()
+        default: selectionShelf(key, metrics: metrics)
+        }
+    }
+
+    /// A selection's row (`sel:<id>`): its movies and series of the day; "See All" lists them all.
+    @ViewBuilder
+    private func selectionShelf(_ key: String, metrics: ShelfMetrics) -> some View {
+        if let id = Selections.id(ofRow: key), let selection = model.selection(id) {
+            let items = model.selectionTitles(selection, tab: SyncRows.home, limit: 20)
+            if !items.isEmpty {
+                Shelf(verbatim: model.selectionName(selection), route: .metadata(.selection(id)), metrics: metrics) {
+                    ForEach(items) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
+                    }
+                }
+                .accessibilityIdentifier("shelf-selection")
+            }
         }
     }
 

@@ -9,6 +9,8 @@ enum MetadataRoute: Hashable {
     case festival(String)
     case year(Int)
     case genre(String)
+    /// A selection's titles on Home (its ID): movies and series, each in the day's order.
+    case selection(String)
 }
 
 extension AppModel {
@@ -42,6 +44,11 @@ extension AppModel {
             return search("", releasedIn: nil, awardGroup: group, winnersOnly: false)
         case .year(let year):
             return search("", releasedIn: year...year, awardGroup: nil, winnersOnly: false)
+        case .selection(let id):
+            guard let picked = self.selection(id) else { return SearchResults(movies: [], series: []) }
+            let titles = selectionTitles(picked, tab: SyncRows.home)
+            return SearchResults(movies: titles.compactMap { if case .movie(let movie) = $0 { return movie } else { return nil } },
+                                 series: titles.compactMap { if case .series(let series) = $0 { return series } else { return nil } })
         case .genre(let genre):
             let wanted = TextNormalizer.normalize(genre)
             let excluded = exclusions

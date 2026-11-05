@@ -53,7 +53,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Selections (docs/ROWS.md, "Selections"): their rows pick each tab's titles of their tags, as every row leaves out
+ * Selections (docs/SYNC.md, "Selections"): their rows pick each tab's titles of their tags, as every row leaves out
  * what is hidden and what a Kids profile never sees, a new pick every day with the titles watched last; made from
  * Settings → Row order with chips, on a phone and with a TV's remote.
  */

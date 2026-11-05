@@ -37,6 +37,14 @@ struct Shelf<Content: View>: View {
         self.content = content
     }
 
+    /// A row named by the viewer (a selection): its name shown as is.
+    init(verbatim title: String, route: AnyHashableRoute?, metrics: ShelfMetrics, @ViewBuilder content: @escaping () -> Content) {
+        self.title = Text(verbatim: title)
+        self.seeAll = route
+        self.metrics = metrics
+        self.content = content
+    }
+
     /// A provider category: its name is shown as is and "See All" opens its grid.
     init(category: MediaCategory, metrics: ShelfMetrics, @ViewBuilder content: @escaping () -> Content) {
         self.title = Text(verbatim: category.name)
@@ -79,6 +87,7 @@ struct Shelf<Content: View>: View {
             case .section(let section): NavigationLink(value: section) { label }
             case .category(let category): NavigationLink(value: category) { label }
             case .favorites(let favorites): NavigationLink(value: favorites) { label }
+            case .metadata(let metadata): NavigationLink(value: metadata) { label }
             }
         }
         .buttonStyle(.plain)
@@ -91,6 +100,8 @@ enum AnyHashableRoute: Hashable {
     case section(AppSection)
     case category(PosterCategoryRoute)
     case favorites(FavoritesRoute)
+    /// Titles of every type (a selection's on Home).
+    case metadata(MetadataRoute)
 }
 
 /// Poster of a movie or series opening its detail page.

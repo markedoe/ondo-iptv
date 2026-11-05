@@ -26,7 +26,7 @@ the actors and directors kept in My List, the lists (collections) with the peopl
 keys typed in Settings for outside services (the TMDb token, and the subtitle services' keys and OpenSubtitles account
 with the Addic7ed switch), the order of the rows of the Home, Movies and Series tabs with the rows hidden (Settings →
 Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's own My List, favourite channels,
-people, lists, progress, order of rows and hidden categories, languages and styles (docs/PROFILES.md), and the lists
+people, lists, progress, order of rows, selections and hidden categories, languages and styles (docs/PROFILES.md), and the lists
 shared with every profile.
 
 Stays on each device: the other settings, hidden channels and channel edits, the category locks (Apple), reminders, profile PINs (never sent, salted
@@ -118,6 +118,7 @@ an iPhone, iPad or Mac sent thus passes it on to the other Android devices.
   "keys": [ … ],
   "rows": [ … ],
   "hiddenCategories": [ … ],
+  "selections": [ … ],
   "profiles": [ … ],
   "profileData": [ … ],
   "household": { "lists": [ … ], "deleted": { … } },
@@ -263,6 +264,31 @@ hide with its own time, and nothing changes from one session to the next, as for
 applies. Categories that look adult stay hidden in a Kids profile whatever the list says. The categories of a file
 playlist, on its device only, are not sent.
 
+**Selections** (rows the viewer makes of tags: Settings → Row order → New selection) — `{"id", "name", "tags",
+"match", "tabs", "updatedAt"}`. `id` is a UUID in lowercase; `name` the name the viewer gave (the tags' names when they
+typed none); `tags` the tags a title is picked by: `genre:<name>` (a genre, its name as both apps normalise text: lowercase,
+without accents, words separated by one space; the provider's genres, and on Android TMDb's kept on the device),
+`award:<group>` (a festival or ceremony of the awards file: `cannes`, `oscars`, `emmys`…; a title with an award or a
+selection there), `decade:<first year>` (`decade:1990`), `style:<style>` (a style of the category names: `manga`,
+`kids`, `documentary`…); `match` is `any` (a title with one of the tags) or `all` (with each of them); `tabs` the tabs it
+shows in (`home`, `movie`, `series`: on Home its movies and series together). A tag of a kind a device does not know is
+kept and passed on, and left out of the match in both modes (with no tag left, the row is empty). In each tab, the
+selection's row is `sel:<id>` in the tab's order (**Rows**): a new selection, and one that now shows in another tab,
+goes to the top of that tab's order; one deleted leaves it. Its row is a new pick every day, the same on every device
+of the same date: each title's key is its TMDb weighted rating (m = 200, C = 6.5, at least 10 votes; else 6.5) plus 2
+times a number drawn from `<selection id>|<yyyy-mm-dd>|<movie|series>:<provider's id>` (FNV-1a 64-bit of its UTF-8
+bytes, SplitMix64's finaliser, its 53 top bits over 2^53), the highest first, then by that string; the movies watched to
+the end and the series started come last. Key: `selection:<id>`; time: `updatedAt` (set each time it is saved). The
+whole record is one change; deleting it adds its key to `deleted`. Tie string (rule 2): `name`, `match`, the number of
+`tabs` in decimal, the tabs, then the tags, joined with a line feed. Readers drop a selection whose `id` is blank, holds a
+control character or is longer than 256 UTF-16 units, lowercase its `id` (and that of `selection:` keys in `deleted`),
+take control characters out of `name` (and leave it empty past 256 UTF-16 units), read a `match` that is blank or holds
+a control character as `any`, keep the tags and tabs that are valid (as row keys, 256 UTF-16 units at most) each once,
+sorted in UTF-16 code units, 200 at most, and keep the 100 selections changed last (the later `updatedAt` first, then the
+smaller key). The list is left out when it is empty, in the snapshot and in `profileData`. A snapshot without
+`selections` (an older version) removes none. Each profile has its own: the main profile's is `selections`, another
+profile's is in its `profileData`. A Kids profile cannot change its own.
+
 **Profiles** (docs/PROFILES.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` is a UUID in
 lowercase; the main profile's is `00000000-0000-0000-0000-000000000001`. `symbol` is `initial`, an icon name or an
 emoji. Never a PIN: a profile's PIN stays on its device. Key: `profile:<id>`; time: `updatedAt` (set when the profile is
@@ -270,7 +296,7 @@ added, renamed, or its colour, avatar or Kids switch changes; a new PIN alone is
 (the main one as each device makes it, "Me") is not sent. Deleting a profile adds `profile:<id>` to `deleted`; the main
 profile is never deleted (a deletion of it is ignored). Readers keep 16 profiles at most: the main one, then by ID.
 
-**Profile data** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "hiddenCategories"?, "deleted"?}`: the records of a
+**Profile data** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "hiddenCategories"?, "selections"?, "deleted"?}`: the records of a
 profile other than the main one, by the same rules as the snapshot's own, with what was deleted in that profile. The
 main profile's records are the snapshot's own: an older device, which knows nothing of profiles, reads and writes the
 main profile's data, ignores `profiles` and `profileData`, and the format version stays 1. Data sent for the main
@@ -364,7 +390,8 @@ nothing.
    - key: `value`;
    - rows: the number of keys of `order` in decimal, a line feed, then the keys of `order` and of `hidden` joined with a
      line feed (no key holds one);
-   - hidden category: none (two records of the same key and time are the same).
+   - hidden category: none (two records of the same key and time are the same);
+   - selection: `name`, `match`, the number of `tabs` in decimal, the tabs, then the tags, joined with a line feed.
 3. A record whose time is not later than its key's deletion time is dropped (on equal times, the deletion wins).
 4. **The same playlist added twice** (on two devices before they synced): playlists of the same `kind`, `url`
    (trimmed, then compared ignoring case) and `username` are one playlist. The one with the smallest `addedAt`
@@ -376,8 +403,8 @@ nothing.
    playlist has that ID) is dropped. One whose playlist is simply unknown (a file playlist of another device) is
    kept.
 6. The result lists playlists by `addedAt` then `id`, favorites by `addedAt` then key, progress by `watchedAt`
-   (latest first) then key, lists by `id`, people by `addedAt` then key, keys by `service`, rows by `tab`, and hidden
-   categories by key.
+   (latest first) then key, lists by `id`, people by `addedAt` then key, keys by `service`, rows by `tab`, hidden
+   categories by key, and selections by `id`.
 7. **Lists merge part by part.** A list stays unless `list:<id>` is deleted at or after its latest `updatedAt`, which
    it keeps. Its name is the one with the latest `renamedAt` (then the smaller name). Its items are those of either
    side, one per key, the latest `addedAt` winning (then the smaller tie string of `title` and `image`, optional as in
