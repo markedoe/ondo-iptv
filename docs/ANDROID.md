@@ -177,6 +177,11 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   TV app quality: no Picture-in-Picture on a TV, the screen kept on while playing only, no browser (the privacy
   policy and support pages open in an in-app page limited to them), no file picker or share button where the TV
   has none, a smaller image memory cache on a low-memory device.
+- **Large catalogues**: what every screen needs from a whole catalogue is worked out once per catalogue, in the
+  background, as it arrives (`OndoViewModel`): a film's versions are grouped (Home needs them first), then the movies
+  and series are matched with the awards (`MovieAwards.prepare`), so that the first opening of Movies and Series only
+  reads them (`TabFirstOpenTest`). Trace sections (`Ondo.prepareCatalogue`, `Ondo.awards.*`, `Ondo.vod.*`) show these
+  steps in a system trace.
 - **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), the remote on a TV
   (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), the phone player's gestures
   (`PhonePlayerOverlayTest`), Roborazzi screenshots that double as Google Play screenshots (phone,

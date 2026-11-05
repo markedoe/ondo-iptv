@@ -206,6 +206,11 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   lecture, pas de navigateur (les règles de confidentialité et la page d'aide s'ouvrent dans une page de l'app
   limitée à elles), pas de sélecteur de fichier ni de bouton de partage quand la TV n'en a pas, un cache d'images
   en mémoire plus petit sur un appareil à peu de mémoire.
+- **Grands catalogues** : ce que les écrans tirent d'un catalogue entier est calculé une fois par catalogue, en
+  arrière-plan, dès qu'il arrive (`OndoViewModel`) : les versions d'un film sont regroupées (l'accueil en a besoin
+  d'abord), puis les films et les séries sont rapprochés des récompenses (`MovieAwards.prepare`), si bien que la
+  première ouverture de Films et de Séries ne fait que les lire (`TabFirstOpenTest`). Des sections de trace
+  (`Ondo.prepareCatalogue`, `Ondo.awards.*`, `Ondo.vod.*`) montrent ces étapes dans une trace système.
 - **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), la
   télécommande sur une TV (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), les gestes du
   lecteur du téléphone (`PhonePlayerOverlayTest`), captures Roborazzi qui servent de captures
