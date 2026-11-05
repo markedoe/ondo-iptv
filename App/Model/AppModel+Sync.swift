@@ -819,7 +819,7 @@ extension AppModel {
                 for (profile, stored) in libraries {
                     let dated = SyncMapping.datingHidden(stored, at: time)
                     guard dated != stored else { continue }
-                    if profile.id == activeProfile.id { library = dated } else { otherLibraries[profile.id] = dated }
+                    if profile.id == activeProfile.id { updateLibrary { $0 = dated } } else { otherLibraries[profile.id] = dated }
                     try? userStore.save(dated, name: profile.libraryDocumentName)
                 }
             }
