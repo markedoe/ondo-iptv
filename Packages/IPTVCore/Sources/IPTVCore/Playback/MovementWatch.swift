@@ -27,9 +27,10 @@ public struct MovementWatch: Sendable, Equatable {
     public mutating func sample(clock: Double, position: Double?) -> Double? {
         guard let since, let position else { return nil }
         // After a seek, the position first has to land near the target (a key frame up to 10 s before it), away from
-        // where it was: until then the old picture may still be playing.
+        // where it was: until then the old picture may still be playing. A sample can come late (the app busy for a few
+        // seconds): by then the picture may have played on past the target, by as much as the time since the seek.
         if let target, base == nil {
-            let near = (target - 11...target + 2).contains(position)
+            let near = (target - 11...target + 2 + max(clock - since, 0)).contains(position)
             let moved = origin.map { abs(position - $0) > 1.5 || abs(target - $0) <= 1.5 } ?? true
             if !near || !moved { return nil }
         }

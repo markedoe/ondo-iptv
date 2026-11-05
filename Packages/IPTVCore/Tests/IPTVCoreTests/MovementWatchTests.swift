@@ -31,6 +31,24 @@ final class MovementWatchTests: XCTestCase {
         XCTAssertEqual(watch.sample(clock: 21.0, position: 10.5) ?? 0, 1, accuracy: 0.001)
     }
 
+    /// The first sample after the seek comes 5.6 s late (the app was busy), when the picture already played on past
+    /// the target: the seek still ends (it never did, and "seek done" was never logged).
+    func testASeekSampledLateAfterThePicturePlayedOnStillEnds() {
+        var watch = MovementWatch()
+        watch.start(at: 9.7, target: 120, from: 4)
+        XCTAssertNil(watch.sample(clock: 15.3, position: 125.5))
+        XCTAssertEqual(watch.sample(clock: 15.8, position: 126) ?? 0, 6.1, accuracy: 0.001)
+    }
+
+    /// Late samples never take the old picture, still playing far from the target, for the landing.
+    func testALateSampleOfTheOldPictureIsNotTheLanding() {
+        var watch = MovementWatch()
+        watch.start(at: 10, target: 120, from: 300)
+        XCTAssertNil(watch.sample(clock: 16, position: 306))
+        XCTAssertNil(watch.sample(clock: 16.5, position: 306.5))
+        XCTAssertNotNil(watch.since, "still waiting")
+    }
+
     /// Paused (no position) or cancelled: no time.
     func testNothingWhilePausedOrCancelled() {
         var watch = MovementWatch()
