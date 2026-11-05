@@ -12,6 +12,8 @@ struct LiveView: View {
     #endif
     /// The profile and playlist Live TV last opened for.
     @State private var landedFor: String?
+    /// iPhone: My List was opened over the categories for this profile and playlist; Back from it is the viewer's.
+    @State private var opened = false
 
     private var sideBySide: Bool {
         #if os(macOS)
@@ -47,6 +49,8 @@ struct LiveView: View {
         .id(session)
         .onAppear(perform: land)
         .onChange(of: session) { land() }
+        // Channels added to My List later (sync, another tab) before anything was chosen: Live TV opens on them.
+        .onChange(of: landing?.id) { land() }
         .navigationTitle("Live TV")
         .toolbar {
             #if os(iOS)
@@ -65,14 +69,17 @@ struct LiveView: View {
         }
     }
 
-    /// On iPhone, the first time for a profile and playlist: My List (or the choice made) over the categories.
+    /// On iPhone, My List (or the choice made) over the categories, once for a profile and playlist: as soon as there
+    /// is one, while the viewer has chosen nothing and nothing is open over the categories.
     private func land() {
-        guard landedFor != session else { return }
-        let again = landedFor != nil
-        landedFor = session
-        guard !sideBySide else { return }
-        if again { router?.path = NavigationPath() }
-        if let landing { router?.push(landing) }
+        if landedFor != session {
+            if landedFor != nil && !sideBySide { router?.path = NavigationPath() }
+            landedFor = session
+            opened = false
+        }
+        guard !sideBySide, !opened, model.liveChoiceID == nil, router?.path.isEmpty == true, let landing else { return }
+        router?.push(landing)
+        opened = true
     }
 }
 
