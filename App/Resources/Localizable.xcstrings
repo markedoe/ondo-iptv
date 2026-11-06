@@ -3157,46 +3157,6 @@
         }
       }
     },
-    "At the top of Home, the menu with the playlist's name switches playlists, adds one or refreshes it, and shows when it was last updated. Below it, the carousel shows recent releases, by release date and not by the day your provider added them: movies released in the last 7 days and series with a new episode or season, the best rated first (rated by TMDb's voters, with your TMDb token). When there are too few, it looks further back, up to 60 days; when nothing came out lately, it stays hidden.\n\nMovies in Progress and Series in Progress pick up where you stopped. To take a card out, long-press it (Control-click on a Mac) and choose Remove from History. Then come My List, New Movies and New Series (released this year or last year), Trending, your Collections, Channels in My List and Recently Watched, and your Reminders. A playlist with live channels only shows them first.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En haut de l’Accueil, le menu au nom de la playlist change de playlist, en ajoute une ou l’actualise, et indique sa dernière mise à jour. Dessous, le carrousel montre les sorties récentes, selon leur date de sortie et non le jour où votre fournisseur les a ajoutées : les films sortis ces 7 derniers jours et les séries avec un nouvel épisode ou une nouvelle saison, les mieux notés d’abord (notés par les votants de TMDb, avec votre jeton TMDb). S’il y en a trop peu, il remonte plus loin, jusqu’à 60 jours ; si rien n’est sorti récemment, il reste masqué.\n\nFilms en cours et Séries en cours reprennent là où vous vous êtes arrêté. Pour retirer une carte, appuyez longuement dessus (Contrôle-clic sur Mac) et choisissez Retirer de l'historique. Viennent ensuite Ma liste, Nouveaux films et Nouvelles séries (sortis cette année ou l’an dernier), Tendances, vos Collections, Chaînes de Ma liste et Vus récemment, et vos Rappels. Une playlist qui n’a que des chaînes en direct les montre en premier."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En la parte superior de Inicio, el menú con el nombre de la playlist cambia de playlist, añade una o la actualiza, e indica cuándo se actualizó por última vez. Debajo, el carrusel muestra los estrenos recientes, por su fecha de estreno y no por el día en que tu proveedor los añadió: las películas estrenadas en los últimos 7 días y las series con un nuevo episodio o temporada, primero las mejor valoradas (por los votantes de TMDb, con tu token de TMDb). Si hay muy pocos, busca más atrás, hasta 60 días; si no se ha estrenado nada últimamente, no aparece.\n\nPelículas en curso y Series en curso retoman donde lo dejaste. Para quitar una tarjeta, mantenla pulsada (Control-clic en un Mac) y elige Quitar del historial. Después vienen Mi lista, Películas nuevas y Series nuevas (estrenadas este año o el anterior), Tendencias, tus Colecciones, Canales de Mi lista y Vistos recientemente, y tus Recordatorios. Una playlist que solo tiene canales en directo los muestra primero."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No topo do Início, o menu com o nome da playlist troca de playlist, adiciona uma ou a atualiza, e mostra quando ela foi atualizada pela última vez. Abaixo, o carrossel mostra os lançamentos recentes, pela data de lançamento e não pelo dia em que seu provedor os adicionou: os filmes lançados nos últimos 7 dias e as séries com um novo episódio ou temporada, primeiro os mais bem avaliados (pelos votantes do TMDb, com seu token do TMDb). Se houver poucos, ele volta mais no tempo, até 60 dias; se nada foi lançado recentemente, ele fica oculto.\n\nFilmes em andamento e Séries em andamento retomam de onde você parou. Para remover um card, toque nele e segure (Control-clique no Mac) e escolha Remover do histórico. Depois vêm Minha lista, Novos filmes e Novas séries (lançados neste ano ou no ano passado), Em alta, suas Coleções, Canais da Minha lista e Assistidos recentemente, e seus Lembretes. Uma playlist que só tem canais ao vivo os mostra primeiro."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在“首页”顶部，带有播放列表名称的菜单可切换播放列表、添加或刷新播放列表，并显示其上次更新时间。下方的轮播显示近期上映的作品，按上映日期而不是提供商添加的日期：最近 7 天上映的电影，以及有新一集或新一季的剧集，评分最高的排在前面（按 TMDb 用户的投票评分，需要你的 TMDb 令牌）。数量太少时，会向前查找，最多 60 天；近期没有新作品时，轮播不显示。\n\n“正在观看的电影”和“正在观看的剧集”会从你停下的地方继续。要移除卡片，请长按它（在 Mac 上按住 Control 点按），然后选择“从历史记录中移除”。接下来是“我的片单”、“最新电影”和“最新剧集”（今年或去年上映）、“热门”、你的“合集”、“我的片单中的频道”和“最近观看”，以及你的“提醒”。只有直播频道的播放列表会先显示频道。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "في أعلى الرئيسية، تتيح القائمة التي تحمل اسم قائمة التشغيل التبديل بين قوائم التشغيل أو إضافة قائمة أو تحديثها، وتعرض وقت آخر تحديث لها. وتحتها، يعرض العرض الدوّار الإصدارات الحديثة، بحسب تاريخ صدورها لا بحسب يوم إضافتها من مزوّدك: الأفلام الصادرة في الأيام السبعة الأخيرة والمسلسلات التي صدرت لها حلقة أو موسم جديد، الأعلى تقييمًا أولًا (بحسب تصويت مستخدمي TMDb، مع رمز TMDb الخاص بك). وإن كانت قليلة جدًا، يعود إلى ما قبل ذلك حتى 60 يومًا؛ وإن لم يصدر شيء مؤخرًا، يبقى مخفيًا.\n\nتستأنف «أفلام قيد المشاهدة» و«مسلسلات قيد المشاهدة» من حيث توقفت. لإزالة بطاقة، اضغط عليها مطولًا (أو Control مع النقر على Mac) واختر «إزالة من السجل». ثم تأتي «قائمتي» و«أفلام جديدة» و«مسلسلات جديدة» (الصادرة هذا العام أو العام الماضي) و«الرائج» و«المجموعات» الخاصة بك و«القنوات في قائمتي» و«شوهد مؤخرًا»، ثم «التذكيرات». وتعرض قائمة التشغيل التي لا تحتوي إلا على قنوات مباشرة هذه القنوات أولًا."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "होम के ऊपर, प्लेलिस्ट के नाम वाला मेन्यू प्लेलिस्ट बदलता है, नई जोड़ता है या उसे रीफ़्रेश करता है, और बताता है कि वह आख़िरी बार कब अपडेट हुई। उसके नीचे, कैरोसेल हाल की रिलीज़ दिखाता है, रिलीज़ की तारीख़ के अनुसार, न कि उस दिन के अनुसार जब आपके प्रदाता ने उन्हें जोड़ा: पिछले 7 दिनों में रिलीज़ हुई फ़िल्में और नए एपिसोड या नए सीज़न वाली सीरीज़, सबसे ऊँची रेटिंग वाली पहले (TMDb के मतदाताओं की रेटिंग के अनुसार, आपके TMDb टोकन के साथ)। बहुत कम हों तो यह और पीछे देखता है, 60 दिनों तक; हाल में कुछ रिलीज़ न हुआ हो तो यह छिपा रहता है।\n\nदेखी जा रही फ़िल्में और देखी जा रही सीरीज़ वहीं से शुरू होती हैं जहाँ आपने छोड़ा था। किसी कार्ड को हटाने के लिए उसे देर तक दबाएँ (Mac पर Control-क्लिक करें) और इतिहास से हटाएँ चुनें। फिर आते हैं मेरी सूची, नई फ़िल्में और नई सीरीज़ (इस साल या पिछले साल रिलीज़ हुई), ट्रेंडिंग, आपके संग्रह, मेरी सूची के चैनल और हाल ही में देखे गए, और आपके रिमाइंडर। जिस प्लेलिस्ट में सिर्फ़ लाइव चैनल हों, वह उन्हें सबसे पहले दिखाती है।"
-          }
-        }
-      }
-    },
     "Audio": {
       "localizations": {
         "fr": {
@@ -28519,6 +28479,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "चयन टैग से बनी आपकी अपनी पंक्ति है। सेटिंग्स → मेरे चयन खुले प्रोफ़ाइल के चयन दिखाता है: नया चयन एक बनाता है, किसी चयन को चुनने से उसका पेज बदलने के लिए खुलता है, और उसे स्वाइप करना या उसका मेन्यू (Mac पर Control-क्लिक) उसे हटाता है, जैसे उसके पेज पर चयन हटाएँ। सेटिंग्स → पंक्तियों का क्रम में भी हर टैब के नाम के पास नया चयन है।\n\nउसके पेज पर उसे नाम दें, या नाम खाली छोड़ें ताकि उसके टैग उसका नाम बनें। चुनें कि वह किन टैब में दिखे: होम, फ़िल्में, सीरीज़। फिर जॉनर, पुरस्कारों, दशकों और स्टाइल में से उसके टैग चुनें। किसी टाइटल में चुने गए टैग में से एक होना काफ़ी है; सभी टैग चालू होने पर सभी होने चाहिए।\n\nआपका प्रोवाइडर किसी जॉनर को किसी भी भाषा में नाम दे, वह एक ही जॉनर है: Aventure, Abenteuer और Adventure एक ही हैं, आपकी भाषा में दिखते हैं। जॉनर आपके प्रोवाइडर से आते हैं: फ़िल्म के उसका पेज खुलने के बाद, सीरीज़ के हमेशा।\n\nपंक्ति हर दिन अपने टाइटल में से नया चुनाव है: TMDb पर सबसे अच्छी रेटिंग वाले अक्सर पहले आते हैं, और जो टाइटल आप देख चुके हैं वे आख़िर में। उसके अंत में सभी देखें सभी खोलता है।\n\nचयन हर प्रोफ़ाइल के अपने होते हैं और इस नेटवर्क पर सिंक करें से आपके दूसरे डिवाइस पर भी आते हैं। बच्चों का प्रोफ़ाइल उन्हें बना या बदल नहीं सकता। नए चयन की पंक्ति हर उस टैब में सबसे ऊपर जाती है जिसमें वह दिखता है; सेटिंग्स → पंक्तियों का क्रम उसे दूसरी पंक्तियों की तरह हिलाता या छिपाता है।"
+          }
+        }
+      }
+    },
+    "At the top of Home, the menu with the playlist's name switches playlists, adds one or refreshes it, and shows when it was last updated. Below it, the carousel shows recent releases, by release date and not by the day your provider added them: movies released in the last 90 days and series with an episode out in the last 30 days, one card per series, movies and series in turn. The best rated come first (rated by TMDb's voters, with your TMDb token), the newest a little ahead; when nothing came out lately, it stays hidden.\n\nMovies in Progress and Series in Progress pick up where you stopped. To take a card out, long-press it (Control-click on a Mac) and choose Remove from History. Then come My List, New Movies and New Series (released this year or last year), Trending, your Collections, Channels in My List and Recently Watched, and your Reminders. A playlist with live channels only shows them first.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En haut de l’Accueil, le menu au nom de la playlist change de playlist, en ajoute une ou l’actualise, et indique sa dernière mise à jour. Dessous, le carrousel montre les sorties récentes, selon leur date de sortie et non le jour où votre fournisseur les a ajoutées : les films sortis ces 90 derniers jours et les séries avec un épisode sorti ces 30 derniers jours, une seule carte par série, films et séries en alternance. Les mieux notés passent d’abord (notés par les votants de TMDb, avec votre jeton TMDb), les plus récents un peu en avance ; si rien n’est sorti récemment, il reste masqué.\n\nFilms en cours et Séries en cours reprennent là où vous vous êtes arrêté. Pour retirer une carte, appuyez longuement dessus (Contrôle-clic sur Mac) et choisissez Retirer de l'historique. Viennent ensuite Ma liste, Nouveaux films et Nouvelles séries (sortis cette année ou l’an dernier), Tendances, vos Collections, Chaînes de Ma liste et Vus récemment, et vos Rappels. Une playlist qui n’a que des chaînes en direct les montre en premier."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En la parte superior de Inicio, el menú con el nombre de la playlist cambia de playlist, añade una o la actualiza, e indica cuándo se actualizó por última vez. Debajo, el carrusel muestra los estrenos recientes, por su fecha de estreno y no por el día en que tu proveedor los añadió: las películas estrenadas en los últimos 90 días y las series con un episodio estrenado en los últimos 30 días, una sola tarjeta por serie, alternando películas y series. Primero las mejor valoradas (por los votantes de TMDb, con tu token de TMDb), con algo de ventaja para las más recientes; si no se ha estrenado nada últimamente, no aparece.\n\nPelículas en curso y Series en curso retoman donde lo dejaste. Para quitar una tarjeta, mantenla pulsada (Control-clic en un Mac) y elige Quitar del historial. Después vienen Mi lista, Películas nuevas y Series nuevas (estrenadas este año o el anterior), Tendencias, tus Colecciones, Canales de Mi lista y Vistos recientemente, y tus Recordatorios. Una playlist que solo tiene canales en directo los muestra primero."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No topo do Início, o menu com o nome da playlist troca de playlist, adiciona uma ou a atualiza, e mostra quando ela foi atualizada pela última vez. Abaixo, o carrossel mostra os lançamentos recentes, pela data de lançamento e não pelo dia em que seu provedor os adicionou: os filmes lançados nos últimos 90 dias e as séries com um episódio lançado nos últimos 30 dias, um só cartão por série, alternando filmes e séries. Primeiro os mais bem avaliados (pelos votantes do TMDb, com seu token do TMDb), com uma pequena vantagem para os mais recentes; se nada foi lançado recentemente, ele fica oculto.\n\nFilmes em andamento e Séries em andamento retomam de onde você parou. Para remover um card, toque nele e segure (Control-clique no Mac) e escolha Remover do histórico. Depois vêm Minha lista, Novos filmes e Novas séries (lançados neste ano ou no ano passado), Em alta, suas Coleções, Canais da Minha lista e Assistidos recentemente, e seus Lembretes. Uma playlist que só tem canais ao vivo os mostra primeiro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在“首页”顶部，带有播放列表名称的菜单可切换播放列表、添加或刷新播放列表，并显示其上次更新时间。下方的轮播显示近期上映的作品，按上映日期而不是提供商添加的日期：最近 90 天上映的电影，以及最近 30 天有新一集播出的剧集，每部剧集只显示一张卡片，电影和剧集交替出现。评分最高的排在前面（按 TMDb 用户的投票评分，需要你的 TMDb 令牌），较新的作品略微靠前；近期没有新作品时，轮播不显示。\n\n“正在观看的电影”和“正在观看的剧集”会从你停下的地方继续。要移除卡片，请长按它（在 Mac 上按住 Control 点按），然后选择“从历史记录中移除”。接下来是“我的片单”、“最新电影”和“最新剧集”（今年或去年上映）、“热门”、你的“合集”、“我的片单中的频道”和“最近观看”，以及你的“提醒”。只有直播频道的播放列表会先显示频道。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "في أعلى الرئيسية، تتيح القائمة التي تحمل اسم قائمة التشغيل التبديل بين قوائم التشغيل أو إضافة قائمة أو تحديثها، وتعرض وقت آخر تحديث لها. وتحتها، يعرض العرض الدوّار الإصدارات الحديثة، بحسب تاريخ صدورها لا بحسب يوم إضافتها من مزوّدك: الأفلام الصادرة في آخر 90 يومًا والمسلسلات التي صدرت لها حلقة في آخر 30 يومًا، بطاقة واحدة لكل مسلسل، بالتناوب بين الأفلام والمسلسلات. الأعلى تقييمًا أولًا (بحسب تصويت مستخدمي TMDb، مع رمز TMDb الخاص بك)، مع تقديم بسيط للأحدث؛ وإن لم يصدر شيء مؤخرًا، يبقى مخفيًا.\n\nتستأنف «أفلام قيد المشاهدة» و«مسلسلات قيد المشاهدة» من حيث توقفت. لإزالة بطاقة، اضغط عليها مطولًا (أو Control مع النقر على Mac) واختر «إزالة من السجل». ثم تأتي «قائمتي» و«أفلام جديدة» و«مسلسلات جديدة» (الصادرة هذا العام أو العام الماضي) و«الرائج» و«المجموعات» الخاصة بك و«القنوات في قائمتي» و«شوهد مؤخرًا»، ثم «التذكيرات». وتعرض قائمة التشغيل التي لا تحتوي إلا على قنوات مباشرة هذه القنوات أولًا."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "होम के ऊपर, प्लेलिस्ट के नाम वाला मेन्यू प्लेलिस्ट बदलता है, नई जोड़ता है या उसे रीफ़्रेश करता है, और बताता है कि वह आख़िरी बार कब अपडेट हुई। उसके नीचे, कैरोसेल हाल की रिलीज़ दिखाता है, रिलीज़ की तारीख़ के अनुसार, न कि उस दिन के अनुसार जब आपके प्रदाता ने उन्हें जोड़ा: पिछले 90 दिनों में रिलीज़ हुई फ़िल्में और पिछले 30 दिनों में नए एपिसोड वाली सीरीज़, हर सीरीज़ का एक ही कार्ड, फ़िल्में और सीरीज़ बारी-बारी से। सबसे ऊँची रेटिंग वाली पहले (TMDb के मतदाताओं की रेटिंग के अनुसार, आपके TMDb टोकन के साथ), नई रिलीज़ को थोड़ी बढ़त; हाल में कुछ रिलीज़ न हुआ हो तो यह छिपा रहता है।\n\nदेखी जा रही फ़िल्में और देखी जा रही सीरीज़ वहीं से शुरू होती हैं जहाँ आपने छोड़ा था। किसी कार्ड को हटाने के लिए उसे देर तक दबाएँ (Mac पर Control-क्लिक करें) और इतिहास से हटाएँ चुनें। फिर आते हैं मेरी सूची, नई फ़िल्में और नई सीरीज़ (इस साल या पिछले साल रिलीज़ हुई), ट्रेंडिंग, आपके संग्रह, मेरी सूची के चैनल और हाल ही में देखे गए, और आपके रिमाइंडर। जिस प्लेलिस्ट में सिर्फ़ लाइव चैनल हों, वह उन्हें सबसे पहले दिखाती है।"
           }
         }
       }

@@ -118,15 +118,18 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   (`RecentReleases`, comme sur Apple) : la `release_date` d'un film, le dernier épisode d'une série
   (`last_episode_to_air`, `last_air_date`), sinon sa dernière saison, sinon sa `first_air_date`, lus dans le même
   appel `/movie/{id}` ou `/tv/{id}` et gardés en `release_date` (sinon la date complète du fournisseur d'une fiche
-  ouverte ; une année seule n'est pas une date). Les titres sortis ces 7 derniers jours, jamais une date à venir,
-  classés par la note moyenne de TMDb pondérée par son nombre de votes (`v/(v+200)·R + 200/(v+200)·6,5`,
-  `WeightedRating`), 10 votes au moins (les nouveautés en ont peu : avec m = 200, quelques votes restent de toute façon
-  près de la moyenne a priori), égalité au plus récent puis au titre ; 14, 30 puis 60 jours tant que moins de 15 sont
-  retenus ; aucun retenu, les sorties les plus récentes par date ; rien de sorti en 60 jours, pas de carrousel (jamais
-  de titres plus anciens). Une image est requise (affiche ou image de fond) ; catégories, langues et mots masqués,
+  ouverte ; une année seule n'est pas une date). Les films sortis ces 90 derniers jours et les séries avec un épisode ces 30 derniers
+  jours, jamais une date à venir, une seule carte par film et par série (`RecentReleases.identity` : une série par son
+  nom nettoyé sans l'épisode, si bien qu'un fournisseur qui la liste une fois par nouvel épisode ou sous plusieurs
+  catégories donne une carte, la plus récente), classés par la note moyenne de TMDb pondérée pour les nouveautés
+  (`(v·R + 50·6,5)/(v+50)`, `carouselRating` ; les nouveautés ont des dizaines ou des centaines de votes, la moyenne a
+  priori pèse donc comme 50 votes et non 200), 5 votes au moins, plus un bonus de fraîcheur de 0,5 le jour de la
+  sortie qui décroît régulièrement jusqu'à 0 à la fin de la fenêtre (`freshness`) ; les titres avec moins de votes
+  après eux, par date ; égalité au plus récent puis au titre ; films et séries en alternance, la sorte du premier
+  d'abord ; moins de 15 : ceux qu'il y a ; rien de sorti récemment, pas de carrousel (jamais de titres plus anciens). Une image est requise (affiche ou image de fond) ; catégories, langues et mots masqués,
   films vus et limites du profil s'appliquent. Les dates arrivent sans rafale sur l'accueil : avec le jeton de
   l'utilisateur, tant qu'Ondo est à l'écran, les titres peut-être récents (sortis cette année ou l'an dernier, ou
-  modifiés par le fournisseur ces 60 derniers jours, comme une série avec un nouvel épisode) dont l'appareil ne
+  modifiés par le fournisseur ces 90 derniers jours, comme une série avec un nouvel épisode) dont l'appareil ne
   connaît pas la date, ou que le fournisseur a modifiés depuis la question à TMDb, sont demandés en arrière-plan,
   100 au plus par catalogue, deux à la fois au rythme des autres requêtes (`RatingFill`), et l'accueil les relit deux
   fois ; un titre gardé avant les dates de sortie est redemandé quand il s'affiche (comme pour les genres), les crédits gardés trouvent les personnes dans la recherche et leurs titres sans réseau, et une adresse

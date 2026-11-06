@@ -60,9 +60,9 @@ extension HelpTopic {
             body: """
             At the top of Home, the menu with the playlist's name switches playlists, adds one or refreshes it, and \
             shows when it was last updated. Below it, the carousel shows recent releases, by release date and not by the \
-            day your provider added them: movies released in the last 7 days and series with a new episode or season, the \
-            best rated first (rated by TMDb's voters, with your TMDb token). When there are too few, it looks further back, \
-            up to 60 days; when nothing came out lately, it stays hidden.
+            day your provider added them: movies released in the last 90 days and series with an episode out in the last \
+            30 days, one card per series, movies and series in turn. The best rated come first (rated by TMDb's voters, \
+            with your TMDb token), the newest a little ahead; when nothing came out lately, it stays hidden.
 
             Movies in Progress and Series in Progress pick up where you stopped. To take a card out, long-press it \
             (Control-click on a Mac) and choose Remove from History. Then come My List, New Movies and New Series \

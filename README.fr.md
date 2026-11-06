@@ -149,11 +149,12 @@ chaque changement de l'interface.
 ### Android (téléphones, tablettes et TV)
 
 - **Accueil** : carrousel des sorties récentes, selon leur date de sortie et jamais selon le jour où le fournisseur
-  a ajouté un titre : les films sortis ces 7 derniers jours, les séries avec un épisode ou une saison sortis ces
-  7 derniers jours (une série de 2014 avec une nouvelle saison cette semaine y est, une série sans rien de nouveau
-  non), rien d'annoncé pour plus tard ; les meilleurs d'abord selon la note moyenne de TMDb pondérée par le nombre de
-  votes (avec un jeton TMDb ; 10 votes au moins) ; 14, puis 30, puis 60 jours quand moins de 15 titres sont retenus ;
-  sans votes, les sorties les plus récentes par date ; masqué quand rien n'est sorti en 60 jours ; chaque titre indique le jour de sa sortie (une série : « Nouvel
+  a ajouté un titre : les films sortis ces 90 derniers jours, les séries avec un épisode sorti ces 30 derniers
+  jours (une série de 2014 avec un nouvel épisode cette semaine y est, une série sans rien de nouveau non), rien
+  d'annoncé pour plus tard ; une seule carte par série et par film ; les meilleurs d'abord selon la note moyenne de
+  TMDb pondérée pour les nouveautés (avec un jeton TMDb ; 5 votes au moins) plus un petit bonus pour les plus récents,
+  les autres après eux par date ; films et séries en alternance ; masqué quand rien n'est sorti récemment ; chaque
+  titre indique le jour de sa sortie (une série : « Nouvel
   épisode » et le jour) au lieu de son année. Films et séries en
   cours (une rangée chacun ; appuyez longuement sur une carte, ou
   maintenez OK sur une TV, pour la retirer), Ma liste, nouveautés, chaînes ; la date de dernière mise à jour de la

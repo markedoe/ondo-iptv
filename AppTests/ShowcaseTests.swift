@@ -148,9 +148,10 @@ final class ShowcaseTests: XCTestCase {
         release(.movie(bright), in: model, daysAgo: 2, votes: (7.8, 5_000))
         release(.movie(quiet), in: model, daysAgo: 5, votes: (8.0, 300))
         release(.series(harbor), in: model, daysAgo: 1, votes: (7.0, 100))
-        XCTAssertEqual(model.heroItems(limit: 5), [.movie(bright), .movie(quiet), .series(harbor)],
-                       "by weighted rating; an old film, however well rated or being watched, stays out")
-        XCTAssertEqual(model.heroItems(limit: 2), [.movie(bright), .movie(quiet)])
+        // Scores (rating for new titles + freshness): Bright Side 7.79 + 0.49, Quiet Water 7.79 + 0.47, Harbor 6.83 + 0.48.
+        XCTAssertEqual(model.heroItems(limit: 5), [.movie(bright), .series(harbor), .movie(quiet)],
+                       "by score, movies and series in turn; an old film, however well rated or being watched, stays out")
+        XCTAssertEqual(model.heroItems(limit: 2), [.movie(bright), .series(harbor)])
     }
 
     /// One series, one card: listed again under other categories ("|FR| Harbor", "Harbor 4K"), each copy released
@@ -213,7 +214,7 @@ final class ShowcaseTests: XCTestCase {
         let model = try await model(with: Self.oldWithPosters)
         XCTAssertTrue(model.heroItems(limit: 5).isEmpty)
         release(.movie(try movie("Old Film B", in: model)), in: model, daysAgo: 400, votes: (9, 20_000))
-        XCTAssertTrue(model.heroItems(limit: 5).isEmpty, "released over 60 days ago")
+        XCTAssertTrue(model.heroItems(limit: 5).isEmpty, "released over 90 days ago")
         XCTAssertTrue(model.releasesToAsk().isEmpty, "old titles nobody changed lately are not asked about")
     }
 

@@ -176,10 +176,13 @@ extension AppModel {
                 .filter { RecentReleases.mayBeRecent(year: $0.year, addedAt: $0.addedAt, today: today) }.map(ShowcaseItem.series)
             let items = movies + series
             // Titles without a date keep the playlist's order, after the others (the offset breaks the tie).
-            return self.distinctFilms(items).enumerated().sorted { a, b in
+            let sorted: [ShowcaseItem] = self.distinctFilms(items).enumerated().sorted { a, b in
                 let x = a.element.addedAt ?? .distantPast, y = b.element.addedAt ?? .distantPast
                 return x != y ? x > y : a.offset < b.offset
             }.map(\.element)
+            // A title listed several times (once per new episode, under other categories) is asked once, by its latest entry.
+            var titles = Set<String>()
+            return sorted.filter { (item: ShowcaseItem) -> Bool in titles.insert(Self.carouselIdentity(item)).inserted }
         }
         let watched = hiddenWatchedMovieIDs()
         guard !watched.isEmpty else { return all }
@@ -252,11 +255,11 @@ extension AppModel {
     }
 
     /// Up to `limit` titles for the hero carousel, by release date and not by the day the provider added them
-    /// (`RecentReleases.pick`): the titles released in the last 7 days (a movie's release, a series' latest episode or
-    /// season), best first by TMDb's weighted rating, the window widening to 14, 30 then 60 days while fewer than `limit`
-    /// qualify; with no votes, the newest releases by date; with no recent release, none (Home shows no carousel). Only
-    /// titles with artwork, nothing from a hidden or locked category, a hidden language or a movie hidden as watched; each
-    /// film once. Picked again when the carousel's fill brought dates (`TMDbMetadata.carouselRevision`).
+    /// (`RecentReleases.pick`): the movies released in the last 90 days and the series with an episode in the last 30,
+    /// best first by their rating for new titles plus freshness, those not rated enough after them by date, movies and
+    /// series in turn; with no recent release, none (Home shows no carousel). Only titles with artwork, nothing from a
+    /// hidden or locked category, a hidden language or a movie hidden as watched; each film, and each series, once.
+    /// Picked again when the carousel's fill brought dates (`TMDbMetadata.carouselRevision`).
     func heroItems(limit: Int = 5, now: Date = .now) -> [ShowcaseItem] {
         let today = RecentReleases.today(now)
         let watched = hiddenWatchedMovieIDs()
@@ -272,16 +275,23 @@ extension AppModel {
                 return true
             }
             var byID: [String: ShowcaseItem] = [:]
-            var seen = Set<String>()
-            let candidates = self.distinctFilms(recent).compactMap { item -> RecentReleases.Candidate? in
-                let film = item.title.trimmingCharacters(in: .whitespaces).lowercased() + "|" + (item.year.map(String.init) ?? "")
-                guard seen.insert(film).inserted else { return nil }
+            // One card per title (`RecentReleases.identity`): a series listed once per new episode or under other categories.
+            let candidates = self.distinctFilms(recent).map { item -> RecentReleases.Candidate in
                 byID[item.id] = item
                 let votes = self.tmdbTitle(for: item)?.votes
                 return RecentReleases.Candidate(id: item.id, title: item.title, released: released[item.id], average: votes?.average,
-                                                votes: votes?.count ?? 0, categoryID: item.categoryID, hasArtwork: self.hasArtwork(item))
+                                                votes: votes?.count ?? 0, categoryID: item.categoryID, hasArtwork: self.hasArtwork(item),
+                                                identity: Self.carouselIdentity(item), series: item.contentType == .series)
             }
             return RecentReleases.pick(candidates, today: today, size: limit).compactMap { byID[$0.id] }
+        }
+    }
+
+    /// What a title is for the carousel, whatever the provider's entry (`RecentReleases.identity`).
+    nonisolated static func carouselIdentity(_ item: ShowcaseItem) -> String {
+        switch item {
+        case .movie(let movie): return RecentReleases.identity(title: movie.name, series: false, year: movie.year)
+        case .series(let series): return RecentReleases.identity(title: series.name, series: true, year: series.year)
         }
     }
 

@@ -104,14 +104,17 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   (`RecentReleases`, as on Apple): a movie's `release_date`, a series' latest episode (`last_episode_to_air`,
   `last_air_date`), else its latest season, else its `first_air_date`, read from the same `/movie/{id}` or `/tv/{id}`
   call and kept as `release_date` (else the provider's full date from a page opened; a year alone is no date). The
-  titles released in the last 7 days, never a date to come, ranked by TMDb's average vote weighted by its number of
-  votes (`v/(v+200)·R + 200/(v+200)·6.5`, `WeightedRating`), 10 votes at least (new releases have few: with
-  m = 200, a handful of votes stays near the prior anyway), ties to the newest then the title; 14, 30 then 60 days
-  while fewer than 15 qualify; none qualifying, the newest releases by date; nothing released in 60 days, no
-  carousel (never older titles). Artwork required (a poster or a backdrop); hidden categories, languages, words,
+  movies released in the last 90 days and the series with an episode in the last 30, never a date to come, one card
+  per film and per series (`RecentReleases.identity`: a series by its cleaned name without the episode, so a provider
+  listing it once per new episode or under several categories gives one card, the latest), ranked by TMDb's average
+  vote weighted for new titles (`(v·R + 50·6.5)/(v+50)`, `carouselRating`; new releases have tens or hundreds of votes,
+  so the prior weighs as 50 votes, not 200), 5 votes at least, plus a freshness bonus of 0.5 on the release day falling
+  evenly to 0 at the end of the window (`freshness`); the titles with fewer votes after them, by date; ties to the
+  newest then the title; movies and series in turn, the kind of the first one first; fewer than 15: those there are;
+  nothing released lately, no carousel (never older titles). Artwork required (a poster or a backdrop); hidden categories, languages, words,
   watched movies and the profile's limits apply. The dates come without a burst on Home: with the viewer's token,
   while Ondo is on screen, the titles that may be recent (released this year or last, or changed by the provider in
-  the last 60 days, as a series with a new episode) whose date the device does not know, or that the provider
+  the last 90 days, as a series with a new episode) whose date the device does not know, or that the provider
   changed since TMDb was asked, are asked in the background, 100 at most per catalogue, two at a time at the pace of
   the other requests (`RatingFill`), and Home reads them again twice; a title kept before release dates is asked
   again as it shows (as genres were),

@@ -33,11 +33,11 @@ class ShowcaseTest {
     ) = Showcase(content, library, playlistId, hidden, votes = votes, kept = Fixtures.kept(content))
 
     /**
-     * What TMDb's voters said, by poster key, of the titles [Fixtures.releaseDaysAgo] dates: The Last Signal 8.0 from
-     * 4,000 (7.93 weighted), Harbor Lights and Blue Horizon 7.9 from 800 (7.62 each: the newer first), Northern Lights
-     * 7.3 from 12,345 (7.29), Silent Harbor 8.0 from 50 (6.8, released 20 days ago: in once the window widens), Glass
-     * City 10 from 10 (6.67, just enough votes). Summer in Lisbon and The Long Road, best rated, are old films; Late
-     * Show is in the hidden adult category.
+     * What TMDb's voters said, by poster key, of the titles [Fixtures.releaseDaysAgo] dates, with their carousel score
+     * (rating for new titles + freshness): The Last Signal 8.0 from 4,000 (7.98 + 0.49), Harbor Lights 7.9 from 800
+     * (7.82 + 0.48, a series: 30 days), Blue Horizon the same (7.82 + 0.43, 4 days), Northern Lights 7.3 from 12,345
+     * (7.30 + 0.48), Silent Harbor 8.0 from 50 (7.25 + 0.39, 20 days ago), Glass City 10 from 10 (7.08 + 0.47). Summer
+     * in Lisbon and The Long Road, best rated, are old films; Late Show is in the hidden adult category.
      */
     private val votes = mapOf(
         "m-1" to TmdbRating(7.3, 12_345),
@@ -90,9 +90,9 @@ class ShowcaseTest {
     fun theCarouselShowsTheBestRatedRecentReleasesWeightedByVotes() {
         val showcase = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = votes)
         assertEquals(
-            "released in the last 7 days, then 14, 30: by weighted rating, ties to the newest; an old series with nothing new, " +
-                "older titles, a release to come and hidden categories are out",
-            listOf("The Last Signal", "Harbor Lights", "Blue Horizon", "Northern Lights", "Silent Harbor", "Glass City"),
+            "by score, movies and series in turn; an old series with nothing new, older titles, a release to come and " +
+                "hidden categories are out",
+            listOf("The Last Signal", "Harbor Lights", "Northern Lights", "Blue Horizon", "Silent Harbor", "Glass City"),
             showcase.heroItems(Fixtures.NOW).map { it.title },
         )
         assertEquals(listOf("The Last Signal", "Harbor Lights"), showcase.heroItems(Fixtures.NOW, limit = 2).map { it.title })
@@ -115,12 +115,12 @@ class ShowcaseTest {
     fun withoutVotesTheNewestReleasesStandInAndWithoutRecentReleasesTheCarouselIsEmpty() {
         val none = showcase(hidden = setOf(Fixtures.adultMovies.id))
         assertEquals(
-            "the newest releases by date",
-            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "Blue Horizon", "Glass City", "Silent Harbor"),
+            "the newest releases by date, series and movies in turn",
+            listOf("Harbor Lights", "The Last Signal", "Blue Horizon", "Northern Lights", "Glass City", "Silent Harbor"),
             none.heroItems(Fixtures.NOW).map { it.title },
         )
-        // Two months on, nothing was released in the last 60 days: no carousel, rather than older titles.
-        assertTrue(none.heroItems(Fixtures.NOW + 70 * 86_400_000L).isEmpty())
+        // Three months on, no movie released in the last 90 days nor series in the last 30: no carousel, rather than older titles.
+        assertTrue(none.heroItems(Fixtures.NOW + 100 * 86_400_000L).isEmpty())
         // Without any release date known (no TMDb answer, no provider details), none either.
         assertTrue(Showcase(Fixtures.content, LibraryState(), playlistId).heroItems(Fixtures.NOW).isEmpty())
     }

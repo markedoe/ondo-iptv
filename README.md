@@ -136,10 +136,11 @@ interface changes.
 ### Android (phones, tablets and TV)
 
 - **Home**: carousel of recent releases, by release date and never by the day the provider added a title: movies
-  released in the last 7 days, series with an episode or a season out in the last 7 days (a series from 2014 with a
-  new season this week is in, one with nothing new is not), nothing announced for later; the best first by TMDb's
-  average vote weighted by the number of votes (with a TMDb token; 10 votes at least); 14, then 30, then 60 days when
-  fewer than 15 qualify; without votes, the newest releases by date; hidden when nothing came out in 60 days; each title says the day it came out (a series: "New episode" and
+  released in the last 90 days, series with an episode out in the last 30 days (a series from 2014 with a new episode
+  this week is in, one with nothing new is not), nothing announced for later; one card per series and per film; the
+  best first by TMDb's average vote weighted for new titles (with a TMDb token; 5 votes at least) plus a small bonus
+  for the newest, the others after them by date; movies and series in turn; hidden when nothing came out lately;
+  each title says the day it came out (a series: "New episode" and
   the day) in place of its year. Movies
   and series in progress (one row each; long-press a card, or hold OK on a TV, to take
   it out), My List, new releases, channels; when the playlist was last updated, above its name.

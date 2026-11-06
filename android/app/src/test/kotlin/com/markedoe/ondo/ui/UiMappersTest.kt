@@ -92,12 +92,13 @@ class UiMappersTest {
         val library = LibraryState().recordStart(finished).updateProgress(finished.key, 5_900.0, 6_000.0, now = 2)
         val home = UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, Fixtures.NOW, Fixtures.kept())
         assertEquals(listOf("The Long Road", "Blue Horizon", "Summer in Lisbon"), home.trending.map { it.title })
-        // Without TMDb votes, the newest releases by date: Blue Horizon for its new season, not for trending.
+        // Without TMDb votes, the newest releases by date, series and movies in turn: Blue Horizon for its new season, not for trending.
         assertEquals(
-            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "Blue Horizon", "Glass City", "Silent Harbor"),
+            listOf("Harbor Lights", "The Last Signal", "Blue Horizon", "Northern Lights", "Glass City", "Silent Harbor"),
             home.hero.map { it.item.title },
         )
-        // With votes, the recent releases with enough of them, by weighted rating; ten votes at 10 stay near the prior.
+        // With votes, the recent releases with enough of them first, by score; ten votes at 10 stay near the prior; the
+        // others after them by date; series and movies in turn.
         val voted = Fixtures.state(library).copy(
             trending = trending,
             tmdbRatings = mapOf(
@@ -107,7 +108,7 @@ class UiMappersTest {
             ),
         )
         assertEquals(
-            listOf("Harbor Lights", "Northern Lights", "The Last Signal"),
+            listOf("Harbor Lights", "Northern Lights", "Blue Horizon", "The Last Signal", "Glass City", "Silent Harbor"),
             UiMappers.home(voted, labels, Fixtures.NOW, Fixtures.kept()).hero.map { it.item.title },
         )
 

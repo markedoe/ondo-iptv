@@ -85,7 +85,7 @@ final class CarouselReleasesEverySurfaceTests: XCTestCase {
         ]
         for (surface, carousel) in surfaces {
             XCTAssertEqual(carousel.map(\.title), ["The Last Signal", "Blue Horizon", "Northern Lights", "Glass City"],
-                           "\(surface): the recent releases by weighted rating; a 12-year-old series with a new season is in")
+                           "\(surface): the recent releases by score, movies and series in turn; a 12-year-old series with a new season is in")
             for name in ["The Long Road", "The Archive", "Midnight Orchard", "Late Show"] {
                 XCTAssertFalse(carousel.map(\.title).contains(name), "\(surface) shows \(name)")
             }

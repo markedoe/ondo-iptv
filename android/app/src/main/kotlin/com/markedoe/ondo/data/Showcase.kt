@@ -169,8 +169,9 @@ class Showcase(
         val today = today(now)
         val found = browsableMovies.filter { RecentReleases.mayBeRecent(it.year, it.addedAt, today) }.map { ShowcaseItem.MovieItem(it) } +
             series.filter { RecentReleases.mayBeRecent(it.year, it.addedAt, today) }.map { ShowcaseItem.SeriesItem(it) }
-        // sortedByDescending is stable: titles without a date keep the playlist's order, after the others.
-        return films.distinctItems(found).sortedByDescending { it.addedAt ?: Long.MIN_VALUE }
+        // sortedByDescending is stable: titles without a date keep the playlist's order, after the others. A title listed
+        // several times (once per new episode, under other categories) is asked once, by its latest entry.
+        return films.distinctItems(found).sortedByDescending { it.addedAt ?: Long.MIN_VALUE }.distinctBy(::identity)
     }
 
     /**
@@ -182,12 +183,15 @@ class Showcase(
             .distinctBy { it.key }
             .take(limit)
 
+    /** What a title is for the carousel, whatever the provider's entry ([RecentReleases.identity]). */
+    private fun identity(item: ShowcaseItem): String = RecentReleases.identity(item.title, item is ShowcaseItem.SeriesItem, item.year)
+
     /**
      * Up to [limit] titles for the carousel, by release date and not by the day the provider added them
-     * ([RecentReleases.pick]): the titles released in the last 7 days (a movie's release, a series' latest episode or
-     * season), best first by TMDb's weighted rating, the window widening to 14, 30 then 60 days while fewer than [limit]
-     * qualify; with no votes, the newest releases by date; with no recent release, none (the carousel hides). Only titles
-     * with artwork, never one of a hidden category, hidden by name or watched when Settings hides those; each film once.
+     * ([RecentReleases.pick]): the movies released in the last 90 days and the series with an episode in the last 30,
+     * best first by their rating for new titles plus freshness, those not rated enough after them by date, movies and
+     * series in turn; with no recent release, none (the carousel hides). Only titles
+     * with artwork, never one of a hidden category, hidden by name or watched when Settings hides those; each film, and each series, once.
      */
     fun heroItems(now: Long, limit: Int = HERO_TITLES): List<ShowcaseItem> {
         val today = today(now)
@@ -198,12 +202,12 @@ class Showcase(
             today - day in 0 until RecentReleases.WIDEST
         }
         val byKey = HashMap<String, ShowcaseItem>()
+        // One card per title ([RecentReleases.identity]): a series listed once per new episode or under other categories.
         val candidates = films.distinctItems(shown)
-            .distinctBy { "${it.title.trim().lowercase()}|${it.year}" }
             .map { item ->
                 byKey[item.key] = item
                 val rating = votes[item.key] ?: kept[item.key]?.rating
-                RecentReleases.Candidate(item.key, item.title, dated[item.key], rating?.average, rating?.votes ?: 0, categoryOf(item), hasArtwork(item))
+                RecentReleases.Candidate(item.key, item.title, dated[item.key], rating?.average, rating?.votes ?: 0, categoryOf(item), hasArtwork(item), identity(item), item is ShowcaseItem.SeriesItem)
             }
         return RecentReleases.pick(candidates, today, limit, excludedCategoryIds).mapNotNull { byKey[it.id] }
     }

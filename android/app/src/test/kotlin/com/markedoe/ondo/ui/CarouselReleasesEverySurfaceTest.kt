@@ -77,7 +77,7 @@ class CarouselReleasesEverySurfaceTest {
     fun everyCarouselGoesByReleaseDate() {
         assertEquals(
             "the list every surface draws",
-            listOf("The Last Signal", "Harbor Lights", "Blue Horizon", "Northern Lights", "Silent Harbor", "Glass City"),
+            listOf("The Last Signal", "Harbor Lights", "Northern Lights", "Blue Horizon", "Silent Harbor", "Glass City"),
             home.hero.map { it.item.title },
         )
         // The facts say when it came out, and why a series is there (its latest episode, not the year it started).
