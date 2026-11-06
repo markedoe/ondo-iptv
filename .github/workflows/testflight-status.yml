@@ -1,10 +1,11 @@
 name: TestFlight status
 
-# Read only: TestFlight as App Store Connect holds it (fastlane testflight_status): the groups and how many testers each
-# has, Test Information per language and the Beta App Review contact (set or missing, never their values), and each
-# platform's latest builds with their edition, states, beta review and What to Test. Uploads, submits and changes
-# nothing. A workflow of its own on Linux: in release.yml it would wait in the release queue, and a waiting run there
-# would hold back the deliveries (deliver.yml).
+# Read only: TestFlight as App Store Connect holds it (fastlane testflight_status): the groups, how many testers each
+# has and whether it offers iOS builds on Apple silicon Macs, whether a macOS version is on the Mac App Store, Test
+# Information per language and the Beta App Review contact (set or missing, never their values), and each platform's
+# latest builds with their edition, states, beta review and What to Test. Uploads, submits and changes nothing. A
+# workflow of its own on Linux: in release.yml it would wait in the release queue, and a waiting run there would hold
+# back the deliveries (deliver.yml).
 on:
   workflow_dispatch:
 

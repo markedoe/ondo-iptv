@@ -611,6 +611,15 @@ class AppStoreTests(CheckTestCase):
                 self.external_path(self.EXTERNAL_FASTFILE + "\nlane :anything do\n" + extra + "end\n")
                 self.assertFails("app_store", "gives a build to external testers or Beta App Review outside")
 
+    def test_ios_builds_on_apple_silicon_macs_are_only_ever_turned_off(self):
+        patch = "  Spaceship::ConnectAPI.patch_group(group_id: id, attributes: { iosBuildsAvailableForAppleSiliconMac: %s })\n"
+        self.external_path(self.EXTERNAL_FASTFILE + "\ndef keep_ios_builds_off_macs(app)\n" + patch % "false" + "end\n")
+        self.assertPasses("app_store")
+        for value in ("true", "value", "!value"):
+            with self.subTest(value=value):
+                self.external_path(self.EXTERNAL_FASTFILE + "\ndef keep_ios_builds_off_macs(app)\n" + patch % value + "end\n")
+                self.assertFails("app_store", "sets iosBuildsAvailableForAppleSiliconMac to")
+
     def test_a_line_starting_with_end_does_not_end_a_function(self):
         # `end_time = …` at column 0 inside a function must not end it: the lines after it stay checked as its own.
         self.external_path(self.EXTERNAL_FASTFILE.replace(

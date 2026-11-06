@@ -269,8 +269,16 @@ user-selected files).
      *TestFlight → External Testing*, by e-mail or with a public link. An empty Beta App Review contact is copied from
      the App Review contact. The first build of a version waits for Beta App Review (usually within a day or two);
      the next builds of that version are often approved within minutes.
+   - **No iOS build on Macs.** A Mac with Apple silicon can install the iOS build from TestFlight, and the Mac app
+     (same bundle ID) then refuses to install until it is deleted. Each TestFlight group has the setting (*TestFlight →
+     the group → Settings → Test iPhone and iPad apps on Apple silicon Macs*; API: `iosBuildsAvailableForAppleSiliconMac`):
+     the external testers job turns it off in every group where it is on, and logs it. It does not remove an iOS build
+     already installed on a Mac: delete it there, then install the Mac build. The App Store's own setting (*Pricing and
+     Availability → iPhone and iPad Apps on Apple Silicon Mac → Make this app available*) is not in the API: App Store
+     Connect shows it only while no macOS version is on the Mac App Store, and *TestFlight status* says whether one is.
    - **To look before changing anything**: *Actions → TestFlight status → Run workflow* (`testflight-status.yml`,
-     Linux, read only, outside the release queue): the groups and their tester counts, Test Information per language
+     Linux, read only, outside the release queue): the groups, their tester counts and whether they offer iOS builds
+     on Apple silicon Macs, whether a macOS version is on the Mac App Store, Test Information per language
      (set or missing), the Beta App Review contact (set or missing), and each platform's latest builds with whether
      they are in `External testers` (App Store edition), their internal, external and beta review states and their
      What to Test.
