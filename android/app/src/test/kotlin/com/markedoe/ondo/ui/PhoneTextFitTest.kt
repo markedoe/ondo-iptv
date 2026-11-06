@@ -1,0 +1,138 @@
+package com.markedoe.ondo.ui
+
+import android.content.Context
+import android.content.res.Configuration
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.test.core.app.ApplicationProvider
+import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.R
+import com.markedoe.ondo.appLabels
+import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
+import com.markedoe.ondo.ui.screens.HomeActions
+import com.markedoe.ondo.ui.screens.HomeScreen
+import com.markedoe.ondo.ui.screens.LiveActions
+import com.markedoe.ondo.ui.screens.LiveScreen
+import com.markedoe.ondo.ui.screens.PersonScreen
+import com.markedoe.ondo.ui.screens.VodActions
+import com.markedoe.ondo.ui.screens.VodScreen
+import com.markedoe.ondo.ui.theme.OndoTheme
+import com.markedoe.ondo.ui.tv.TelevisionFrame
+import com.markedoe.ondo.screenshots.ShowcaseCatalogue
+import com.markedoe.ondo.screenshots.ShowcaseImages
+import java.util.Locale
+import org.junit.After
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.ParameterizedRobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * On a 360 dp phone, in each language of the app, the short words of every surface stay whole on one line: the tab
+ * titles (Movies, Series, Live TV), the person page's section title and its My List and Collection buttons, and Home's
+ * Play and My List. Arabic and Hindi titles used to break onto a second line, even mid-word (a letter-spaced title is
+ * measured narrower than it is laid out), the Collection button was squeezed into a column of letters, and the hero's
+ * My List wrapped in Portuguese.
+ */
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w360dp-h640dp-xxhdpi")
+class PhoneTextFitTest(private val language: String) {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
+    @get:Rule val compose = createComposeRule()
+
+    companion object {
+        @JvmStatic
+        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun languages(): List<Array<Any>> = listOf("en", "fr", "es", "pt-rBR", "zh-rCN", "ar-ldrtl", "hi").map { arrayOf<Any>(it) }
+    }
+
+    private enum class Surface { MOVIES, SERIES, LIVE, PERSON, HOME }
+
+    private val tag get() = language.substringBefore("-ldrtl").replace("-r", "-")
+    private val locale: Locale get() = Locale.forLanguageTag(tag)
+    private val defaultLocale = Locale.getDefault()
+
+    @Before
+    fun setUp() {
+        RuntimeEnvironment.setQualifiers("+$language")
+        Locale.setDefault(locale)
+        ShowcaseImages.install(ApplicationProvider.getApplicationContext())
+    }
+
+    @After
+    fun tearDown() {
+        ShowcaseImages.reset()
+        Locale.setDefault(defaultLocale)
+    }
+
+    private val strings: Context
+        get() {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            return context.createConfigurationContext(Configuration(context.resources.configuration).apply { setLocale(locale) })
+        }
+
+    private fun lines(text: String): List<Int> =
+        compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { node ->
+            val layouts = mutableListOf<TextLayoutResult>()
+            node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
+            layouts.singleOrNull()?.lineCount
+        }
+
+    @Test
+    fun shortWordsStayOnOneLineOnEverySurface() {
+        val catalogue = ShowcaseCatalogue.load(tag.substringBefore('-'))
+        val state = catalogue.state()
+        val now = ShowcaseCatalogue.NOW
+        val words = strings
+        val labels = appLabels(words.getString(R.string.kind_movie), words.getString(R.string.kind_series), words.getString(R.string.hero_new_episode), locale)
+        var surface by mutableStateOf(Surface.MOVIES)
+        compose.setContent {
+            OndoTheme {
+                CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
+                    TelevisionFrame {
+                        when (surface) {
+                            Surface.MOVIES -> VodScreen(UiMappers.vod(state, series = false, title = words.getString(R.string.movies), now = now), VodActions())
+                            Surface.SERIES -> VodScreen(UiMappers.vod(state, series = true, title = words.getString(R.string.series), now = now), VodActions())
+                            Surface.LIVE -> LiveScreen(UiMappers.live(state, null, false, now), LiveActions())
+                            Surface.PERSON -> PersonScreen(UiMappers.person(state, catalogue.screens.person), onOpen = {}, onBack = {})
+                            Surface.HOME -> HomeScreen(UiMappers.home(state, labels, now, catalogue.kept()).copy(channels = emptyList()), HomeActions())
+                        }
+                    }
+                }
+            }
+        }
+        val checked = mapOf(
+            Surface.MOVIES to listOf(R.string.movies),
+            Surface.SERIES to listOf(R.string.series),
+            Surface.LIVE to listOf(R.string.live_tv),
+            Surface.PERSON to listOf(R.string.movies, R.string.my_list, R.string.collection),
+            Surface.HOME to listOf(R.string.play, R.string.my_list),
+        )
+        val problems = mutableListOf<String>()
+        for ((shown, texts) in checked) {
+            surface = shown
+            compose.waitForIdle()
+            for (id in texts) {
+                val text = words.getString(id)
+                val found = lines(text)
+                if (found.isEmpty()) problems += "$shown: \"$text\" not shown"
+                found.filter { it != 1 }.forEach { problems += "$shown: \"$text\" on $it lines" }
+            }
+        }
+        assertTrue(problems.joinToString("\n"), problems.isEmpty())
+    }
+}
