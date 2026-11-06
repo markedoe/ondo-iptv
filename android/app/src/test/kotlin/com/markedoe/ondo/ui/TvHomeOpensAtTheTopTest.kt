@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.Series
