@@ -274,7 +274,10 @@ class TvTextFieldsEverySurfaceTest(private val surfaceName: String) {
         if (!exists(tag)) surface.list?.let { compose.onNodeWithTag(it).performScrollToNode(hasTestTag(tag)) }
         compose.runOnIdle { runCatching { focusManager?.clearFocus(force = true) } }
         settle(100)
-        imm.setSoftInputVisibility(false)
+        compose.runOnIdle {
+            compose.activity.getSystemService(InputMethodManager::class.java).hideSoftInputFromWindow(compose.activity.window.decorView.windowToken, 0)
+        }
+        assertFalse(keyboardShown())
         compose.onNodeWithTag(tag).requestFocus()
         settle()
     }
