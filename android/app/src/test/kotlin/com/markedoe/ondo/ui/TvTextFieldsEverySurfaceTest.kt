@@ -144,11 +144,14 @@ class TvTextFieldsEverySurfaceTest(private val surfaceName: String) {
                 TvSearchScreen(SearchUiState(query = query, movies = listOf(ShowcaseItem.MovieItem(Fixtures.glassCity))), { query = it }, {}, {}, {}, {})
             },
             Surface(
-                "settingsTmdb", "settingsPane",
+                "settingsTmdb", null,
                 listOf(Field("tmdbTokenField", "TOKEN", After.Leaves, secret = true)),
+                // With the remote, as a viewer: Catalogue, then down its part to the field.
                 prepare = {
                     compose.onNodeWithTag("settingsCatalogue").requestFocus()
                     settle()
+                    press(Key.DirectionRight)
+                    repeat(16) { if (focusedTag() != "tmdbTokenField") press(Key.DirectionDown) }
                 },
             ) { TvSettingsScreen(SettingsUiState(), SettingsActions()) },
             Surface(
