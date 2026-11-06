@@ -567,7 +567,7 @@ class UiMappersTest {
      * Regression guard for hidden categories, on every list of titles at once. A language hidden in Settings (as a
      * language, or its categories one by one, on this device or on another one and applied by sync) leaves none of its
      * titles, channels or people in:
-     *  - Home: carousel, new movies, new series, trending, channels;
+     *  - Home: carousel (and the titles whose release TMDb is asked for it), new movies, new series, trending, channels;
      *  - Movies and Series: rows and grids (every category);
      *  - a selection's rows (Home, Movies, Series) and its See all grid, and the tags a new selection offers;
      *  - Search: movies, series, channels and people, with and without filters;
@@ -611,6 +611,13 @@ class UiMappersTest {
             val seriesCategories = state.content.seriesCategories.map { it.id }
             return mapOf(
                 "home" to home.copy(continueWatching = emptyList(), tagSuggestion = null).toString(),
+                // Home's lists one by one too, so that a failure names the list.
+                "carousel" to home.hero.toString(),
+                "carousel candidates" to UiMappers.showcase(state).releasesToAsk(Fixtures.NOW).toString(),
+                "new movies" to home.newMovies.toString(),
+                "new series" to home.newSeries.toString(),
+                "trending" to home.trending.toString(),
+                "live row" to home.channels.toString(),
                 "movies rows" to UiMappers.vod(state, series = false, title = "").copy(continueWatching = emptyList()).toString(),
                 "series rows" to UiMappers.vod(state, series = true, title = "").copy(continueWatching = emptyList()).toString(),
                 "movie grids" to (categories.map { UiMappers.grid(state, false, it, false, "") } + listOf(UiMappers.grid(state, false, null, false, ""))).toString(),

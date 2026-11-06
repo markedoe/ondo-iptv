@@ -2,8 +2,10 @@ package com.markedoe.ondo.data
 
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.core.library.RecentReleases
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -231,5 +233,33 @@ class ShowcaseTest {
             listOf(ShowcaseItem.SeriesItem(Fixtures.harborLights), ShowcaseItem.MovieItem(Fixtures.glassCity)),
             showcase(library).myList(),
         )
+    }
+
+    /**
+     * One series, one card. A provider lists a series with new episodes once per episode ("Harbor S01E08", "Harbor
+     * S01E09", "Harbor S01E10": three entries, each released lately), and again under other categories ("|FR| Harbor",
+     * "Harbor 4K"): the carousel shows it once, dated by its latest episode. The same rule as Apple's `ShowcaseTests`.
+     */
+    @Test
+    fun aSeriesWithSeveralNewEpisodesOrEntriesIsOneCard() {
+        val today = Fixtures.NOW
+        fun entry(id: String, name: String) = Series(id = id, name = name, categoryId = Fixtures.seriesDrama.id, coverUrl = "http://example.com/cover/$id.jpg", year = 2025, addedAt = today / 1000)
+        val entries = listOf(
+            entry("e8", "Harbor S01E08"), entry("e9", "Harbor S01E09"), entry("e10", "Harbor S01E10"),
+            entry("fr", "|FR| Harbor"), entry("4k", "Harbor 4K"),
+        )
+        val days = mapOf("s-e8" to 6L, "s-e9" to 3L, "s-e10" to 1L, "s-fr" to 2L, "s-4k" to 4L)
+        val content = Fixtures.content.copy(series = Fixtures.content.series + entries)
+        val showcase = Showcase(
+            content, LibraryState(), playlistId, setOf(Fixtures.adultMovies.id), kept = Fixtures.kept(content),
+            providerRelease = { item -> days[item.key]?.let { Fixtures.releasedDaysAgo(it) } },
+        )
+        val hero = showcase.heroItems(today, limit = 20)
+        val harbor = hero.filter { it.title.contains("Harbor") && it.key.startsWith("s-") && it.key in days }
+        assertEquals("one card for the series: ${hero.map { it.title }}", 1, harbor.size)
+        assertEquals("the entry of its latest episode", "s-e10", harbor.single().key)
+        assertEquals(RecentReleases.epochDay(Fixtures.releasedDaysAgo(1L)), showcase.releaseDay(harbor.single()))
+        // TMDb is asked once for it.
+        assertEquals(1, showcase.releasesToAsk(today).count { it.key in days })
     }
 }

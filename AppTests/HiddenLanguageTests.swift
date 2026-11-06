@@ -5,7 +5,7 @@ import IPTVCore
 /// Regression guard for hidden languages, on every list of titles at once (the Android `noListShowsTheTitlesOfAHiddenLanguage`).
 /// A language hidden as a whole leaves its categories, and every title and channel whose own name carries it ("|PT| …",
 /// "PT - …", "[PT] …") whatever its category, out of:
-///  - Home: carousel, new movies, new series, recently added;
+///  - Home: carousel, new movies, new series, recently added, trending;
 ///  - Movies, Series and Live TV: every category's list and the lists of all of them;
 ///  - Search (movies, series, channels) and the search by release year (a year's titles);
 ///  - similar titles, award winners;
@@ -106,6 +106,12 @@ final class HiddenLanguageTests: XCTestCase {
             "award winners": model.awardWinners().map(\.name),
             "my list": names(model.myList()),
             "favourite channels": model.favoriteChannels().map(\.name),
+            "trending": model.trendingTitles().map { (match: TrendingMatch) -> String in
+                switch match {
+                case .movie(let movie, _): return movie.name
+                case .series(let series, _): return series.name
+                }
+            },
             "selection row": selectionRow,
             "selection page": selectionPage,
             "selection tags": selectionTags,

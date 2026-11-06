@@ -153,6 +153,27 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(model.heroItems(limit: 2), [.movie(bright), .movie(quiet)])
     }
 
+    /// One series, one card: listed again under other categories ("|FR| Harbor", "Harbor 4K"), each copy released
+    /// lately, the carousel shows it once, dated by the latest. The same rule as Android's `ShowcaseTest` (a series listed
+    /// once per new episode is tested in IPTVCore, `RecentReleasesTests`).
+    func testASeriesListedSeveralTimesIsOneCard() async throws {
+        let copies: String = Self.catalogue + """
+
+        #EXTINF:2700 group-title="|FR| Séries",|FR| Harbor (\(Self.thisYear)) S01E01
+        http://127.0.0.1:9/fr101.mp4
+        #EXTINF:2700 group-title="4K Series",Harbor 4K (\(Self.thisYear)) S01E01
+        http://127.0.0.1:9/k101.mp4
+        """
+        let model = try await model(with: copies)
+        let harbors: [Series] = model.content.series.filter { $0.name.contains("Harbor") }
+        XCTAssertEqual(harbors.count, 3, harbors.map(\.name).joined(separator: ", "))
+        for (index, show) in harbors.enumerated() {
+            release(.series(show), in: model, daysAgo: index + 1, votes: (7.5, 500))
+        }
+        let shown: [ShowcaseItem] = model.heroItems(limit: 20).filter { $0.title.contains("Harbor") }
+        XCTAssertEqual(shown.count, 1, shown.map(\.title).joined(separator: ", "))
+    }
+
     func testAnOldSeriesWithANewSeasonIsInAndOneWithNothingNewIsOut() async throws {
         let model = try await model(with: Self.releases)
         let horror = try XCTUnwrap(model.content.movieCategories.first { $0.name.contains("Horror") })
