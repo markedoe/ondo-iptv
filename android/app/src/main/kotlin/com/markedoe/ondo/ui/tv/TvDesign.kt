@@ -102,6 +102,8 @@ import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.theme.inter
+import com.markedoe.ondo.ui.theme.tightTitles
+import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.delay
 
 /**
@@ -163,21 +165,26 @@ fun OndoTvTheme(content: @Composable () -> Unit) {
             borderVariant = Color.White.copy(alpha = 0.4f),
             scrim = Color.Black,
         ),
-        typography = TvTypography,
+        typography = if (tightTitles(LocalConfiguration.current.locales[0])) TvTypography else TvPlainTypography,
     ) {
         // Text outside a Compose for TV surface takes this colour (black otherwise).
         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface, content = content)
     }
 }
 
-private val TvTypography: androidx.tv.material3.Typography = androidx.tv.material3.Typography().let { t ->
+private val TvTypography = tvTypography(tight = true)
+
+/** Without the tighter large titles, for Arabic and Hindi ([tightTitles]). */
+private val TvPlainTypography = tvTypography(tight = false)
+
+private fun tvTypography(tight: Boolean): androidx.tv.material3.Typography = androidx.tv.material3.Typography().let { t ->
     androidx.tv.material3.Typography(
-        displayLarge = t.displayLarge.inter(tight = true),
-        displayMedium = t.displayMedium.inter(tight = true).copy(fontWeight = FontWeight.ExtraBold),
-        displaySmall = t.displaySmall.inter(tight = true).copy(fontWeight = FontWeight.ExtraBold),
-        headlineLarge = t.headlineLarge.inter(tight = true),
-        headlineMedium = t.headlineMedium.inter(tight = true),
-        headlineSmall = t.headlineSmall.inter(tight = true),
+        displayLarge = t.displayLarge.inter(tight),
+        displayMedium = t.displayMedium.inter(tight).copy(fontWeight = FontWeight.ExtraBold),
+        displaySmall = t.displaySmall.inter(tight).copy(fontWeight = FontWeight.ExtraBold),
+        headlineLarge = t.headlineLarge.inter(tight),
+        headlineMedium = t.headlineMedium.inter(tight),
+        headlineSmall = t.headlineSmall.inter(tight),
         titleLarge = t.titleLarge.inter(),
         titleMedium = t.titleMedium.inter(),
         titleSmall = t.titleSmall.inter(),
