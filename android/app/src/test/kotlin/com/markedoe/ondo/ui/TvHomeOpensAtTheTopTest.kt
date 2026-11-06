@@ -33,12 +33,15 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
+import androidx.lifecycle.Lifecycle
 import com.markedoe.ondo.ui.tv.FocusEntry
+import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
 import com.markedoe.ondo.ui.tv.rememberFocusMemory
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -69,6 +72,7 @@ class TvHomeOpensAtTheTopTest {
     private val hero = listOf(HeroPage(movies[5], meta = "Movie · 2024", inMyList = false, resumable = false, plot = "A keeper counts the ships that never come."))
 
     private var homeState by mutableStateOf(HomeUiState(playlistName = "Example Playlist"))
+    private var memory: FocusMemory? = null
 
     private fun show(initial: HomeUiState) {
         homeState = initial
@@ -78,7 +82,7 @@ class TvHomeOpensAtTheTopTest {
             OndoTheme {
                 TelevisionFrame {
                     TvNavigationFrame(TopLevel.HOME, showBar = true, onSelect = {}, onSearch = {}, onSettings = {}) {
-                        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) {
+                        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory().also { memory = it }) {
                             FocusEntry { TvHomeScreen(homeState, HomeActions(), autoAdvance = false) }
                         }
                     }
@@ -105,9 +109,17 @@ class TvHomeOpensAtTheTopTest {
     private fun focusedIn(tag: String) = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(tag))).fetchSemanticsNodes().isNotEmpty()
 
     /** The featured titles come [after] the rows: Home is then at its top, Play focused, the first row whole below. */
-    private fun assertOpensAtTheTop(rows: HomeUiState, firstShelf: String) {
+    private fun assertOpensAtTheTop(rows: HomeUiState, firstShelf: String, paused: Boolean = false) {
         show(rows)
         assertTrue("meanwhile, the focus on the first row ($firstShelf)", focusedIn(firstShelf))
+        assertFalse("the first card's focus was given, not chosen by the viewer", memory?.chosen == true)
+        if (paused) {
+            // Something over Ondo a moment (a TV's overlay, its standby), then Ondo again.
+            compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+            advance(500)
+            compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+            advance(500)
+        }
         homeState = rows.copy(hero = hero)
         advance(1_500)
         fun exists(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size
@@ -124,6 +136,13 @@ class TvHomeOpensAtTheTopTest {
     fun continueWatchingFirstThenTheFeaturedTitles() = assertOpensAtTheTop(
         HomeUiState(playlistName = "Example Playlist", continueWatching = resume, newMovies = movies, newSeries = shows, hasVod = true),
         "shelfResumeMovies",
+    )
+
+    @Test
+    fun continueWatchingFirstThenAPauseThenTheFeaturedTitles() = assertOpensAtTheTop(
+        HomeUiState(playlistName = "Example Playlist", continueWatching = resume, newMovies = movies, newSeries = shows, hasVod = true),
+        "shelfResumeMovies",
+        paused = true,
     )
 
     @Test
