@@ -147,20 +147,27 @@ class TelevisionTest {
         useUnmergedTree = true,
     ).fetchSemanticsNodes().isNotEmpty()
 
+    /** The top bar's playlist status (when it was updated, a check or a spinner before it), on the bar itself. */
+    private fun statusInTheBar(): Boolean = compose.onAllNodes(
+        hasAnyAncestor(hasTestTag("topBar")) and hasTestTag("playlistStatus"),
+        useUnmergedTree = true,
+    ).fetchSemanticsNodes().isNotEmpty()
+
     /**
-     * The top bar shows no line of the playlist on any tab page (neither its name nor when it was updated), Home
-     * included: Settings shows when each playlist was updated.
+     * Every tab page's top bar shows when the playlist was updated, compact (an icon and a short time, the playlist's
+     * name and the whole sentence for TalkBack only): never the name or a long line written in the bar.
      */
     @Test
-    fun theTopBarShowsNoPlaylistLineOnAnyTab() {
+    fun theTopBarShowsThePlaylistsStatusOnEveryTab() {
         val name = "Example Playlist Name"
         start(playlistName = name)
-        assertFalse("Home", playlistLineInTheBar(name))
-        openTab(1)
-        assertTrue(compose.onAllNodesWithTag("vod").fetchSemanticsNodes().isNotEmpty())
-        assertFalse("Movies", playlistLineInTheBar(name))
-        openTab(2)
-        assertFalse("Series", playlistLineInTheBar(name))
+        assertTrue("Home", statusInTheBar())
+        assertFalse("Home: no line", playlistLineInTheBar(name))
+        for ((index, tab) in listOf(1 to "Movies", 2 to "Series", 3 to "Live TV", 4 to "My List")) {
+            openTab(index)
+            assertTrue(tab, statusInTheBar())
+            assertFalse("$tab: no line", playlistLineInTheBar(name))
+        }
         // Settings, its playlists first: when the one in use was updated.
         repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
         repeat(12) { if (focusedTag() != SETTINGS_TAG) press(Key.DirectionRight) }
