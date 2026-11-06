@@ -25,7 +25,10 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.Selections
+import com.markedoe.ondo.core.model.ContentType
+import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
+import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.sync.SyncSelection
 import com.markedoe.ondo.data.ItemKind
@@ -338,5 +341,52 @@ class SelectionAppTest {
         compose.setContent { OndoTheme { SettingsScreen(settings, SettingsActions()) } }
         compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("categoriesRow"))
         assertTrue(compose.onAllNodesWithTag("selectionsRow").fetchSemanticsNodes().isEmpty())
+    }
+
+    /**
+     * The ways a hidden title could reach a selection, each checked (they hold on main: the rows leave out what every list
+     * leaves out). A film's versions grouped as one card: a version in a hidden category never stands for it, and gives
+     * it no tag; a category hidden by a word; a title of a language the provider's metadata only shows (its genre in
+     * Portuguese, in a visible category of no language) is in the row exactly as it is in All movies.
+     */
+    @Test
+    fun aSelectionLeavesOutWhatEveryListLeavesOutAndNothingElse() {
+        val portuguese = MediaCategory("m-pt", "|PT| Filmes", ContentType.MOVIE)
+        val concerts = MediaCategory("m-concerts", "Concerts", ContentType.MOVIE)
+        val fourK = MediaCategory("m-4k", "4K Movies", ContentType.MOVIE)
+        // The same film twice (one TMDb id): its Portuguese version in a hidden category, its English one visible.
+        val hiddenVersion = Movie("v-pt", "Mar Alto", categoryId = portuguese.id, streamUrl = "http://example.com/movie/v-pt.mp4", year = 2024, tmdbId = 4242)
+        val shownVersion = Movie("v-en", "Mar Alto", categoryId = Fixtures.drama.id, streamUrl = "http://example.com/movie/v-en.mp4", year = 2024, tmdbId = 4242)
+        val concert = Movie("c1", "Live at Dawn", categoryId = concerts.id, streamUrl = "http://example.com/movie/c1.mp4", year = 2024)
+        val dubbed = Movie("d1", "O Grande Salto", categoryId = fourK.id, streamUrl = "http://example.com/movie/d1.mp4", year = 2024)
+        val content = Fixtures.content.copy(
+            movies = Fixtures.content.movies + listOf(hiddenVersion, shownVersion, concert, dubbed),
+            movieCategories = Fixtures.content.movieCategories + listOf(portuguese, concerts, fourK),
+        )
+        val adventures = SyncSelection("adv", "", listOf("genre:aventura"), SyncSelection.ANY, listOf(RowOrder.MOVIES), 1)
+        val library = LibraryState(selections = listOf(adventures))
+            .settingCategoriesHidden(Fixtures.PLAYLIST_ID, listOf(portuguese.id), hidden = true)
+            .settingWordHidden("concerts", hidden = true)
+        fun details(vararg genres: Pair<Movie, String>) = genres.associate { (movie, genre) -> movie.id to MediaDetails(title = movie.name, genre = genre) }
+        val state = Fixtures.state(library, content = content).copy(
+            movieDetails = details(hiddenVersion to "Aventura", shownVersion to "Adventure", concert to "Adventure", dubbed to "Aventura"),
+        )
+        // The two versions are one film.
+        assertEquals(1, UiMappers.films(state).distinct(listOf(hiddenVersion, shownVersion)).size)
+        val row = titles(state, RowOrder.MOVIES)
+        assertEquals("the visible version, once; nothing of a category hidden by a word", setOf(shownVersion.name, dubbed.name), row.toSet())
+        assertEquals(1, row.count { it == shownVersion.name })
+        val keys = SelectionRows.rows(state, RowOrder.MOVIES, Fixtures.NOW, emptyMap(), Int.MAX_VALUE).values.single().items.map { it.key }
+        assertFalse(ShowcaseItem.MovieItem(hiddenVersion).key in keys)
+        // Only the hidden version has the genre: the film is not in the row.
+        val onlyHidden = state.copy(movieDetails = details(hiddenVersion to "Aventura"))
+        assertTrue(titles(onlyHidden, RowOrder.MOVIES).isEmpty())
+        // The title whose metadata is Portuguese, in a visible category of no language: in the row as in All movies.
+        val all = UiMappers.grid(state, false, null, false, "").map { it.title }
+        assertTrue(dubbed.name in all && dubbed.name in row)
+        assertFalse(concert.name in all)
+        // The tags offered: from the visible titles only.
+        val decades = SelectionRows.choices(state.copy(content = content.copy(movies = content.movies.map { if (it.id == concert.id) it.copy(year = 1950) else it })), emptyMap()).decades
+        assertFalse(1950 in decades)
     }
 }
