@@ -57,8 +57,14 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   or another tab then this one) shows its rows again. Every row that can hold more than it shows ends with See all,
   New movies, New series and Award winners included (on Home too): their page lists all the row's titles in the row's
   own order ("Default order" in Sort; another order chosen there is that page's only). Continue watching (resume
-  cards) and Trending (always whole) have none. The top bar holds the tabs, Search and Settings only, no
-  playlist line (Settings → Playlists says when each was updated); which categories show is in Settings → Languages
+  cards) and Trending (always whole) have none. The top bar holds the tabs, the playlist's status, Search and
+  Settings: before Search, a check and how long ago the playlist was updated, short ("5 min"), a small spinner in
+  the check's place while it is fetched again and a warning sign when that failed, in one slot that the remote passes
+  over and that keeps its width (TalkBack reads the playlist's name and the whole sentence; `TvPlaylistStatusTest`).
+  Home opens at its top with Play focused, also when its featured titles come after its rows, and Ondo opened again
+  from the launcher goes back to it (`MainActivity` is `singleTask`; `TvLauncherOpensHomeTest`,
+  `TvHomeOpensAtTheTopTest`). Down from the featured titles shows the first row whole, its name too, whatever kind of
+  row it is (`TvHomeDownFromHeroTest`); which categories show is in Settings → Languages
   and categories. A category's titles and the genre, year and award pages on a TV start with their posters right
   under the header: no Back row (the remote's Back goes back), the page's name on one line above the first row, no
   filter field (Search finds a title); Down from the tab lands on the first poster, its title in the header at once.
@@ -222,8 +228,8 @@ the only one allowed to write, then commits the new references to that branch (a
 the images' metadata removed). Pull the branch afterwards, and look at the images in the commit before merging it.
 
 Behaviour that a picture does not prove has its own tests: `TvLayoutRegressionTest` (the header's backdrop from the
-screen's top and cropped towards its top, no playlist line in the top bar (Home, Movies, Series, a category's and a
-genre's titles), each row type whole under the header at 960 × 540 dp, the path tab → Down → Down on Movies and
+screen's top and cropped towards its top, no playlist line written in the top bar (Home, Movies, Series, a category's and a
+genre's titles: its status only), each row type whole under the header at 960 × 540 dp, the path tab → Down → Down on Movies and
 Series with the header on the focused title before its wait, a top bar of tabs, Search and Settings only, a category's
 name whole on its line, a category's and a genre's titles with no row of their own above the posters, Down from the
 tab on the first poster and never on a sort chip, the order chosen with the Sort chip reached by Up from the first row,
@@ -242,7 +248,7 @@ before; another tab then Movies again shows the rows; Ondo started anew shows th
 4. Every difference is wanted: record the references anew (*record_screenshots*) and check the committed images.
    One is not: fix the change, never the reference.
 5. Check at 960 × 540 dp that each row (its name, its cards and their lines) fits under the header, that the top bar
-   shows no playlist line, and that a category's name reads whole above its titles.
+   shows the playlist's status (an icon and a short time) and no playlist line, and that a category's name reads whole above its titles.
 6. Check the path tab → Down → Down with screenshots, on Movies and on Series (`movies-tab-focused`,
    `movies-down-1`, `movies-down-2` and the same for `series`): on the tab, the first row whole under the header and
    no empty area; each Down, the focused card's title in the header at once. The same on a category's titles

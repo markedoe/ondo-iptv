@@ -279,6 +279,7 @@
         <item quantity="one">%2$d में से पहले %1$d चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।</item>
         <item quantity="other">%2$d में से पहले %1$d चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।</item>
     </plurals>
+    <string name="playlist_update_failed">प्लेलिस्ट अपडेट नहीं हो सकी</string>
     <string name="updated_ago">%1$s अपडेट किया गया</string>
     <string name="title_added_on">%1$s को जोड़ा गया</string>
     <string name="title_updated_on">%1$s को अपडेट किया गया</string>

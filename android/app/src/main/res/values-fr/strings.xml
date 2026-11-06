@@ -289,6 +289,7 @@
         <item quantity="many">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
         <item quantity="other">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
     </plurals>
+    <string name="playlist_update_failed">La playlist n’a pas pu être mise à jour</string>
     <string name="updated_ago">Mis à jour %1$s</string>
     <string name="title_added_on">Ajouté le %1$s</string>
     <string name="title_updated_on">Mis à jour le %1$s</string>

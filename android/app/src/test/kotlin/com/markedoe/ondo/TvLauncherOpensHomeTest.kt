@@ -129,6 +129,15 @@ class TvLauncherOpensHomeTest {
         assertTrue("still on the title's page", exists("detailPlay"))
     }
 
+    @Test
+    fun whichIntentsAreTheLaunchers() {
+        assertTrue(MainActivity.isLauncherIntent(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)))
+        assertTrue(MainActivity.isLauncherIntent(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)))
+        assertFalse(MainActivity.isLauncherIntent(Intent(Intent.ACTION_MAIN)))
+        assertFalse(MainActivity.isLauncherIntent(Intent(Intent.ACTION_VIEW).addCategory(Intent.CATEGORY_LAUNCHER)))
+        assertFalse(MainActivity.isLauncherIntent(null))
+    }
+
     /** The launcher's intent reaches the running app: it is the task's only Ondo screen, the player on top of it closed. */
     @Test
     fun mainActivityIsTheTasksSingleInstance() {

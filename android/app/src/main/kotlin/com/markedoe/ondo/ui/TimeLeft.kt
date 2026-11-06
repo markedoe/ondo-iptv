@@ -1,6 +1,9 @@
 package com.markedoe.ondo.ui
 
 import android.content.res.Resources
+import android.icu.text.MeasureFormat
+import android.icu.util.Measure
+import android.icu.util.MeasureUnit
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.platform.LocalResources
@@ -44,3 +47,29 @@ fun updatedAgo(resources: Resources, updatedAt: Long, now: Long, locale: Locale)
 @ReadOnlyComposable
 fun updatedAgoText(updatedAt: Long, now: Long): String =
     LocalResources.current.let { updatedAgo(it, updatedAt, now, it.configuration.locales[0]) }
+
+/** The longest [shortAge] counts in days ("99 d" for anything older). */
+const val SHORT_AGE_MAX_DAYS = 99L
+
+/**
+ * How long ago the playlist was updated, as short as it gets: "<1 min", "5 min", "2 hr", "3 days" in English, "3 j" in
+ * French, in the units and digits of [locale] (ICU's own abbreviations). The longest unit is the day, up to
+ * [SHORT_AGE_MAX_DAYS].
+ */
+fun shortAge(updatedAt: Long, now: Long, locale: Locale): String {
+    val minutes = (now - updatedAt) / 60_000L
+    val format = MeasureFormat.getInstance(locale, MeasureFormat.FormatWidth.SHORT)
+    return when {
+        minutes < 1 -> "<" + format.format(Measure(1, MeasureUnit.MINUTE))
+        minutes < 60 -> format.format(Measure(minutes, MeasureUnit.MINUTE))
+        minutes < 24 * 60 -> format.format(Measure(minutes / 60, MeasureUnit.HOUR))
+        else -> format.format(Measure((minutes / (24 * 60)).coerceAtMost(SHORT_AGE_MAX_DAYS), MeasureUnit.DAY))
+    }
+}
+
+/** The widest values [shortAge] gives in [locale], one of each unit: the room its slot keeps whatever it shows. */
+fun shortAgeSamples(locale: Locale): List<String> {
+    val now = 1_000L * 60 * 60 * 24 * 365
+    val minute = 60_000L
+    return listOf(0L, 59 * minute, 23 * 60 * minute, SHORT_AGE_MAX_DAYS * 24 * 60 * minute).map { shortAge(now - it, now, locale) }
+}

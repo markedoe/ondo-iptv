@@ -51,9 +51,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Ondo.Starting">
 
+        <!-- singleTask: the launcher's intent reaches the running app (onNewIntent), which goes back to Home, the
+             player left on top of it closed. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

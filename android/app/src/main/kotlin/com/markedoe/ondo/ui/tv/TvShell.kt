@@ -1,6 +1,16 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.text.rememberTextMeasurer
+import com.markedoe.ondo.ui.shortAge
+import com.markedoe.ondo.ui.shortAgeSamples
+import com.markedoe.ondo.ui.updatedAgoText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -165,6 +175,8 @@ fun TvNavigationFrame(
     /** The profile in use, its avatar at the far end, next to Settings: it opens the switcher ([onProfiles]). */
     profile: Profile? = null,
     onProfiles: () -> Unit = {},
+    /** The playlist in use and when it was updated, at the bar's end before Search ([TvPlaylistStatusSlot]). */
+    playlist: TvPlaylistStatus? = null,
     content: @Composable () -> Unit,
 ) {
     val requesters = remember { HashMap<String, FocusRequester>() }
@@ -276,6 +288,7 @@ fun TvNavigationFrame(
                             )
                         }
                     }
+                    playlist?.let { TvPlaylistStatusSlot(it, Modifier.padding(end = 10.dp)) }
                 }
                 BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)
                 BarIcon(stringResource(R.string.settings), Icons.Rounded.Settings, shown, SETTINGS_TAG, requester(SETTINGS_TAG), ::below, onSettings)
@@ -445,3 +458,76 @@ private fun BarProfile(profile: Profile, shown: Boolean, requester: FocusRequest
         }
     }
 }
+
+/**
+ * The playlist in use for the top bar ([TvNavigationFrame]): its [name], when its catalogue was last fetched
+ * ([updatedAt], null: not yet) at [now], whether it is being fetched again ([refreshing]) and whether the last try
+ * failed ([failed]).
+ */
+data class TvPlaylistStatus(val name: String, val updatedAt: Long?, val now: Long, val refreshing: Boolean = false, val failed: Boolean = false)
+
+/**
+ * At the top bar's end, before Search: a check and how long ago the playlist was updated, short ("5 min"); a small
+ * spinner in the check's place while it is fetched again; a warning sign when that failed (the age, the last good
+ * fetch's). One slot, as wide as the widest age in the app's language: the tabs and the icons never move as it changes.
+ * Not focusable (the remote goes from the tabs straight to Search); TalkBack reads the whole sentence, with the
+ * playlist's name, which is not written.
+ */
+@Composable
+fun TvPlaylistStatusSlot(status: TvPlaylistStatus, modifier: Modifier = Modifier) {
+    val resources = LocalResources.current
+    val locale = resources.configuration.locales[0]
+    val age = status.updatedAt?.let { shortAge(it, status.now, locale) }
+    val sentence = listOfNotNull(
+        status.name.takeIf { it.isNotBlank() },
+        when {
+            status.refreshing -> stringResource(R.string.refreshing_playlist)
+            status.failed -> stringResource(R.string.playlist_update_failed)
+            else -> null
+        },
+        status.updatedAt?.let { updatedAgoText(it, status.now) },
+    ).joinToString(". ")
+    val style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.sp)
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val widest = remember(locale, style, density) {
+        with(density) { shortAgeSamples(locale).maxOf { measurer.measure(it, style, maxLines = 1, softWrap = false).size.width }.toDp() }
+    }
+    val tint = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        modifier
+            .width(STATUS_ICON + STATUS_GAP + widest)
+            .semantics(mergeDescendants = true) { contentDescription = sentence }
+            .testTag("playlistStatus"),
+        horizontalArrangement = Arrangement.spacedBy(STATUS_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(STATUS_ICON), contentAlignment = Alignment.Center) {
+            when {
+                status.refreshing -> androidx.compose.material3.CircularProgressIndicator(
+                    color = tint,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(STATUS_ICON - 2.dp).semantics { hideFromAccessibility() }.testTag("playlistRefreshing"),
+                )
+                status.failed -> Icon(Icons.Rounded.Warning, contentDescription = null, tint = STATUS_WARNING, modifier = Modifier.size(STATUS_ICON).testTag("playlistFailed"))
+                else -> Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = tint, modifier = Modifier.size(STATUS_ICON).testTag("playlistUpdated"))
+            }
+        }
+        if (age != null) {
+            Text(
+                age,
+                style = style,
+                color = tint,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.semantics { hideFromAccessibility() }.testTag("playlistAge"),
+            )
+        }
+    }
+}
+
+private val STATUS_ICON = 16.dp
+private val STATUS_GAP = 6.dp
+
+/** The warning sign's colour: amber, read on the dark bar without the alarm of red. */
+private val STATUS_WARNING = Color(0xFFFFB74D)
