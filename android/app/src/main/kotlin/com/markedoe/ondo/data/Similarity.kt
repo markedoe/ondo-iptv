@@ -2,6 +2,7 @@ package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.CatalogueMatcher
+import com.markedoe.ondo.core.library.Genres
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.parsing.TitleParser
@@ -76,9 +77,8 @@ internal object Similarity {
 
     private fun yearOf(title: Title): Int? = title.year ?: TitleParser.splitYear(title.name).year
 
-    /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"), normalised. */
-    private fun genres(field: String?): Set<String> =
-        field.orEmpty().split(',', '/', '|', '&').mapNotNullTo(HashSet()) { TextNormalizer.normalize(it).takeIf(String::isNotEmpty) }
+    /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"), the same genre in any language once ([Genres]). */
+    private fun genres(field: String?): Set<String> = Genres.keys(field).toHashSet()
 
     private fun people(field: String?): Set<String> = People.names(field).mapTo(HashSet()) { TextNormalizer.normalize(it) }
 }

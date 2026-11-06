@@ -7,7 +7,7 @@ struct SelectionEditing: Identifiable, Hashable {
     let tab: String
 }
 
-/// A selection (Settings → Row Order → New Selection): its name (its tags' names until one is typed), the tabs it shows
+/// A selection (Settings → My Selections or Row Order → New Selection): its name (its tags' names until one is typed), the tabs it shows
 /// in, whether a title needs any tag or all of them, then every tag the playlist offers as chips, by group: genres,
 /// awards, decades and styles. Save keeps it, Delete removes one already made.
 struct SelectionEditorView: View {
@@ -24,7 +24,9 @@ struct SelectionEditorView: View {
     private static let tabs = [SyncRows.home, SyncRows.movies, SyncRows.series]
 
     var body: some View {
-        let saved = editing.id.flatMap { model.selection($0) }?.tags ?? []
+        // An earlier version's genre tags as this version's: saving keeps them so.
+        let savedTags: [String] = editing.id.flatMap { model.selection($0) }?.tags ?? []
+        let saved: [String] = Genres.canonicalTags(savedTags)
         let groups: [(LocalizedStringKey, [String])] = model.selectionTagGroups(keeping: saved).map { (group: (kind: String, tags: [String])) -> (LocalizedStringKey, [String]) in
             (Self.groupTitle(group.kind), group.tags)
         }
@@ -108,7 +110,7 @@ struct SelectionEditorView: View {
         loaded = true
         if let id = editing.id, let selection = model.selection(id) {
             name = selection.name
-            tags = selection.tags
+            tags = Genres.canonicalTags(selection.tags)
             all = selection.matchesAll
             tabs = selection.tabs
         } else {

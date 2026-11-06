@@ -5,7 +5,9 @@ import Foundation
 /// rules and tests as the Kotlin `Selections` (android/core); the selections sync (`SyncSelection`, docs/SYNC.md,
 /// "Selections").
 public enum Selections {
-    /// A genre, by its name as `TextNormalizer.normalize` gives it: `genre:drama`.
+    /// A genre, by its key (`Genres`): TMDb's genre whatever the language of its name (`genre:adventure` for "Aventure"),
+    /// else the name normalised (`genre:erotique`). An earlier version keyed each genre by its name normalised; its tags
+    /// are read as this version's (`Genres.canonicalTags`).
     public static let genrePrefix = "genre:"
     /// A festival or ceremony of the awards file (`AwardsCatalogue.Award.group`): `award:cannes`.
     public static let awardPrefix = "award:"
@@ -25,9 +27,12 @@ public enum Selections {
     private static let kinds = [genrePrefix, awardPrefix, decadePrefix, stylePrefix]
 
     public static func genre(_ name: String) -> String? {
-        let normalized = TextNormalizer.normalize(name)
-        return normalized.isEmpty ? nil : genrePrefix + normalized
+        guard let key = Genres.keys(name).first else { return nil }
+        return genrePrefix + key
     }
+
+    /// The genre tags of a genre field ("Action &amp; Adventure, Drame" → `genre:action`, `genre:adventure`, `genre:drama`).
+    public static func genres(_ field: String?) -> [String] { Genres.keys(field).map { genrePrefix + $0 } }
 
     public static func award(_ group: String) -> String { awardPrefix + group }
 
@@ -50,7 +55,7 @@ public enum Selections {
         return tag.utf16.count > kind.utf16.count
     }
 
-    /// What a title is tagged with: its genres (normalised names), the festivals and ceremonies of its awards (won or
+    /// What a title is tagged with: its genres (`Genres.keys`), the festivals and ceremonies of its awards (won or
     /// selected), its year, and the styles of its category's name (`styles(of:)`).
     public struct Facts: Hashable, Sendable {
         public var genres: Set<String>
@@ -72,9 +77,9 @@ public enum Selections {
         return Set(CategoryStyles.order.filter { CategoryStyles.matches(tokens: tokens, rule: $0) })
     }
 
-    /// Whether a title of `facts` has `tag`.
+    /// Whether a title of `facts` has `tag`; a genre tag that joins genres (an earlier version's), each of them.
     public static func has(_ facts: Facts, tag: String) -> Bool {
-        if tag.hasPrefix(genrePrefix) { return facts.genres.contains(String(tag.dropFirst(genrePrefix.count))) }
+        if let keys = Genres.required(tag) { return !keys.isEmpty && keys.allSatisfy { facts.genres.contains($0) } }
         if tag.hasPrefix(awardPrefix) { return facts.awardGroups.contains(String(tag.dropFirst(awardPrefix.count))) }
         if tag.hasPrefix(decadePrefix) {
             guard let start = Int(tag.dropFirst(decadePrefix.count)), let year = facts.year else { return false }
@@ -86,10 +91,20 @@ public enum Selections {
 
     /// Whether a title of `facts` belongs to a selection of `tags`: one of them (`all` false), or each of them. Tags of a
     /// kind this version does not know are left out; with no tag left, no title matches.
-    public static func matches(tags: [String], all: Bool, facts: Facts) -> Bool {
-        let known = tags.filter(isKnown)
-        guard !known.isEmpty else { return false }
-        return all ? known.allSatisfy { has(facts, tag: $0) } : known.contains { has(facts, tag: $0) }
+    public static func matches(tags: [String], all: Bool, facts: Facts) -> Bool { matcher(tags: tags, all: all)(facts) }
+
+    /// `matches` for many titles: the tags read once (`Genres.canonicalTags`), then each title's facts.
+    public static func matcher(tags: [String], all: Bool) -> (Facts) -> Bool {
+        let known: [String] = tags.filter(isKnown)
+        guard !known.isEmpty else { return { _ in false } }
+        // Each tag as the keys a title needs, those of an earlier version read as this version's.
+        let genres: [[String]?] = known.map { Genres.required($0) }
+        func has(_ facts: Facts, _ index: Int) -> Bool {
+            guard let keys = genres[index] else { return Selections.has(facts, tag: known[index]) }
+            return !keys.isEmpty && keys.allSatisfy { facts.genres.contains($0) }
+        }
+        if all { return { facts in known.indices.allSatisfy { has(facts, $0) } } }
+        return { facts in known.indices.contains { has(facts, $0) } }
     }
 
     /// The day's order of a selection's titles: each title's key is its TMDb weighted rating (`WeightedRating.weighted`,
