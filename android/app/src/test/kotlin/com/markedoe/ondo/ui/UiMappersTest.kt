@@ -569,7 +569,7 @@ class UiMappersTest {
      * titles, channels or people in:
      *  - Home: carousel, new movies, new series, trending, channels;
      *  - Movies and Series: rows and grids (every category);
-     *  - a selection's rows (Home, Movies, Series) and its See all grid;
+     *  - a selection's rows (Home, Movies, Series) and its See all grid, and the tags a new selection offers;
      *  - Search: movies, series, channels and people, with and without filters;
      *  - pages reached from a title: person, genre, year, award, similar titles (movie and series);
      *  - Live TV and the guide;
@@ -590,7 +590,9 @@ class UiMappersTest {
             // The hidden titles share a genre, a year and an award with visible ones, are named by TMDb among a visible
             // movie's similar titles, and name an actor only they name.
             movieDetails = mapOf(
-                HiddenLanguage.movie.id to MediaDetails(title = HiddenLanguage.movie.name, genre = "Drama", cast = "Ana $marker"),
+                HiddenLanguage.movie.id to MediaDetails(title = HiddenLanguage.movie.name, genre = "Drama, $marker", cast = "Ana $marker"),
+                // A genre only a title named with the language has: the tags a selection offers name it while it shows.
+                HiddenLanguage.concert.id to MediaDetails(title = HiddenLanguage.concert.name, genre = HiddenLanguage.BY_NAME),
                 Fixtures.northernLights.id to MediaDetails(title = Fixtures.northernLights.name, genre = "Drama"),
             ),
             tmdbRelated = mapOf(
@@ -616,6 +618,7 @@ class UiMappersTest {
                 "selection rows" to listOf(RowOrder.HOME, RowOrder.MOVIES, RowOrder.SERIES).map { SelectionRows.rows(state, it, Fixtures.NOW, emptyMap(), Int.MAX_VALUE) }.toString(),
                 "selection grids" to listOf(RowOrder.HOME, RowOrder.MOVIES, RowOrder.SERIES)
                     .map { UiMappers.grid(state, it == RowOrder.SERIES, null, false, "", anyType = it == RowOrder.HOME, now = Fixtures.NOW, selection = twenties.id, selectionTab = it) }.toString(),
+                "selection tags" to SelectionRows.choices(state, emptyMap()).genres.toString(),
                 "my list" to UiMappers.myList(state, Fixtures.NOW).toString(),
                 "search" to listOf("a", "o", marker.lowercase(), "do mar", "tv", "carreira", "tony").joinToString { found(UiMappers.search(index, it, state, Fixtures.NOW)) },
                 "filtered search" to found(UiMappers.search(index, "", state, Fixtures.NOW, SearchFilters(fromYear = 2024, toYear = 2024))),
@@ -630,12 +633,12 @@ class UiMappersTest {
         }
         // Shown: every surface that can list them does, so the check below proves something.
         val shown = surfaces(base)
-        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
+        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "selection tags", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
             .forEach { assertTrue("$it lists the language while it is shown", marker in shown.getValue(it)) }
 
         // The titles named with the language in visible categories of no language, shown while the language is.
         val byName = HiddenLanguage.BY_NAME
-        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "search", "filtered search", "year", "live", "guide")
+        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "selection tags", "search", "filtered search", "year", "live", "guide")
             .forEach { assertTrue("$it lists the titles named with the language while it is shown", byName in shown.getValue(it)) }
 
         val byLanguage = base.copy(library = base.library.settingTagsHidden(listOf("PT"), hidden = true))
@@ -673,7 +676,7 @@ class UiMappersTest {
         val shownAgain = synced(hiddenHere, SyncSnapshot(device = "phone", deleted = mapOf(SyncKeys.hiddenTag("PT") to 10)))
         assertTrue(shownAgain.library.hiddenTags.isEmpty())
         val again = surfaces(shownAgain)
-        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
+        listOf("movies rows", "series rows", "movie grids", "series grids", "selection rows", "selection grids", "selection tags", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
             .forEach { assertTrue("$it lists the language once shown again on another device", marker in again.getValue(it)) }
     }
 

@@ -9,7 +9,8 @@ import IPTVCore
 ///  - Movies, Series and Live TV: every category's list and the lists of all of them;
 ///  - Search (movies, series, channels) and the search by release year (a year's titles);
 ///  - similar titles, award winners;
-///  - My List and favourite channels.
+///  - My List and favourite channels;
+///  - a selection's row (Home) and its See All page, and the tags a new selection offers.
 /// The one exception, the product rule: Continue watching keeps a title the viewer already started.
 /// A new screen that lists titles is added to `surfaces` here.
 @MainActor
@@ -81,6 +82,15 @@ final class HiddenLanguageTests: XCTestCase {
             searched += found.movies.map(\.name) + found.series.map(\.name) + found.channels.map(\.name)
         }
         let year = model.search("", releasedIn: Self.thisYear...Self.thisYear)
+        // A selection of this decade, on Home: its row and its See All page; and the genres a new selection offers.
+        var selectionRow: [String] = []
+        var selectionPage: [String] = []
+        if let selection = model.profileSelections.first {
+            selectionRow = names(model.selectionTitles(selection, tab: SyncRows.home))
+            let page: SearchResults = model.titles(for: .selection(selection.id))
+            selectionPage = page.movies.map(\.name) + page.series.map(\.name)
+        }
+        let selectionTags: [String] = model.selectionChoices().genres.map(\.name)
         return [
             "carousel": names(model.heroItems(limit: 20)),
             "new movies": names(model.newMovies(limit: 50)),
@@ -96,6 +106,9 @@ final class HiddenLanguageTests: XCTestCase {
             "award winners": model.awardWinners().map(\.name),
             "my list": names(model.myList()),
             "favourite channels": model.favoriteChannels().map(\.name),
+            "selection row": selectionRow,
+            "selection page": selectionPage,
+            "selection tags": selectionTags,
         ]
     }
 
@@ -118,13 +131,20 @@ final class HiddenLanguageTests: XCTestCase {
             }
         }
         model.tmdbMetadata.carouselRevision += 1
+        // A selection of the decade they came out in; a genre only the titles of the language have, one named with it.
+        XCTAssertNotNil(model.saveSelection(id: nil, name: "Decade", tags: [Selections.decade(Self.thisYear)], all: false, tabs: [SyncRows.home]))
+        model.movieDetailsCache[concert.id] = MediaDetails(title: concert.name, genre: "Carreira")
+        if let saudade = model.content.movies.first(where: { $0.name.contains("Saudade") }) {
+            model.movieDetailsCache[saudade.id] = MediaDetails(title: saudade.name, genre: "Saudade")
+        }
 
         // Shown: the lists that can list them do, so the checks below prove something.
         let shown = surfaces(model)
-        for list in ["carousel", "carousel candidates", "movies", "series", "live", "search", "year", "my list", "favourite channels"] {
+        for list in ["carousel", "carousel candidates", "movies", "series", "live", "search", "year", "my list", "favourite channels",
+                     "selection row", "selection page", "selection tags"] {
             XCTAssertTrue(shown[list, default: []].contains { $0.contains("Saudade") || $0.contains("Carreira") }, "\(list) lists the language while it is shown")
         }
-        for list in ["movies", "series", "live", "search", "year"] {
+        for list in ["movies", "series", "live", "search", "year", "selection row", "selection page", "selection tags"] {
             XCTAssertTrue(shown[list, default: []].contains { $0.contains("Carreira") }, "\(list) lists the titles named with the language while it is shown")
         }
 
