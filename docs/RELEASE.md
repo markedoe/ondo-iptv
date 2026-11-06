@@ -152,7 +152,7 @@ user-selected files).
      the `testflight` edition and `external` on: for iOS and macOS, first the **App Store edition** (checked as for a
      release: `check_app_store.py`, review playlist, listing addresses), uploaded for the **external testers**, then
      the **TestFlight edition** (internal testers, no review), whose build number comes after it; a job on Linux then
-     waits for App Store Connect's processing and sends the App Store edition to the external group through Beta App
+     waits for App Store Connect's processing and sends the App Store edition to the external groups through Beta App
      Review (step 3, *External testers*). It sends nothing
      when the commit changed nothing the app ships (`App/`, `Packages/` without their tests, `project.yml`,
      `fastlane/Fastfile`, `Gemfile*`), when a newer push on `main` changes what the app ships (that push's delivery
@@ -237,7 +237,8 @@ user-selected files).
    with target `builds` and `edition` left at `testflight`, otherwise testers get the build without downloads.
 
    **External testers** (CLAUDE.md, the owner's standing go). Every push to `main` that delivers sends the **App Store
-   edition**, exactly the build App Review would get, to the external TestFlight group `External testers`, through
+   edition**, exactly the build App Review would get, to **every external TestFlight group** of the app (by id,
+   whatever its name; `External testers` is created only when the app has none), through
    **Beta App Review** (never App Review: the App Store version and its submission are not touched). The TestFlight
    edition never goes there: `check_app_store.py` fails if a lane or a workflow could distribute it externally or
    submit it for beta review, or if the external path builds anything but the App Store edition.
@@ -253,17 +254,17 @@ user-selected files).
      (`testflight-external.yml`), which has its own queue: its wait (up to 3 hours) never holds back a tag or the next
      delivery, and a newer push's builds replace builds still waiting there. It runs only when *Release* started it
      (a run started by hand stops), on `main`, with `fastlane ios external_testers` then `fastlane mac
-     external_testers`: the group as App Store Connect holds it, the processing first (up to 90 min per build), then
+     external_testers`: the groups as App Store Connect holds them (each external group's name, testers and public link are logged; internal groups are listed and never used), the processing first (up to 90 min per build), then
      the beta review slot (a build of the same version still waiting for beta review is expired and replaced, never a
      build an App Store version uses: the lane stops instead; while one is in review, the new build is not sent and
      the next push's follows), *Test Information* (the beta app description: the listing's `description.txt`, with
      its privacy and marketing addresses; *What to Test*: its `release_notes.txt`; the review notes and test playlist:
      `review_information/notes.txt`; no sign-in; export compliance: no non-exempt encryption), language by language:
      a language App Store Connect refuses is logged, the others are set and the build is sent, and the run is red at
-     the end. Then the build is submitted for Beta App Review and added to the group; the testers are e-mailed once
+     the end. Then the build is submitted for Beta App Review and added to every external group; the testers are e-mailed once
      Apple approves it.
-   - **What App Store Connect holds** (*TestFlight → Test Information*, the group and its testers) is read, never
-     assumed: the job logs whether the group is external and how many testers it has, whether the **Feedback Email**
+   - **What App Store Connect holds** (*TestFlight → Test Information*, the groups and their testers) is read, never
+     assumed: the job logs each group, internal or external, and how many testers it has, whether the **Feedback Email**
      and the Beta App Review contact are set (never their values), and stops only when one is really missing, naming
      the field. The Feedback Email and the testers' addresses are never in the repository; testers are added in
      *TestFlight → External Testing*, by e-mail or with a public link. An empty Beta App Review contact is copied from
@@ -272,7 +273,7 @@ user-selected files).
    - **To look before changing anything**: *Actions → TestFlight status → Run workflow* (`testflight-status.yml`,
      Linux, read only, outside the release queue): the groups and their tester counts, Test Information per language
      (set or missing), the Beta App Review contact (set or missing), and each platform's latest builds with whether
-     they are in `External testers` (App Store edition), their internal, external and beta review states and their
+     they are in an external group, their internal, external and beta review states and their
      What to Test.
    - By hand: *Run workflow*, target `builds`, `edition` `testflight`, `external` on.
 

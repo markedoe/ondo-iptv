@@ -35,7 +35,7 @@ submitted, its listing and its review notes are checked here, before any upload:
    check_review_playlist.py). The listing never names Addic7ed, a subtitle source without an official API.
 
 9. External testers get the App Store edition only: in fastlane/Fastfile, what distributes a build outside the team
-   (an external group, Beta App Review) is in `distribute_to_external_testers` and its helpers, which refuse any
+   (an external group, Beta App Review) is in `distribute_to_external_testers` and its helpers (to every external group of the app, by id), which refuse any
    edition but the App Store one and only distribute a build given by number; the internal TestFlight upload submits
    nothing, and What to Test (set on every build) writes the build's localizations only. In the workflows, a step that runs the external_testers lanes has `EDITION: app-store` and takes its build
    number from the App Store edition steps (ids ios_app_store, mac_app_store), which build that edition (2.5.19: the
@@ -573,7 +573,7 @@ EXTERNAL_WORDS = re.compile(
     r"\btestflight\s*\(|\bgroups\s*=>|:groups\b|\b(?:patch|post)_beta_app_localizations\b|\.expire!")
 # The functions allowed to use them: the external distribution and its helpers. upload_build is the internal upload,
 # allowed upload_to_testflight only (checked below: it submits nothing).
-EXTERNAL_FUNCTIONS = {"distribute_to_external_testers", "external_group", "beta_review_contact", "beta_test_information",
+EXTERNAL_FUNCTIONS = {"distribute_to_external_testers", "external_groups", "beta_review_contact", "beta_test_information",
                       "beta_review_slot_free?"}
 EXTERNAL_STEPS = {"ios": "ios_app_store", "mac": "mac_app_store"}
 # The only workflow that runs the external_testers lanes, started by release.yml alone with the App Store edition builds.
@@ -668,6 +668,18 @@ def check_external_testers(problems: list) -> None:
         if not any(re.fullmatch(r'\s*UI\.user_error!\(.*\) if ENV\["GITHUB_REF_TYPE"\] == "tag"', code) for code in distribute[:3]):
             problems.append("fastlane/Fastfile: distribute_to_external_testers must refuse a tag's build "
                             '(UI.user_error!(…) if ENV["GITHUB_REF_TYPE"] == "tag", among its first lines)')
+        # The build goes to the app's external groups, by id, never to a group named in the Fastfile (an internal group may
+        # share the name): groups = external_groups(app), which leaves the internal groups out.
+        group_lines = [code.strip() for code in distribute if re.search(r"\bgroups\s*(?::|=>)|\bgroups\s*=", code)]
+        if group_lines != ["groups = external_groups(app)", "groups: groups.map(&:id),"]:
+            problems.append("fastlane/Fastfile: distribute_to_external_testers must send the build to the app's external "
+                            "groups by id (groups = external_groups(app) … groups: groups.map(&:id)), never to a group "
+                            f"by name: {group_lines}")
+        selection = "\n".join(code for _, code in functions.get("external_groups", []))
+        if "reject(&:is_internal_group)" not in selection or \
+                'UI.user_error!("An internal group was selected for external testers") if external.any?(&:is_internal_group)' not in selection:
+            problems.append("fastlane/Fastfile: external_groups must leave the internal groups out "
+                            "(reject(&:is_internal_group)) and refuse any internal group it would return")
         slot = [code for _, code in functions.get("beta_review_slot_free?", [])]
         expire = next((index for index, code in enumerate(slot) if ".expire!" in code), None)
         if expire is not None and not any("app_store_version_build?(" in code for code in slot[:expire]):

@@ -33,7 +33,7 @@ screenshots.
     `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go: pushing a
     version tag `vX.Y.Z` is that go (it submits iOS and macOS for App Review and sends Android, with its listing, to
     closed testing for review); a push to `main` reaches TestFlight (never submitted for App Review: the TestFlight
-    edition for internal testers and, built before it, the App Store edition for the external group, submitted for
+    edition for internal testers and, built before it, the App Store edition for the external groups, submitted for
     Beta App Review only, every push), Google Play
     internal testing and Google Play closed testing, where Google reviews the release: closed testing receives the
     latest internal build once any review in progress is over, and a push never cancels or restarts a review
