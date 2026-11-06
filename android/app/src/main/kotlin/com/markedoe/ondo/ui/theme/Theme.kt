@@ -8,6 +8,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.tv.ProvideFocusRipple
+import java.util.Locale
 
 /**
  * Ondo's palette: neutral greys on pure black, white for what is chosen or focused. The colour on screen comes from
@@ -78,14 +80,17 @@ fun ondoSwitchColors(): SwitchColors = SwitchDefaults.colors(
     uncheckedBorderColor = OndoColors.Secondary,
 )
 
-/** Every style of [base] in Inter; large titles drawn a little tighter, as large type reads best. */
-fun Typography.inInter(): Typography = Typography(
-    displayLarge = displayLarge.inter(tight = true),
-    displayMedium = displayMedium.inter(tight = true),
-    displaySmall = displaySmall.inter(tight = true),
-    headlineLarge = headlineLarge.inter(tight = true),
-    headlineMedium = headlineMedium.inter(tight = true),
-    headlineSmall = headlineSmall.inter(tight = true),
+/**
+ * Every style of [base] in Inter; large titles drawn a little tighter, as large type reads best, when [tight] (see
+ * [tightTitles]).
+ */
+fun Typography.inInter(tight: Boolean = true): Typography = Typography(
+    displayLarge = displayLarge.inter(tight),
+    displayMedium = displayMedium.inter(tight),
+    displaySmall = displaySmall.inter(tight),
+    headlineLarge = headlineLarge.inter(tight),
+    headlineMedium = headlineMedium.inter(tight),
+    headlineSmall = headlineSmall.inter(tight),
     titleLarge = titleLarge.inter(),
     titleMedium = titleMedium.inter(),
     titleSmall = titleSmall.inter(),
@@ -99,19 +104,30 @@ fun Typography.inInter(): Typography = Typography(
 
 fun TextStyle.inter(tight: Boolean = false): TextStyle = copy(fontFamily = Inter, letterSpacing = if (tight) (-0.02).em else letterSpacing)
 
-private val OndoTypography = Typography(
+/**
+ * Whether large titles are letter-spaced tighter in the app's language. Not in Arabic or Hindi, whose letters join or
+ * combine: Android measures letter-spaced text in those scripts narrower than it lays it out, so a title sized to its
+ * own width broke onto a second line, even mid-word ("الأفلا / م"). Latin and Chinese titles measure true.
+ */
+fun tightTitles(locale: Locale): Boolean = locale.language !in setOf("ar", "hi")
+
+private val OndoBaseTypography = Typography(
     displaySmall = TextStyle(fontWeight = FontWeight.ExtraBold, fontSize = 34.sp, lineHeight = 40.sp),
     headlineSmall = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp),
     titleLarge = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 26.sp),
     titleMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 22.sp),
     bodyMedium = TextStyle(fontSize = 15.sp, lineHeight = 21.sp),
     labelLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
-).inInter()
+)
+
+private val OndoTypography = OndoBaseTypography.inInter(tight = true)
+private val OndoPlainTypography = OndoBaseTypography.inInter(tight = false)
 
 @Composable
 fun OndoTheme(content: @Composable () -> Unit) {
+    val tight = tightTitles(LocalConfiguration.current.locales[0])
     // Ondo is always dark, on a phone as on a TV.
-    MaterialTheme(colorScheme = Dark, typography = OndoTypography) {
+    MaterialTheme(colorScheme = Dark, typography = if (tight) OndoTypography else OndoPlainTypography) {
         // A focus that shows from the sofa (remote, keyboard).
         ProvideFocusRipple(content)
     }
