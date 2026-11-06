@@ -302,52 +302,56 @@ class TvTextFieldsEverySurfaceTest(private val surfaceName: String) {
     @Test
     fun eachTextFieldIsTypedWithTheRemote() {
         start()
+        val failures = mutableListOf<String>()
+        fun expect(message: String, condition: Boolean) { if (!condition) failures += message }
+        fun expectNot(message: String, condition: Boolean) = expect(message, !condition)
+        fun expectEqual(message: String, expected: Any?, actual: Any?) = expect("$message: expected <$expected>, got <$actual>", expected == actual)
         if (surface.opensOnEntry) {
             val first = surface.fields.first().tag
             waitFor(what = "opened on its field with the keyboard up") { focusedTag() == first && keyboardShown() }
             press(Key.Back)
             press(Key.DirectionDown)
-            assertFalse("$surfaceName: Down leaves the field", focusedTag() == first)
+            expectNot("$surfaceName: Down leaves the field", focusedTag() == first)
         }
         for (field in surface.fields) {
             val name = "$surfaceName/${field.tag}"
             reach(field.tag)
             // (a) The remote on the field: the keyboard stays closed.
-            assertEquals("$name: the remote is on the field", field.tag, focusedTag())
-            assertFalse("$name: the keyboard opened as the remote reached the field", keyboardShown())
+            expectEqual("$name: the remote is on the field", field.tag, focusedTag())
+            expectNot("$name: the keyboard opened as the remote reached the field", keyboardShown())
             // (e) It says how to type.
-            assertTrue("$name: no \"Press OK to type\" with the remote on the field", hintShown())
+            expect("$name: no \"Press OK to type\" with the remote on the field", hintShown())
 
             // (b) OK: the keyboard, the caret at the end of the text there.
             press(Key.DirectionCenter)
-            assertTrue("$name: OK opens the keyboard", keyboardShown())
+            expect("$name: OK opens the keyboard", keyboardShown())
             val node = focusedNode()!!
             val text = node.config.getOrNull(SemanticsProperties.EditableText)?.text.orEmpty()
-            assertEquals("$name: the text there", field.initial.length, text.length)
-            assertEquals("$name: the caret at the end of \"$text\"", TextRange(text.length), node.config.getOrNull(SemanticsProperties.TextSelectionRange))
-            assertFalse("$name: no \"Press OK to type\" while typing", hintShown())
+            expectEqual("$name: the text there", field.initial.length, text.length)
+            expectEqual("$name: the caret at the end of \"$text\"", TextRange(text.length), node.config.getOrNull(SemanticsProperties.TextSelectionRange))
+            expectNot("$name: no \"Press OK to type\" while typing", hintShown())
 
             // (d) Back closes the keyboard, the remote still on the field, which reads again.
             press(Key.Back)
-            assertFalse("$name: Back closes the keyboard", keyboardShown())
-            assertEquals("$name: Back leaves the remote on the field", field.tag, focusedTag())
-            assertTrue("$name: the field says how to type again", hintShown())
+            expectNot("$name: Back closes the keyboard", keyboardShown())
+            expectEqual("$name: Back leaves the remote on the field", field.tag, focusedTag())
+            expect("$name: the field says how to type again", hintShown())
 
             // A secret's Show, Right from the field, and Left back.
             if (field.secret) {
                 press(Key.DirectionRight)
-                assertEquals("$name: Right reaches Show", REVEAL, focusedTag())
+                expectEqual("$name: Right reaches Show", REVEAL, focusedTag())
                 val description = { focusedNode()?.config?.getOrNull(SemanticsProperties.ContentDescription)?.joinToString().orEmpty() }
-                assertEquals("$name", "Show characters", description())
+                expectEqual("$name", "Show characters", description())
                 press(Key.DirectionCenter)
-                assertEquals("$name: OK shows the characters", "Hide characters", description())
+                expectEqual("$name: OK shows the characters", "Hide characters", description())
                 press(Key.DirectionLeft)
-                assertEquals("$name: Left goes back to the field", field.tag, focusedTag())
+                expectEqual("$name: Left goes back to the field", field.tag, focusedTag())
             }
 
             // (c) Typed, then the keyboard's action key.
             press(Key.DirectionCenter)
-            assertTrue("$name: OK opens the keyboard again", keyboardShown())
+            expect("$name: OK opens the keyboard again", keyboardShown())
             compose.onAllNodes(isFocused()).onLast().performTextInput(field.typed)
             settle(100)
             compose.onAllNodes(isFocused()).onLast().performImeAction()
@@ -355,22 +359,24 @@ class TvTextFieldsEverySurfaceTest(private val surfaceName: String) {
             when (val after = field.after) {
                 is After.Next -> {
                     waitFor(what = "went on to ${after.tag}") { focusedTag() == after.tag }
-                    assertTrue("$name: Next keeps the keyboard open", keyboardShown())
+                    expect("$name: Next keeps the keyboard open", keyboardShown())
                 }
                 is After.To -> waitFor(what = "went on to ${after.tag}") { focusedTag() == after.tag }
                 After.Leaves -> {
-                    assertFalse("$name: the action key closes the keyboard", keyboardShown())
-                    assertTrue("$name: and goes on below (the focus on '${focusedTag()}')", focusedTag() != field.tag && focusedNode() != null)
+                    expectNot("$name: the action key closes the keyboard", keyboardShown())
+                    expect("$name: and goes on below (the focus on '${focusedTag()}')", focusedTag() != field.tag && focusedNode() != null)
                 }
                 After.Stays -> {
-                    assertFalse("$name: the action key closes the keyboard", keyboardShown())
-                    assertEquals("$name: the remote stays on the field", field.tag, focusedTag())
+                    expectNot("$name: the action key closes the keyboard", keyboardShown())
+                    expectEqual("$name: the remote stays on the field", field.tag, focusedTag())
                 }
                 After.Gone -> {
                     waitFor(what = "closed its dialog") { !exists(field.tag) }
-                    assertFalse("$name: the keyboard closed with the dialog", keyboardShown())
+                    expectNot("$name: the keyboard closed with the dialog", keyboardShown())
                 }
             }
         }
+        // Every check of every field, the failures all told at once.
+        assertTrue("$surfaceName:\n" + failures.joinToString("\n"), failures.isEmpty())
     }
 }
