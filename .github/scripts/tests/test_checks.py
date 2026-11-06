@@ -627,6 +627,10 @@ class AppStoreTests(CheckTestCase):
             "        id: mac_app_store\n        env:\n          EDITION: app-store\n",
             "        id: mac_app_store\n        env:\n          EDITION: testflight\n"))
         self.assertFails("app_store", "step mac_app_store builds what external testers get")
+        self.external_path(release=self.EXTERNAL_RELEASE.replace(
+            "        run: bundle exec fastlane ios beta\n      - name: iOS → TestFlight",
+            "        run: EDITION=testflight bundle exec fastlane ios beta\n      - name: iOS → TestFlight"))
+        self.assertFails("app_store", "step ios_app_store builds what external testers get")
 
     def test_a_workflow_never_runs_pilot_itself(self):
         self.external_path()

@@ -670,7 +670,7 @@ def check_external_testers(problems: list) -> None:
             for platform, expected_id in EXTERNAL_STEPS.items():
                 if step_id != expected_id:
                     continue
-                if edition != "app-store" or not re.search(rf"\bfastlane\s+{platform}\s+beta\b", step):
+                if edition != "app-store" or not re.search(rf"^\s*run:\s*bundle exec fastlane {platform} beta\s*$", step, re.MULTILINE):
                     problems.append(f"{relative}: step {expected_id} builds what external testers get: it must run "
                                     f"`fastlane {platform} beta` with EDITION: app-store")
         if re.search(r"\bexternal_testers\b", text):

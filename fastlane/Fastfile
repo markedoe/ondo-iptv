@@ -252,6 +252,8 @@ def distribute_to_external_testers(platform)
   email = feedback_email(app)
   return unless beta_review_slot_free?(app, platform, version)
   descriptions = listing_texts("description.txt")
+  privacy = listing_texts("privacy_url.txt")
+  marketing = listing_texts("marketing_url.txt")
   upload_to_testflight(
     api_key: api_key,
     app_identifier: APP_ID,
@@ -268,7 +270,9 @@ def distribute_to_external_testers(platform)
     uses_non_exempt_encryption: false,
     demo_account_required: false,
     beta_app_review_info: { notes: File.read(File.join(METADATA_DIR, "review_information/notes.txt"), encoding: "UTF-8").strip[0, 4000] },
-    localized_app_info: descriptions.to_h { |locale, text| [locale, { description: text, feedback_email: email }] },
+    localized_app_info: descriptions.to_h do |locale, text|
+      [locale, { description: text, feedback_email: email, privacy_policy_url: privacy[locale], marketing_url: marketing[locale] }.compact]
+    end,
     localized_build_info: listing_texts("release_notes.txt").to_h { |locale, text| [locale, { whats_new: text }] }
   )
   UI.success("Build #{build} (#{platform} #{version}): sent to the \"#{EXTERNAL_GROUP}\" group through Beta App Review")
