@@ -9,6 +9,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -162,7 +164,7 @@ class TvHomeDownFromHeroTest {
     private fun onPlay() {
         compose.onNodeWithTag("heroPlay").requestFocus()
         advance(1_000)
-        assertTrue("Play has the focus", compose.onNodeWithTag("heroPlay").fetchSemanticsNode().config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Focused) == true)
+        assertTrue("Play has the focus", compose.onNodeWithTag("heroPlay").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
     }
 
     /** The row [shelf]'s name and cards below the frame, never under it, and whole above the screen's bottom once still. */
@@ -170,7 +172,10 @@ class TvHomeDownFromHeroTest {
         val frame = bounds("hero")
         val row = bounds(shelf)
         assertTrue("$step: $shelf starts at ${row.top}, under the frame ending at ${frame.bottom}", row.top >= frame.bottom - 0.5.dp)
-        if (settled) assertTrue("$step: $shelf ends at ${row.bottom}, below the screen", row.bottom <= 540.dp + 0.5.dp)
+        if (settled) {
+            val card = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(shelf))).onLast().getUnclippedBoundsInRoot()
+            assertTrue("$step: the focused card ends at ${card.bottom}, below the screen", card.bottom <= 540.dp + 0.5.dp)
+        }
     }
 
     /** Down from Play: the focus in [shelf], its name never cut at any frame while the frame shrinks, nor after. */
