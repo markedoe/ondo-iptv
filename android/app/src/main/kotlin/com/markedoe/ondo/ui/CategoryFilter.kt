@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.CategoryStyles
 import com.markedoe.ondo.core.library.CategoryTags
 import com.markedoe.ondo.core.library.PlotLanguage
+import com.markedoe.ondo.core.library.PlotLanguageIndex
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.PlaylistContent
@@ -75,6 +76,7 @@ object CategoryFilter {
         cached = null
         hiddenChannels = null
         hiddenTitles = null
+        plotLanguages = null
     }
 
     /** What providers put around a header's name ("-----▼", "---●★|"). */
@@ -104,38 +106,55 @@ object CategoryFilter {
     }
 
     @Volatile private var hiddenTitles: Triple<PlaylistContent, Set<String>, HiddenTitles>? = null
+    private val hiddenTitlesLock = Any()
+
+    @Volatile private var plotLanguages: Pair<PlaylistContent, PlotLanguageIndex>? = null
+    private val plotLanguagesLock = Any()
+
+    /** How many times a catalogue's descriptions were read ([PlotLanguageIndex]): once per catalogue at most. */
+    @Volatile internal var plotScans = 0
+        private set
 
     fun hiddenTitles(state: OndoState): HiddenTitles = hiddenTitles(state.content, state.library.hiddenTags)
 
     /**
      * The movies and series hidden by these hidden language or country tags whatever their category: "|PT| Tony
-     * Carreira" or "Os Amigos (PT)" filed under "Concerts", or a series of "Netflix" described in Portuguese while PT is
-     * hidden; a hidden language leaves them as it leaves its categories ([CategoryTags.isHiddenTitle]). One pass over the
-     * catalogue, off the main thread (the mappers run on `Dispatchers.Default`); the descriptions are read only when a
-     * hidden tag stands for a language, and only those of categories without a language tag. Built once per catalogue
-     * and hidden tags.
+     * Carreira" or "Os Amigos (PT)" filed under "Concerts", or a series of "Netflix" described in Portuguese while
+     * Portuguese is hidden ([PlotLanguage.hiddenLanguages]: none of its tags in the catalogue kept, never English); a
+     * hidden language leaves them as it leaves its categories ([CategoryTags.isHiddenTitle]). Off the main thread (the
+     * mappers run on `Dispatchers.Default`), once per catalogue and hidden tags however many lists ask at once: the
+     * others wait for it. The descriptions are read once per catalogue ([PlotLanguageIndex]), only once a hidden
+     * language needs them.
      */
-    fun hiddenTitles(content: PlaylistContent, tags: Set<String>): HiddenTitles {
-        if (tags.isEmpty()) return HiddenTitles.NONE
-        hiddenTitles?.let { (known, knownTags, titles) -> if (known === content && knownTags == tags) return titles }
-        val languages = PlotLanguage.hiddenLanguages(tags)
-        // The categories whose titles are told by their description: no language tag of their own.
-        val readsPlots = HashSet<String>()
-        if (languages.isNotEmpty()) {
-            for (category in content.movieCategories + content.seriesCategories) {
-                if (CategoryTags.readsPlots(CategoryTags.tagOf(category.name))) readsPlots += category.id
+    fun hiddenTitles(content: PlaylistContent, hiddenTags: Set<String>): HiddenTitles {
+        if (hiddenTags.isEmpty()) return HiddenTitles.NONE
+        hiddenTitles?.let { (known, knownTags, titles) -> if (known === content && knownTags == hiddenTags) return titles }
+        synchronized(hiddenTitlesLock) {
+            hiddenTitles?.let { (known, knownTags, titles) -> if (known === content && knownTags == hiddenTags) return titles }
+            val languages = PlotLanguage.hiddenLanguages(hiddenTags, tags(content).categories.keys)
+            val movies = HashSet<String>()
+            for (movie in content.movies) if (CategoryTags.isHiddenByName(movie.name, hiddenTags)) movies += movie.id
+            val series = HashSet<String>()
+            for (show in content.series) if (CategoryTags.isHiddenByName(show.name, hiddenTags)) series += show.id
+            if (languages.isNotEmpty()) {
+                val (describedMovies, describedSeries) = plotLanguages(content).hidden(languages)
+                movies += describedMovies
+                series += describedSeries
             }
+            val titles = HiddenTitles(movies, series)
+            hiddenTitles = Triple(content, hiddenTags, titles)
+            return titles
         }
-        fun hidden(name: String, plot: String?, categoryId: String): Boolean =
-            CategoryTags.isHiddenByName(name, tags) ||
-                (plot != null && categoryId in readsPlots && PlotLanguage.detect(plot) in languages)
-        val movies = HashSet<String>()
-        for (movie in content.movies) if (hidden(movie.name, movie.plot, movie.categoryId)) movies += movie.id
-        val series = HashSet<String>()
-        for (show in content.series) if (hidden(show.name, show.plot, show.categoryId)) series += show.id
-        val titles = HiddenTitles(movies, series)
-        hiddenTitles = Triple(content, tags, titles)
-        return titles
+    }
+
+    /** The catalogue's titles by the language of their description, read once per catalogue. */
+    private fun plotLanguages(content: PlaylistContent): PlotLanguageIndex {
+        plotLanguages?.let { (known, index) -> if (known === content) return index }
+        synchronized(plotLanguagesLock) {
+            plotLanguages?.let { (known, index) -> if (known === content) return index }
+            plotScans++
+            return PlotLanguageIndex(content).also { plotLanguages = content to it }
+        }
     }
 
     @Volatile private var hiddenChannels: Triple<PlaylistContent, Set<String>, Set<String>>? = null

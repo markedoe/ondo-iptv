@@ -15,6 +15,7 @@ final class PlotLanguageTests: XCTestCase {
         }
         struct Languages: Decodable {
             var hidden: [String]
+            var catalogue: [String]
             var languages: [String]
         }
         var plots: [Plot]
@@ -91,10 +92,15 @@ final class PlotLanguageTests: XCTestCase {
         XCTAssertEqual(PlotLanguage.detect(spanish + " " + filler), "es")
     }
 
+    /// Regression guard: a language hides its descriptions only when none of its tags in the catalogue is kept (a viewer
+    /// who keeps PT and hides BR, as "Show only your languages?" can leave it, keeps the descriptions in Portuguese), and
+    /// English never (providers describe in English whatever the audio).
     func testTheLanguagesOfHiddenTags() throws {
         for item in try cases().languages {
-            XCTAssertEqual(PlotLanguage.hiddenLanguages(Set(item.hidden)), Set(item.languages), "\(item.hidden)")
+            let found: Set<String> = PlotLanguage.hiddenLanguages(Set(item.hidden), catalogueTags: Set(item.catalogue))
+            XCTAssertEqual(found, Set(item.languages), "\(item.hidden)")
         }
+        XCTAssertEqual(PlotLanguage.neverHidden, ["en"])
         XCTAssertTrue(PlotLanguage.isLanguageTag("LAT"))
         XCTAssertFalse(PlotLanguage.isLanguageTag("VOSTFR"), "French subtitles are no French audio")
         XCTAssertFalse(PlotLanguage.isLanguageTag("HBO"))
@@ -120,24 +126,34 @@ final class PlotLanguageTests: XCTestCase {
         let spanish = "Un joven abogado descubre que su padre esconde un secreto que pondrá en peligro a toda la familia cuando regresa a su pueblo."
         let english = "A young lawyer discovers that his father is hiding a secret that will put the whole family in danger when he returns home."
         let spanishTags: Set<String> = ["ES"]
+        func hidden(_ name: String, _ plot: String?, _ categoryTag: String?, _ tags: Set<String>, catalogue: Set<String> = ["FR"]) -> Bool {
+            let languages: Set<String> = PlotLanguage.hiddenLanguages(tags, catalogueTags: catalogue)
+            return CategoryTags.isHiddenTitle(name: name, plot: plot, categoryTag: categoryTag, hiddenTags: tags, hiddenLanguages: languages)
+        }
         // Described in Spanish, in a category of no tag ("Netflix") or of a tag of no language ("HBO | Series").
-        XCTAssertTrue(CategoryTags.isHiddenTitle(name: "La Casa", plot: spanish, categoryTag: nil, hiddenTags: spanishTags))
-        XCTAssertTrue(CategoryTags.isHiddenTitle(name: "La Casa", plot: spanish, categoryTag: CategoryTags.tag(of: "HBO | Series"), hiddenTags: spanishTags))
+        XCTAssertTrue(hidden("La Casa", spanish, nil, spanishTags))
+        XCTAssertTrue(hidden("La Casa", spanish, CategoryTags.tag(of: "HBO | Series"), spanishTags))
         // Another tag of the language hidden ("LAT"): the same language.
-        XCTAssertTrue(CategoryTags.isHiddenTitle(name: "La Casa", plot: spanish, categoryTag: nil, hiddenTags: ["LAT"]))
+        XCTAssertTrue(hidden("La Casa", spanish, nil, ["LAT"]))
         // Named with it at the end.
-        XCTAssertTrue(CategoryTags.isHiddenTitle(name: "La Casa (ES)", plot: english, categoryTag: nil, hiddenTags: spanishTags))
+        XCTAssertTrue(hidden("La Casa (ES)", english, nil, spanishTags))
         // A category of a language the viewer kept wins.
-        XCTAssertFalse(CategoryTags.isHiddenTitle(name: "La Casa", plot: spanish, categoryTag: CategoryTags.tag(of: "|FR| Séries"), hiddenTags: spanishTags))
+        XCTAssertFalse(hidden("La Casa", spanish, CategoryTags.tag(of: "|FR| Séries"), spanishTags))
         // Nothing hidden, or no tag of a language: nothing new disappears.
-        XCTAssertFalse(CategoryTags.isHiddenTitle(name: "La Casa", plot: spanish, categoryTag: nil, hiddenTags: []))
-        XCTAssertFalse(CategoryTags.isHiddenTitle(name: "La Casa", plot: spanish, categoryTag: nil, hiddenTags: ["VIP"]))
-        XCTAssertFalse(CategoryTags.isHiddenTitle(name: "La Casa", plot: english, categoryTag: nil, hiddenTags: spanishTags))
-        XCTAssertFalse(CategoryTags.isHiddenTitle(name: "La Casa", plot: nil, categoryTag: nil, hiddenTags: spanishTags), "no description")
+        XCTAssertFalse(hidden("La Casa", spanish, nil, []))
+        XCTAssertFalse(hidden("La Casa", spanish, nil, ["VIP"]))
+        XCTAssertFalse(hidden("La Casa", english, nil, spanishTags))
+        XCTAssertFalse(hidden("La Casa", nil, nil, spanishTags), "no description")
+        // Another tag of the language kept in the catalogue (LAT hidden, ES kept): its descriptions stay.
+        XCTAssertFalse(hidden("La Casa", spanish, nil, ["LAT"], catalogue: ["ES", "LAT"]))
+        XCTAssertTrue(hidden("La Casa [LAT]", spanish, nil, ["LAT"], catalogue: ["ES", "LAT"]), "its name still counts")
+        // English is never hidden by description.
+        XCTAssertFalse(hidden("The House", english, nil, ["EN", "UK", "US"]))
+        XCTAssertTrue(hidden("The House (UK)", english, nil, ["UK"]), "its name still counts")
     }
 
-    /// `TitleTags` (built once per catalogue, off the main actor) hides what `CategoryTags.isHiddenTitle` hides, title by
-    /// title, so that every list leaves the same ones out.
+    /// `PlotLanguageIndex` (read once per catalogue, off the main actor) with `TitleTags` hides what
+    /// `CategoryTags.isHiddenTitle` hides, title by title, so that every list leaves the same ones out.
     func testTheCatalogueIndexHidesWhatTheRuleHides() {
         let spanish = "Un joven abogado descubre que su padre esconde un secreto que pondrá en peligro a toda la familia cuando regresa a su pueblo."
         let english = "A young lawyer discovers that his father is hiding a secret that will put the whole family in danger when he returns home."
@@ -155,14 +171,20 @@ final class PlotLanguageTests: XCTestCase {
         }
         let content = PlaylistContent(seriesCategories: categories, series: series)
         let tags = TitleTags(content: content)
-        let hiddenSets: [Set<String>] = [["ES"], ["LAT"], ["FR"], ["VIP"], []]
+        let plots = PlotLanguageIndex(content: content)
+        XCTAssertNil(plots.series["en"], "English is not kept")
+        let hiddenSets: [Set<String>] = [["ES"], ["LAT"], ["EN"], ["FR"], ["VIP"], []]
         for hidden in hiddenSets {
+            let languages: Set<String> = PlotLanguage.hiddenLanguages(hidden, catalogueTags: [])
             let expected = Set(series.filter { show in
                 let tag: String? = CategoryTags.tag(of: categories.first { $0.id == show.categoryID }?.name ?? "")
-                return CategoryTags.isHiddenTitle(name: show.name, plot: show.plot, categoryTag: tag, hiddenTags: hidden)
+                return CategoryTags.isHiddenTitle(name: show.name, plot: show.plot, categoryTag: tag, hiddenTags: hidden, hiddenLanguages: languages)
             }.map(\.id))
-            XCTAssertEqual(tags.hidden(by: hidden).seriesIDs, expected, "\(hidden)")
+            let found: Set<String> = tags.hidden(by: hidden).seriesIDs.union(plots.hidden(languages).seriesIDs)
+            XCTAssertEqual(found, expected, "\(hidden)")
         }
-        XCTAssertEqual(tags.hidden(by: ["ES"]).seriesIDs.count, 2 + 3 + 3, "described in Spanish (not under |FR|), named with ES")
+        let spanishLanguages: Set<String> = PlotLanguage.hiddenLanguages(["ES"], catalogueTags: [])
+        let spanishFound: Set<String> = tags.hidden(by: ["ES"]).seriesIDs.union(plots.hidden(spanishLanguages).seriesIDs)
+        XCTAssertEqual(spanishFound.count, 2 + 3 + 3, "described in Spanish (not under |FR|), named with ES")
     }
 }

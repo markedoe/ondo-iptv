@@ -110,16 +110,17 @@ object CategoryTags {
 
     /**
      * Whether a title is hidden by these hidden tags whatever its category: its own name starts or ends with one
-     * ([isHiddenByName]), or its provider's [plot] is in a language one of them stands for ([PlotLanguage]) and its
-     * category's own tag ([categoryTag], from [tagOf]) does not name a language: a category tagged with a language the
-     * viewer kept ("|FR|") keeps its titles, whatever their description.
+     * ([isHiddenByName]), or its provider's [plot] is in one of [hiddenLanguages] ([PlotLanguage.hiddenLanguages]: a
+     * hidden language none of whose tags in the catalogue is kept, never English) and its category's own tag
+     * ([categoryTag], from [tagOf]) does not name a language: a category tagged with a language the viewer kept ("|FR|")
+     * keeps its titles, whatever their description.
      */
     fun isHiddenTitle(
         name: String,
         plot: String?,
         categoryTag: String?,
         hiddenTags: Set<String>,
-        hiddenLanguages: Set<String> = PlotLanguage.hiddenLanguages(hiddenTags),
+        hiddenLanguages: Set<String>,
     ): Boolean {
         if (hiddenTags.isEmpty()) return false
         if (isHiddenByName(name, hiddenTags)) return true

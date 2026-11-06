@@ -50,10 +50,18 @@
     {"name": "Quiet Water (ESPECIAL)", "tag": null}
   ],
   "languages": [
-    {"hidden": ["LAT"], "languages": ["es"]},
-    {"hidden": ["PT", "FR"], "languages": ["fr", "pt"]},
-    {"hidden": ["AR", "IN"], "languages": ["ar", "hi"]},
-    {"hidden": ["VIP", "EX-YU"], "languages": []},
-    {"hidden": [], "languages": []}
+    {"hidden": ["LAT"], "catalogue": ["LAT", "FR"], "languages": ["es"]},
+    {"hidden": ["PT", "FR"], "catalogue": ["PT", "FR", "EN"], "languages": ["fr", "pt"]},
+    {"hidden": ["AR", "IN"], "catalogue": ["AR", "IN", "FR"], "languages": ["ar", "hi"]},
+    {"hidden": ["ES"], "catalogue": [], "languages": ["es"]},
+    {"hidden": ["BR"], "catalogue": ["PT", "BR", "FR"], "languages": []},
+    {"hidden": ["BR", "PT"], "catalogue": ["PT", "BR", "FR"], "languages": ["pt"]},
+    {"hidden": ["LAT", "MX"], "catalogue": ["ES", "LAT", "MX"], "languages": []},
+    {"hidden": ["MX"], "catalogue": ["ES"], "languages": []},
+    {"hidden": ["VFQ"], "catalogue": ["FR", "VFQ"], "languages": []},
+    {"hidden": ["EN", "UK", "US"], "catalogue": ["EN", "UK", "US", "FR"], "languages": []},
+    {"hidden": ["EN"], "catalogue": ["FR"], "languages": []},
+    {"hidden": ["VIP", "EX-YU"], "catalogue": ["VIP", "EX-YU"], "languages": []},
+    {"hidden": [], "catalogue": ["PT"], "languages": []}
   ]
 }

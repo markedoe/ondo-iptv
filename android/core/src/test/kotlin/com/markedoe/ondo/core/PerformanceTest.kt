@@ -6,9 +6,14 @@ import com.markedoe.ondo.core.epg.XmltvParser
 import com.markedoe.ondo.core.library.CategoryTags
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.library.PlotLanguage
+import com.markedoe.ondo.core.library.PlotLanguageIndex
 import com.markedoe.ondo.core.library.SearchEngine
+import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.EpgData
 import com.markedoe.ondo.core.model.EpgProgram
+import com.markedoe.ondo.core.model.MediaCategory
+import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.Series
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -63,7 +68,7 @@ class PerformanceTest {
         // Long descriptions too: only their start is read.
         val titles = (0 until 100_000).map { i -> "Title $i (${if (i % 7 == 0) "ES" else "2024"})" to plots[i % plots.size].repeat(1 + i % 3) }
         val hidden = setOf("ES", "AR")
-        val languages = PlotLanguage.hiddenLanguages(hidden)
+        val languages = PlotLanguage.hiddenLanguages(hidden, catalogueTags = setOf("ES", "AR", "FR"))
         val start = System.nanoTime()
         var count = 0
         for ((name, plot) in titles) if (CategoryTags.isHiddenTitle(name, plot, null, hidden, languages)) count++
@@ -71,7 +76,22 @@ class PerformanceTest {
         println("100k titles and descriptions read in ${elapsed}s")
         // Spanish and Arabic descriptions, and the English and Portuguese ones named "(ES)".
         assertEquals(50_000 + (0 until 100_000).count { it % 7 == 0 && it % 4 in 1..2 }, count)
-        assertTrue(elapsed < 10, "took ${elapsed}s")
+        // A fraction of a second: the bound leaves a CI machine room, and catches a scan that copies each word.
+        assertTrue(elapsed < 2, "took ${elapsed}s")
+
+        // The catalogue's index ([PlotLanguageIndex]) reads them once; hiding a language then only gathers sets.
+        val categories = (0 until 40).map { MediaCategory("c$it", "Netflix $it", ContentType.SERIES) }
+        val series = titles.mapIndexed { i, (name, plot) -> Series(id = "s$i", name = name, categoryId = "c${i % 40}", plot = plot) }
+        val buildStart = System.nanoTime()
+        val index = PlotLanguageIndex(PlaylistContent(series = series, seriesCategories = categories))
+        val buildElapsed = (System.nanoTime() - buildStart) / 1e9
+        val hideStart = System.nanoTime()
+        val described = index.hidden(languages).second
+        val hideElapsed = (System.nanoTime() - hideStart) / 1e9
+        println("100k descriptions indexed in ${buildElapsed}s, gathered in ${hideElapsed}s")
+        assertEquals(50_000, described.size)
+        assertTrue(buildElapsed < 2, "took ${buildElapsed}s")
+        assertTrue(hideElapsed < 0.5, "took ${hideElapsed}s")
     }
 
     @Test

@@ -128,16 +128,17 @@ public enum CategoryTags {
     }
 
     /// Whether a title is hidden by these hidden tags whatever its category: its own name starts or ends with one
-    /// (`isHidden(name:hiddenTags:)`), or its provider's `plot` is in a language one of them stands for (`PlotLanguage`)
-    /// and its category's own tag (`categoryTag`, from `tag(of:)`) does not name a language: a category tagged with a
+    /// (`isHidden(name:hiddenTags:)`), or its provider's `plot` is in one of `hiddenLanguages`
+    /// (`PlotLanguage.hiddenLanguages`: a hidden language none of whose tags in the catalogue is kept, never English) and
+    /// its category's own tag (`categoryTag`, from `tag(of:)`) does not name a language: a category tagged with a
     /// language the viewer kept ("|FR|") keeps its titles, whatever their description. Same rule as the Kotlin
     /// `CategoryTags.isHiddenTitle`.
     public static func isHiddenTitle(
-        name: String, plot: String?, categoryTag: String?, hiddenTags: Set<String>, hiddenLanguages: Set<String>? = nil
+        name: String, plot: String?, categoryTag: String?, hiddenTags: Set<String>, hiddenLanguages: Set<String>
     ) -> Bool {
         guard !hiddenTags.isEmpty else { return false }
         if isHidden(name: name, hiddenTags: hiddenTags) { return true }
-        let languages: Set<String> = hiddenLanguages ?? PlotLanguage.hiddenLanguages(hiddenTags)
+        let languages: Set<String> = hiddenLanguages
         guard !languages.isEmpty, let plot, !plot.isEmpty, readsPlots(categoryTag: categoryTag),
               let language = PlotLanguage.detect(plot) else { return false }
         return languages.contains(language)

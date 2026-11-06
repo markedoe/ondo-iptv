@@ -101,10 +101,25 @@ zh|tags|ZH|CN|CHI
     /** Whether a category tag stands for a language of the table ("LAT", "VF"), not for a label ("VIP", "HBO"). */
     fun isLanguageTag(tag: String): Boolean = tag in languageOfTag
 
-    /** The languages one of whose tags is hidden ("LAT" hidden: "es"); empty when none is. */
-    fun hiddenLanguages(hiddenTags: Set<String>): Set<String> {
+    /** Languages a description never hides: providers often describe their titles in English whatever their audio. */
+    val neverHidden: Set<String> = setOf("en")
+
+    /**
+     * The languages whose descriptions are hidden: one of their tags is hidden ([hiddenTags], "LAT": "es") and none of
+     * their tags the catalogue has ([catalogueTags], [CategoryTags.detect]) is kept: a viewer who keeps PT and hides BR
+     * keeps the descriptions in Portuguese. English never ([neverHidden]). Same rule as the Swift
+     * `PlotLanguage.hiddenLanguages`.
+     */
+    fun hiddenLanguages(hiddenTags: Set<String>, catalogueTags: Set<String>): Set<String> {
         if (hiddenTags.isEmpty()) return emptySet()
-        return hiddenTags.mapNotNullTo(LinkedHashSet()) { languageOfTag[it] }
+        val languages = LinkedHashSet<String>()
+        for (tag in hiddenTags) {
+            val language = languageOfTag[tag] ?: continue
+            if (language in neverHidden) continue
+            val kept = tags.getValue(language).any { it in catalogueTags && it !in hiddenTags }
+            if (!kept) languages += language
+        }
+        return languages
     }
 
     /**

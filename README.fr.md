@@ -98,7 +98,8 @@ chaque changement de l'interface.
   par des codes comme `|PT|` ou `FR:`), une règle qui couvre aussi les catégories ajoutées plus tard et chaque
   film, série ou chaîne dont le nom lui-même commence ou se termine par ce code (`|PT| …`, `[PT] …`, `PT - …`,
   `… (PT)`), où qu'il soit classé, et, dans une catégorie sans code de langue, chaque film ou série dont la
-  description donnée par le fournisseur est dans cette langue ;
+  description donnée par le fournisseur est dans cette langue (sauf si un autre code de cette langue est gardé, comme
+  `PT` quand `BR` est masqué ; une description en anglais ne masque jamais rien) ;
   proposé une fois quand une playlist en compte beaucoup (garder vos langues, choisir, ou plus tard) ;
   masquez de la même façon un **style** (manga et anime, enfants, documentaires…) ou n'importe quel mot des noms
   de catégories (Bollywood…) ; ou masquez les catégories une par une. Le bouton de filtre est sur les écrans

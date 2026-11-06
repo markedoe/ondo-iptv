@@ -102,6 +102,39 @@ class CategoryFilterTest {
         assertTrue(filtered.tags.isEmpty())
     }
 
+    /**
+     * Regression guard: a language hides by description only when none of its tags in the catalogue is kept, and English
+     * never. A viewer who keeps PT and hides BR (as the suggestion can leave it) keeps the titles of "Netflix" described
+     * in Portuguese, and neither BR nor EN reads a description; hiding PT too hides them, the descriptions read once
+     * however many lists ask at the same time.
+     */
+    @Test
+    fun aKeptTagOfTheLanguageOrEnglishHidesNoDescription() {
+        val portuguese = "Depois da morte da mãe, Luísa herda uma casa antiga no litoral. Mas os vizinhos não querem que ela fique, e logo ela descobre o motivo."
+        val englishPlot = "After the death of her mother, Lucy inherits an old house on the coast. But the neighbours do not want her to stay, and she soon finds out why."
+        val tagged = listOf("|PT| Filmes", "|PT| Ação", "|BR| Filmes", "|BR| Ação", "Netflix").mapIndexed { index, name -> MediaCategory("c-$index", name, ContentType.MOVIE) }
+        val netflix = tagged.last().id
+        val described = Movie(id = "pt", name = "A Casa", categoryId = netflix, streamUrl = "http://example.com/movie/pt.mp4", plot = portuguese)
+        val inEnglish = Movie(id = "en", name = "The House", categoryId = netflix, streamUrl = "http://example.com/movie/en.mp4", plot = englishPlot)
+        val catalogue = Fixtures.content.copy(movieCategories = tagged, movies = listOf(described, inEnglish))
+        CategoryFilter.forget()
+        val scans = CategoryFilter.plotScans
+
+        val kept = CategoryFilter.hiddenTitles(catalogue, setOf("BR", "EN", "UK", "US"))
+        assertTrue("PT kept: the Portuguese description stays; English never hides", kept.movies.isEmpty())
+        assertEquals("no description read", scans, CategoryFilter.plotScans)
+
+        val both = setOf("BR", "PT")
+        val threads = (0 until 10).map { Thread { CategoryFilter.hiddenTitles(catalogue, both) } }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+        assertEquals(setOf("pt"), CategoryFilter.hiddenTitles(catalogue, both).movies)
+        assertEquals("the descriptions read once, not once per list", scans + 1, CategoryFilter.plotScans)
+        // Another hidden language of the same catalogue gathers what was read.
+        CategoryFilter.hiddenTitles(catalogue, both + "DE")
+        assertEquals(scans + 1, CategoryFilter.plotScans)
+    }
+
     @Test
     fun theSuggestionKeepsTheViewersLanguagesOnce() {
         val state = Fixtures.state(content = content)

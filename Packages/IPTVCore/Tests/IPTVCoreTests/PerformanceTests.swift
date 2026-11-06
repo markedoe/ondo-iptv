@@ -29,7 +29,7 @@ final class PerformanceTests: XCTestCase {
     }
 
     /// Hidden languages read every description of a catalogue of a large panel (100k titles) once, off the main actor
-    /// (`TitleTags`, with the catalogue's other indexes); hiding a language then only gathers what was found.
+    /// (`PlotLanguageIndex`, only once a hidden language needs it); hiding a language then only gathers what was found.
     func testAHundredThousandDescriptionsAreReadQuickly() {
         let plots: [String] = [
             "Un joven abogado descubre que su padre esconde un secreto que pondrá en peligro a toda la familia cuando regresa a su pueblo natal después de diez años.",
@@ -44,18 +44,23 @@ final class PerformanceTests: XCTestCase {
             return Series(id: "s\(i)", name: "Title \(i) (\(i % 7 == 0 ? "ES" : "2024"))", categoryID: "c\(i % 40)", plot: plot)
         }
         let content = PlaylistContent(seriesCategories: categories, series: series)
-        let start = Date()
         let tags = TitleTags(content: content)
-        let elapsed = Date().timeIntervalSince(start)
+        let start = Date()
+        let index = PlotLanguageIndex(content: content)
+        let elapsed: TimeInterval = Date().timeIntervalSince(start)
+        let hiddenTags: Set<String> = ["ES", "AR"]
         let hideStart = Date()
-        let hidden = tags.hidden(by: ["ES", "AR"])
-        let hideElapsed = Date().timeIntervalSince(hideStart)
+        let languages: Set<String> = PlotLanguage.hiddenLanguages(hiddenTags, catalogueTags: ["ES", "AR", "FR"])
+        let hidden: Set<String> = tags.hidden(by: hiddenTags).seriesIDs.union(index.hidden(languages).seriesIDs)
+        let hideElapsed: TimeInterval = Date().timeIntervalSince(hideStart)
         print("100k titles and descriptions read in \(elapsed)s, hidden in \(hideElapsed)s")
         // Spanish and Arabic descriptions, and the English and Portuguese ones named "(ES)".
         let named: Int = (0..<100_000).filter { $0 % 7 == 0 && (1...2).contains($0 % 4) }.count
-        XCTAssertEqual(hidden.seriesIDs.count, 50_000 + named)
-        XCTAssertLessThan(elapsed, 20)
-        XCTAssertLessThan(hideElapsed, 2)
+        XCTAssertEqual(hidden.count, 50_000 + named)
+        // A fraction of a second on a laptop; the bounds leave a CI machine room and catch a scan that copies each word,
+        // or a hide that reads the descriptions again.
+        XCTAssertLessThan(elapsed, 4)
+        XCTAssertLessThan(hideElapsed, 0.5)
     }
 
     /// 100,000 films, a third of them in three versions (two with the TMDb id, one without): grouped in one pass.

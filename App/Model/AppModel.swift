@@ -102,8 +102,15 @@ final class AppModel {
     /// The catalogue as loaded, before the user's channel edits (kept to undo them).
     @ObservationIgnored private(set) var rawContent = PlaylistContent.empty
     private(set) var index = ContentIndex()
-    /// What the hidden languages leave out by name, kept per catalogue (`TitleTags.id`) and hidden tags (`exclusions`).
-    @ObservationIgnored var hiddenByNameCache: (id: UUID, tags: Set<String>, hidden: HiddenTitles)? = nil
+    /// What the hidden languages leave out by name, kept per catalogue (`TitleTags.id`) and hidden tags (`exclusions`),
+    /// with or without the titles described in them (`plotLanguages`, once built).
+    @ObservationIgnored var hiddenByNameCache: (id: UUID, tags: Set<String>, withPlots: Bool, hidden: HiddenTitles)? = nil
+    /// The titles of categories of no language by the language of their description, for the catalogue `TitleTags.id`:
+    /// built off the main actor, and only once a hidden language needs it (`buildPlotLanguages`); the catalogue shows
+    /// without waiting for it.
+    var plotLanguages: (id: UUID, index: PlotLanguageIndex)? = nil
+    @ObservationIgnored var plotLanguagesTask: Task<Void, Never>?
+    @ObservationIgnored var plotLanguagesTaskID: UUID?
     /// Language and country tags of the catalogue's categories ("|PT| Filmes").
     private(set) var categoryTags = CategoryTagIndex()
     /// Awards and festival selections of the catalogue's movies, by movie id (bundled data, matched on the device).
@@ -1111,16 +1118,49 @@ extension AppModel {
         TitleExclusions(categoryIDs: excludedCategoryIDs, byName: hiddenByName)
     }
 
-    /// The titles and channels whose own name carries a hidden language, built once per catalogue and hidden tags.
+    /// The titles and channels whose own name carries a hidden language, and the titles of categories of no language
+    /// described in one (`PlotLanguage.hiddenLanguages`: none of its tags in the catalogue kept, never English), built
+    /// once per catalogue and hidden tags. The descriptions are read off the main actor, once a hidden language needs
+    /// them (`buildPlotLanguages`): until then, the titles hidden by name only.
     var hiddenByName: HiddenTitles {
         guard activePlaylist != nil else { return HiddenTitles() }
         let tags = hiddenTags
         guard !tags.isEmpty else { return HiddenTitles() }
         let titleTags = index.titleTags
-        if let cached = hiddenByNameCache, cached.id == titleTags.id, cached.tags == tags { return cached.hidden }
-        let hidden = titleTags.hidden(by: tags)
-        hiddenByNameCache = (titleTags.id, tags, hidden)
+        let languages: Set<String> = PlotLanguage.hiddenLanguages(tags, catalogueTags: Set(categoryTags.categories.keys))
+        var plots: PlotLanguageIndex?
+        if !languages.isEmpty {
+            if let built = plotLanguages, built.id == titleTags.id {
+                plots = built.index
+            } else {
+                buildPlotLanguages(for: titleTags.id)
+            }
+        }
+        let withPlots = plots != nil
+        if let cached = hiddenByNameCache, cached.id == titleTags.id, cached.tags == tags, cached.withPlots == withPlots {
+            return cached.hidden
+        }
+        var hidden = titleTags.hidden(by: tags)
+        if let plots {
+            let described = plots.hidden(languages)
+            hidden.movieIDs.formUnion(described.movieIDs)
+            hidden.seriesIDs.formUnion(described.seriesIDs)
+        }
+        hiddenByNameCache = (titleTags.id, tags, withPlots, hidden)
         return hidden
+    }
+
+    /// Reads the descriptions of the catalogue `id` (`PlotLanguageIndex`) off the main actor, once; the lists follow
+    /// when it is done.
+    func buildPlotLanguages(for id: UUID) {
+        guard plotLanguagesTaskID != id else { return }
+        plotLanguagesTaskID = id
+        let content = self.content
+        plotLanguagesTask = Task { [weak self] in
+            let built = await Task.detached(priority: .userInitiated) { PlotLanguageIndex(content: content) }.value
+            guard let self, self.index.titleTags.id == id else { return }
+            self.plotLanguages = (id, built)
+        }
     }
 
     /// Category ids excluded from aggregated lists (search, home, "all channels").

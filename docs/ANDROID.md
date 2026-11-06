@@ -29,8 +29,10 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   name ends with one ("… (DE)", "… [DE]", "… - DE", `CategoryTags.trailingTag`; "(2024)", "(4K)" or "(Uncut)" are
   none), and, in a category with no language tag of its own, the movies and series whose description from the
   provider is in a hidden language (`PlotLanguage`: its little words, or its script, in the first 400 characters;
-  `fixtures/plot-language`, shared with the Apple core). A category tagged with a language kept keeps its titles;
-  TMDb's description, in the app's language, never counts. On a TV, Search opens on its field with the
+  `fixtures/plot-language`, shared with the Apple core). A hidden language counts for descriptions only when none of
+  its tags in the catalogue is kept (`PlotLanguage.hiddenLanguages`: PT kept and BR hidden keep the descriptions in
+  Portuguese), and English never does; the descriptions are read once per catalogue (`PlotLanguageIndex`), only once
+  such a language is hidden. A category tagged with a language kept keeps its titles; TMDb's description, in the app's language, never counts. On a TV, Search opens on its field with the
   keyboard up.
 - **TV text fields** (`ui/tv/TvTextInput.kt`): every text field on a TV (Search, a playlist's form, the TMDb token,
   the subtitle services' keys and logins, a profile's name and PIN, the parent PIN, the categories' filter and words, a

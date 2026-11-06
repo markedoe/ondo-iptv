@@ -10,6 +10,7 @@ The language of a provider's description (plot) and the tag at the end of a titl
   Latin letters. Arabic, Hindi and Chinese are told by their script. Each core holds the same text
   (`PlotLanguage.TABLE`, `PlotLanguage.table`), and its tests check that it is this file.
 - `cases.json`: descriptions and the language both cores give them (none when short or unclear), names and the tag
-  at their end, hidden tags and the languages they stand for.
+  at their end, hidden tags with the tags of the catalogue (`catalogue`) and the languages whose descriptions they
+  hide: none whose tag in the catalogue is kept (PT kept, BR hidden: no Portuguese), never English.
 
 A word or a tag added to a language goes into `table.txt` and both cores' copies, with a case in `cases.json`.

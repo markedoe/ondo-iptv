@@ -95,7 +95,9 @@ extension HelpTopic {
             once, in every playlist; the categories the provider adds later follow the same rule. Movies, series and \
             channels whose own name starts with that code, such as |PT| Concerto ao Vivo, are hidden too, whatever \
             their category. So are those whose name ends with that code, such as Concerto ao Vivo (PT), and, in a \
-            category with no language code, those whose description from the provider is in that language.
+            category with no language code, those whose description from the provider is in that language. A \
+            description keeps its title when you keep another code of its language (PT while BR is hidden), and a \
+            description in English never hides one.
 
             Styles work the same way with the words of category names: hide Manga & Anime, Children or \
             Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of \

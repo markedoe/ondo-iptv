@@ -1,6 +1,10 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.HangGuard
+import com.markedoe.ondo.core.model.ContentType
+import com.markedoe.ondo.core.model.MediaCategory
+import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.Series
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -85,13 +89,19 @@ class PlotLanguageTest {
         assertEquals("es", PlotLanguage.detect("Un joven abogado descubre que su padre esconde un secreto cuando regresa a su pueblo. $filler"))
     }
 
+    /**
+     * Regression guard: a language hides its descriptions only when none of its tags in the catalogue is kept (a viewer
+     * who keeps PT and hides BR, as "Show only your languages?" can leave it, keeps the descriptions in Portuguese), and
+     * English never (providers describe in English whatever the audio).
+     */
     @Test
     fun theLanguagesOfHiddenTags() {
         for (case in cases.getValue("languages").jsonArray) {
-            val hidden = case.jsonObject.getValue("hidden").jsonArray.map { it.jsonPrimitive.content }.toSet()
-            val expected = case.jsonObject.getValue("languages").jsonArray.map { it.jsonPrimitive.content }.toSet()
-            assertEquals(hidden.toString(), expected, PlotLanguage.hiddenLanguages(hidden))
+            fun list(key: String) = case.jsonObject.getValue(key).jsonArray.map { it.jsonPrimitive.content }.toSet()
+            val hidden = list("hidden")
+            assertEquals(hidden.toString(), list("languages"), PlotLanguage.hiddenLanguages(hidden, list("catalogue")))
         }
+        assertEquals(setOf("en"), PlotLanguage.neverHidden)
         assertTrue(PlotLanguage.isLanguageTag("LAT"))
         assertFalse("French subtitles are no French audio", PlotLanguage.isLanguageTag("VOSTFR"))
         assertFalse(PlotLanguage.isLanguageTag("HBO"))
@@ -123,19 +133,53 @@ class PlotLanguageTest {
         val spanish = "Un joven abogado descubre que su padre esconde un secreto que pondrá en peligro a toda la familia cuando regresa a su pueblo."
         val english = "A young lawyer discovers that his father is hiding a secret that will put the whole family in danger when he returns home."
         val es = setOf("ES")
+        fun hidden(name: String, plot: String?, categoryTag: String?, tags: Set<String>, catalogue: Set<String> = setOf("FR")) =
+            CategoryTags.isHiddenTitle(name, plot, categoryTag, tags, PlotLanguage.hiddenLanguages(tags, catalogue))
         // Described in Spanish, in a category of no tag ("Netflix") or of a tag of no language ("HBO | Series").
-        assertTrue(CategoryTags.isHiddenTitle("La Casa", spanish, null, es))
-        assertTrue(CategoryTags.isHiddenTitle("La Casa", spanish, CategoryTags.tagOf("HBO | Series"), es))
+        assertTrue(hidden("La Casa", spanish, null, es))
+        assertTrue(hidden("La Casa", spanish, CategoryTags.tagOf("HBO | Series"), es))
         // Another tag of the language hidden ("LAT"): the same language.
-        assertTrue(CategoryTags.isHiddenTitle("La Casa", spanish, null, setOf("LAT")))
+        assertTrue(hidden("La Casa", spanish, null, setOf("LAT")))
         // Named with it at the end.
-        assertTrue(CategoryTags.isHiddenTitle("La Casa (ES)", english, null, es))
+        assertTrue(hidden("La Casa (ES)", english, null, es))
         // A category of a language the viewer kept wins.
-        assertFalse(CategoryTags.isHiddenTitle("La Casa", spanish, CategoryTags.tagOf("|FR| Séries"), es))
+        assertFalse(hidden("La Casa", spanish, CategoryTags.tagOf("|FR| Séries"), es))
         // Nothing hidden, or no tag of a language: nothing new disappears.
-        assertFalse(CategoryTags.isHiddenTitle("La Casa", spanish, null, emptySet()))
-        assertFalse(CategoryTags.isHiddenTitle("La Casa", spanish, null, setOf("VIP")))
-        assertFalse(CategoryTags.isHiddenTitle("La Casa", english, null, es))
-        assertFalse("no description", CategoryTags.isHiddenTitle("La Casa", null, null, es))
+        assertFalse(hidden("La Casa", spanish, null, emptySet()))
+        assertFalse(hidden("La Casa", spanish, null, setOf("VIP")))
+        assertFalse(hidden("La Casa", english, null, es))
+        assertFalse("no description", hidden("La Casa", null, null, es))
+        // Another tag of the language kept in the catalogue (LAT hidden, ES kept): its descriptions stay.
+        assertFalse(hidden("La Casa", spanish, null, setOf("LAT"), catalogue = setOf("ES", "LAT")))
+        assertTrue("its name still counts", hidden("La Casa [LAT]", spanish, null, setOf("LAT"), catalogue = setOf("ES", "LAT")))
+        // English is never hidden by description.
+        assertFalse(hidden("The House", english, null, setOf("EN", "UK", "US")))
+        assertTrue("its name still counts", hidden("The House (UK)", english, null, setOf("UK")))
+    }
+
+    /** [PlotLanguageIndex] (read once per catalogue) hides what [CategoryTags.isHiddenTitle] hides, title by title. */
+    @Test
+    fun theCatalogueIndexHidesWhatTheRuleHides() {
+        val spanish = "Un joven abogado descubre que su padre esconde un secreto que pondrá en peligro a toda la familia cuando regresa a su pueblo."
+        val english = "A young lawyer discovers that his father is hiding a secret that will put the whole family in danger when he returns home."
+        val categories = listOf(
+            MediaCategory("netflix", "Netflix", ContentType.SERIES),
+            MediaCategory("fr", "|FR| Séries", ContentType.SERIES),
+            MediaCategory("hbo", "HBO | Series", ContentType.SERIES),
+        )
+        val titles = listOf("La Casa" to spanish, "The House" to english, "La Casa (ES)" to english, "|ES| El Puente" to null)
+        val series = titles.flatMapIndexed { index, (name, plot) ->
+            categories.map { Series(id = "$index-${it.id}", name = name, categoryId = it.id, plot = plot) }
+        }
+        val index = PlotLanguageIndex(PlaylistContent(series = series, seriesCategories = categories))
+        assertFalse("English is not kept", "en" in index.series)
+        for (hidden in listOf(setOf("ES"), setOf("LAT"), setOf("EN"), setOf("VIP"), emptySet())) {
+            val languages = PlotLanguage.hiddenLanguages(hidden, emptySet())
+            val expected = series.filter { show ->
+                CategoryTags.isHiddenTitle(show.name, show.plot, CategoryTags.tagOf(categories.first { it.id == show.categoryId }.name), hidden, languages)
+            }.map { it.id }.toSet()
+            val byName = series.filter { CategoryTags.isHiddenByName(it.name, hidden) }.map { it.id }.toSet()
+            assertEquals(hidden.toString(), expected, byName + index.hidden(languages).second)
+        }
     }
 }

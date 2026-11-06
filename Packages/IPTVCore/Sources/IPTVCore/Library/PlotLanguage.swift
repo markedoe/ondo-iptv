@@ -51,39 +51,58 @@ zh|tags|ZH|CN|CHI
     /// The longest word of the table: seven letters of 9 bits each fit in 64 bits.
     private static let longestWord = 7
 
+    /// Languages a description never hides: providers often describe their titles in English whatever their audio.
+    public static let neverHidden: Set<String> = ["en"]
+
     private struct Table {
         var languages: [String] = []
         var tags: [String: Set<String>] = [:]
         var languageOfTag: [String: String] = [:]
-        /// A packed word (`key(_:)`) and its language's index.
-        var owners: [UInt64: Int] = [:]
+        /// Open addressing: a packed word (`key(_:)`) and its language's index plus one; 0 is an empty slot.
+        var slots: ContiguousArray<UInt64> = []
+        var owners: ContiguousArray<Int> = []
+        var mask = 0
     }
 
     private static let parsed: Table = {
         var result = Table()
+        var words: [(String, Int)] = []
         for line in table.split(separator: "\n") {
             let parts = line.trimmingCharacters(in: .whitespaces).split(separator: "|", omittingEmptySubsequences: false).map(String.init)
             guard parts.count >= 3 else { continue }
             let language = parts[0]
             if !result.languages.contains(language) { result.languages.append(language) }
             let items = parts.dropFirst(2)
+            let index = result.languages.firstIndex(of: language) ?? 0
             switch parts[1] {
             case "tags":
                 result.tags[language, default: []].formUnion(items)
                 for tag in items { result.languageOfTag[tag] = language }
             case "words":
-                let index = result.languages.firstIndex(of: language) ?? 0
-                for word in items {
-                    guard let key = key(word) else { preconditionFailure("not a word the scan reads: \(word)") }
-                    precondition(result.owners[key] == nil, "a word of two languages: \(word)")
-                    result.owners[key] = index
-                }
+                for word in items { words.append((word, index)) }
             default:
                 continue
             }
         }
+        var capacity = 16
+        while capacity < words.count * 4 { capacity *= 2 }
+        result.slots = ContiguousArray(repeating: 0, count: capacity)
+        result.owners = ContiguousArray(repeating: 0, count: capacity)
+        result.mask = capacity - 1
+        for (word, language) in words {
+            guard let key = key(word) else { preconditionFailure("not a word the scan reads: \(word)") }
+            var slot = slot(of: key, mask: result.mask)
+            while result.slots[slot] != 0 && result.slots[slot] != key { slot = (slot + 1) & result.mask }
+            precondition(result.slots[slot] == 0, "a word of two languages: \(word)")
+            result.slots[slot] = key
+            result.owners[slot] = language + 1
+        }
         return result
     }()
+
+    private static func slot(of key: UInt64, mask: Int) -> Int {
+        Int(truncatingIfNeeded: (key &* 0x9E37_79B9_7F4A_7C15) >> 40) & mask
+    }
 
     /// The languages, in the table's order.
     public static var languages: [String] { parsed.languages }
@@ -94,11 +113,52 @@ zh|tags|ZH|CN|CHI
     /// Whether a category tag stands for a language of the table ("LAT", "VF"), not for a label ("VIP", "HBO").
     public static func isLanguageTag(_ tag: String) -> Bool { parsed.languageOfTag[tag] != nil }
 
-    /// The languages one of whose tags is hidden ("LAT" hidden: "es"); empty when none is.
-    public static func hiddenLanguages(_ hiddenTags: Set<String>) -> Set<String> {
+    /// The languages whose descriptions are hidden: one of their tags is hidden (`hiddenTags`, "LAT": "es") and none of
+    /// their tags the catalogue has (`catalogueTags`, `CategoryTags.detect`) is kept: a viewer who keeps PT and hides
+    /// BR keeps the descriptions in Portuguese. English never (`neverHidden`). Same rule as the Kotlin
+    /// `PlotLanguage.hiddenLanguages`.
+    public static func hiddenLanguages(_ hiddenTags: Set<String>, catalogueTags: Set<String>) -> Set<String> {
         guard !hiddenTags.isEmpty else { return [] }
-        let languageOfTag = parsed.languageOfTag
-        return Set(hiddenTags.compactMap { languageOfTag[$0] })
+        let table = parsed
+        var languages = Set<String>()
+        for tag in hiddenTags {
+            guard let language = table.languageOfTag[tag], !neverHidden.contains(language) else { continue }
+            let siblings: Set<String> = table.tags[language] ?? []
+            let kept: Bool = siblings.contains { catalogueTags.contains($0) && !hiddenTags.contains($0) }
+            if !kept { languages.insert(language) }
+        }
+        return languages
+    }
+
+    /// What a scan of a description counts.
+    private struct Scan {
+        var hits: [Int]
+        var words = 0
+        var key: UInt64 = 0
+        var readable = true
+        var length = 0
+
+        init(languages: Int) { hits = [Int](repeating: 0, count: languages) }
+
+        mutating func endWord(_ table: Table) {
+            guard length > 0 else { return }
+            words += 1
+            if readable && key > 0 {
+                var slot = PlotLanguage.slot(of: key, mask: table.mask)
+                while true {
+                    let found: UInt64 = table.slots[slot]
+                    if found == 0 { break }
+                    if found == key {
+                        hits[table.owners[slot] - 1] += 1
+                        break
+                    }
+                    slot = (slot + 1) & table.mask
+                }
+            }
+            key = 0
+            readable = true
+            length = 0
+        }
     }
 
     /// The language of a description ("es"), or nil when it is too short or not clear: at least `minimumWords` words,
@@ -107,11 +167,7 @@ zh|tags|ZH|CN|CHI
     public static func detect(_ text: String?) -> String? {
         guard let text, !text.isEmpty else { return nil }
         let table = parsed
-        var hits = [Int](repeating: 0, count: table.languages.count)
-        var words = 0
-        var key: UInt64 = 0
-        var readable = true
-        var length = 0
+        var scan = Scan(languages: table.languages.count)
         var latin = 0
         var arabic = 0
         var devanagari = 0
@@ -119,16 +175,6 @@ zh|tags|ZH|CN|CHI
         var kana = 0
         var count = 0
         var cut = false
-
-        func endWord() {
-            guard length > 0 else { return }
-            words += 1
-            if readable, let owner = table.owners[key] { hits[owner] += 1 }
-            key = 0
-            readable = true
-            length = 0
-        }
-
         for scalar in text.unicodeScalars {
             if count == scanned {
                 cut = true
@@ -139,15 +185,15 @@ zh|tags|ZH|CN|CHI
             if isLatin(point) {
                 latin += 1
                 let folded: UInt32 = fold(point)
-                if readable && length < longestWord && folded < 0x200 {
-                    key = (key << 9) | UInt64(folded)
+                if scan.readable && scan.length < longestWord && folded < 0x200 {
+                    scan.key = (scan.key << 9) | UInt64(folded)
                 } else {
-                    readable = false
+                    scan.readable = false
                 }
-                length += 1
+                scan.length += 1
                 continue
             }
-            endWord()
+            scan.endWord(table)
             switch point {
             case 0x600...0x6FF, 0x750...0x77F, 0x8A0...0x8FF: arabic += 1
             case 0x900...0x97F: devanagari += 1
@@ -157,11 +203,12 @@ zh|tags|ZH|CN|CHI
             }
         }
         // A word cut by the limit is not read.
-        if !cut { endWord() }
+        if !cut { scan.endWord(table) }
         if arabic >= 20 && arabic > latin { return "ar" }
         if devanagari >= 20 && devanagari > latin { return "hi" }
         if han >= 10 && kana == 0 && han > latin { return "zh" }
-        guard words >= minimumWords, !hits.isEmpty else { return nil }
+        let hits = scan.hits
+        guard scan.words >= minimumWords, !hits.isEmpty else { return nil }
         var best = 0
         for language in hits.indices where hits[language] > hits[best] { best = language }
         var second = 0

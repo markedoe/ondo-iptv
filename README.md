@@ -95,7 +95,8 @@ interface changes.
   such as `|PT|` or `FR:`), a rule that also covers the categories added later and every movie, series or
   channel whose own name starts or ends with that code (`|PT| …`, `[PT] …`, `PT - …`, `… (PT)`) wherever it is filed,
   and, in a category with no language code, every movie or series whose description from the provider is in that
-  language; offered once when a playlist
+  language (unless another code of that language is kept, such as `PT` while `BR` is hidden; English descriptions
+  never hide anything); offered once when a playlist
   has many of them (keep your languages, choose, or not now); hide a **style** (manga & anime, children,
   documentaries…) or any word of category names (Bollywood…) the same way; or hide categories one by one.
   The filter button is on the Movies, Series and Live TV screens.

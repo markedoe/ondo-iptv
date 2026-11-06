@@ -12,7 +12,9 @@ langues masquées (docs/ANDROID.fr.md, « Recherche »), lues par les deux cœur
   hindi et le chinois se reconnaissent à leur écriture. Chaque cœur contient le même texte (`PlotLanguage.TABLE`,
   `PlotLanguage.table`), et ses tests vérifient que c'est ce fichier.
 - `cases.json` : des descriptions et la langue que les deux cœurs leur donnent (aucune si elles sont courtes ou pas
-  claires), des noms et l'étiquette à leur fin, des étiquettes masquées et les langues qu'elles désignent.
+  claires), des noms et l'étiquette à leur fin, des étiquettes masquées avec les étiquettes du catalogue
+  (`catalogue`) et les langues dont elles masquent les descriptions : aucune dont une étiquette du catalogue est
+  gardée (PT gardé, BR masqué : pas le portugais), jamais l'anglais.
 
 Un mot ou une étiquette ajouté à une langue va dans `table.txt` et dans les copies des deux cœurs, avec un cas dans
 `cases.json`.

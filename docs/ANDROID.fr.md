@@ -32,8 +32,11 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   `CategoryTags.trailingTag` ; « (2024) », « (4K) » ou « (Uncut) » n'en sont pas) et, dans une catégorie sans
   étiquette de langue, pour les films et séries dont la description donnée par le fournisseur est dans une langue
   masquée (`PlotLanguage` : ses petits mots, ou son écriture, dans les 400 premiers caractères ;
-  `fixtures/plot-language`, partagé avec le cœur Apple). Une catégorie étiquetée d'une langue gardée garde ses
-  titres ; la description de TMDb, dans la langue de l'app, ne compte jamais. Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
+  `fixtures/plot-language`, partagé avec le cœur Apple). Une langue masquée ne compte pour les descriptions que si
+  aucune de ses étiquettes du catalogue n'est gardée (`PlotLanguage.hiddenLanguages` : PT gardé et BR masqué gardent
+  les descriptions en portugais), et l'anglais jamais ; les descriptions sont lues une fois par catalogue
+  (`PlotLanguageIndex`), seulement quand une telle langue est masquée. Une catégorie étiquetée d'une langue gardée
+  garde ses titres ; la description de TMDb, dans la langue de l'app, ne compte jamais. Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
 - **Champs de texte sur TV** (`ui/tv/TvTextInput.kt`) : chaque champ de texte sur une TV (Recherche, formulaire d'une
   playlist, jeton TMDb, clés et identifiants des services de sous-titres, nom et code d'un profil, code parental, filtre
   et mots des catégories, nom d'une présélection ou d'une collection) est une ligne avec son libellé et sa valeur ou son
