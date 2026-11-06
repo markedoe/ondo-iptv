@@ -34,12 +34,19 @@ final class GenresTests: XCTestCase {
     private func cases() throws -> Cases { try JSONDecoder().decode(Cases.self, from: fixture("cases.json")) }
 
     private var englishNames: [String] {
-        Genres.table.split(separator: "\n").map { String($0.split(separator: "|")[0]) }
+        var names: [String] = []
+        for line in Genres.table.split(separator: "\n") {
+            let name = String(line.split(separator: "|")[0])
+            if !names.contains(name) { names.append(name) }
+        }
+        return names
     }
 
     func testTheTableIsTheSharedOne() throws {
         let shared = String(decoding: try fixture("table.txt"), as: UTF8.self)
         XCTAssertEqual(Genres.table.trimmingCharacters(in: .whitespacesAndNewlines), shared.trimmingCharacters(in: .whitespacesAndNewlines))
+        // Short lines (the linters' limits): a genre with many names goes on over several lines.
+        XCTAssertTrue(Genres.table.split(separator: "\n").allSatisfy { $0.utf16.count <= 150 })
     }
 
     func testEachCanonicalKeyIsItsEnglishNameNormalised() {

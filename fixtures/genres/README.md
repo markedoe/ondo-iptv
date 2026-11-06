@@ -3,7 +3,7 @@
 Genres in any language as one genre (docs/SYNC.md, "Selections"), read by both cores: Android's `GenresTest` and
 Apple's `GenresTests`.
 
-- `table.txt`: one line per TMDb genre, its English name, then the names that mean it (English, French, Spanish,
+- `table.txt`: a line per TMDb genre (several for one with many names, so that lines stay short), its English name, then the names that mean it (English, French, Spanish,
   Portuguese, German, Italian, Dutch, Chinese, Arabic, Hindi), separated by `|`. Each core holds the same text
   (`Genres.TABLE`, `Genres.table`), and its tests check that it is this file. A genre's key is its English name
   normalised (`adventure`, `science fiction`).

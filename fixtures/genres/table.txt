@@ -1,11 +1,16 @@
 Action|action|actions|accion|acao|azione|actie|actionfilm|action film|动作|أكشن|اكشن|حركة|एक्शन
-Adventure|adventure|adventures|aventure|aventures|aventura|aventuras|abenteuer|abenteuerfilm|avventura|avventure|avontuur|冒险|مغامرة|مغامرات|साहसिक|एडवेंचर
-Animation|animation|animations|animation adulte|adult animation|animacion|animacao|animazione|animatie|animatiefilm|animationsfilm|zeichentrick|dessin anime|dessins animes|cartoon|cartoons|动画|رسوم متحركة|انيميشن|एनिमेशन
+Adventure|adventure|adventures|aventure|aventures|aventura|aventuras|abenteuer|abenteuerfilm|avventura|avventure|avontuur|冒险|مغامرة|مغامرات|साहसिक
+Adventure|एडवेंचर
+Animation|animation|animations|animation adulte|adult animation|animacion|animacao|animazione|animatie|animatiefilm|animationsfilm|zeichentrick
+Animation|dessin anime|dessins animes|cartoon|cartoons|动画|رسوم متحركة|انيميشن|एनिमेशन
 Comedy|comedy|comedies|comedie|comedia|comedias|komodie|commedia|komedie|humour|humor|喜剧|كوميديا|كوميدي|कॉमेडी|हास्य
 Crime|crime|crimes|crimen|policier|policiers|polar|polars|policial|krimi|kriminalfilm|crimine|poliziesco|misdaad|犯罪|جريمة|अपराध
-Documentary|documentary|documentaries|documentaire|documentaires|documentaire serie|documentaires series|documental|documentales|documentario|documentarios|documentari|dokumentarfilm|dokumentation|dokumentarserie|doku|docu|docuseries|docu serie|纪录|纪录片|وثائقي|وثائقية|वृत्तचित्र|डॉक्यूमेंट्री
+Documentary|documentary|documentaries|documentaire|documentaires|documentaire serie|documentaires series|documental|documentales|documentario
+Documentary|documentarios|documentari|dokumentarfilm|dokumentation|dokumentarserie|doku|docu|docuseries|docu serie|纪录|纪录片|وثائقي|وثائقية|वृत्तचित्र
+Documentary|डॉक्यूमेंट्री
 Drama|drama|dramas|drame|drames|dramma|剧情|دراما|ड्रामा|नाटक
-Family|family|familial|familiale|famille|divertissement familial|film familial|familia|familiar|familie|familienfilm|famiglia|familiefilm|家庭|عائلي|عائلة|पारिवारिक
+Family|family|familial|familiale|famille|divertissement familial|film familial|familia|familiar|familie|familienfilm|famiglia|familiefilm|家庭|عائلي
+Family|عائلة|पारिवारिक
 Fantasy|fantasy|fantastique|fantastic|fantasia|fantasie|fantastico|fantastisch|奇幻|فانتازيا|خيالي|फ़ैंटेसी|फंतासी
 History|history|historical|histoire|historique|historia|historico|historisch|historienfilm|storia|storico|geschiedenis|历史|تاريخ|تاريخي|इतिहास|ऐतिहासिक
 Horror|horror|horreur|epouvante|epouvante horreur|terror|terreur|orrore|恐怖|رعب|हॉरर|डरावनी

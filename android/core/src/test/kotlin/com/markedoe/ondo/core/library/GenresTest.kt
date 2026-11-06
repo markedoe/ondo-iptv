@@ -28,12 +28,14 @@ class GenresTest {
     @Test
     fun theTableIsTheSharedOne() {
         assertEquals(File("../../fixtures/genres/table.txt").readText().trim(), Genres.TABLE.trim())
+        // Short lines (the linters' limits): a genre with many names goes on over several lines.
+        assertTrue(Genres.TABLE.lines().all { it.length <= 150 })
     }
 
     @Test
     fun eachCanonicalKeyIsItsEnglishNameNormalised() {
         // An earlier version keys a genre by its name normalised: an English name matches the same key there.
-        val english = Genres.TABLE.trim().lines().map { it.substringBefore('|') }
+        val english = Genres.TABLE.trim().lines().map { it.substringBefore('|') }.distinct()
         assertEquals(english.map(TextNormalizer::normalize), Genres.canonical)
         assertEquals(25, Genres.canonical.size)
         assertTrue(Genres.isCanonical("science fiction"))
