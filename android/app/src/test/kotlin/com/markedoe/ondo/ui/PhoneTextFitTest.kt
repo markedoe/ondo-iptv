@@ -8,7 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.test.core.app.ActivityScenario
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ApplicationProvider
@@ -52,7 +55,8 @@ import org.robolectric.annotation.GraphicsMode
 class PhoneTextFitTest(private val language: String) {
     @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
 
-    @get:Rule val compose = createComposeRule()
+    // The activity starts once the language is set, as the app's does: its configuration is the language's.
+    @get:Rule val compose = createEmptyComposeRule()
 
     companion object {
         @JvmStatic
@@ -100,7 +104,8 @@ class PhoneTextFitTest(private val language: String) {
         val words = strings
         val labels = appLabels(words.getString(R.string.kind_movie), words.getString(R.string.kind_series), words.getString(R.string.hero_new_episode), locale)
         var surface by mutableStateOf(Surface.MOVIES)
-        compose.setContent {
+        val scenario = ActivityScenario.launch(ComponentActivity::class.java)
+        scenario.onActivity { activity -> activity.setContent {
             OndoTheme {
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
                     TelevisionFrame {
@@ -114,7 +119,7 @@ class PhoneTextFitTest(private val language: String) {
                     }
                 }
             }
-        }
+        } }
         val checked = mapOf(
             Surface.MOVIES to listOf(R.string.movies),
             Surface.SERIES to listOf(R.string.series),
@@ -133,6 +138,7 @@ class PhoneTextFitTest(private val language: String) {
                 found.filter { it != 1 }.forEach { problems += "$shown: \"$text\" on $it lines" }
             }
         }
+        scenario.close()
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
     }
 }
