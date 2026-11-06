@@ -566,7 +566,9 @@ class TelevisionLibraryTest {
         // A selection opens its page; Back comes back to the list.
         pressUntil(Key.DirectionDown) { focusedTag() == "selection-s1" }
         press(Key.DirectionCenter)
-        waitFor { exists("selection") && exists("deleteSelection") && !exists("selections") }
+        // The page of that selection (its buttons are further down the page).
+        waitFor { exists("selection") && exists("selectionName") && !exists("selections") }
+        assertTrue(compose.onAllNodesWithText("Edit selection").fetchSemanticsNodes().isNotEmpty())
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         waitFor { exists("selections") }
         settle()
@@ -581,7 +583,8 @@ class TelevisionLibraryTest {
         // New selection opens an empty page.
         pressUntil(Key.DirectionUp) { focusedTag() == "newSelection" }
         press(Key.DirectionCenter)
-        waitFor { exists("selection") && exists("saveSelection") && !exists("deleteSelection") }
+        waitFor { exists("selection") && exists("selectionName") && !exists("selections") }
+        assertTrue(compose.onAllNodesWithText("New selection").fetchSemanticsNodes().isNotEmpty())
         // Back to the list, then to its row in Settings.
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         waitFor { exists("selections") }
