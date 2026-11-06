@@ -15,7 +15,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
-import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -95,14 +94,12 @@ class TvLauncherOpensHomeTest {
         waitFor("Play focused") { focusedTag() == "heroPlay" }
     }
 
-    /** The viewer leaves Ondo (the remote's Home button) on a title's page, then opens it again with [intent]. */
+    /** The viewer leaves Ondo on a title's page (the remote's Home button), then opens it again with [intent]. */
     private fun leaveOnATitlesPageAndOpen(intent: Intent) {
         compose.onNodeWithTag("heroInfo").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("the title's page") { exists("detailPlay") }
-        val scenario = scenario!!
-        scenario.moveToState(Lifecycle.State.CREATED)
-        scenario.onActivity { InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(it, intent) }
-        scenario.moveToState(Lifecycle.State.RESUMED)
+        // The launcher's intent, as Android hands it to the running instance (onNewIntent).
+        scenario!!.onActivity { InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(it, intent) }
         settle(1_500)
     }
 
