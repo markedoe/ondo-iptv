@@ -14,7 +14,11 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -54,6 +58,7 @@ import org.robolectric.annotation.Config
  * the device kept of TMDb still being read): the focus waits on the first card meanwhile, then goes to Play, the frame
  * full size above the rows, the rows from their first. Whatever row came first (continue watching, new titles).
  */
+@OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TvHomeOpensAtTheTopTest {
@@ -137,6 +142,32 @@ class TvHomeOpensAtTheTopTest {
         HomeUiState(playlistName = "Example Playlist", continueWatching = resume, newMovies = movies, newSeries = shows, hasVod = true),
         "shelfResumeMovies",
     )
+
+    /**
+     * The featured titles there from the start, but the focus put on the first card before Play could take it (Play not
+     * focusable yet as the app starts, the page's entry giving the focus to what it finds), then on Play: the rows
+     * stay at their top, never left scrolled with their first row's name under the frame.
+     */
+    @Test
+    fun aCardFocusedBeforePlayLeavesTheRowsAtTheirTop() {
+        for ((rows, shelf) in listOf(
+            HomeUiState(playlistName = "Example Playlist", hero = hero, continueWatching = resume, newMovies = movies, hasVod = true) to "shelfResumeMovies",
+            HomeUiState(playlistName = "Example Playlist", hero = hero, newMovies = movies, newSeries = shows, hasVod = true) to "shelfNewMovies",
+        )) {
+            if (homeState.hero.isEmpty()) show(rows) else {
+                homeState = rows
+                advance(1_000)
+            }
+            compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag(shelf))).onFirst().requestFocus()
+            advance(1_000)
+            compose.onNodeWithTag("heroPlay").requestFocus()
+            advance(1_500)
+            assertTrue("$shelf: Play has the focus", compose.onNodeWithTag("heroPlay").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
+            val heroBottom = compose.onNodeWithTag("hero", useUnmergedTree = true).getUnclippedBoundsInRoot().bottom
+            val top = compose.onNodeWithTag(shelf, useUnmergedTree = true).getUnclippedBoundsInRoot().top
+            assertTrue("the rows at their top: $shelf at $top, the frame ending at $heroBottom", top >= heroBottom + 17.dp && top <= heroBottom + 19.dp)
+        }
+    }
 
     @Test
     fun continueWatchingFirstThenAPauseThenTheFeaturedTitles() = assertOpensAtTheTop(
