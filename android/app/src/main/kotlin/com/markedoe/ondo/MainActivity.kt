@@ -1,5 +1,6 @@
 package com.markedoe.ondo
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
 import android.provider.Settings
@@ -10,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,6 +31,18 @@ import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
 
 class MainActivity : ComponentActivity() {
+    /**
+     * When Ondo was last opened from the TV's home screen while running ([TvLauncherActivity]; the device's uptime, 0:
+     * not since this screen was made): each time, Home again, at its top.
+     */
+    private var launch by mutableLongStateOf(0L)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (opensHome(intent)) launch = SystemClock.uptimeMillis()
+    }
+
     override fun onStart() {
         super.onStart()
         // Back in front: a playlist older than the viewer's choice is downloaded again.
@@ -73,7 +87,7 @@ class MainActivity : ComponentActivity() {
             }
             OndoTheme {
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides animations) {
-                    OndoApp(viewModel)
+                    OndoApp(viewModel, launch = launch)
                 }
             }
         }
@@ -82,6 +96,12 @@ class MainActivity : ComponentActivity() {
     private fun animationsOn(): Boolean = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
 
     companion object {
+        /** Set by [TvLauncherActivity]: Home, at its top, whatever page was left open. */
+        const val EXTRA_OPEN_HOME = "com.markedoe.ondo.OPEN_HOME"
+
+        /** Whether [intent] asks for Home ([EXTRA_OPEN_HOME]): the TV's home screen. */
+        fun opensHome(intent: Intent?): Boolean = intent?.getBooleanExtra(EXTRA_OPEN_HOME, false) == true
+
         /** Longest wait for the saved catalogue behind the splash screen: Home then appears without it (never as empty). */
         const val SPLASH_RESTORE_LIMIT_MS = 2_000L
 

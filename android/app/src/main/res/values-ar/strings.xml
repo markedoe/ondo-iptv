@@ -319,6 +319,7 @@
         <item quantity="many">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
         <item quantity="other">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
     </plurals>
+    <string name="playlist_update_failed">تعذّر تحديث قائمة التشغيل</string>
     <string name="updated_ago">حُدّثت %1$s</string>
     <string name="title_added_on">أُضيف في %1$s</string>
     <string name="title_updated_on">حُدّث في %1$s</string>

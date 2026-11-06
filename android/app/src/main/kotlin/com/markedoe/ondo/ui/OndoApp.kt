@@ -36,6 +36,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -169,9 +170,12 @@ const val SUPPORT_URL = "https://markedoe.github.io/ondo-iptv/support.html"
 private const val PAGE_FADE_MS = 220
 private const val FILTER_DEBOUNCE_MS = 150L
 
-/** The whole app: welcome until a playlist exists, then the tabs and their pages. */
+/**
+ * The whole app: welcome until a playlist exists, then the tabs and their pages. [launch]: when Ondo was last opened
+ * again from the launcher (0: not), which brings a TV back to Home.
+ */
 @Composable
-fun OndoApp(viewModel: OndoViewModel) {
+fun OndoApp(viewModel: OndoViewModel, launch: Long = 0L) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -208,7 +212,7 @@ fun OndoApp(viewModel: OndoViewModel) {
                     onCheckPin = viewModel::checkPin,
                 ),
             )
-            else -> MainTabs(viewModel)
+            else -> MainTabs(viewModel, launch)
         }
     }
 }
@@ -244,15 +248,25 @@ private fun Onboarding(viewModel: OndoViewModel) {
 }
 
 @Composable
-private fun MainTabs(viewModel: OndoViewModel) {
+private fun MainTabs(viewModel: OndoViewModel, launch: Long) {
     // The top bar's avatar: the profile in use only (the whole state would recompose the frame at each change).
     val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    // The bar's playlist status: when it was updated, again each minute (not the whole state either).
+    val playlistStatus by viewModel.playlistStatus.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val entry by navController.currentBackStackEntryAsState()
     var selected by rememberSaveable { mutableStateOf(TopLevel.HOME) }
     LaunchedEffect(entry) {
         val destination = entry?.destination ?: return@LaunchedEffect
         TopLevel.entries.firstOrNull { destination.hasRoute(it.route::class) }?.let { selected = it }
+    }
+    val television = isTelevision()
+    // Opened again from the launcher on a TV: Home, whatever page was left open (Home itself back at its top).
+    var handledLaunch by rememberSaveable { mutableLongStateOf(launch) }
+    LaunchedEffect(launch) {
+        if (launch == 0L || launch == handledLaunch) return@LaunchedEffect
+        handledLaunch = launch
+        if (television) navController.popBackStack(Routes.Home, inclusive = false)
     }
     val destination = entry?.destination
     // On a TV, Search is a page of its own, without the top bar: Back closes it.
@@ -270,6 +284,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 onSettings = { navController.navigate(Routes.Settings) },
                 profile = activeProfile,
                 onProfiles = { navController.navigate(Routes.Profiles) },
+                playlist = playlistStatus,
                 content = pages,
             )
         }
@@ -292,7 +307,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                     popEnterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
                     popExitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
                 ) {
-                    page<Routes.Home>(TvMargins.NONE) { HomeDestination(viewModel, navController) }
+                    page<Routes.Home>(TvMargins.NONE) { HomeDestination(viewModel, navController, launch) }
                     page<Routes.Movies>(TvMargins.HEADER) { VodDestination(viewModel, navController, series = false) }
                     page<Routes.Series>(TvMargins.HEADER) { VodDestination(viewModel, navController, series = true) }
                     page<Routes.Live>(TvMargins.TAB) { LiveDestination(viewModel, navController) }
@@ -505,7 +520,7 @@ private fun Loading() {
 }
 
 @Composable
-private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostController) {
+private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostController, launch: Long) {
     val home by viewModel.home.collectAsStateWithLifecycle()
     val preparing by viewModel.preparing.collectAsStateWithLifecycle()
     val state = home ?: return Loading()
@@ -536,7 +551,7 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onShowBackdrop = viewModel::wantBackdrop,
             onBackdropFailed = viewModel::backdropFailed,
         )
-    if (isTelevision()) TvHomeScreen(state, actions, preparingKey = preparing) else HomeScreen(state = state, preparingKey = preparing, actions = actions)
+    if (isTelevision()) TvHomeScreen(state, actions, preparingKey = preparing, launch = launch) else HomeScreen(state = state, preparingKey = preparing, actions = actions)
 }
 
 @Composable

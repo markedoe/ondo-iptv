@@ -117,6 +117,26 @@ class OndoViewModel(
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
+    /**
+     * The playlist in use for a TV's top bar: when its catalogue was last fetched, whether it is being fetched again or
+     * that failed, again every minute. Only the catalogue's fetch, which the time is of: not what TMDb fills in.
+     */
+    val playlistStatus: StateFlow<com.markedoe.ondo.ui.tv.TvPlaylistStatus?> = combine(
+        state.map { state ->
+            state.activePlaylist?.let { playlist ->
+                com.markedoe.ondo.ui.tv.TvPlaylistStatus(
+                    name = playlist.name,
+                    updatedAt = state.content.fetchedAt.takeIf { it > 0 && !state.content.isEmpty },
+                    now = 0L,
+                    refreshing = state.isLoading,
+                    failed = !state.isLoading && state.error != null,
+                )
+            }
+        }.distinctUntilChanged(),
+        minutes,
+    ) { status, now -> status?.copy(now = now) }
+        .stateIn(viewModelScope, sharing, null)
+
     /** The device's date, again when it changes: a selection's row is a new pick every day. */
     private val days: Flow<String> = minutes.map { SelectionRows.day(it) }.distinctUntilChanged()
 
