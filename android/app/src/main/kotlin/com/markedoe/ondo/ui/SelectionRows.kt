@@ -9,6 +9,8 @@ import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.model.MediaDetails
+import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.core.sync.SyncSelection
@@ -129,21 +131,17 @@ object SelectionRows {
     fun titles(state: OndoState, selection: SyncSelection, tab: String, now: Long, kept: Map<String, TitleMetadata>, limit: Int): List<ShowcaseItem> {
         if (selection.tags.none(Selections::isKnown)) return emptyList()
         val tagged = tagged(state, kept)
-        val hidden = UiMappers.hiddenCategoryIds(state)
-        val byName = CategoryFilter.hiddenTitles(state)
         val matcher = Selections.matcher(selection.tags, selection.matchesAll)
         fun matches(key: String) = tagged.facts[key]?.let(matcher) == true
+        val visible = visible(state)
         val candidates = ArrayList<ShowcaseItem>()
         if (tab != RowOrder.SERIES) {
             val watched = UiMappers.hiddenMovieIds(state)
-            val movies = state.content.movies.filter {
-                it.categoryId !in hidden && it.id !in watched && it.id !in byName.movies && matches(ShowcaseItem.MovieItem(it).key)
-            }
+            val movies = visible.movies.filter { it.id !in watched && matches(ShowcaseItem.MovieItem(it).key) }
             UiMappers.films(state).distinct(movies).mapTo(candidates) { ShowcaseItem.MovieItem(it) }
         }
         if (tab != RowOrder.MOVIES) {
-            state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series && matches(ShowcaseItem.SeriesItem(it).key) }
-                .mapTo(candidates) { ShowcaseItem.SeriesItem(it) }
+            visible.series.filter { matches(ShowcaseItem.SeriesItem(it).key) }.mapTo(candidates) { ShowcaseItem.SeriesItem(it) }
         }
         val playlist = state.activePlaylistId.orEmpty()
         val finishedMovies = state.library.finishedMovies(playlist)
@@ -183,9 +181,10 @@ object SelectionRows {
     /** The tags a selection can be made of, from the playlist's visible titles. */
     fun choices(state: OndoState, kept: Map<String, TitleMetadata>): SelectionChoices {
         val tagged = tagged(state, kept)
-        val hidden = UiMappers.hiddenCategoryIds(state)
-        val movies = state.content.movies.filter { it.categoryId !in hidden }
-        val series = state.content.series.filter { it.categoryId !in hidden }
+        // The same titles as the rows pick from: a tag only hidden titles have is not offered.
+        val visible = visible(state)
+        val movies = visible.movies
+        val series = visible.series
         val facts = movies.mapNotNull { tagged.facts[ShowcaseItem.MovieItem(it).key] } + series.mapNotNull { tagged.facts[ShowcaseItem.SeriesItem(it).key] }
         val genres = facts.flatMapTo(HashSet()) { it.genres }
         val groups = facts.flatMapTo(HashSet()) { it.awardGroups }
@@ -198,6 +197,22 @@ object SelectionRows {
             awardGroups = state.awards.groups.filter { it in groups },
             decades = Selections.decades((movies.map { it.year } + series.map { it.year })),
             styles = com.markedoe.ondo.core.library.CategoryStyles.order.filter { it in styles },
+        )
+    }
+
+    /** The titles a selection picks from, and its tags are offered from: as every list shows them. */
+    private class Visible(val movies: List<Movie>, val series: List<Series>)
+
+    /**
+     * The catalogue's titles but those of hidden categories (a Kids profile's adult ones included) and those whose own
+     * name carries a hidden language ("|PT| …" filed under "Concerts"), as every list of titles leaves them out.
+     */
+    private fun visible(state: OndoState): Visible {
+        val hidden = UiMappers.hiddenCategoryIds(state)
+        val byName = CategoryFilter.hiddenTitles(state)
+        return Visible(
+            state.content.movies.filter { it.categoryId !in hidden && it.id !in byName.movies },
+            state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series },
         )
     }
 
