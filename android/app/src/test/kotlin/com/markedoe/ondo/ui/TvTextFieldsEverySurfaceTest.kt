@@ -55,7 +55,7 @@ import com.markedoe.ondo.ui.components.SubtitleServicesSettings
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.CategoriesActions
-import com.markedoe.ondo.ui.screens.CollectionNameDialog
+import com.markedoe.ondo.ui.screens.CollectionNameField
 import com.markedoe.ondo.ui.screens.ParentGate
 import com.markedoe.ondo.ui.screens.ProfileEditScreen
 import com.markedoe.ondo.ui.screens.SearchUiState
@@ -124,8 +124,6 @@ class TvTextFieldsEverySurfaceTest(private val surfaceName: String) {
         val list: String?,
         val fields: List<Field>,
         val opensOnEntry: Boolean = false,
-        /** A dialog never idles under a running test clock (its window's frames): its clock stays paused from the start. */
-        val pausedClock: Boolean = false,
         val prepare: TvTextFieldsEverySurfaceTest.() -> Unit = {},
         val content: @Composable () -> Unit,
     )
@@ -225,10 +223,12 @@ class TvTextFieldsEverySurfaceTest(private val surfaceName: String) {
             Surface(
                 "collectionName", null,
                 listOf(Field("collectionName", "s", After.Gone, initial = "Collection 1")),
-                pausedClock = true,
             ) {
+                // The dialog's own field (Material's dialog never idles under Robolectric's clock): Done makes the
+                // collection, which closes the dialog.
                 var showing by remember { mutableStateOf(true) }
-                if (showing) CollectionNameDialog("New collection", "Collection 1", "Create", onConfirm = { showing = false }, onDismiss = {})
+                var name by remember { mutableStateOf("Collection 1") }
+                if (showing) Column { CollectionNameField(name, { name = it }, onConfirm = { showing = false }) }
             },
         )
 
@@ -290,7 +290,6 @@ class TvTextFieldsEverySurfaceTest(private val surfaceName: String) {
 
     private fun start() {
         var inputModes: InputModeManager? = null
-        if (surface.pausedClock) compose.mainClock.autoAdvance = false
         compose.setContent {
             inputModes = LocalInputModeManager.current
             focusManager = LocalFocusManager.current
