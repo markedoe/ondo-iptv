@@ -303,7 +303,8 @@ class TelevisionFocusTest {
     fun theRemoteComesBackToHomeWhenThePlaylistTypedHereBecomesThePhones() {
         start()
         addWithTheRemote()
-        waitFor { exists("home") && focusedTag() == "heroPlay" }
+        // The rows below the carousel come once the catalogue's titles are sorted: Down before them stays on Play.
+        waitFor { exists("home") && focusedTag() == "heroPlay" && exists("shelfNewMovies") }
         press(Key.DirectionDown)
         assertTrue("the focus is on ${focused()}", focusedIn("shelfNewMovies"))
         val typed = repository.state.value.activePlaylistId
