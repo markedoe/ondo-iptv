@@ -245,15 +245,23 @@ user-selected files).
      TestFlight edition of its platform (`AFTER_BUILD_NUMBER`: the TestFlight edition takes the next number, so the
      internal testers' latest build stays the TestFlight edition). A failed check or App Store edition build does not
      stop the TestFlight edition, and step *External testers builds* turns the run red. The core tests are not run
-     again (CI passed on the commit, and CI builds the App Store edition too).
-   - Job *External testers (Beta App Review)*, on Linux (the wait costs no macOS minutes), runs
-     `fastlane ios external_testers` then `fastlane mac external_testers`: it creates the external group the first
-     time, waits for the processing (up to 90 min per build), fills *Test Information* (the beta app description:
-     the listing's `description.txt`; *What to Test*: its `release_notes.txt`, in every language of the listing; the
-     review notes and test playlist: `review_information/notes.txt`; no sign-in; export compliance: no non-exempt
-     encryption), submits the build for Beta App Review and adds it to the group; the testers are e-mailed once Apple
-     approves it. A build of the same version still waiting for beta review is expired and replaced; while one is in
-     review, the new build is not sent (the next push's follows). The run holds the release queue until this job ends.
+     again (CI passed on the commit, and CI builds the App Store edition too). If the TestFlight edition fails after
+     the App Store edition went up, the internal testers' latest build of that platform is the App Store edition one
+     (without downloads) until the next delivery; the run is red. Only a run on `main` sends anything to external
+     testers (never a tag, never another branch).
+   - *Release*'s job *External testers* (Linux) hands the two build numbers to the workflow *TestFlight external*
+     (`testflight-external.yml`), which has its own queue: its wait (up to 3 hours) never holds back a tag or the next
+     delivery, and a newer push's builds replace builds still waiting there. It runs only when *Release* started it
+     (a run started by hand stops), on `main`, with `fastlane ios external_testers` then `fastlane mac
+     external_testers`: the group as App Store Connect holds it, the processing first (up to 90 min per build), then
+     the beta review slot (a build of the same version still waiting for beta review is expired and replaced, never a
+     build an App Store version uses: the lane stops instead; while one is in review, the new build is not sent and
+     the next push's follows), *Test Information* (the beta app description: the listing's `description.txt`, with
+     its privacy and marketing addresses; *What to Test*: its `release_notes.txt`; the review notes and test playlist:
+     `review_information/notes.txt`; no sign-in; export compliance: no non-exempt encryption), language by language:
+     a language App Store Connect refuses is logged, the others are set and the build is sent, and the run is red at
+     the end. Then the build is submitted for Beta App Review and added to the group; the testers are e-mailed once
+     Apple approves it.
    - **What App Store Connect holds** (*TestFlight → Test Information*, the group and its testers) is read, never
      assumed: the job logs whether the group is external and how many testers it has, whether the **Feedback Email**
      and the Beta App Review contact are set (never their values), and stops only when one is really missing, naming

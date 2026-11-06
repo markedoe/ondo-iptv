@@ -372,16 +372,27 @@ class ExternalTestersTests(WorkflowScriptTestCase):
 
     def test_only_a_push_delivery_goes_to_external_testers(self):
         block = "\n".join(job_block("release.yml", "deliver"))
-        self.assertIn("EXTERNAL: ${{ github.event.inputs.external == 'true' && github.event.inputs.target == 'builds' && "
-                      "github.event.inputs.edition == 'testflight' }}", block)
+        self.assertIn("EXTERNAL: ${{ github.ref == 'refs/heads/main' && github.event.inputs.external == 'true' && "
+                      "github.event.inputs.target == 'builds' && github.event.inputs.edition == 'testflight' }}", block)
+        self.assertIn("github.ref == 'refs/heads/main'", "\n".join(job_block("release.yml", "external")))
         # A tag's TestFlight edition again (the tag submitted its App Store edition for App Review) has no external testers.
         self.assertNotIn("external=true", "\n".join(job_block("release.yml", "testflight")))
 
-    def test_the_external_job_runs_on_linux_after_the_builds(self):
-        block = "\n".join(job_block("release.yml", "external"))
-        self.assertIn("runs-on: ubuntu-24.04", block)
-        self.assertIn("needs: deliver", block)
-        self.assertEqual(self.steps("external")[-2:], ["iOS → external testers", "macOS → external testers"])
+    def test_the_builds_go_to_the_external_workflow_outside_the_release_queue(self):
+        self.commit("change", "App/OndoApp.swift")
+        output, dispatched = self.run_script(step_script("release.yml", "Start the external testers distribution"), {},
+                                             IOS_BUILD="51", MAC_BUILD="")
+        self.assertEqual(dispatched, ["testflight-external.yml --repo owner/ondo-iptv --ref main -f ios_build=51 -f mac_build="], output)
+        self.assertIn("needs: deliver", "\n".join(job_block("release.yml", "external")))
+        external = (WORKFLOWS / "testflight-external.yml").read_text(encoding="utf-8")
+        self.assertIn("group: testflight-external", external)
+        self.assertNotIn("release-apple", external)
+        self.assertIn("runs-on: ubuntu-24.04", external)
+        self.assertIn("github.actor == 'github-actions[bot]'", external)
+        steps = [line.strip()[len("- name: "):] for line in job_block("testflight-external.yml", "external")
+                 if line.strip().startswith("- name: ")]
+        self.assertEqual(steps, ["iOS → external testers", "macOS → external testers"])
+
 
 class CorePassedTests(WorkflowScriptTestCase):
     """release.yml: a TestFlight edition run skips the core tests only when CI passed, its macOS jobs run, on the very

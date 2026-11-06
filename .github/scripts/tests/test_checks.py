@@ -550,8 +550,16 @@ class AppStoreTests(CheckTestCase):
         "def app_store_edition?\n  ENV[\"EDITION\"] == \"app-store\"\nend\n\n"
         "def upload_build(platform)\n  upload_to_testflight(\n    api_key: api_key,\n    skip_submission: true\n  )\nend\n\n"
         "def external_group(app)\n  app.create_beta_group(group_name: EXTERNAL_GROUP, is_internal_group: false)\nend\n\n"
+        "def beta_review_slot_free?(app, platform, version, number)\n  waiting.each do |build|\n"
+        "    UI.user_error!(\"attached\") if app_store_version_build?(build)\n    build.expire!\n  end\nend\n\n"
+        "def fill_what_to_test(platform, number)\n"
+        "  existing = build.get_beta_build_localizations\n"
+        "  Spaceship::ConnectAPI.patch_beta_build_localizations(localization_id: id, attributes: attributes)\n"
+        "  Spaceship::ConnectAPI.post_beta_build_localizations(build_id: build.id, attributes: attributes)\n"
+        "  text.gsub(\"<\", \"\")\nend\n\n"
         "def distribute_to_external_testers(platform)\n"
         "  UI.user_error!(\"Only the App Store edition\") unless app_store_edition?\n"
+        "  UI.user_error!(\"Never a tag's build\") if ENV[\"GITHUB_REF_TYPE\"] == \"tag\"\n"
         "  upload_to_testflight(\n    distribute_only: true,\n    distribute_external: true,\n"
         "    groups: [EXTERNAL_GROUP],\n    submit_beta_review: true\n  )\nend\n\n"
         "platform :ios do\n  lane :external_testers do\n    distribute_to_external_testers(\"ios\")\n  end\nend\n")
@@ -564,17 +572,26 @@ class AppStoreTests(CheckTestCase):
         "      - name: iOS → TestFlight\n        id: ios\n        run: bundle exec fastlane ios beta\n"
         "      - name: macOS App Store edition\n        id: mac_app_store\n        env:\n          EDITION: app-store\n"
         "        run: bundle exec fastlane mac beta\n"
-        "  external:\n    steps:\n"
+        "  external:\n    env:\n      IOS_BUILD: ${{ needs.deliver.outputs.ios_app_store_build }}\n"
+        "      MAC_BUILD: ${{ needs.deliver.outputs.mac_app_store_build }}\n    steps:\n"
+        "      - name: Start the external testers distribution\n"
+        "        run: gh workflow run testflight-external.yml --ref main -f ios_build=\"$IOS_BUILD\" -f mac_build=\"$MAC_BUILD\"\n")
+    EXTERNAL_WORKFLOW = (
+        "name: TestFlight external\non:\n  workflow_dispatch:\n    inputs:\n      ios_build:\n        type: string\n"
+        "concurrency:\n  group: testflight-external\npermissions:\n  contents: read\njobs:\n  external:\n"
+        "    if: ${{ github.actor == 'github-actions[bot]' && github.ref == 'refs/heads/main' }}\n    steps:\n"
         "      - name: iOS → external testers\n        env:\n          EDITION: app-store\n"
-        "          BUILD_NUMBER: ${{ needs.deliver.outputs.ios_app_store_build }}\n"
+        "          BUILD_NUMBER: ${{ inputs.ios_build }}\n"
         "        run: bundle exec fastlane ios external_testers\n"
         "      - name: macOS → external testers\n        env:\n          EDITION: app-store\n"
-        "          BUILD_NUMBER: ${{ needs.deliver.outputs.mac_app_store_build }}\n"
+        "          BUILD_NUMBER: ${{ inputs.mac_build }}\n"
         "        run: bundle exec fastlane mac external_testers\n")
 
-    def external_path(self, fastfile: str = EXTERNAL_FASTFILE, release: str = EXTERNAL_RELEASE) -> None:
+    def external_path(self, fastfile: str = EXTERNAL_FASTFILE, release: str = EXTERNAL_RELEASE,
+                      workflow: str = EXTERNAL_WORKFLOW) -> None:
         self.write("fastlane/Fastfile", fastfile)
         self.write(".github/workflows/release.yml", release)
+        self.write(".github/workflows/testflight-external.yml", workflow)
 
     def test_external_testers_with_the_app_store_edition_pass(self):
         self.external_path()
@@ -587,8 +604,26 @@ class AppStoreTests(CheckTestCase):
         self.assertFails("app_store", "outside distribute_to_external_testers", "must keep skip_submission: true")
 
     def test_beta_review_outside_the_guarded_function_fails(self):
-        self.external_path(self.EXTERNAL_FASTFILE + "\nlane :anything do\n  upload_to_testflight(submit_beta_review: true)\nend\n")
-        self.assertFails("app_store", "Fastfile:39: gives a build to external testers or Beta App Review outside")
+        for extra in ("  upload_to_testflight(submit_beta_review: true)\n",
+                      "  testflight(:distribute_external => true, :groups => [\"External testers\"])\n",
+                      "  build.expire!\n"):
+            with self.subTest(extra=extra):
+                self.external_path(self.EXTERNAL_FASTFILE + "\nlane :anything do\n" + extra + "end\n")
+                self.assertFails("app_store", "gives a build to external testers or Beta App Review outside")
+
+    def test_a_line_starting_with_end_does_not_end_a_function(self):
+        # `end_time = …` at column 0 inside a function must not end it: the lines after it stay checked as its own.
+        self.external_path(self.EXTERNAL_FASTFILE.replace(
+            "def fill_what_to_test(platform, number)\n", "def fill_what_to_test(platform, number)\nend_time = Time.now\n").replace(
+            "  text.gsub(\"<\", \"\")\nend\n", "  text.gsub(\"<\", \"\")\n  build.expire!\nend\n"))
+        self.assertFails("app_store", "fill_what_to_test runs on the TestFlight edition too")
+
+    def test_the_edition_and_the_build_never_change_at_run_time(self):
+        for line in ('  ENV["EDITION"] = "app-store"\n', "  ENV['BUILD_NUMBER'] = latest\n", '  ENV.store("EDITION", "app-store")\n',
+                     '  ENV["EDITION"] ||= "app-store"\n'):
+            with self.subTest(line=line):
+                self.external_path(self.EXTERNAL_FASTFILE.replace("platform :ios do\n", "platform :ios do\n" + line))
+                self.assertFails("app_store", "changes EDITION or the build number at run time")
 
     def test_the_external_distribution_must_refuse_the_testflight_edition(self):
         for fastfile in (self.EXTERNAL_FASTFILE.replace("  UI.user_error!(\"Only the App Store edition\") unless app_store_edition?\n", ""),
@@ -601,26 +636,63 @@ class AppStoreTests(CheckTestCase):
                 self.assertTrue("must first refuse any edition but the App Store one" in output
                                 or "app_store_edition? must be" in output, output)
 
+    def test_a_tags_build_never_goes_to_external_testers(self):
+        self.external_path(self.EXTERNAL_FASTFILE.replace(
+            "  UI.user_error!(\"Never a tag's build\") if ENV[\"GITHUB_REF_TYPE\"] == \"tag\"\n", ""))
+        self.assertFails("app_store", "must refuse a tag's build")
+
+    def test_a_build_an_app_store_version_uses_is_never_expired(self):
+        self.external_path(self.EXTERNAL_FASTFILE.replace(
+            "    UI.user_error!(\"attached\") if app_store_version_build?(build)\n", ""))
+        self.assertFails("app_store", "must check app_store_version_build? before it expires a build")
+
     def test_the_external_distribution_never_builds(self):
         self.external_path(self.EXTERNAL_FASTFILE.replace("    distribute_only: true,\n", ""))
         self.assertFails("app_store", "distribute_only: true")
 
     def test_an_external_step_without_the_app_store_edition_fails(self):
-        for release in (self.EXTERNAL_RELEASE.replace("          EDITION: app-store\n          BUILD_NUMBER: ${{ needs.deliver.outputs.ios",
-                                                      "          BUILD_NUMBER: ${{ needs.deliver.outputs.ios"),
-                        self.EXTERNAL_RELEASE.replace("          EDITION: app-store\n          BUILD_NUMBER: ${{ needs.deliver.outputs.mac",
-                                                      "          EDITION: testflight\n          BUILD_NUMBER: ${{ needs.deliver.outputs.mac")):
-            with self.subTest(release=release):
-                self.external_path(release=release)
+        for workflow in (self.EXTERNAL_WORKFLOW.replace("          EDITION: app-store\n          BUILD_NUMBER: ${{ inputs.ios",
+                                                        "          BUILD_NUMBER: ${{ inputs.ios"),
+                         self.EXTERNAL_WORKFLOW.replace("          EDITION: app-store\n          BUILD_NUMBER: ${{ inputs.mac",
+                                                        "          EDITION: testflight\n          BUILD_NUMBER: ${{ inputs.mac")):
+            with self.subTest(workflow=workflow):
+                self.external_path(workflow=workflow)
                 self.assertFails("app_store", "sends a build to external testers without EDITION: app-store")
 
+    def test_a_script_never_sets_the_edition_or_the_build_itself(self):
+        for run_line in ("EDITION=testflight bundle exec fastlane ios external_testers",
+                         "BUILD_NUMBER=12 bundle exec fastlane ios external_testers",
+                         "export EDITION=testflight; bundle exec fastlane ios external_testers",
+                         "echo \"BUILD_NUMBER=12\" >> \"$GITHUB_ENV\""):
+            with self.subTest(run_line=run_line):
+                self.external_path(workflow=self.EXTERNAL_WORKFLOW.replace(
+                    "        run: bundle exec fastlane ios external_testers\n", f"        run: {run_line}\n"))
+                self.assertFails("app_store", "sets EDITION or a build number in its script")
+
     def test_external_testers_never_get_the_testflight_edition_build(self):
-        self.external_path(release=self.EXTERNAL_RELEASE.replace(
-            "BUILD_NUMBER: ${{ needs.deliver.outputs.ios_app_store_build }}", "BUILD_NUMBER: ${{ needs.deliver.outputs.ios_build }}"))
+        self.external_path(workflow=self.EXTERNAL_WORKFLOW.replace(
+            "BUILD_NUMBER: ${{ inputs.ios_build }}", "BUILD_NUMBER: ${{ inputs.latest_build }}"))
         self.assertFails("app_store", "must take BUILD_NUMBER from the App Store edition build")
         self.external_path(release=self.EXTERNAL_RELEASE.replace(
             "ios_app_store_build: ${{ steps.ios_app_store.outputs.build }}", "ios_app_store_build: ${{ steps.ios.outputs.build }}"))
-        self.assertFails("app_store", "the external testers' ios build must be the output of step ios_app_store")
+        self.assertFails("app_store", "only release.yml starts .github/workflows/testflight-external.yml")
+        self.external_path(release=self.EXTERNAL_RELEASE.replace('-f ios_build="$IOS_BUILD"', '-f ios_build="$LATEST"'))
+        self.assertFails("app_store", "only release.yml starts .github/workflows/testflight-external.yml")
+
+    def test_only_the_external_workflow_sends_to_external_testers(self):
+        self.external_path(release=self.EXTERNAL_RELEASE + (
+            "      - name: iOS → external testers\n        env:\n          EDITION: app-store\n"
+            "          BUILD_NUMBER: ${{ inputs.ios_build }}\n        run: bundle exec fastlane ios external_testers\n"))
+        self.assertFails("app_store", "only .github/workflows/testflight-external.yml does")
+        self.external_path()
+        self.write(".github/workflows/other.yml", "      - run: gh workflow run testflight-external.yml -f ios_build=12\n")
+        self.assertFails("app_store", ".github/workflows/other.yml: only release.yml starts")
+
+    def test_the_external_workflow_starts_only_from_release(self):
+        self.external_path(workflow=self.EXTERNAL_WORKFLOW.replace("on:\n  workflow_dispatch:\n", "on:\n  push:\n  workflow_dispatch:\n"))
+        self.assertFails("app_store", "must start only by workflow_dispatch from release.yml")
+        self.external_path(workflow=self.EXTERNAL_WORKFLOW.replace("github.actor == 'github-actions[bot]' && ", ""))
+        self.assertFails("app_store", "its job must run only when release.yml started it")
 
     def test_the_external_build_must_be_the_app_store_edition(self):
         self.external_path(release=self.EXTERNAL_RELEASE.replace(
@@ -629,19 +701,16 @@ class AppStoreTests(CheckTestCase):
         self.assertFails("app_store", "step mac_app_store builds what external testers get")
         self.external_path(release=self.EXTERNAL_RELEASE.replace(
             "        run: bundle exec fastlane ios beta\n      - name: iOS → TestFlight",
-            "        run: EDITION=testflight bundle exec fastlane ios beta\n      - name: iOS → TestFlight"))
+            "        run: bundle exec fastlane ios beta --env x\n      - name: iOS → TestFlight"))
         self.assertFails("app_store", "step ios_app_store builds what external testers get")
 
     def test_what_to_test_on_every_build_only_sets_the_build_localizations(self):
-        fill = ("def fill_what_to_test(platform, number)\n"
-                "  Spaceship::ConnectAPI.patch_beta_build_localizations(localization_id: id, attributes: attributes)\n"
-                "  Spaceship::ConnectAPI.post_beta_build_localizations(build_id: build.id, attributes: attributes)\n%send\n")
-        self.external_path(self.EXTERNAL_FASTFILE + fill % "")
-        self.assertPasses("app_store")
         for extra in ("  Spaceship::ConnectAPI.patch_beta_app_localizations(localization_id: id, attributes: a)\n",
-                      "  build.post_beta_app_review_submission\n", "  build.expire!\n"):
+                      "  build.post_beta_app_review_submission\n", "  build.expire!\n", "  build.add_beta_groups(beta_groups: g)\n",
+                      "  Spaceship::ConnectAPI.patch_build_beta_details(build_beta_details_id: id, attributes: a)\n",
+                      "  upload_to_testflight(distribute_only: true)\n", "  deliver(submit_for_review: true)\n"):
             with self.subTest(extra=extra):
-                self.external_path(self.EXTERNAL_FASTFILE + fill % extra)
+                self.external_path(self.EXTERNAL_FASTFILE.replace("  text.gsub(\"<\", \"\")\nend\n", "  text.gsub(\"<\", \"\")\n" + extra + "end\n"))
                 self.assertFails("app_store", "fill_what_to_test runs on the TestFlight edition too")
 
     def test_a_workflow_never_runs_pilot_itself(self):

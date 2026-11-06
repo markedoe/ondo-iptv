@@ -250,15 +250,24 @@ réseau, fichiers choisis par l'utilisateur).
      le dernier build des testeurs internes reste l'édition TestFlight). Un contrôle ou un build de l'édition App Store
      en échec n'arrête pas l'édition TestFlight, et l'étape *External testers builds* met le lancement en rouge. Les
      tests du cœur ne tournent pas à nouveau (CI a réussi sur le commit, et CI construit aussi l'édition App Store).
-   - Le job *External testers (Beta App Review)*, sous Linux (l'attente ne coûte pas de minutes macOS), lance
-     `fastlane ios external_testers` puis `fastlane mac external_testers` : il crée le groupe externe la première fois,
-     attend le traitement (jusqu'à 90 min par build), remplit les *Informations de test* (la description de l'app
-     bêta : le `description.txt` de la fiche ; *À tester* : son `release_notes.txt`, dans chaque langue de la fiche ;
-     les notes de review et la playlist de test : `review_information/notes.txt` ; pas de connexion ; conformité à
-     l'export : pas de chiffrement non exempté), soumet le build à la Beta App Review et l'ajoute au groupe ; les
-     testeurs reçoivent un e-mail quand Apple l'approuve. Un build de la même version encore en attente de la Beta
-     App Review est expiré et remplacé ; tant qu'un autre est en cours de review, le nouveau n'est pas envoyé (celui
-     du push suivant suivra). Le lancement garde la file des releases jusqu'à la fin de ce job.
+     Si l'édition TestFlight échoue après l'envoi de l'édition App Store, le dernier build de cette plateforme pour les
+     testeurs internes est celui de l'édition App Store (sans téléchargements) jusqu'à la livraison suivante ; le
+     lancement est rouge. Seul un lancement sur `main` envoie quoi que ce soit aux testeurs externes (jamais un tag,
+     jamais une autre branche).
+   - Le job *External testers* (Linux) de *Release* passe les deux numéros de build au workflow *TestFlight external*
+     (`testflight-external.yml`), qui a sa propre file : son attente (jusqu'à 3 heures) ne retient jamais un tag ni la
+     livraison suivante, et les builds d'un push plus récent remplacent ceux qui y attendent encore. Il ne tourne que
+     lancé par *Release* (un lancement à la main s'arrête), sur `main`, avec `fastlane ios external_testers` puis
+     `fastlane mac external_testers` : le groupe tel qu'App Store Connect le tient, d'abord le traitement (jusqu'à
+     90 min par build), puis la place en Beta App Review (un build de la même version encore en attente est expiré et
+     remplacé, jamais un build qu'utilise une version App Store : la lane s'arrête alors ; tant qu'un autre est en
+     cours de review, le nouveau n'est pas envoyé et celui du push suivant suivra), les *Informations de test* (la
+     description de l'app bêta : le `description.txt` de la fiche, avec ses adresses de confidentialité et marketing ;
+     *À tester* : son `release_notes.txt` ; les notes de review et la playlist de test :
+     `review_information/notes.txt` ; pas de connexion ; conformité à l'export : pas de chiffrement non exempté),
+     langue par langue : une langue qu'App Store Connect refuse est notée, les autres sont posées et le build est
+     envoyé, et le lancement est rouge à la fin. Le build est ensuite soumis à la Beta App Review et ajouté au groupe ;
+     les testeurs reçoivent un e-mail quand Apple l'approuve.
    - **Ce que contient App Store Connect** (*TestFlight → Informations de test*, le groupe et ses testeurs) est lu,
      jamais supposé : le job note si le groupe est externe et combien il a de testeurs, si l'**e-mail de retour**
      (*Feedback Email*) et le contact de la Beta App Review sont remplis (jamais leurs valeurs), et ne s'arrête que

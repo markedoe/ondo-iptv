@@ -160,33 +160,50 @@ rescue StandardError => e
   UI.important("Build #{number}: could not turn off the testers' e-mail (#{e.message})")
 end
 
-# What to Test, the same on every build of both editions, internal and external, iOS and macOS: the listing's release
-# notes in each of its languages (WHATS_NEW). Only the build's localizations change: nothing is distributed or
-# submitted. Set as soon as App Store Connect lists the build. A failure leaves the upload as it is and is reported
-# (::error:: and the step output what_to_test=missing, which step What to Test turns into a failed run).
+# The build this lane uploaded (or was given), once App Store Connect lists it: up to 10 minutes after the upload.
+def listed_build(app, platform, number)
+  40.times do
+    build = Spaceship::ConnectAPI::Build.all(app_id: app.id, build_number: number.to_s, platform: Spaceship::ConnectAPI::Platform.map(platform)).first
+    return build if build
+    sleep 15
+  end
+  nil
+end
+
+# What to Test, the same on every build of both editions, internal and external, iOS and macOS, pushes and tags: the
+# listing's release notes in each of its languages. Only the build's localizations change: nothing is distributed or
+# submitted. Each language on its own: one App Store Connect refuses is reported and the others are still set. Returns
+# the problems (empty when every language is set); the beta lanes report them as ::error:: lines and the step output
+# what_to_test=missing, which step What to Test of release.yml turns into a failed run, and leave the upload as it is.
 def fill_what_to_test(platform, number)
   api_key
   app = Spaceship::ConnectAPI::App.find(APP_ID)
-  build = nil
-  40.times do
-    build = Spaceship::ConnectAPI::Build.all(app_id: app.id, build_number: number.to_s, platform: Spaceship::ConnectAPI::Platform.map(platform)).first
-    break if build
-    sleep 15
-  end
-  UI.user_error!("not listed by App Store Connect after 10 minutes") unless build
+  build = listed_build(app, platform, number)
+  return ["build #{number} not listed by App Store Connect after 10 minutes"] unless build
   existing = build.get_beta_build_localizations.to_h { |localization| [localization.locale, localization] }
+  refused = []
   whats_new_texts.each do |locale, text|
-    # TestFlight refuses "<" in What to Test (as fastlane's own upload does, it is left out).
-    attributes = { whatsNew: text.delete("<")[0, 4000] }
+    # TestFlight refuses "<" in What to Test (fastlane's own upload leaves it out too).
+    attributes = { whatsNew: text.gsub("<", "")[0, 4000] }
     if existing[locale]
       Spaceship::ConnectAPI.patch_beta_build_localizations(localization_id: existing[locale].id, attributes: attributes)
     else
       Spaceship::ConnectAPI.post_beta_build_localizations(build_id: build.id, attributes: attributes.merge(locale: locale))
     end
+  rescue StandardError => e
+    refused << "#{locale}: #{e.message.lines.first.to_s.strip}"
   end
-  UI.message("Build #{number}: What to Test set in #{whats_new_texts.keys.join(', ')}")
+  set = whats_new_texts.keys - refused.map { |problem| problem.split(":", 2).first }
+  UI.message("Build #{number} (#{platform}): What to Test set in #{set.join(', ')}")
+  refused.map { |problem| "What to Test refused in #{problem}" }
 rescue StandardError => e
-  puts "::error::Build #{number} (#{platform}): What to Test not set (#{e.message})"
+  ["What to Test not set (#{e.message.lines.first.to_s.strip})"]
+end
+
+def report_what_to_test(platform, number)
+  problems = fill_what_to_test(platform, number)
+  return if problems.empty?
+  problems.each { |problem| puts "::error::Build #{number} (#{platform}): #{problem}" }
   File.write(ENV["GITHUB_OUTPUT"], "what_to_test=missing\n", mode: "a") if ENV["GITHUB_OUTPUT"]
 end
 
@@ -214,13 +231,14 @@ def whats_new_texts
   listing_texts("release_notes.txt")
 end
 
-# The external group of the app, created the first time (testers are added in App Store Connect, never from here).
 def tester_count(group)
   Spaceship::ConnectAPI.get_beta_testers(filter: { betaGroups: group.id }, limit: 200).all_pages.sum { |page| page.to_models.size }
 rescue StandardError => e
   "unknown (#{e.message})"
 end
 
+# The external group of the app, as App Store Connect holds it (logged: external, testers, public link), created only
+# when there is none (testers are added in App Store Connect, never from here).
 def external_group(app)
   groups = app.get_beta_groups.select { |group| group.name == EXTERNAL_GROUP }
   UI.user_error!("The TestFlight group \"#{EXTERNAL_GROUP}\" is an internal group: rename it in App Store Connect") if groups.any?(&:is_internal_group)
@@ -257,7 +275,7 @@ def beta_review_contact(app)
 end
 
 # External testers send their feedback to the beta app's feedback e-mail, which is not in the repository (CLAUDE.md,
-# Privacy): set once in App Store Connect, then reused for every language. Never printed.
+# Privacy): read from App Store Connect (logged as set or missing, never printed) and reused for every language.
 def feedback_email(app)
   localizations = app.get_beta_app_localizations
   email = localizations.map(&:feedback_email).find { |value| !value.to_s.empty? }
@@ -267,43 +285,79 @@ def feedback_email(app)
                  "external testing needs it")
 end
 
-# Apple reviews one build of a version at a time. A build of this version and platform still waiting for Beta App
-# Review is expired (the newer one replaces it; it is an App Store edition build: no other is ever submitted); one in
-# review is left alone, and this build waits for the next push (false).
-def beta_review_slot_free?(app, platform, version)
+# Test Information of the beta app (description, feedback e-mail, privacy and marketing addresses), one language at a
+# time: one App Store Connect refuses is reported and the others are still set. Returns the problems.
+def beta_test_information(app, email)
+  existing = app.get_beta_app_localizations.to_h { |localization| [localization.locale, localization] }
+  privacy = listing_texts("privacy_url.txt")
+  marketing = listing_texts("marketing_url.txt")
+  listing_texts("description.txt").filter_map do |locale, text|
+    attributes = { description: text, feedbackEmail: email, privacyPolicyUrl: privacy[locale], marketingUrl: marketing[locale] }.compact
+    if existing[locale]
+      Spaceship::ConnectAPI.patch_beta_app_localizations(localization_id: existing[locale].id, attributes: attributes)
+    else
+      Spaceship::ConnectAPI.post_beta_app_localizations(app_id: app.id, attributes: attributes.merge(locale: locale))
+    end
+    nil
+  rescue StandardError => e
+    "Test Information refused in #{locale}: #{e.message.lines.first.to_s.strip}"
+  end
+end
+
+# Whether a build is attached to an App Store version (selected for App Review, or released): such a build is never
+# expired here, whatever its beta review state.
+def app_store_version_build?(build)
+  response = Spaceship::ConnectAPI.get_build(build_id: build.id, includes: "appStoreVersion")
+  !response.body.dig("data", "relationships", "appStoreVersion", "data").nil?
+end
+
+# Apple reviews one build of a version at a time; checked once this build is processed. A build of this version and
+# platform still waiting for Beta App Review is expired (the newer one replaces it; only App Store edition builds are
+# ever submitted), unless an App Store version uses it: then the lane stops. One in review is left alone, and this
+# build waits for the next push (false).
+def beta_review_slot_free?(app, platform, version, number)
   waiting = app.get_builds(
     filter: { "betaAppReviewSubmission.betaReviewState" => "WAITING_FOR_REVIEW,IN_REVIEW", "expired" => false,
               "preReleaseVersion.version" => version, "preReleaseVersion.platform" => Spaceship::ConnectAPI::Platform.map(platform) },
     includes: "betaAppReviewSubmission,preReleaseVersion"
-  )
+  ).reject { |build| build.version == number }
   if waiting.any? { |build| build.beta_app_review_submission&.beta_review_state == "IN_REVIEW" }
     UI.important("A #{platform} build of #{version} is in Beta App Review: this one is not sent; the next push's build follows it")
     return false
   end
   waiting.each do |build|
+    if app_store_version_build?(build)
+      UI.user_error!("Build #{build.version} (#{platform} #{version}) waits for Beta App Review and is attached to an App " \
+                     "Store version: it is not expired; nothing is sent")
+    end
     UI.important("Build #{build.version} (#{platform} #{version}) was waiting for Beta App Review: replaced by this one")
     build.expire!
   end
   true
 end
 
-# The App Store edition build BUILD_NUMBER (uploaded by this run's App Store edition step) → the external group, after
-# App Store Connect's processing and Beta App Review. Never App Review: the App Store version and its submission are not
-# read or written here.
+# The App Store edition build BUILD_NUMBER (uploaded by a push's Release run, given by testflight-external.yml) → the
+# external group, through Beta App Review. Never App Review: the App Store version and its submission are not changed.
+# Never a tag's build (the tag submitted its App Store edition for App Review). Waits for the processing first, then
+# frees the beta review slot, fills Test Information and What to Test language by language, submits and adds the build
+# to the group; a refused language fails the lane at the end, once the others are set and the build is sent.
 def distribute_to_external_testers(platform)
   UI.user_error!("Only the App Store edition goes to external testers (EDITION=app-store)") unless app_store_edition?
+  UI.user_error!("A tag's build never goes to external testers: only a push to main's") if ENV["GITHUB_REF_TYPE"] == "tag"
   build = ENV.fetch("BUILD_NUMBER", "").strip
-  UI.user_error!("BUILD_NUMBER must be the App Store edition build this run uploaded") unless build.match?(/\A\d+\z/)
+  UI.user_error!("BUILD_NUMBER must be the App Store edition build of a push's Release run") unless build.match?(/\A\d+\z/)
   api_key
   app = Spaceship::ConnectAPI::App.find(APP_ID)
   version = app_version
   external_group(app)
   beta_review_contact(app)
   email = feedback_email(app)
-  return unless beta_review_slot_free?(app, platform, version)
-  descriptions = listing_texts("description.txt")
-  privacy = listing_texts("privacy_url.txt")
-  marketing = listing_texts("marketing_url.txt")
+  FastlaneCore::BuildWatcher.wait_for_build_processing_to_be_complete(
+    app_id: app.id, platform: platform, app_version: version, build_version: build,
+    timeout_duration: 5400, return_spaceship_testflight_build: false
+  )
+  return unless beta_review_slot_free?(app, platform, version, build)
+  problems = beta_test_information(app, email) + fill_what_to_test(platform, build)
   upload_to_testflight(
     api_key: api_key,
     app_identifier: APP_ID,
@@ -319,13 +373,11 @@ def distribute_to_external_testers(platform)
     notify_external_testers: true,
     uses_non_exempt_encryption: false,
     demo_account_required: false,
-    beta_app_review_info: { notes: File.read(File.join(METADATA_DIR, "review_information/notes.txt"), encoding: "UTF-8").strip[0, 4000] },
-    localized_app_info: descriptions.to_h do |locale, text|
-      [locale, { description: text, feedback_email: email, privacy_policy_url: privacy[locale], marketing_url: marketing[locale] }.compact]
-    end,
-    localized_build_info: whats_new_texts.to_h { |locale, text| [locale, { whats_new: text }] }
+    beta_app_review_info: { notes: File.read(File.join(METADATA_DIR, "review_information/notes.txt"), encoding: "UTF-8").strip[0, 4000] }
   )
   UI.success("Build #{build} (#{platform} #{version}): sent to the \"#{EXTERNAL_GROUP}\" group through Beta App Review")
+  problems.each { |problem| puts "::error::Build #{build} (#{platform}): #{problem}" }
+  UI.user_error!("#{problems.size} language(s) refused by App Store Connect (see the errors above)") unless problems.empty?
 end
 
 # Submits for App Review the App Store edition build BUILD_NUMBER of this version, with the listing as it is on App
@@ -576,7 +628,7 @@ platform :ios do
     upload_build("ios")
     quiet_testers("ios", number)
     report_build_number(number)
-    fill_what_to_test("ios", number)
+    report_what_to_test("ios", number)
   end
 
   desc "Upload the App Store listing (texts, keywords, URLs, screenshots) without a binary; the age rating is set in App Store Connect"
@@ -680,7 +732,7 @@ platform :mac do
     upload_build("osx")
     quiet_testers("osx", number)
     report_build_number(number)
-    fill_what_to_test("osx", number)
+    report_what_to_test("osx", number)
   end
 end
 
