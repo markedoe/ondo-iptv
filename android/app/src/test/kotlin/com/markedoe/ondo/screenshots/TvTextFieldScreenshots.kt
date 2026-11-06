@@ -1,5 +1,6 @@
 package com.markedoe.ondo.screenshots
 
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -28,12 +30,15 @@ import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.ui.theme.OndoTheme
+import com.markedoe.ondo.ui.tv.TV_FIELD_HINT_TAG
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TvTextInput
+import java.time.Duration
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -92,9 +97,13 @@ class TvTextFieldScreenshots {
         compose.onNodeWithTag("name").requestFocus()
         compose.mainClock.advanceTimeBy(300)
         compose.onNodeWithTag("name").performKeyInput { pressKey(Key.DirectionCenter) }
-        // Right after OK: the caret shows (it blinks from there).
-        compose.mainClock.advanceTimeBy(100)
-        compose.waitForIdle()
+        // Right after OK (the key handled on the main thread): the caret shows, at the end (it blinks from there).
+        repeat(5) {
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(20))
+            compose.mainClock.advanceTimeBy(20)
+            compose.waitForIdle()
+        }
+        check(compose.onAllNodes(hasTestTag(TV_FIELD_HINT_TAG), useUnmergedTree = true).fetchSemanticsNodes().isEmpty()) { "OK did not open the field" }
         capture("text-field-editing")
     }
 }
