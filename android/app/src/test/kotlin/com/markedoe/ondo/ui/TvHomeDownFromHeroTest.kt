@@ -1,6 +1,9 @@
 package com.markedoe.ondo.ui
 
+import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.snapshots.Snapshot
+import org.robolectric.Shadows.shadowOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -149,6 +152,9 @@ class TvHomeDownFromHeroTest {
     }
 
     private fun advance(ms: Long) {
+        // What the test changed reaches the screen (the main looper idle, the snapshot's changes sent).
+        Snapshot.sendApplyNotifications()
+        shadowOf(Looper.getMainLooper()).idle()
         compose.mainClock.advanceTimeBy(ms)
         compose.waitForIdle()
     }

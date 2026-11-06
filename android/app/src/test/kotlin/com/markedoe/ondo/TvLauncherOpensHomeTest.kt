@@ -51,6 +51,8 @@ class TvLauncherOpensHomeTest {
 
     @After
     fun close() {
+        // The scenario knows its activity by the intent it started it with, which onNewIntent replaced (setIntent).
+        scenario?.onActivity { it.intent = launcher() }
         scenario?.close()
     }
 
