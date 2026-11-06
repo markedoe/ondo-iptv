@@ -572,7 +572,7 @@ EXTERNAL_WORDS = re.compile(
     r"\bdistribute_external\b|\bsubmit_beta_review\b|\bbeta_app_review_info\b|\bpost_beta_app_review_submissions?\b|"
     r"\badd_beta_groups(?:_to_build)?\b|\bcreate_beta_group\b|\bpatch_beta_app_review_detail\b|\bgroups:|"
     r"\blocalized_app_info\b|\bnotify_external_testers\b|\bbeta_app_feedback_email\b|\bpilot\b|\bupload_to_testflight\b|"
-    r"\btestflight\s*\(|\bgroups\s*=>|:groups\b|\b(?:patch|post)_beta_app_localizations\b|\.expire!")
+    r"\btestflight\s*\(|\bgroups\s*=>|:groups\b|\b(?:patch|post)_beta_app_localizations\b|\.expire!|v1/betaGroups\b")
 # The functions allowed to use them: the external distribution and its helpers. upload_build is the internal upload,
 # allowed upload_to_testflight only (checked below: it submits nothing).
 EXTERNAL_FUNCTIONS = {"distribute_to_external_testers", "external_groups", "beta_review_contact", "beta_test_information",
@@ -677,6 +677,11 @@ def check_external_testers(problems: list) -> None:
             problems.append("fastlane/Fastfile: distribute_to_external_testers must send the build to the app's external "
                             "groups by id (groups = external_groups(app) … groups: groups.map(&:id)), never to a group "
                             f"by name: {group_lines}")
+        # Spaceship's create_beta_group sends publicLinkLimit, which App Store Connect refuses with the public link off.
+        for number, code in ((n, c) for body in functions.values() for n, c in body):
+            if "create_beta_group" in code:
+                problems.append(f"fastlane/Fastfile:{number}: create_beta_group sends publicLinkLimit, which App Store "
+                                "Connect refuses while the public link is off: post new_external_group_body instead")
         selection = "\n".join(code for _, code in functions.get("external_groups", []))
         if "reject(&:is_internal_group)" not in selection or \
                 'UI.user_error!("An internal group was selected for external testers") if external.any?(&:is_internal_group)' not in selection:
