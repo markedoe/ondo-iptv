@@ -149,7 +149,11 @@ user-selected files).
    or speaks of downloads.
 2. **The pipeline.** Two events deliver, nothing else is needed:
    - **A push to `main`.** Once *CI* is green, the *Deliver* workflow starts *Release* with target `builds` and
-     the `testflight` edition: iOS and macOS go to TestFlight (internal testers, no review). It sends nothing
+     the `testflight` edition and `external` on: for iOS and macOS, first the **App Store edition** (checked as for a
+     release: `check_app_store.py`, review playlist, listing addresses), uploaded for the **external testers**, then
+     the **TestFlight edition** (internal testers, no review), whose build number comes after it; a job on Linux then
+     waits for App Store Connect's processing and sends the App Store edition to the external group through Beta App
+     Review (step 3, *External testers*). It sends nothing
      when the commit changed nothing the app ships (`App/`, `Packages/` without their tests, `project.yml`,
      `fastlane/Fastfile`, `Gemfile*`), when a newer push on `main` changes what the app ships (that push's delivery
      sends it), or when the commit carries a version tag.
@@ -198,7 +202,8 @@ user-selected files).
 
    **Targets** (*Run workflow*, by hand):
    - `release`: what a tag does (above); `submit` off is a rehearsal;
-   - `builds`: both builds without the listing (what a push to `main` sends to TestFlight);
+   - `builds`: both builds without the listing; with `edition` `testflight` and `external` on, what a push to `main`
+     sends (the App Store edition for the external testers first);
    - `all`: both builds, then the listing;
    - `ios` or `mac`: one build;
    - `metadata`: the listing only (`metadata-ios` or `metadata-mac` for one platform);
@@ -220,10 +225,36 @@ user-selected files).
    edition is built without the download code (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), so nothing in it can
    turn downloads on: a feature switched off, or an unlock code, would be a hidden or dormant feature, which
    rule 2.5.19 forbids and for which Apple can remove a developer from its program. TestFlight edition builds
-   stay with internal testers: external testing goes through App Review. TestFlight offers testers the latest
+   stay with internal testers; the external testers get the App Store edition (below). TestFlight offers testers the latest
    build of each platform, and each run builds one edition: a tag builds the TestFlight edition again by itself
    after the App Store one; after an App Store edition built by hand (`ios`, `mac` or `all`), run *Release* again
    with target `builds` and `edition` left at `testflight`, otherwise testers get the build without downloads.
+
+   **External testers** (CLAUDE.md, the owner's standing go). Every push to `main` that delivers sends the **App Store
+   edition**, exactly the build App Review would get, to the external TestFlight group `External testers`, through
+   **Beta App Review** (never App Review: the App Store version and its submission are not touched). The TestFlight
+   edition never goes there: `check_app_store.py` fails if a lane or a workflow could distribute it externally or
+   submit it for beta review, or if the external path builds anything but the App Store edition.
+   - *Release*'s macOS job builds and uploads the App Store edition of iOS then macOS without waiting, each before the
+     TestFlight edition of its platform (`AFTER_BUILD_NUMBER`: the TestFlight edition takes the next number, so the
+     internal testers' latest build stays the TestFlight edition). A failed check or App Store edition build does not
+     stop the TestFlight edition, and step *External testers builds* turns the run red. The core tests are not run
+     again (CI passed on the commit, and CI builds the App Store edition too).
+   - Job *External testers (Beta App Review)*, on Linux (the wait costs no macOS minutes), runs
+     `fastlane ios external_testers` then `fastlane mac external_testers`: it creates the external group the first
+     time, waits for the processing (up to 90 min per build), fills *Test Information* (the beta app description:
+     the listing's `description.txt`; *What to Test*: its `release_notes.txt`, in every language of the listing; the
+     review notes and test playlist: `review_information/notes.txt`; no sign-in; export compliance: no non-exempt
+     encryption), submits the build for Beta App Review and adds it to the group; the testers are e-mailed once Apple
+     approves it. A build of the same version still waiting for beta review is expired and replaced; while one is in
+     review, the new build is not sent (the next push's follows). The run holds the release queue until this job ends.
+   - **In App Store Connect, once** (*TestFlight → Test Information*): the **Feedback Email** (the job stops and says
+     so while there is none; it is not in the repository and is reused for every language). The Beta App Review
+     contact is copied from the App Review contact when it is empty. **Add the testers** to the `External testers`
+     group (*TestFlight → External Testing*), by e-mail or with a public link: their addresses are never in the
+     repository. The first build of a version waits for Beta App Review (usually within a day or two); the next
+     builds of that version are often approved within minutes.
+   - By hand: *Run workflow*, target `builds`, `edition` `testflight`, `external` on.
 
    **No beta badge.** No edition shows one. Nothing in the app, its listing or the site pages the listing opens
    (home, support, privacy: App Review visits them) may call the app a beta (rule 2.2); `check_app_store.py`

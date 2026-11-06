@@ -79,9 +79,11 @@ end
 # Build number: the platform's latest upload on App Store Connect + 1 (1 for the first one), so a re-run or
 # an upload made by hand is never reused. An API error (key, missing app) stops the lane here, before a long
 # build that App Store Connect would refuse.
+# AFTER_BUILD_NUMBER: the build this run uploaded just before (a push's App Store edition, before its TestFlight
+# edition), which App Store Connect may not list yet while it processes it.
 def next_build_number(platform)
   latest = latest_testflight_build_number(api_key: api_key, app_identifier: APP_ID, platform: platform, initial_build_number: 0)
-  latest.to_i + 1
+  [latest.to_i, ENV.fetch("AFTER_BUILD_NUMBER", "0").to_i].max + 1
 end
 
 # The version comes from the tag (v1.2.3 → 1.2.3); without one (a manual run on a branch, even one whose name starts
@@ -111,6 +113,11 @@ end
 # EDITION from the release workflow: "testflight" for testers, anything else builds the App Store edition.
 def testflight_edition?
   ENV["EDITION"] == "testflight"
+end
+
+# EDITION "app-store": the edition submitted for App Review, the only one external testers get.
+def app_store_edition?
+  ENV["EDITION"] == "app-store"
 end
 
 # A version tag's release waits until App Store Connect has processed the build (minutes to half an hour): only a
@@ -157,6 +164,114 @@ end
 def report_build_number(number)
   File.write(ENV["GITHUB_OUTPUT"], "build=#{number}\n", mode: "a") if ENV["GITHUB_OUTPUT"]
   UI.message("Build number #{number}")
+end
+
+# External testers (CLAUDE.md, App Store): the App Store edition of each push to main, the build App Review would get,
+# goes to the TestFlight group EXTERNAL_GROUP through Apple's Beta App Review. The TestFlight edition (downloads) stays
+# with internal testers: nothing else in this file distributes a build externally or submits one for beta review.
+EXTERNAL_GROUP = "External testers"
+# The release notes and the description of the listing, the same texts and languages as the App Store's (checked by
+# check_app_store.py): What to Test and the beta app description.
+METADATA_DIR = File.expand_path("metadata", __dir__)
+
+def listing_texts(file)
+  Dir[File.join(METADATA_DIR, "*", file)].sort.to_h do |path|
+    [File.basename(File.dirname(path)), File.read(path, encoding: "UTF-8").strip[0, 4000]]
+  end.reject { |_locale, text| text.empty? }
+end
+
+# The external group of the app, created the first time (testers are added in App Store Connect, never from here).
+def external_group(app)
+  groups = app.get_beta_groups.select { |group| group.name == EXTERNAL_GROUP }
+  UI.user_error!("The TestFlight group \"#{EXTERNAL_GROUP}\" is an internal group: rename it in App Store Connect") if groups.any?(&:is_internal_group)
+  return groups.first unless groups.empty?
+  UI.important("Creating the external TestFlight group \"#{EXTERNAL_GROUP}\" (add its testers in App Store Connect)")
+  app.create_beta_group(group_name: EXTERNAL_GROUP, is_internal_group: false)
+  app.get_beta_groups.find { |group| group.name == EXTERNAL_GROUP && !group.is_internal_group } ||
+    UI.user_error!("The TestFlight group \"#{EXTERNAL_GROUP}\" could not be created")
+end
+
+# Beta App Review needs a contact: the App Review contact App Store Connect already holds, copied when the beta review
+# details have none. Neither is in the repository nor printed (the log of a public repository is public).
+def beta_review_contact(app)
+  fields = %i[contact_first_name contact_last_name contact_phone contact_email]
+  detail = Spaceship::ConnectAPI.get_beta_app_review_detail(filter: { app: app.id }).to_models.first
+  return if detail && fields.all? { |field| !detail.send(field).to_s.empty? }
+  review = PLATFORMS.values.lazy.flat_map do |platform, _folder|
+    app.get_app_store_versions(filter: { platform: platform }, includes: "appStoreReviewDetail").map(&:app_store_review_detail)
+  end.find { |candidate| candidate && fields.all? { |field| !candidate.send(field).to_s.empty? } }
+  UI.user_error!("No contact for Beta App Review: fill App Store Connect → TestFlight → Test Information → Beta App Review Information") unless review
+  Spaceship::ConnectAPI.patch_beta_app_review_detail(app_id: app.id, attributes: {
+    contactFirstName: review.contact_first_name, contactLastName: review.contact_last_name,
+    contactPhone: review.contact_phone, contactEmail: review.contact_email
+  })
+  UI.message("Beta App Review contact: the App Review contact")
+end
+
+# External testers send their feedback to the beta app's feedback e-mail, which is not in the repository (CLAUDE.md,
+# Privacy): set once in App Store Connect, then reused for every language. Never printed.
+def feedback_email(app)
+  email = app.get_beta_app_localizations.map(&:feedback_email).find { |value| !value.to_s.empty? }
+  return email if email
+  UI.user_error!("No feedback e-mail for external testers: fill App Store Connect → TestFlight → Test Information → " \
+                 "Feedback Email (English (U.S.)), then run Release again (target builds, external on)")
+end
+
+# Apple reviews one build of a version at a time. A build of this version and platform still waiting for Beta App
+# Review is expired (the newer one replaces it; it is an App Store edition build: no other is ever submitted); one in
+# review is left alone, and this build waits for the next push (false).
+def beta_review_slot_free?(app, platform, version)
+  waiting = app.get_builds(
+    filter: { "betaAppReviewSubmission.betaReviewState" => "WAITING_FOR_REVIEW,IN_REVIEW", "expired" => false,
+              "preReleaseVersion.version" => version, "preReleaseVersion.platform" => Spaceship::ConnectAPI::Platform.map(platform) },
+    includes: "betaAppReviewSubmission,preReleaseVersion"
+  )
+  if waiting.any? { |build| build.beta_app_review_submission&.beta_review_state == "IN_REVIEW" }
+    UI.important("A #{platform} build of #{version} is in Beta App Review: this one is not sent; the next push's build follows it")
+    return false
+  end
+  waiting.each do |build|
+    UI.important("Build #{build.version} (#{platform} #{version}) was waiting for Beta App Review: replaced by this one")
+    build.expire!
+  end
+  true
+end
+
+# The App Store edition build BUILD_NUMBER (uploaded by this run's App Store edition step) → the external group, after
+# App Store Connect's processing and Beta App Review. Never App Review: the App Store version and its submission are not
+# read or written here.
+def distribute_to_external_testers(platform)
+  UI.user_error!("Only the App Store edition goes to external testers (EDITION=app-store)") unless app_store_edition?
+  build = ENV.fetch("BUILD_NUMBER", "").strip
+  UI.user_error!("BUILD_NUMBER must be the App Store edition build this run uploaded") unless build.match?(/\A\d+\z/)
+  api_key
+  app = Spaceship::ConnectAPI::App.find(APP_ID)
+  version = app_version
+  external_group(app)
+  beta_review_contact(app)
+  email = feedback_email(app)
+  return unless beta_review_slot_free?(app, platform, version)
+  descriptions = listing_texts("description.txt")
+  upload_to_testflight(
+    api_key: api_key,
+    app_identifier: APP_ID,
+    app_platform: platform,
+    distribute_only: true,
+    app_version: version,
+    build_number: build,
+    wait_processing_timeout_duration: 5400,
+    distribute_external: true,
+    groups: [EXTERNAL_GROUP],
+    submit_beta_review: true,
+    reject_build_waiting_for_review: false,
+    notify_external_testers: true,
+    uses_non_exempt_encryption: false,
+    demo_account_required: false,
+    beta_app_review_info: { notes: File.read(File.join(METADATA_DIR, "review_information/notes.txt"), encoding: "UTF-8").strip[0, 4000] },
+    localized_app_info: descriptions.to_h { |locale, text| [locale, { description: text, feedback_email: email }] },
+    localized_build_info: listing_texts("release_notes.txt").to_h { |locale, text| [locale, { whats_new: text }] }
+  )
+  UI.success("Build #{build} (#{platform} #{version}): sent to the \"#{EXTERNAL_GROUP}\" group through Beta App Review")
 end
 
 # Submits for App Review the App Store edition build BUILD_NUMBER of this version, with the listing as it is on App
@@ -385,6 +500,11 @@ platform :ios do
     submit_for_review("ios")
   end
 
+  desc "App Store edition build BUILD_NUMBER → external testers, through Beta App Review (never App Review)"
+  lane :external_testers do
+    distribute_to_external_testers("ios")
+  end
+
   desc "Withdraw the iOS submission from App Review (the user's decision), nothing else"
   lane :withdraw do
     withdraw_from_review("ios")
@@ -419,6 +539,11 @@ platform :mac do
   desc "Submit the App Store edition build BUILD_NUMBER of this version for App Review"
   lane :submit do
     submit_for_review("osx")
+  end
+
+  desc "App Store edition build BUILD_NUMBER → external testers, through Beta App Review (never App Review)"
+  lane :external_testers do
+    distribute_to_external_testers("osx")
   end
 
   desc "Withdraw the macOS submission from App Review (the user's decision), nothing else"

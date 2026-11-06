@@ -147,7 +147,11 @@ réseau, fichiers choisis par l'utilisateur).
    plateforme, promet une fonction à venir ou parle de téléchargements.
 2. **La chaîne de livraison.** Deux événements livrent, rien d'autre n'est nécessaire :
    - **Un push sur `main`.** Une fois *CI* au vert, le workflow *Deliver* lance *Release* avec la cible `builds`
-     et l'édition `testflight` : iOS et macOS partent sur TestFlight (testeurs internes, sans review). Il n'envoie
+     et l'édition `testflight`, `external` activé : pour iOS et macOS, d'abord **l'édition App Store** (vérifiée comme
+     pour une release : `check_app_store.py`, playlist de review, adresses de la fiche), envoyée pour les **testeurs
+     externes**, puis **l'édition TestFlight** (testeurs internes, sans review), dont le numéro de build vient après ;
+     un job Linux attend ensuite le traitement d'App Store Connect et envoie l'édition App Store au groupe externe par
+     la Beta App Review (étape 3, *Testeurs externes*). Il n'envoie
      rien quand le commit ne change rien de ce que l'app embarque (`App/`, `Packages/` sans leurs tests,
      `project.yml`, `fastlane/Fastfile`, `Gemfile*`), quand un push plus récent sur `main` change ce que l'app
      embarque (sa propre livraison l'envoie), ou quand le commit porte un tag de version.
@@ -199,7 +203,8 @@ réseau, fichiers choisis par l'utilisateur).
 
    **Cibles** (*Run workflow*, à la main) :
    - `release` : ce que fait un tag (ci-dessus) ; `submit` décoché, c'est une répétition ;
-   - `builds` : les deux builds sans la fiche (ce qu'un push sur `main` envoie sur TestFlight) ;
+   - `builds` : les deux builds sans la fiche ; avec l'`edition` `testflight` et `external` activé, ce qu'envoie un
+     push sur `main` (d'abord l'édition App Store pour les testeurs externes) ;
    - `all` : les deux builds, puis la fiche ;
    - `ios` ou `mac` : un seul build ;
    - `metadata` : la fiche seule (`metadata-ios` ou `metadata-mac` pour une seule plateforme) ;
@@ -222,11 +227,39 @@ réseau, fichiers choisis par l'utilisateur).
    (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), donc rien en elle ne peut les activer : une fonction désactivée, ou un
    code de déblocage, serait une fonction cachée ou dormante, ce que la règle 2.5.19 interdit et pour quoi Apple
    peut exclure un développeur de son programme. Les builds de l'édition TestFlight restent aux testeurs
-   internes : les tests externes passent par la review d'Apple. TestFlight propose aux testeurs le dernier build
+   internes ; les testeurs externes reçoivent l'édition App Store (ci-dessous). TestFlight propose aux testeurs le dernier build
    de chaque plateforme, et chaque lancement construit une seule édition : un tag reconstruit tout seul l'édition
    TestFlight après l'édition App Store ; après une édition App Store construite à la main (`ios`, `mac` ou
    `all`), relancez *Release* avec la cible `builds` et l'`edition` laissée à `testflight`, sinon les testeurs
    reçoivent le build sans téléchargements.
+
+   **Testeurs externes** (CLAUDE.md, le go permanent du propriétaire). Chaque push sur `main` qui livre envoie
+   **l'édition App Store**, exactement le build que recevrait la review d'Apple, au groupe TestFlight externe
+   `External testers`, par la **Beta App Review** (jamais la review de l'App Store : la version App Store et sa
+   soumission ne sont pas touchées). L'édition TestFlight n'y va jamais : `check_app_store.py` échoue si une lane ou un
+   workflow pouvait la distribuer aux testeurs externes ou la soumettre à la Beta App Review, ou si le chemin externe
+   construisait autre chose que l'édition App Store.
+   - Le job macOS de *Release* construit et envoie l'édition App Store d'iOS puis de macOS sans attendre, chacune avant
+     l'édition TestFlight de sa plateforme (`AFTER_BUILD_NUMBER` : l'édition TestFlight prend le numéro suivant, donc
+     le dernier build des testeurs internes reste l'édition TestFlight). Un contrôle ou un build de l'édition App Store
+     en échec n'arrête pas l'édition TestFlight, et l'étape *External testers builds* met le lancement en rouge. Les
+     tests du cœur ne tournent pas à nouveau (CI a réussi sur le commit, et CI construit aussi l'édition App Store).
+   - Le job *External testers (Beta App Review)*, sous Linux (l'attente ne coûte pas de minutes macOS), lance
+     `fastlane ios external_testers` puis `fastlane mac external_testers` : il crée le groupe externe la première fois,
+     attend le traitement (jusqu'à 90 min par build), remplit les *Informations de test* (la description de l'app
+     bêta : le `description.txt` de la fiche ; *À tester* : son `release_notes.txt`, dans chaque langue de la fiche ;
+     les notes de review et la playlist de test : `review_information/notes.txt` ; pas de connexion ; conformité à
+     l'export : pas de chiffrement non exempté), soumet le build à la Beta App Review et l'ajoute au groupe ; les
+     testeurs reçoivent un e-mail quand Apple l'approuve. Un build de la même version encore en attente de la Beta
+     App Review est expiré et remplacé ; tant qu'un autre est en cours de review, le nouveau n'est pas envoyé (celui
+     du push suivant suivra). Le lancement garde la file des releases jusqu'à la fin de ce job.
+   - **Dans App Store Connect, une fois** (*TestFlight → Informations de test*) : l'**e-mail de retour** (*Feedback
+     Email* ; le job s'arrête et le dit tant qu'il n'y en a pas ; il n'est pas dans le dépôt et sert pour toutes les
+     langues). Le contact de la Beta App Review est copié du contact de la review App Store s'il est vide.
+     **Ajoutez les testeurs** au groupe `External testers` (*TestFlight → Tests externes*), par e-mail ou avec un lien
+     public : leurs adresses ne sont jamais dans le dépôt. Le premier build d'une version attend la Beta App Review
+     (en général un ou deux jours) ; les builds suivants de cette version sont souvent approuvés en quelques minutes.
+   - À la main : *Run workflow*, cible `builds`, `edition` `testflight`, `external` activé.
 
    **Pas de badge bêta.** Aucune édition n'en affiche. Rien dans l'app, sa fiche ou les pages du site que la fiche
    ouvre (accueil, support, confidentialité : la review d'Apple les visite) ne doit dire que l'app est une bêta

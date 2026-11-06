@@ -28,10 +28,13 @@ screenshots.
   - The build submitted is the build App Review sees. A feature the App Store edition does not have is left out of
     its build (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), never switched off at run time: no unlock code, no remote
     switch, no setting, date or launch argument that turns something on, no constant `false` feature left in.
-  - The TestFlight edition (downloads) goes to internal testers only and is never submitted; a tag or
+  - The TestFlight edition (downloads) goes to internal testers only and is never submitted, not even for Beta App
+    Review; a tag or
     `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go: pushing a
     version tag `vX.Y.Z` is that go (it submits iOS and macOS for App Review and sends Android, with its listing, to
-    closed testing for review); a push to `main` reaches TestFlight (never submitted for App Review), Google Play
+    closed testing for review); a push to `main` reaches TestFlight (never submitted for App Review: the TestFlight
+    edition for internal testers and, built before it, the App Store edition for the external group, submitted for
+    Beta App Review only, every push), Google Play
     internal testing and Google Play closed testing, where Google reviews the release: closed testing receives the
     latest internal build once any review in progress is over, and a push never cancels or restarts a review
     (`.github/workflows/deliver.yml`, `release-android.yml`, `play-catchup.yml`). The user has given a standing go for
