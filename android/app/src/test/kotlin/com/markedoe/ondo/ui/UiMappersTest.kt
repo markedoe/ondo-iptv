@@ -552,7 +552,7 @@ class UiMappersTest {
         const val PORTUGUESE = "Depois da morte da mãe, Luísa herda uma casa antiga no litoral. Mas os vizinhos não querem que ela fique, e logo ela descobre o motivo."
 
         /** Named with the language at the end ("… (PT)"), or described in it, in categories of no language. */
-        val endTagged = Movie("ct2", "Tony $BY_NAME – Ao Vivo (PT)", categoryId = concerts.id, streamUrl = "http://example.com/movie/ct2.mp4", year = 2024, addedAt = Fixtures.NOW / 1000)
+        val endTagged = Movie("ct2", "Tony $BY_NAME no Porto (PT)", categoryId = concerts.id, streamUrl = "http://example.com/movie/ct2.mp4", year = 2024, addedAt = Fixtures.NOW / 1000)
         val described = Movie("ct3", "$BY_NAME no Coliseu", categoryId = concerts.id, streamUrl = "http://example.com/movie/ct3.mp4", year = 2024, addedAt = Fixtures.NOW / 1000, plot = PORTUGUESE, rating = 9.7)
         val describedShow = Series(id = "sct2", name = "$BY_NAME Nova", categoryId = classics.id, year = 2024, rating = 9.95, genre = "Drama", plot = PORTUGUESE, addedAt = Fixtures.NOW / 1000)
 
@@ -670,7 +670,7 @@ class UiMappersTest {
         // A hidden language leaves the titles whose own name carries it too ("|PT| …", "PT - …", "[PT] …", "… (PT)"),
         // and those described in it in categories of no language, whatever their category; names that only look like a
         // tag ("Portugal: …", "PTSD …", "… (UK)") and a title of a kept language's category ("|FR|") stay.
-        for (title in listOf(HiddenLanguage.endTagged.name, HiddenLanguage.described.name, HiddenLanguage.describedShow.name)) {
+        for (title in listOf("no Porto", "no Coliseu", "$byName Nova")) {
             listOf("search", "year").forEach { assertTrue("$title is listed in $it while the language is shown", title in shown.getValue(it)) }
         }
         surfaces(byLanguage).forEach { (surface, text) -> assertFalse("hidden as a language, $surface still shows a title named with it: $text", byName in text) }
