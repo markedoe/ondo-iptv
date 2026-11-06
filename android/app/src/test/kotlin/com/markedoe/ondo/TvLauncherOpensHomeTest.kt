@@ -3,6 +3,7 @@ package com.markedoe.ondo
 import android.content.Intent
 import android.os.Looper
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -11,7 +12,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.lifecycle.Lifecycle
@@ -25,6 +26,7 @@ import com.markedoe.ondo.data.SqliteMetadataStore
 import java.io.File
 import java.time.Duration
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -95,7 +97,7 @@ class TvLauncherOpensHomeTest {
 
     /** The viewer leaves Ondo (the remote's Home button) on a title's page, then opens it again with [intent]. */
     private fun leaveOnATitlesPageAndOpen(intent: Intent) {
-        compose.onNodeWithTag("heroInfo").performClick()
+        compose.onNodeWithTag("heroInfo").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("the title's page") { exists("detailPlay") }
         val scenario = scenario!!
         scenario.moveToState(Lifecycle.State.CREATED)
