@@ -2,6 +2,7 @@ package com.markedoe.ondo.ui
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,7 +14,18 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.text.Paragraph
+import androidx.compose.ui.text.ParagraphIntrinsics
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import kotlin.math.ceil
 import androidx.test.core.app.ApplicationProvider
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.R
@@ -103,6 +115,47 @@ class PhoneTextFitTest(private val language: String) {
                 maxOf(layout.lineCount, (node.size.height / lineHeight).roundToInt())
             }
         }
+
+    /**
+     * A title as wide as its text sits on one line: Compose sizes a title to the width it measures for it, then lays
+     * it out at that width, so a title measured narrower than it is laid out breaks onto a second line. This happened
+     * to letter-spaced Arabic and Hindi ("الأفلا / م"). Every large style of the theme, as the app's language sets it.
+     */
+    @Test
+    fun titlesFitTheWidthTheyAreMeasuredAt() {
+        lateinit var styles: Map<String, TextStyle>
+        lateinit var density: Density
+        lateinit var fonts: FontFamily.Resolver
+        val scenario = ActivityScenario.launch(ComponentActivity::class.java)
+        scenario.onActivity { activity -> activity.setContent {
+            OndoTheme {
+                val type = MaterialTheme.typography
+                styles = mapOf(
+                    "headlineSmall" to type.headlineSmall,
+                    "headlineSmall bold" to type.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    "headlineMedium" to type.headlineMedium,
+                    "headlineLarge" to type.headlineLarge,
+                    "displaySmall" to type.displaySmall,
+                )
+                density = LocalDensity.current
+                fonts = LocalFontFamilyResolver.current
+            }
+        } }
+        compose.waitForIdle()
+        scenario.close()
+        val problems = mutableListOf<String>()
+        for (id in listOf(R.string.movies, R.string.series, R.string.live_tv, R.string.my_list)) {
+            val text = strings.getString(id)
+            for ((name, style) in styles) {
+                val localized = style.copy(localeList = LocaleList(tag))
+                val intrinsics = ParagraphIntrinsics(text, localized, annotations = emptyList(), density = density, fontFamilyResolver = fonts)
+                val width = ceil(intrinsics.maxIntrinsicWidth).toInt()
+                val paragraph = Paragraph(intrinsics, Constraints(maxWidth = width), maxLines = Int.MAX_VALUE)
+                if (paragraph.lineCount != 1) problems += "\"$text\" in $name: ${paragraph.lineCount} lines at its own width ($width px)"
+            }
+        }
+        assertTrue(problems.joinToString("\n"), problems.isEmpty())
+    }
 
     @Test
     fun shortWordsStayOnOneLineOnEverySurface() {
