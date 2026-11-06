@@ -3,7 +3,9 @@ package com.markedoe.ondo.core
 import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import com.markedoe.ondo.core.epg.EpgFilter
 import com.markedoe.ondo.core.epg.XmltvParser
+import com.markedoe.ondo.core.library.CategoryTags
 import com.markedoe.ondo.core.library.PlaylistLoader
+import com.markedoe.ondo.core.library.PlotLanguage
 import com.markedoe.ondo.core.library.SearchEngine
 import com.markedoe.ondo.core.model.EpgData
 import com.markedoe.ondo.core.model.EpgProgram
@@ -44,6 +46,32 @@ class PerformanceTest {
         val searchElapsed = (System.nanoTime() - searchStart) / 1e9
         println("search index + query in ${searchElapsed}s")
         assertTrue(searchElapsed < 10, "took ${searchElapsed}s")
+    }
+
+    /**
+     * Hidden languages read every description of a catalogue of a large panel (100k titles) in one pass, off the main
+     * thread: it must stay a fraction of a second, without a string per word.
+     */
+    @Test
+    fun aHundredThousandDescriptionsAreReadQuickly() {
+        val plots = listOf(
+            "Un joven abogado descubre que su padre esconde un secreto que pondrá en peligro a toda la familia cuando regresa a su pueblo natal después de diez años.",
+            "Um jovem advogado descobre que o pai esconde um segredo que vai colocar toda a família em perigo quando ele volta para a sua cidade natal.",
+            "A young lawyer discovers that his father is hiding a secret that will put the whole family in danger when he returns to his hometown after ten years.",
+            "يكتشف محامٍ شاب أن والده يخفي سرًا سيعرّض العائلة كلها للخطر عندما يعود إلى مدينته بعد عشر سنوات.",
+        )
+        // Long descriptions too: only their start is read.
+        val titles = (0 until 100_000).map { i -> "Title $i (${if (i % 7 == 0) "ES" else "2024"})" to plots[i % plots.size].repeat(1 + i % 3) }
+        val hidden = setOf("ES", "AR")
+        val languages = PlotLanguage.hiddenLanguages(hidden)
+        val start = System.nanoTime()
+        var count = 0
+        for ((name, plot) in titles) if (CategoryTags.isHiddenTitle(name, plot, null, hidden, languages)) count++
+        val elapsed = (System.nanoTime() - start) / 1e9
+        println("100k titles and descriptions read in ${elapsed}s")
+        // Spanish and Arabic descriptions, and the English and Portuguese ones named "(ES)".
+        assertEquals(50_000 + (0 until 100_000).count { it % 7 == 0 && it % 4 in 1..2 }, count)
+        assertTrue(elapsed < 10, "took ${elapsed}s")
     }
 
     @Test

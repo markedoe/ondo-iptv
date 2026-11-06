@@ -37,10 +37,117 @@ public enum CategoryTags {
         tag(of: String(name.drop { $0 != "|" && decoration.contains($0) }))
     }
 
-    /// Whether a title's or a channel's own `name` carries one of these hidden tags (see `titleTag(of:)`).
+    /// Whether a title's or a channel's own `name` starts or ends with one of these hidden tags (`titleTag(of:)`,
+    /// `trailingTag(of:)`).
     public static func isHidden(name: String, hiddenTags: Set<String>) -> Bool {
-        guard !hiddenTags.isEmpty, let tag = titleTag(of: name) else { return false }
-        return hiddenTags.contains(tag)
+        guard !hiddenTags.isEmpty else { return false }
+        if let tag = titleTag(of: name), hiddenTags.contains(tag) { return true }
+        if let tag = trailingTag(of: name), hiddenTags.contains(tag) { return true }
+        return false
+    }
+
+    /// What a tag at the end of a name is closed by, and what opens it.
+    private static let endClosers: Set<Unicode.Scalar> = [")", "]", "}", ">", "|", "»", "┃", "│"]
+    private static let endOpeners: Set<Unicode.Scalar> = ["(", "[", "{", "<", "|", "«", "┃", "│"]
+    /// What stands between a name and an unbracketed tag at its end ("La Casa - ESP", "La Casa | ES").
+    private static let endSeparators: Set<Unicode.Scalar> = ["-", "–", "—", "|"]
+    private static let upperCase: ClosedRange<Unicode.Scalar> = "A"..."Z"
+    private static let lowerCase: ClosedRange<Unicode.Scalar> = "a"..."z"
+    private static let digits: ClosedRange<Unicode.Scalar> = "0"..."9"
+
+    /// The tag a title's or a channel's own name ends with, uppercased: a code in brackets ("La Casa (ES)", "El Puente
+    /// [LAT]", "Os Amigos |PT|") or after a spaced dash or bar ("La Casa - ESP", "La Casa | ES"), years and quality
+    /// words after it left out ("El Puente [LAT] (2024)", "(LAT) (4K)"); nil without one. Conservative: an upper-case
+    /// code of 2 to 6 letters only, with a name before it; "Quiet Water (2024)", "(4K)", "(Uncut)", "(es)",
+    /// "Spider-MAN", "La Casa ES" carry none. Same rules as the Kotlin `CategoryTags.trailingTag`.
+    public static func trailingTag(of name: String) -> String? {
+        let scalars = name.unicodeScalars
+        var end = endOfText(scalars, scalars.endIndex)
+        // A year or a quality word ("(2024)", "[HD]") after the tag, at most twice.
+        for _ in 0..<3 {
+            guard end > scalars.startIndex else { return nil }
+            let last: Unicode.Scalar = scalars[scalars.index(before: end)]
+            let bracketed: Bool = endClosers.contains(last)
+            let tokenEnd = bracketed ? endOfText(scalars, scalars.index(before: end)) : end
+            var tokenStart = tokenEnd
+            while tokenStart > scalars.startIndex {
+                let previous: Unicode.Scalar = scalars[scalars.index(before: tokenStart)]
+                guard isASCIILetterOrDigit(previous) || previous == "-" else { break }
+                tokenStart = scalars.index(before: tokenStart)
+            }
+            guard tokenStart < tokenEnd else { return nil }
+            let before: String.UnicodeScalarView.Index
+            if bracketed {
+                let opener = endOfText(scalars, tokenStart)
+                guard opener > scalars.startIndex, endOpeners.contains(scalars[scalars.index(before: opener)]) else { return nil }
+                before = scalars.index(before: opener)
+            } else {
+                // "La Casa - ESP": a space, a dash or a bar, a space.
+                guard tokenStart > scalars.startIndex, isSpace(scalars[scalars.index(before: tokenStart)]) else { return nil }
+                let separator = endOfText(scalars, tokenStart)
+                guard separator > scalars.startIndex else { return nil }
+                let separatorIndex = scalars.index(before: separator)
+                guard separatorIndex > scalars.startIndex, endSeparators.contains(scalars[separatorIndex]),
+                      isSpace(scalars[scalars.index(before: separatorIndex)]) else { return nil }
+                before = separatorIndex
+            }
+            let token = String(scalars[tokenStart..<tokenEnd])
+            let isYear: Bool = bracketed && token.unicodeScalars.count == 4 && token.unicodeScalars.allSatisfy { digits.contains($0) }
+            if isYear || skipped.contains(token) {
+                end = endOfText(scalars, before)
+                continue
+            }
+            let units = token.unicodeScalars
+            guard (2...6).contains(units.count), units.first != "-", units.last != "-",
+                  units.contains(where: { upperCase.contains($0) }),
+                  !units.contains(where: { lowerCase.contains($0) }) else { return nil }
+            // A name before the tag: "(ES)" alone is no title in Spanish.
+            guard scalars[scalars.startIndex..<before].contains(where: { isASCIILetterOrDigit($0) || $0.value >= 128 }) else { return nil }
+            return token
+        }
+        return nil
+    }
+
+    /// `end` with the spaces before it left out.
+    private static func endOfText(
+        _ scalars: String.UnicodeScalarView, _ end: String.UnicodeScalarView.Index
+    ) -> String.UnicodeScalarView.Index {
+        var index = end
+        while index > scalars.startIndex, isSpace(scalars[scalars.index(before: index)]) {
+            index = scalars.index(before: index)
+        }
+        return index
+    }
+
+    private static func isSpace(_ scalar: Unicode.Scalar) -> Bool {
+        scalar == " " || scalar == "\t" || scalar == "\u{00A0}"
+    }
+
+    private static func isASCIILetterOrDigit(_ scalar: Unicode.Scalar) -> Bool {
+        upperCase.contains(scalar) || lowerCase.contains(scalar) || digits.contains(scalar)
+    }
+
+    /// Whether a title is hidden by these hidden tags whatever its category: its own name starts or ends with one
+    /// (`isHidden(name:hiddenTags:)`), or its provider's `plot` is in a language one of them stands for (`PlotLanguage`)
+    /// and its category's own tag (`categoryTag`, from `tag(of:)`) does not name a language: a category tagged with a
+    /// language the viewer kept ("|FR|") keeps its titles, whatever their description. Same rule as the Kotlin
+    /// `CategoryTags.isHiddenTitle`.
+    public static func isHiddenTitle(
+        name: String, plot: String?, categoryTag: String?, hiddenTags: Set<String>, hiddenLanguages: Set<String>? = nil
+    ) -> Bool {
+        guard !hiddenTags.isEmpty else { return false }
+        if isHidden(name: name, hiddenTags: hiddenTags) { return true }
+        let languages: Set<String> = hiddenLanguages ?? PlotLanguage.hiddenLanguages(hiddenTags)
+        guard !languages.isEmpty, let plot, !plot.isEmpty, readsPlots(categoryTag: categoryTag),
+              let language = PlotLanguage.detect(plot) else { return false }
+        return languages.contains(language)
+    }
+
+    /// Whether the titles of a category with this tag (`tag(of:)`) are told by their description's language: no
+    /// language tag.
+    public static func readsPlots(categoryTag: String?) -> Bool {
+        guard let categoryTag else { return true }
+        return !PlotLanguage.isLanguageTag(categoryTag)
     }
 
     /// Tags carried by at least two of these categories, and the categories that carry each one.

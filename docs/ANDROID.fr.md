@@ -27,7 +27,13 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   titres et chaînes dont le nom porte lui-même une étiquette de langue masquée (comme « |DE| … », « [DE] … »,
   « DE - … ») sont écartés comme les catégories masquées, là et dans toutes les autres listes (rangées, grilles,
   Accueil, titres d'une personne, d'un genre, d'une année ou d'un prix, titres similaires, TV en direct et guide),
-  quelle que soit leur catégorie (`CategoryTags.titleTag` ; « Portugal: … » ou « PTSD … » ne portent pas d'étiquette). Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
+  quelle que soit leur catégorie (`CategoryTags.titleTag` ; « Portugal: … » ou « PTSD … » ne portent pas d'étiquette).
+  De même pour les titres dont le nom se termine par une telle étiquette (« … (DE) », « … [DE] », « … - DE »,
+  `CategoryTags.trailingTag` ; « (2024) », « (4K) » ou « (Uncut) » n'en sont pas) et, dans une catégorie sans
+  étiquette de langue, pour les films et séries dont la description donnée par le fournisseur est dans une langue
+  masquée (`PlotLanguage` : ses petits mots, ou son écriture, dans les 400 premiers caractères ;
+  `fixtures/plot-language`, partagé avec le cœur Apple). Une catégorie étiquetée d'une langue gardée garde ses
+  titres ; la description de TMDb, dans la langue de l'app, ne compte jamais. Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
 - **Champs de texte sur TV** (`ui/tv/TvTextInput.kt`) : chaque champ de texte sur une TV (Recherche, formulaire d'une
   playlist, jeton TMDb, clés et identifiants des services de sous-titres, nom et code d'un profil, code parental, filtre
   et mots des catégories, nom d'une présélection ou d'une collection) est une ligne avec son libellé et sa valeur ou son

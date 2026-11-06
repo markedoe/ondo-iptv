@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.CategoryStyles
 import com.markedoe.ondo.core.library.CategoryTags
+import com.markedoe.ondo.core.library.PlotLanguage
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.PlaylistContent
@@ -92,7 +93,10 @@ object CategoryFilter {
     /** The language or country tag a channel's own name starts with ("|DE| ARD", "▼--- |DE| VOD"), or null. */
     fun channelTag(name: String): String? = CategoryTags.titleTag(name)
 
-    /** The movies and the series left out wherever titles are listed because their own name carries a hidden tag. */
+    /**
+     * The movies and the series left out wherever titles are listed whatever their category: their own name starts or
+     * ends with a hidden tag, or their provider's description is in a hidden language ([CategoryTags.isHiddenTitle]).
+     */
     class HiddenTitles(val movies: Set<String>, val series: Set<String>) {
         companion object {
             val NONE = HiddenTitles(emptySet(), emptySet())
@@ -101,20 +105,35 @@ object CategoryFilter {
 
     @Volatile private var hiddenTitles: Triple<PlaylistContent, Set<String>, HiddenTitles>? = null
 
+    fun hiddenTitles(state: OndoState): HiddenTitles = hiddenTitles(state.content, state.library.hiddenTags)
+
     /**
-     * The movies and series whose own name carries a hidden language or country tag ("|PT| Tony Carreira" filed under
-     * "Concerts"), whatever their category: a hidden language leaves them as it leaves its categories. Built once per
-     * catalogue and hidden tags.
+     * The movies and series hidden by these hidden language or country tags whatever their category: "|PT| Tony
+     * Carreira" or "Os Amigos (PT)" filed under "Concerts", or a series of "Netflix" described in Portuguese while PT is
+     * hidden; a hidden language leaves them as it leaves its categories ([CategoryTags.isHiddenTitle]). One pass over the
+     * catalogue, off the main thread (the mappers run on `Dispatchers.Default`); the descriptions are read only when a
+     * hidden tag stands for a language, and only those of categories without a language tag. Built once per catalogue
+     * and hidden tags.
      */
-    fun hiddenTitles(state: OndoState): HiddenTitles {
-        val tags = state.library.hiddenTags
+    fun hiddenTitles(content: PlaylistContent, tags: Set<String>): HiddenTitles {
         if (tags.isEmpty()) return HiddenTitles.NONE
-        val content = state.content
         hiddenTitles?.let { (known, knownTags, titles) -> if (known === content && knownTags == tags) return titles }
-        val titles = HiddenTitles(
-            movies = content.movies.filter { CategoryTags.isHiddenByName(it.name, tags) }.mapTo(HashSet()) { it.id },
-            series = content.series.filter { CategoryTags.isHiddenByName(it.name, tags) }.mapTo(HashSet()) { it.id },
-        )
+        val languages = PlotLanguage.hiddenLanguages(tags)
+        // The categories whose titles are told by their description: no language tag of their own.
+        val readsPlots = HashSet<String>()
+        if (languages.isNotEmpty()) {
+            for (category in content.movieCategories + content.seriesCategories) {
+                if (CategoryTags.readsPlots(CategoryTags.tagOf(category.name))) readsPlots += category.id
+            }
+        }
+        fun hidden(name: String, plot: String?, categoryId: String): Boolean =
+            CategoryTags.isHiddenByName(name, tags) ||
+                (plot != null && categoryId in readsPlots && PlotLanguage.detect(plot) in languages)
+        val movies = HashSet<String>()
+        for (movie in content.movies) if (hidden(movie.name, movie.plot, movie.categoryId)) movies += movie.id
+        val series = HashSet<String>()
+        for (show in content.series) if (hidden(show.name, show.plot, show.categoryId)) series += show.id
+        val titles = HiddenTitles(movies, series)
         hiddenTitles = Triple(content, tags, titles)
         return titles
     }
@@ -123,14 +142,14 @@ object CategoryFilter {
 
     /**
      * Channels left out of Live TV whatever their category: the provider's headers, and the channels whose own name
-     * carries a hidden tag (a "|DE|" channel filed under "All"). Built once per catalogue and hidden tags.
+     * starts or ends with a hidden tag (a "|DE|" channel filed under "All"). Built once per catalogue and hidden tags.
      */
     fun hiddenChannelIds(state: OndoState): Set<String> {
         val content = state.content
         val tags = state.library.hiddenTags
         hiddenChannels?.let { (known, knownTags, ids) -> if (known === content && knownTags == tags) return ids }
         val ids = content.channels
-            .filter { isHeader(it.name) || (tags.isNotEmpty() && channelTag(it.name) in tags) }
+            .filter { isHeader(it.name) || CategoryTags.isHiddenByName(it.name, tags) }
             .mapTo(HashSet()) { it.id }
         hiddenChannels = Triple(content, tags, ids)
         return ids

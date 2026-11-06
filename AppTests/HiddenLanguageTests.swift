@@ -19,8 +19,9 @@ final class HiddenLanguageTests: XCTestCase {
 
     nonisolated private static let thisYear = Calendar.current.component(.year, from: .now)
 
-    /// Titles of the language's categories hold "Saudade"; titles named with the language in categories of no language
-    /// ("Concerts", "Clássicos", "Rádio") hold "Carreira". "Portugal: The Man" and "PTSD" only look like a tag.
+    /// Titles of the language's categories hold "Saudade"; titles named with the language, at the start or at the end
+    /// ("… (PT)", "… [PT]"), in categories of no language ("Concerts", "Clássicos", "Rádio") hold "Carreira".
+    /// "Portugal: The Man", "PTSD" and "Quiet Office (UK)" only look like a tag.
     nonisolated private static let catalogue = """
     #EXTM3U
     #EXTINF:-1 tvg-type="live" group-title="News",Test News
@@ -35,8 +36,12 @@ final class HiddenLanguageTests: XCTestCase {
     http://127.0.0.1:9/saudade.mp4
     #EXTINF:6000 tvg-type="movie" group-title="Concerts",|PT| Tony Carreira – Ao Vivo em Lisboa (\(thisYear))
     http://127.0.0.1:9/carreira.mp4
+    #EXTINF:6000 tvg-type="movie" group-title="Concerts",Tony Carreira – Ao Vivo no Porto (PT) (\(thisYear))
+    http://127.0.0.1:9/porto.mp4
     #EXTINF:6000 tvg-type="movie" group-title="Concerts",Portugal: The Man – Live (\(thisYear))
     http://127.0.0.1:9/portugal.mp4
+    #EXTINF:6000 tvg-type="movie" group-title="Concerts",Quiet Office (UK) (\(thisYear))
+    http://127.0.0.1:9/office.mp4
     #EXTINF:6000 tvg-type="movie" group-title="Concerts",PTSD Stories (\(thisYear))
     http://127.0.0.1:9/ptsd.mp4
     #EXTINF:2700 tvg-type="series" group-title="Series | Drama",Harbor (\(thisYear)) S01E01
@@ -45,6 +50,8 @@ final class HiddenLanguageTests: XCTestCase {
     http://127.0.0.1:9/nocturna101.mp4
     #EXTINF:2700 tvg-type="series" group-title="Clássicos",PT - Carreira Antiga (\(thisYear)) S01E01
     http://127.0.0.1:9/antiga101.mp4
+    #EXTINF:2700 tvg-type="series" group-title="Clássicos",Carreira Velha [PT] (\(thisYear)) S01E01
+    http://127.0.0.1:9/velha101.mp4
     #EXTINF:2700 tvg-type="series" group-title="Clássicos",Classic Days (\(thisYear)) S01E01
     http://127.0.0.1:9/classic101.mp4
     """
@@ -146,6 +153,11 @@ final class HiddenLanguageTests: XCTestCase {
 
         // Shown: the lists that can list them do, so the checks below prove something.
         let shown = surfaces(model)
+        for ending in ["Ao Vivo no Porto", "Carreira Velha"] {
+            for list in ["movies", "series", "search", "year"] where list != (ending.hasPrefix("Ao") ? "series" : "movies") {
+                XCTAssertTrue(shown[list, default: []].contains { $0.contains(ending) }, "\(list) lists \(ending) while the language is shown")
+            }
+        }
         for list in ["carousel", "carousel candidates", "movies", "series", "live", "search", "year", "my list", "favourite channels",
                      "selection row", "selection page", "selection tags"] {
             XCTAssertTrue(shown[list, default: []].contains { $0.contains("Saudade") || $0.contains("Carreira") }, "\(list) lists the language while it is shown")
@@ -159,11 +171,14 @@ final class HiddenLanguageTests: XCTestCase {
         for (list, names) in hidden {
             XCTAssertFalse(names.contains { $0.contains("Saudade") || $0.contains("Carreira") }, "\(list) still shows the hidden language: \(names)")
         }
-        // Names that only start like a tag stay.
-        for name in ["Portugal: The Man – Live", "PTSD Stories"] {
-            for list in ["movies", "search", "year"] {
-                XCTAssertTrue(hidden[list, default: []].contains(name), "\(name) stays in \(list)")
+        // Names that only start or end like a tag stay.
+        for name in ["Portugal: The Man – Live", "PTSD Stories", "Quiet Office"] {
+            for list in ["movies", "year"] {
+                XCTAssertTrue(hidden[list, default: []].contains { $0.hasPrefix(name) }, "\(name) stays in \(list)")
             }
+        }
+        for name in ["Portugal: The Man – Live", "PTSD Stories"] {
+            XCTAssertTrue(hidden["search", default: []].contains(name), "\(name) stays in search")
         }
         // The exception: Continue watching keeps the title already started.
         XCTAssertEqual(model.continueWatching().map(\.reference.itemID), [concert.id], "Continue watching keeps it")
@@ -171,6 +186,44 @@ final class HiddenLanguageTests: XCTestCase {
         // Shown again.
         model.setHidden(false, tag: "PT")
         XCTAssertTrue(surfaces(model)["movies", default: []].contains { $0.contains("Carreira") })
+    }
+
+    /// The same lists, for the titles of categories of no language whose provider's description is in the hidden
+    /// language (an Xtream panel's lists carry descriptions; an M3U playlist's do not): a Portuguese series of "Netflix"
+    /// leaves every list, the carousel first, once Portuguese is hidden; a title of a category of a language the viewer
+    /// keeps ("|FR| Films") stays, whatever its description.
+    func testNoListShowsTheTitlesDescribedInAHiddenLanguage() async throws {
+        let panel = try DescribedPanel(year: Self.thisYear)
+        let base = try await panel.server.start()
+        let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        await model.bootstrap()
+        try await model.addPlaylist(Playlist(
+            name: "Panel", source: .xtream(XtreamCredentials(server: base, username: "viewer", password: "secret")), autoRefreshHours: 0
+        ))
+        XCTAssertEqual(model.content.series.first { $0.name == "Carreira Nova" }?.plot, DescribedPanel.portuguese, "the list's description")
+        let yesterday = RecentReleases.dayString(RecentReleases.today(.now) - 1)
+        for title in model.content.movies.map(ShowcaseItem.movie) + model.content.series.map(ShowcaseItem.series) {
+            for key in model.metadataKeys(for: title) {
+                model.tmdbMetadata.titles[key] = TitleMetadata(key: key, kind: MetadataKey.kind(title.contentType),
+                                                               backdropURL: URL(string: "https://example.com/backdrop.jpg"), fetchedAt: .now, releaseDate: yesterday)
+            }
+        }
+        model.tmdbMetadata.carouselRevision += 1
+
+        let shown = surfaces(model)
+        for list in ["carousel", "movies", "series", "search", "year"] {
+            XCTAssertTrue(shown[list, default: []].contains { $0.contains("Carreira") }, "\(list) lists the described titles while the language is shown")
+        }
+        model.setHidden(true, tag: "PT")
+        let hidden = surfaces(model)
+        for (list, names) in hidden {
+            XCTAssertFalse(names.contains { $0.contains("Carreira") }, "\(list) still shows a title described in the hidden language: \(names)")
+        }
+        for list in ["movies", "search", "year"] {
+            XCTAssertTrue(hidden[list, default: []].contains("Les Amis du Port"), "a kept language's category keeps its title in \(list)")
+            XCTAssertTrue(hidden[list, default: []].contains("Quiet Water"), "a title described in English stays in \(list)")
+        }
+        XCTAssertTrue(hidden["series", default: []].contains("Harbor"))
     }
 
     /// The same lists, once the language is hidden on another device in this profile and sync applies it (docs/SYNC.md,
@@ -212,6 +265,54 @@ final class HiddenLanguageTests: XCTestCase {
             for list in ["movies", "series", "live", "search", "year"] {
                 XCTAssertTrue(again[list, default: []].contains { $0.contains("Saudade") }, "\(list) shows it again, shown again \(how)")
             }
+        }
+    }
+}
+
+/// An Xtream panel whose lists carry descriptions: in Portuguese ("Carreira …") in categories of no language and in a
+/// French one, in English otherwise.
+private final class DescribedPanel: @unchecked Sendable {
+    static let portuguese = "Depois da morte da mãe, Luísa herda uma casa antiga no litoral. Mas os vizinhos não querem que ela fique, e logo ela descobre o motivo."
+    static let english = "After the death of her mother, Lucy inherits an old house on the coast. But the neighbours do not want her to stay, and she soon finds out why."
+    private(set) var server: LocalHTTPServer!
+    private let year: Int
+
+    init(year: Int) throws {
+        self.year = year
+        server = try LocalHTTPServer { [unowned self] request in self.answer(request) }
+    }
+
+    private func movie(_ id: Int, _ name: String, category: String, plot: String) -> String {
+        #"{"num":\#(id),"name":"\#(name)","stream_type":"movie","stream_id":\#(id),"category_id":"\#(category)","container_extension":"mp4","#
+            + #""year":"\#(year)","plot":"\#(plot)"}"#
+    }
+
+    private func series(_ id: Int, _ name: String, plot: String) -> String {
+        #"{"num":\#(id),"name":"\#(name)","series_id":\#(id),"category_id":"20","year":"\#(year)","plot":"\#(plot)"}"#
+    }
+
+    private func answer(_ request: LocalHTTPServer.Request) -> LocalHTTPServer.Response {
+        guard request.path == "/player_api.php" else { return .notFound }
+        switch request.query["action"] ?? "" {
+        case "":
+            return .json("""
+            {"user_info":{"username":"viewer","auth":1,"status":"Active","exp_date":"1924992000","max_connections":"1",\
+            "allowed_output_formats":["m3u8","ts"]},"server_info":{"url":"127.0.0.1","server_protocol":"http"}}
+            """)
+        case "get_vod_categories":
+            return .json(#"[{"category_id":"10","category_name":"Concerts","parent_id":0},{"category_id":"11","category_name":"|FR| Films","parent_id":0}]"#)
+        case "get_vod_streams":
+            let movies: [String] = [
+                movie(5001, "Carreira no Coliseu", category: "10", plot: Self.portuguese),
+                movie(5002, "Les Amis du Port", category: "11", plot: Self.portuguese),
+                movie(5003, "Quiet Water", category: "10", plot: Self.english),
+            ]
+            return .json("[" + movies.joined(separator: ",") + "]")
+        case "get_series_categories": return .json(#"[{"category_id":"20","category_name":"Netflix","parent_id":0}]"#)
+        case "get_series":
+            let shows: [String] = [series(9001, "Carreira Nova", plot: Self.portuguese), series(9002, "Harbor", plot: Self.english)]
+            return .json("[" + shows.joined(separator: ",") + "]")
+        default: return .json("[]")
         }
     }
 }

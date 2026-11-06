@@ -133,25 +133,29 @@ extension AppModel {
         return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
     }
 
-    /// The hidden languages: a title whose own name carries one is left out of Search whatever its category.
+    /// The hidden languages: a title whose own name carries one, or described in one in a category of no language, is
+    /// left out of Search whatever its category (`hiddenByName`).
     var hiddenTags: Set<String> { Set(library.hiddenCategoryTags.keys) }
 
     func search(_ query: String) -> SearchResults {
-        Self.search(query, in: index.search, excluded: excludedCategoryIDs, hidden: hiddenChannelIDs, hiddenTags: hiddenTags, films: films)
+        Self.search(query, in: index.search, excluded: excludedCategoryIDs, hidden: hiddenChannelIDs, hiddenTags: hiddenTags,
+                    hiddenTitles: hiddenByName, films: films)
     }
 
     /// `search` on a background task: the main thread (and the keyboard) stays free while a large playlist is searched.
     func searchInBackground(_ query: String) async -> SearchResults {
         let engine = index.search, excluded = excludedCategoryIDs, hidden = hiddenChannelIDs, tags = hiddenTags, films = self.films
+        let byName = hiddenByName
         return await Task.detached(priority: .userInitiated) {
-            Self.search(query, in: engine, excluded: excluded, hidden: hidden, hiddenTags: tags, films: films)
+            Self.search(query, in: engine, excluded: excluded, hidden: hidden, hiddenTags: tags, hiddenTitles: byName, films: films)
         }.value
     }
 
     private nonisolated static func search(
-        _ query: String, in engine: SearchEngine, excluded: Set<String>, hidden: Set<String>, hiddenTags: Set<String>, films: FilmVersions
+        _ query: String, in engine: SearchEngine, excluded: Set<String>, hidden: Set<String>, hiddenTags: Set<String>,
+        hiddenTitles: HiddenTitles, films: FilmVersions
     ) -> SearchResults {
-        var results = engine.search(query, limitPerType: 150, excludedCategoryIDs: excluded, hiddenTags: hiddenTags)
+        var results = engine.search(query, limitPerType: 150, excludedCategoryIDs: excluded, hiddenTags: hiddenTags, hiddenTitles: hiddenTitles)
         if !hidden.isEmpty { results.channels.removeAll { hidden.contains($0.id) } }
         // Each film once, whatever its versions.
         results.movies = films.distinct(results.movies)

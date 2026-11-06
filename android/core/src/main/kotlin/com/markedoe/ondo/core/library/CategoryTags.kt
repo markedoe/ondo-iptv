@@ -39,8 +39,96 @@ object CategoryTags {
      */
     fun titleTag(name: String): String? = tagOf(name.trimStart { it != '|' && it in DECORATION })
 
-    /** Whether a title's or a channel's own [name] carries one of these hidden tags (see [titleTag]). */
-    fun isHiddenByName(name: String, hiddenTags: Set<String>): Boolean = hiddenTags.isNotEmpty() && titleTag(name) in hiddenTags
+    /** Whether a title's or a channel's own [name] starts or ends with one of these hidden tags ([titleTag], [trailingTag]). */
+    fun isHiddenByName(name: String, hiddenTags: Set<String>): Boolean =
+        hiddenTags.isNotEmpty() && (titleTag(name) in hiddenTags || trailingTag(name) in hiddenTags)
+
+    /** What a tag at the end of a name is closed by, and what opens it. */
+    private const val END_CLOSERS = ")]}>|»┃│"
+    private const val END_OPENERS = "([{<|«┃│"
+
+    /** What stands between a name and an unbracketed tag at its end ("La Casa - ESP", "La Casa | ES"). */
+    private const val END_SEPARATORS = "-–—|"
+
+    /**
+     * The tag a title's or a channel's own name ends with, uppercased: a code in brackets ("La Casa (ES)", "El Puente
+     * [LAT]", "Os Amigos |PT|") or after a spaced dash or bar ("La Casa - ESP", "La Casa | ES"), years and quality
+     * words after it left out ("El Puente [LAT] (2024)", "(LAT) (4K)"); null without one. Conservative: an upper-case code
+     * of 2 to 6 letters only, with a name before it; "Quiet Water (2024)", "(4K)", "(Uncut)", "(es)", "Spider-MAN", "La
+     * Casa ES" carry none. Same rules as the Swift `CategoryTags.trailingTag`.
+     */
+    fun trailingTag(name: String): String? {
+        var end = endOfText(name, name.length)
+        // A year or a quality word ("(2024)", "[HD]") after the tag, at most twice.
+        repeat(3) {
+            if (end == 0) return null
+            val last = name[end - 1]
+            val bracketed = last in END_CLOSERS
+            val tokenEnd = if (bracketed) endOfText(name, end - 1) else end
+            var tokenStart = tokenEnd
+            while (tokenStart > 0 && (isAsciiLetterOrDigit(name[tokenStart - 1]) || name[tokenStart - 1] == '-')) tokenStart--
+            if (tokenStart == tokenEnd) return null
+            val before: Int
+            if (bracketed) {
+                val opener = endOfText(name, tokenStart)
+                if (opener == 0 || name[opener - 1] !in END_OPENERS) return null
+                before = opener - 1
+            } else {
+                // "La Casa - ESP": a space, a dash or a bar, a space.
+                if (tokenStart == 0 || !isSpace(name[tokenStart - 1])) return null
+                val separator = endOfText(name, tokenStart)
+                if (separator < 2 || name[separator - 1] !in END_SEPARATORS || !isSpace(name[separator - 2])) return null
+                before = separator - 1
+            }
+            val token = name.substring(tokenStart, tokenEnd)
+            val year = bracketed && token.length == 4 && token.all { it in '0'..'9' }
+            if (year || token in skipped) {
+                end = endOfText(name, before)
+                return@repeat
+            }
+            if (token.length !in 2..6 || token.first() == '-' || token.last() == '-' || token.none { it in 'A'..'Z' } ||
+                token.any { it in 'a'..'z' }
+            ) return null
+            // A name before the tag: "(ES)" alone is no title in Spanish.
+            if ((0 until before).none { isAsciiLetterOrDigit(name[it]) || name[it].code >= 128 }) return null
+            return token
+        }
+        return null
+    }
+
+    /** [end] with the spaces before it left out. */
+    private fun endOfText(text: String, end: Int): Int {
+        var index = end
+        while (index > 0 && isSpace(text[index - 1])) index--
+        return index
+    }
+
+    private fun isSpace(character: Char): Boolean = character == ' ' || character == '\t' || character == '\u00A0'
+
+    private fun isAsciiLetterOrDigit(character: Char): Boolean =
+        character in 'A'..'Z' || character in 'a'..'z' || character in '0'..'9'
+
+    /**
+     * Whether a title is hidden by these hidden tags whatever its category: its own name starts or ends with one
+     * ([isHiddenByName]), or its provider's [plot] is in a language one of them stands for ([PlotLanguage]) and its
+     * category's own tag ([categoryTag], from [tagOf]) does not name a language: a category tagged with a language the
+     * viewer kept ("|FR|") keeps its titles, whatever their description.
+     */
+    fun isHiddenTitle(
+        name: String,
+        plot: String?,
+        categoryTag: String?,
+        hiddenTags: Set<String>,
+        hiddenLanguages: Set<String> = PlotLanguage.hiddenLanguages(hiddenTags),
+    ): Boolean {
+        if (hiddenTags.isEmpty()) return false
+        if (isHiddenByName(name, hiddenTags)) return true
+        if (hiddenLanguages.isEmpty() || plot.isNullOrEmpty() || !readsPlots(categoryTag)) return false
+        return PlotLanguage.detect(plot) in hiddenLanguages
+    }
+
+    /** Whether the titles of a category with this tag ([tagOf]) are told by their description's language: no language tag. */
+    fun readsPlots(categoryTag: String?): Boolean = categoryTag == null || !PlotLanguage.isLanguageTag(categoryTag)
 
     /** Tags carried by at least two of these categories, and the categories that carry each one. */
     fun detect(categories: List<MediaCategory>): Map<String, List<MediaCategory>> =

@@ -548,17 +548,33 @@ class UiMappersTest {
         val classic = Series(id = "sct", name = "PT - $BY_NAME Antiga", categoryId = classics.id, year = 2024, addedAt = Fixtures.NOW / 1000)
         val station = Channel(id = "cct", name = "[PT] $BY_NAME Rádio", categoryId = radio.id, streamUrl = "http://example.com/live/cct.m3u8")
 
-        /** Names that start like a tag but carry none: they stay whatever language is hidden. */
+        /** A description in Portuguese: the titles of categories of no language described with it go with the language. */
+        const val PORTUGUESE = "Depois da morte da mãe, Luísa herda uma casa antiga no litoral. Mas os vizinhos não querem que ela fique, e logo ela descobre o motivo."
+
+        /** Named with the language at the end ("… (PT)"), or described in it, in categories of no language. */
+        val endTagged = Movie("ct2", "Tony $BY_NAME – Ao Vivo (PT)", categoryId = concerts.id, streamUrl = "http://example.com/movie/ct2.mp4", year = 2024, addedAt = Fixtures.NOW / 1000)
+        val described = Movie("ct3", "$BY_NAME no Coliseu", categoryId = concerts.id, streamUrl = "http://example.com/movie/ct3.mp4", year = 2024, addedAt = Fixtures.NOW / 1000, plot = PORTUGUESE, rating = 9.7)
+        val describedShow = Series(id = "sct2", name = "$BY_NAME Nova", categoryId = classics.id, year = 2024, rating = 9.95, genre = "Drama", plot = PORTUGUESE, addedAt = Fixtures.NOW / 1000)
+
+        /** A category of a language the viewer keeps: its title described in Portuguese stays. */
+        val french = MediaCategory("m-fr", "|FR| Films", ContentType.MOVIE)
+
+        /**
+         * Names that start or end like a tag but carry none of the hidden one, and a title of a kept language's category
+         * described in Portuguese: they stay whatever language is hidden.
+         */
         val notTagged = listOf(
             Movie("nt1", "Portugal: The Man – Live", categoryId = concerts.id, streamUrl = "http://example.com/movie/nt1.mp4", year = 2024),
             Movie("nt2", "PTSD Stories", categoryId = concerts.id, streamUrl = "http://example.com/movie/nt2.mp4", year = 2024),
+            Movie("nt3", "Quiet Office (UK)", categoryId = concerts.id, streamUrl = "http://example.com/movie/nt3.mp4", year = 2024),
+            Movie("nt4", "Les Amis du Port", categoryId = french.id, streamUrl = "http://example.com/movie/nt4.mp4", year = 2024, plot = PORTUGUESE),
         )
 
         val content = Fixtures.content.copy(
-            movies = Fixtures.content.movies + listOf(movie, started, concert) + notTagged,
-            series = Fixtures.content.series + show + classic,
+            movies = Fixtures.content.movies + listOf(movie, started, concert, endTagged, described) + notTagged,
+            series = Fixtures.content.series + show + classic + describedShow,
             channels = Fixtures.content.channels + channel + station,
-            movieCategories = Fixtures.content.movieCategories + listOf(films, kids, concerts),
+            movieCategories = Fixtures.content.movieCategories + listOf(films, kids, concerts, french),
             seriesCategories = Fixtures.content.seriesCategories + listOf(series, classics),
             liveCategories = Fixtures.content.liveCategories + listOf(live, radio),
         )
@@ -651,8 +667,12 @@ class UiMappersTest {
 
         val byLanguage = base.copy(library = base.library.settingTagsHidden(listOf("PT"), hidden = true))
         val oneByOne = base.copy(library = base.library.settingCategoriesHidden(Fixtures.PLAYLIST_ID, HiddenLanguage.categories.map { it.id }, hidden = true))
-        // A hidden language leaves the titles whose own name carries it too ("|PT| …", "PT - …", "[PT] …"), whatever
-        // their category; names that only look like a tag ("Portugal: …", "PTSD …") stay.
+        // A hidden language leaves the titles whose own name carries it too ("|PT| …", "PT - …", "[PT] …", "… (PT)"),
+        // and those described in it in categories of no language, whatever their category; names that only look like a
+        // tag ("Portugal: …", "PTSD …", "… (UK)") and a title of a kept language's category ("|FR|") stay.
+        for (title in listOf(HiddenLanguage.endTagged.name, HiddenLanguage.described.name, HiddenLanguage.describedShow.name)) {
+            listOf("search", "year").forEach { assertTrue("$title is listed in $it while the language is shown", title in shown.getValue(it)) }
+        }
         surfaces(byLanguage).forEach { (surface, text) -> assertFalse("hidden as a language, $surface still shows a title named with it: $text", byName in text) }
         val left = surfaces(byLanguage)
         for (name in HiddenLanguage.notTagged.map { it.name }) {

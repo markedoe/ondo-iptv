@@ -1173,8 +1173,9 @@ object UiMappers {
 
     /** Normalised titles, built once per catalogue (see [of]). */
     /**
-     * What Search looks through: not the hidden categories, nor a title or channel whose own name carries a hidden
-     * language tag ("|DE| …" in a category of no language).
+     * What Search looks through: not the hidden categories, nor a title or channel whose own name starts or ends with a
+     * hidden language tag ("|DE| …" in a category of no language), nor a title described in a hidden language in a
+     * category of no language ([CategoryFilter.hiddenTitles]).
      */
     class SearchIndex(
         content: PlaylistContent,
@@ -1186,15 +1187,17 @@ object UiMappers {
         private fun shown(categoryId: String, name: String) =
             categoryId !in hidden && !CategoryTags.isHiddenByName(name, hiddenTags)
 
+        private val byName = CategoryFilter.hiddenTitles(content, hiddenTags)
+
         // Every version, found by its own title and year; a search keeps each film once ([search]).
-        val movies = content.movies.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }
-        val series = content.series.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }
+        val movies = content.movies.filter { it.categoryId !in hidden && it.id !in byName.movies }.map { TextNormalizer.normalize(it.name) to it }
+        val series = content.series.filter { it.categoryId !in hidden && it.id !in byName.series }.map { TextNormalizer.normalize(it.name) to it }
         val channels = content.channels.filter { shown(it.categoryId, it.name) && !CategoryFilter.isHeader(it.name) }.map { TextNormalizer.normalize(it.name) to it }
 
         /** Release years of the movies and series, newest first (the filter's choices). */
         val years: List<Int> = (movies.mapNotNull { it.second.year } + series.mapNotNull { it.second.year }).distinct().sortedDescending()
         /** Every movie shown, each version of a film included (the people of the pages opened). */
-        val movieIds: Set<String> = content.movies.filter { shown(it.categoryId, it.name) }.mapTo(HashSet()) { it.id }
+        val movieIds: Set<String> = movies.mapTo(HashSet()) { it.second.id }
         val seriesIds: Set<String> = series.mapTo(HashSet()) { it.second.id }
 
         /** Actors and directors of the series shown (movie lists give no cast). */

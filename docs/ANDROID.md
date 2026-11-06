@@ -25,7 +25,12 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   with it, then a word starting with it, then the others. Titles and channels whose own name carries a hidden
   language tag (such as "|DE| …", "[DE] …", "DE - …") are left out like hidden categories, there and in every other
   list (rows, grids, Home, a person's, genre's, year's or award's titles, similar titles, Live TV and the guide),
-  whatever their category (`CategoryTags.titleTag`; "Portugal: …" or "PTSD …" carry no tag). On a TV, Search opens on its field with the
+  whatever their category (`CategoryTags.titleTag`; "Portugal: …" or "PTSD …" carry no tag). So are the titles whose
+  name ends with one ("… (DE)", "… [DE]", "… - DE", `CategoryTags.trailingTag`; "(2024)", "(4K)" or "(Uncut)" are
+  none), and, in a category with no language tag of its own, the movies and series whose description from the
+  provider is in a hidden language (`PlotLanguage`: its little words, or its script, in the first 400 characters;
+  `fixtures/plot-language`, shared with the Apple core). A category tagged with a language kept keeps its titles;
+  TMDb's description, in the app's language, never counts. On a TV, Search opens on its field with the
   keyboard up.
 - **TV text fields** (`ui/tv/TvTextInput.kt`): every text field on a TV (Search, a playlist's form, the TMDb token,
   the subtitle services' keys and logins, a profile's name and PIN, the parent PIN, the categories' filter and words, a

@@ -28,6 +28,36 @@ final class PerformanceTests: XCTestCase {
         XCTAssertLessThan(searchElapsed, 10)
     }
 
+    /// Hidden languages read every description of a catalogue of a large panel (100k titles) once, off the main actor
+    /// (`TitleTags`, with the catalogue's other indexes); hiding a language then only gathers what was found.
+    func testAHundredThousandDescriptionsAreReadQuickly() {
+        let plots: [String] = [
+            "Un joven abogado descubre que su padre esconde un secreto que pondrá en peligro a toda la familia cuando regresa a su pueblo natal después de diez años.",
+            "Um jovem advogado descobre que o pai esconde um segredo que vai colocar toda a família em perigo quando ele volta para a sua cidade natal.",
+            "A young lawyer discovers that his father is hiding a secret that will put the whole family in danger when he returns to his hometown after ten years.",
+            "يكتشف محامٍ شاب أن والده يخفي سرًا سيعرّض العائلة كلها للخطر عندما يعود إلى مدينته بعد عشر سنوات.",
+        ]
+        let categories = (0..<40).map { MediaCategory(id: "c\($0)", name: "Netflix \($0)", type: .series) }
+        // Long descriptions too: only their start is read.
+        let series = (0..<100_000).map { i -> Series in
+            let plot: String = String(repeating: plots[i % plots.count], count: 1 + i % 3)
+            return Series(id: "s\(i)", name: "Title \(i) (\(i % 7 == 0 ? "ES" : "2024"))", categoryID: "c\(i % 40)", plot: plot)
+        }
+        let content = PlaylistContent(seriesCategories: categories, series: series)
+        let start = Date()
+        let tags = TitleTags(content: content)
+        let elapsed = Date().timeIntervalSince(start)
+        let hideStart = Date()
+        let hidden = tags.hidden(by: ["ES", "AR"])
+        let hideElapsed = Date().timeIntervalSince(hideStart)
+        print("100k titles and descriptions read in \(elapsed)s, hidden in \(hideElapsed)s")
+        // Spanish and Arabic descriptions, and the English and Portuguese ones named "(ES)".
+        let named: Int = (0..<100_000).filter { $0 % 7 == 0 && (1...2).contains($0 % 4) }.count
+        XCTAssertEqual(hidden.seriesIDs.count, 50_000 + named)
+        XCTAssertLessThan(elapsed, 20)
+        XCTAssertLessThan(hideElapsed, 2)
+    }
+
     /// 100,000 films, a third of them in three versions (two with the TMDb id, one without): grouped in one pass.
     func testAHundredThousandFilmsAreGroupedQuickly() {
         let tags = ["|FR| %@ 4K DV", "%@ VOSTFR", "%@ (MULTI)"]

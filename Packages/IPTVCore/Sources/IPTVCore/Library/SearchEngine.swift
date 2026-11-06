@@ -29,18 +29,24 @@ public struct SearchEngine: Sendable {
     }
 
     /// `hiddenTags`: hidden languages; a title or a channel whose own name carries one is left out whatever its
-    /// category (`CategoryTags.isHidden(name:hiddenTags:)`).
-    public func search(_ query: String, limitPerType: Int = 200, excludedCategoryIDs: Set<String> = [], hiddenTags: Set<String> = []) -> SearchResults {
+    /// category (`CategoryTags.isHidden(name:hiddenTags:)`). `hiddenTitles`: what they leave out besides, the titles
+    /// described in one of them (`TitleTags.hidden(by:)`).
+    public func search(
+        _ query: String, limitPerType: Int = 200, excludedCategoryIDs: Set<String> = [], hiddenTags: Set<String> = [],
+        hiddenTitles: HiddenTitles = HiddenTitles()
+    ) -> SearchResults {
         let normalized = TextNormalizer.normalize(query)
         guard !normalized.isEmpty else { return SearchResults() }
         let tokens = normalized.split(separator: " ")
 
-        func run<T>(_ list: [(key: String, item: T)], categoryID: (T) -> String, name: (T) -> String) -> [T] {
+        func run<T>(
+            _ list: [(key: String, item: T)], categoryID: (T) -> String, name: (T) -> String, id: (T) -> String, hidden: Set<String>
+        ) -> [T] {
             var exact: [T] = []
             var prefix: [T] = []
             var other: [T] = []
             for entry in list {
-                guard !excludedCategoryIDs.contains(categoryID(entry.item)),
+                guard !excludedCategoryIDs.contains(categoryID(entry.item)), hidden.isEmpty || !hidden.contains(id(entry.item)),
                       TextNormalizer.matches(normalizedText: entry.key, queryTokens: tokens),
                       !CategoryTags.isHidden(name: name(entry.item), hiddenTags: hiddenTags) else { continue }
                 // Only exact names fill the limit for good: a later exact name ranks before any prefix match.
@@ -57,9 +63,9 @@ public struct SearchEngine: Sendable {
         }
 
         return SearchResults(
-            channels: run(channels, categoryID: \.categoryID, name: \.name),
-            movies: run(movies, categoryID: \.categoryID, name: \.name),
-            series: run(series, categoryID: \.categoryID, name: \.name)
+            channels: run(channels, categoryID: \.categoryID, name: \.name, id: \.id, hidden: hiddenTitles.channelIDs),
+            movies: run(movies, categoryID: \.categoryID, name: \.name, id: \.id, hidden: hiddenTitles.movieIDs),
+            series: run(series, categoryID: \.categoryID, name: \.name, id: \.id, hidden: hiddenTitles.seriesIDs)
         )
     }
 }
