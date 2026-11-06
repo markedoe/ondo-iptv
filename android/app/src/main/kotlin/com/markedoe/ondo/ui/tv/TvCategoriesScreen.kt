@@ -14,12 +14,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +36,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
@@ -59,7 +55,7 @@ import com.markedoe.ondo.ui.screens.styleName
 /**
  * Languages and categories on a TV, as the TV's Settings: rows the remote goes down one by one, each turned over with
  * OK (the focused row white, its switch the same as in Settings), within the margins a TV may crop. The two text fields
- * take the remote's arrows only once OK opens their keyboard ([rememberTvTextField]). No back button: Back closes the page.
+ * take the remote's arrows only once OK opens their keyboard ([TvTextInput]). No back button: Back closes the page.
  */
 @Composable
 fun TvCategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String, actions: CategoriesActions) {
@@ -70,7 +66,6 @@ fun TvCategoriesScreen(state: CategoriesUiState, type: ContentType, filter: Stri
             newWord = ""
         }
     }
-    val leaveField = rememberLeaveField()
     FocusEntry(Modifier.fillMaxSize().background(TvTokens.Ink)) {
         LazyColumn(
             Modifier.fillMaxSize().testTag("categories"),
@@ -86,17 +81,12 @@ fun TvCategoriesScreen(state: CategoriesUiState, type: ContentType, filter: Stri
                 )
             }
             item(key = "filter") {
-                val field = rememberTvTextField()
-                OutlinedTextField(
+                TvTextInput(
                     value = filter,
                     onValueChange = actions.onFilter,
-                    singleLine = true,
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                    placeholder = { androidx.compose.material3.Text(stringResource(R.string.filter_categories)) },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
-                    readOnly = field.readOnly,
-                    modifier = Modifier.padding(horizontal = 12.dp).widthIn(max = 640.dp).fillMaxWidth().then(field.modifier).testTag("categoriesFilter"),
+                    placeholder = stringResource(R.string.filter_categories),
+                    leadingIcon = Icons.Rounded.Search,
+                    modifier = Modifier.padding(horizontal = 12.dp).widthIn(max = 640.dp).fillMaxWidth().testTag("categoriesFilter"),
                 )
             }
             if (state.tags.isNotEmpty()) {
@@ -144,20 +134,13 @@ fun TvCategoriesScreen(state: CategoriesUiState, type: ContentType, filter: Stri
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        val field = rememberTvTextField()
-                        OutlinedTextField(
+                        // Done hides the word, and the remote goes on below.
+                        TvTextInput(
                             value = newWord,
                             onValueChange = { newWord = it },
-                            singleLine = true,
-                            placeholder = { androidx.compose.material3.Text(stringResource(R.string.word_to_hide)) },
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            readOnly = field.readOnly,
-                            // The word is hidden, and the remote goes on below.
-                            keyboardActions = KeyboardActions(onDone = {
-                                addWord()
-                                leaveField()
-                            }),
-                            modifier = Modifier.widthIn(max = 480.dp).focusRequester(wordField).then(field.modifier).testTag("wordToHide"),
+                            placeholder = stringResource(R.string.word_to_hide),
+                            onImeAction = { addWord() },
+                            modifier = Modifier.widthIn(max = 480.dp).focusRequester(wordField).testTag("wordToHide"),
                         )
                         TvActionButton(onClick = { addWord() }, enabled = CategoryStyles.ruleForWord(newWord) != null, modifier = Modifier.testTag("addWord")) {
                             Text(stringResource(R.string.add), maxLines = 1)

@@ -83,7 +83,8 @@ import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.data.OndoRepository.PinCheck
 import com.markedoe.ondo.ui.tv.FocusOnOpen
 import com.markedoe.ondo.ui.tv.focusFrame
-import com.markedoe.ondo.ui.tv.rememberTvTextField
+import com.markedoe.ondo.ui.tv.TvTextInput
+import com.markedoe.ondo.ui.tv.isTelevision
 import com.markedoe.ondo.ui.tv.tvSafeArea
 import kotlin.math.abs
 import kotlinx.coroutines.delay
@@ -357,17 +358,21 @@ private fun SwitchLine(text: String, hint: String?, checked: Boolean, onChange: 
 /** A PIN field: digits only, hidden, [Profile.MAX_PIN_LENGTH] at most. */
 @Composable
 private fun PinField(value: String, onChange: (String) -> Unit, label: String, onDone: () -> Unit, modifier: Modifier = Modifier) {
-    val field = rememberTvTextField()
+    val digits: (String) -> Unit = { typed -> onChange(typed.filter { it in '0'..'9' }.take(Profile.MAX_PIN_LENGTH)) }
+    if (isTelevision()) {
+        // The TV's digits keyboard; Done tries the PIN, the remote staying on the field (asked again when wrong).
+        TvTextInput(value, digits, modifier.fillMaxWidth(), label = label, secret = true, keyboardType = KeyboardType.NumberPassword, onImeAction = onDone, moveOn = false)
+        return
+    }
     OutlinedTextField(
         value = value,
-        onValueChange = { typed -> onChange(typed.filter { it in '0'..'9' }.take(Profile.MAX_PIN_LENGTH)) },
+        onValueChange = digits,
         label = { Text(label) },
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done, autoCorrectEnabled = false),
         keyboardActions = KeyboardActions(onDone = { onDone() }),
-        readOnly = field.readOnly,
-        modifier = modifier.fillMaxWidth().then(field.modifier),
+        modifier = modifier.fillMaxWidth(),
     )
 }
 
@@ -458,16 +463,19 @@ private fun ProfileEditPage(
         Text(stringResource(if (profile == null) R.string.new_profile else R.string.edit_profile), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         ProfileAvatar(Profile(id = Profile.DEFAULT_ID, name = name, colorIndex = colorIndex, symbol = symbol, isKids = isKids), 88.dp)
         Column(Modifier.widthIn(max = 640.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            val field = rememberTvTextField()
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it.take(MAX_NAME) },
-                label = { Text(stringResource(R.string.name)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                readOnly = field.readOnly,
-                modifier = Modifier.fillMaxWidth().then(field.modifier).focusRequester(first).testTag("profileName"),
-            )
+            if (isTelevision()) {
+                // Done goes on to the colours below.
+                TvTextInput(name, { name = it.take(MAX_NAME) }, Modifier.fillMaxWidth().focusRequester(first).testTag("profileName"), label = stringResource(R.string.name))
+            } else {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(MAX_NAME) },
+                    label = { Text(stringResource(R.string.name)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth().focusRequester(first).testTag("profileName"),
+                )
+            }
             // The page gives its name field the focus itself, once it can take it (after the page's fade).
             LaunchedEffect(first) {
                 repeat(NAME_FOCUS_TRIES) {

@@ -319,6 +319,7 @@
         <item quantity="many">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
         <item quantity="other">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
     </plurals>
+    <string name="playlist_update_failed">تعذّر تحديث قائمة التشغيل</string>
     <string name="updated_ago">حُدّثت %1$s</string>
     <string name="title_added_on">أُضيف في %1$s</string>
     <string name="title_updated_on">حُدّث في %1$s</string>
@@ -613,4 +614,7 @@
     <string name="subtitle_privacy">يُرسل البحث عنوان ما تشاهده إلى هذه الخدمات، بمفتاحك أو حسابك. لا يُرسل شيء قبل أن تبحث. عند تفعيل المزامنة على هذه الشبكة، تصل مفاتيحك أيضًا إلى أجهزة Ondo الأخرى لديك.</string>
     <string name="subtitle_limited">تم بلوغ حد الطلبات لدى %1$s حاليًا، لذلك لم يُحفظ شيء. حاول مرة أخرى لاحقًا.</string>
     <string name="subtitle_incomplete">%1$s: أدخل اسم المستخدم وكلمة المرور معًا، أو لا تدخل أيًّا منهما.</string>
+    <string name="tv_field_press_ok">اضغط على OK للكتابة</string>
+    <string name="tv_field_show">إظهار الأحرف</string>
+    <string name="tv_field_hide">إخفاء الأحرف</string>
 </resources>

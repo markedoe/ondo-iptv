@@ -35,10 +35,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -121,6 +124,8 @@ fun TvHomeScreen(
     actions: HomeActions,
     autoAdvance: Boolean = LocalCarouselAutoAdvance.current,
     preparingKey: String? = null,
+    /** When Ondo was last opened again from the launcher (0: not): each time, Home back at its top, Play focused. */
+    launch: Long = 0L,
 ) {
     // The selections' names, read here: the rows below are no composable scope.
     val selectionTitles = state.selections.mapValues { selectionTitle(it.value) }
@@ -138,8 +143,7 @@ fun TvHomeScreen(
     val empty = state.hero.isEmpty() && state.tagSuggestion == null && state.shownRows.isEmpty()
     val memory = LocalFocusMemory.current
     LaunchedEffect(empty) { if (empty) memory?.given() }
-    // A playlist without featured titles has its name and when it was updated above the channels (no line in the top
-    // bar: Settings shows when each playlist was updated).
+    // A playlist without featured titles has its name and when it was updated above the channels.
     val focusManager = LocalFocusManager.current
     // A card taken away hands the remote on before it goes: to the next card of its row, or the one before; the last
     // one, its row going with it, to the row below (or above). Not back to the carousel at the top.
@@ -159,20 +163,102 @@ fun TvHomeScreen(
     var rowsHaveFocus by remember { mutableStateOf(false) }
     var heroIndex by rememberSaveable { mutableIntStateOf(0) }
     val hero = if (hasHero) rememberHeroShown(state.hero, heroIndex, rowsHaveFocus, focus) else null
+    // The frame's height: smaller while the remote is in the rows. Only the change between full and compact is
+    // animated: the window's size, known from the first layout, is not.
+    val windowHeight = LocalWindowInfo.current.containerDpSize.height
+    val fullHeight = (windowHeight * HERO_SHARE).coerceAtLeast(260.dp)
+    val compactHeight = HERO_COMPACT.coerceAtMost(fullHeight)
+    val compactness by animateFloatAsState(if (rowsHaveFocus) 1f else 0f, tween(HERO_RESIZE_MS), label = "heroHeight")
+    val heroHeight = { lerp(fullHeight, compactHeight, compactness) }
+    // Kept here, not in the rows: the same list whether the featured titles are there yet or not.
+    val listState = rememberTabListState()
+    // A row coming above the first one while the list is at its top, the remote not in it (a selection's titles worked
+    // out after Home was drawn): the list stays at its top, the new row shown, rather than kept on the row that was
+    // first (a lazy list keeps its first item in place).
+    val firstItem = if (!hasHero) "hero" else if (state.tagSuggestion != null) "suggestion" else state.shownRows.firstOrNull()
+    val shownFirst = remember { FirstItem(firstItem) }
+    if (firstItem != shownFirst.key) {
+        shownFirst.key = firstItem
+        Snapshot.withoutReadObservation {
+            if (!rowsHaveFocus && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) listState.requestScrollToItem(0)
+        }
+    }
+    val bar = LocalTvTopBar.current
+    // Whether the viewer has pressed a key on Home yet: until then, Home is theirs to start from its top.
+    var viewerMoved by rememberSaveable { mutableStateOf(false) }
+    // Where Home starts: Play; without featured titles (not read yet, or none), the first card of the first row.
+    val firstRow = state.shownRows.firstOrNull()
+    val initialKey: String? = when {
+        hasHero -> HERO_PLAY
+        state.tagSuggestion != null -> "suggestion-keep"
+        else -> when (firstRow) {
+            null -> null
+            RowOrder.HOME_CONTINUE_MOVIES -> resumeMovies.firstOrNull()?.let { "resume:${it.key}" }
+            RowOrder.HOME_CONTINUE_SERIES -> resumeSeries.firstOrNull()?.let { "resume:${it.key}" }
+            RowOrder.MY_LIST -> state.myList.firstOrNull()?.let { "myList:${it.key}" }
+            RowOrder.HOME_CHANNELS -> state.channels.firstOrNull()?.let { "channel:${it.channel.id}" }
+            RowOrder.HOME_NEW_MOVIES -> state.newMovies.firstOrNull()?.let { "newMovies:${it.key}" }
+            RowOrder.HOME_NEW_SERIES -> state.newSeries.firstOrNull()?.let { "newSeries:${it.key}" }
+            RowOrder.TRENDING -> state.trending.firstOrNull()?.let { "trending:${it.key}" }
+            else -> state.selections[firstRow]?.let { row -> row.items.firstOrNull()?.let { "sel:${row.id}:${it.key}" } }
+        }
+    }
+    // Home at its top, the focus where it starts ([initialKey]), the carousel full size: from the first frame, and
+    // again each time what comes first changes before the viewer has pressed a key (the featured titles, or a row,
+    // coming after Home was drawn: the catalogue or what the device kept of TMDb still being read at a cold start);
+    // and on Ondo opened again from the TV's home screen. A row coming above the one with the focus never leaves the
+    // list scrolled down, the rows above cut under the bar.
+    suspend fun toTop() {
+        listState.scrollToItem(0)
+        // After the page's own focus effects (a card given its focus back as the page comes back).
+        withFrameNanos { }
+        bar?.browsing = false
+        initialKey?.let { memory?.handTo(it) } ?: memory?.given()
+    }
+    LaunchedEffect(firstItem, initialKey) {
+        if (viewerMoved || bar?.browsing == true) return@LaunchedEffect
+        toTop()
+    }
+    var handledLaunch by rememberSaveable { mutableLongStateOf(launch) }
+    LaunchedEffect(launch) {
+        if (launch == 0L || launch == handledLaunch) return@LaunchedEffect
+        handledLaunch = launch
+        viewerMoved = false
+        heroIndex = 0
+        toTop()
+    }
     // The picture runs under the top bar too: the bar's band is a shade over it.
     TvTopBarOverArt(on = hero != null)
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("home")) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .onPreviewKeyEvent {
+                if (it.type == KeyEventType.KeyDown) viewerMoved = true
+                false
+            }
+            .testTag("home"),
+    ) {
         // The carousel's picture, or the focused poster's, behind the whole screen, edge to edge: the frame's words and
         // the rows over it.
         if (hero != null) {
             TvPageBackdrop(hero.art.item, hero.art.backdropUrl, Modifier.matchParentSize()) { item, url -> actions.onBackdropFailed(item, url) }
         }
         Column(Modifier.fillMaxSize()) {
-            if (hero != null) TvHero(state.hero, hero, heroIndex, { heroIndex = it }, actions, autoAdvance, preparingKey, rowsHaveFocus)
-            val rowsModifier = Modifier.weight(1f).fillMaxWidth().onFocusChanged { rowsHaveFocus = it.hasFocus }
+            if (hero != null) TvHero(state.hero, hero, heroIndex, { heroIndex = it }, actions, autoAdvance, preparingKey, rowsHaveFocus, heroHeight)
+            // The rows' list is as tall as it is under the smaller frame, the frame full size or not: its part below the
+            // screen shows as the frame shrinks. The focus going down from the frame then scrolls the rows as their
+            // place will be, not as it is for the moment the frame shrinks: the first row comes in whole, its name too,
+            // rather than scrolled up to the top of a list that was about to grow.
+            val rowsModifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .onFocusChanged { rowsHaveFocus = it.hasFocus }
+                .tallerBy { if (hasHero) heroHeight() - compactHeight else 0.dp }
+                .testTag("homeRows")
             val rows: @Composable () -> Unit = {
                 LazyColumn(
-                    state = rememberTabListState(),
+                    state = listState,
                     modifier = rowsModifier,
                     contentPadding = PaddingValues(top = if (hasHero) 18.dp else 0.dp, bottom = 40.dp),
                     verticalArrangement = Arrangement.spacedBy(22.dp),
@@ -289,7 +375,8 @@ private fun TvHero(
     actions: HomeActions,
     autoAdvance: Boolean,
     preparingKey: String?,
-    rowsHaveFocus: Boolean = false,
+    rowsHaveFocus: Boolean,
+    heroHeight: () -> Dp,
 ) {
     val current = index.coerceIn(0, pages.lastIndex)
     val page = shown.page
@@ -301,12 +388,6 @@ private fun TvHero(
         onIndex((current + 1) % pages.size)
     }
     val compact = rowsHaveFocus
-    // A share of the window's height (the app's own, not the screen's).
-    val windowHeight = LocalWindowInfo.current.containerDpSize.height
-    val fullHeight = (windowHeight * HERO_SHARE).coerceAtLeast(260.dp)
-    // Only the change between full and compact is animated: the window's size, known from the first layout, is not.
-    val compactness by animateFloatAsState(if (compact) 1f else 0f, tween(HERO_RESIZE_MS), label = "heroHeight")
-    val heroHeight = lerp(fullHeight, HERO_COMPACT.coerceAtMost(fullHeight), compactness)
     // Past the last button (Right, Left where the buttons run from the right): the next title. Before the first
     // one: the title before. Both wrap around, and the focus stays on the button.
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -330,7 +411,7 @@ private fun TvHero(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(heroHeight)
+                .height(heroHeight())
                 .clip(HeroShape)
                 .testTag("heroFrame"),
         ) {
@@ -375,7 +456,7 @@ private fun TvHero(
                         onClick = { actions.onPlay(page.item) },
                         prominent = true,
                         // Before the first button: the title before.
-                        modifier = Modifier.turnsPage(backward, -1).focusMemory("hero-play", initial = true).testTag("heroPlay"),
+                        modifier = Modifier.turnsPage(backward, -1).focusMemory(HERO_PLAY, initial = true).testTag("heroPlay"),
                     ) {
                         HeroButtonLabel(playLabel(page.resumable)) { PlayIcon(page.item.key == preparingKey, Modifier.size(20.dp), tint = LocalContentColor.current) }
                     }
@@ -400,6 +481,27 @@ private fun TvHero(
             if (pages.size > 1 && header == null) PageDots(pages.size, current, Modifier.align(Alignment.BottomEnd).padding(end = 24.dp, bottom = 40.dp))
         }
     }
+}
+
+/** The key of the first item of Home's list, as last composed. */
+private class FirstItem(var key: String?)
+
+/** Play's place in Home's focus memory: where Home starts. */
+private const val HERO_PLAY = "hero-play"
+
+/**
+ * Measures the content [extra] taller than the room it is given, its top where it is: the part beyond hangs below
+ * (off the screen at the page's bottom). The room it takes in its parent stays what it was given.
+ */
+private fun Modifier.tallerBy(extra: () -> Dp): Modifier = layout { measurable, constraints ->
+    val more = extra().roundToPx().coerceAtLeast(0)
+    if (!constraints.hasBoundedHeight || more == 0) {
+        val placeable = measurable.measure(constraints)
+        return@layout layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
+    val height = constraints.maxHeight + more
+    val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+    layout(placeable.width, constraints.maxHeight) { placeable.place(0, 0) }
 }
 
 /** How long the frame takes to grow or shrink as the remote goes from its buttons to the rows and back. */

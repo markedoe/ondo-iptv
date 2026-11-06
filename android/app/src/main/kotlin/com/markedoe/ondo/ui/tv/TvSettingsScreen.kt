@@ -25,9 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
@@ -75,9 +72,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -535,26 +529,18 @@ private fun TvTmdbToken(state: SettingsUiState, actions: SettingsActions) {
             if (answer == TmdbCheck.ACCEPTED) token = ""
         }
     }
-    val leaveField = rememberLeaveField()
     Column(Modifier.widthIn(max = 900.dp).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        val field = rememberTvTextField()
-        OutlinedTextField(
+        // Done checks the token and goes on to the buttons below; the keyboard closes either way.
+        TvTextInput(
             value = token,
             onValueChange = {
                 token = it
                 check = null
             },
-            label = { androidx.compose.material3.Text(stringResource(R.string.tmdb_token_label)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done, autoCorrectEnabled = false),
-            // Done checks the token and goes on to the buttons below; the keyboard closes either way.
-            keyboardActions = KeyboardActions(onDone = {
-                submit()
-                if (!leaveField()) defaultKeyboardAction(ImeAction.Done)
-            }),
-            readOnly = field.readOnly,
-            modifier = Modifier.fillMaxWidth().then(field.modifier).focusMemory("settings-tmdb").testTag("tmdbTokenField"),
+            label = stringResource(R.string.tmdb_token_label),
+            secret = true,
+            onImeAction = ::submit,
+            modifier = Modifier.fillMaxWidth().focusMemory("settings-tmdb").testTag("tmdbTokenField"),
         )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             TvActionButton(onClick = ::submit, enabled = token.isNotBlank() && !checking, modifier = Modifier.testTag("tmdbCheck")) {

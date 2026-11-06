@@ -27,6 +27,13 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   list (rows, grids, Home, a person's, genre's, year's or award's titles, similar titles, Live TV and the guide),
   whatever their category (`CategoryTags.titleTag`; "Portugal: …" or "PTSD …" carry no tag). On a TV, Search opens on its field with the
   keyboard up.
+- **TV text fields** (`ui/tv/TvTextInput.kt`): every text field on a TV (Search, a playlist's form, the TMDb token,
+  the subtitle services' keys and logins, a profile's name and PIN, the parent PIN, the categories' filter and words, a
+  selection's or a collection's name) is a row with its label and its value or placeholder; with the remote on it, a
+  white ring, a pencil and "Press OK to type". The keyboard never opens as the remote passes: OK opens it, the caret at
+  the end of the text. Next goes on to the field below with the keyboard open, Done closes it and goes on below (or
+  gives the form's answer), Back closes it and leaves the remote on the field. Keys, passwords and PINs show dots, with
+  a Show button to their right; a PIN gets the digits keyboard. `TvTextFieldsEverySurfaceTest` lists every field.
 - **Automatic refresh** (Settings → Playlists → Automatic refresh: Only when I ask, Every 6 hours, Every 12 hours,
   Every day (default), Every week), checked when Ondo opens and when it comes back to the front
   (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). One setting for all the playlists on Android (Apple has
@@ -57,8 +64,15 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   or another tab then this one) shows its rows again. Every row that can hold more than it shows ends with See all,
   New movies, New series and Award winners included (on Home too): their page lists all the row's titles in the row's
   own order ("Default order" in Sort; another order chosen there is that page's only). Continue watching (resume
-  cards) and Trending (always whole) have none. The top bar holds the tabs, Search and Settings only, no
-  playlist line (Settings → Playlists says when each was updated); which categories show is in Settings → Languages
+  cards) and Trending (always whole) have none. The top bar holds the tabs, the playlist's status, Search and
+  Settings: before Search, a check and how long ago the playlist was updated, short ("5 min"), a small spinner in
+  the check's place while it is fetched again and a warning sign when that failed, in one slot that the remote passes
+  over and that keeps its width (TalkBack reads the playlist's name and the whole sentence; `TvPlaylistStatusTest`).
+  Home opens at its top with Play focused, also when its featured titles come after its rows, and Ondo opened again
+  from the TV's home screen goes back to it, the player left open closed (the TV's entry, `TvLauncherActivity`,
+  brings `MainActivity` back for Home; a phone's icon comes back where it was left; `TvLauncherOpensHomeTest`,
+  `TvHomeOpensAtTheTopTest`). Down from the featured titles shows the first row whole, its name too, whatever kind of
+  row it is (`TvHomeDownFromHeroTest`); which categories show is in Settings → Languages
   and categories. A category's titles and the genre, year and award pages on a TV start with their posters right
   under the header: no Back row (the remote's Back goes back), the page's name on one line above the first row, no
   filter field (Search finds a title); Down from the tab lands on the first poster, its title in the header at once.
@@ -225,8 +239,8 @@ the only one allowed to write, then commits the new references to that branch (a
 the images' metadata removed). Pull the branch afterwards, and look at the images in the commit before merging it.
 
 Behaviour that a picture does not prove has its own tests: `TvLayoutRegressionTest` (the header's backdrop from the
-screen's top and cropped towards its top, no playlist line in the top bar (Home, Movies, Series, a category's and a
-genre's titles), each row type whole under the header at 960 × 540 dp, the path tab → Down → Down on Movies and
+screen's top and cropped towards its top, no playlist line written in the top bar (Home, Movies, Series, a category's and a
+genre's titles: its status only), each row type whole under the header at 960 × 540 dp, the path tab → Down → Down on Movies and
 Series with the header on the focused title before its wait, a top bar of tabs, Search and Settings only, a category's
 name whole on its line, a category's and a genre's titles with no row of their own above the posters, Down from the
 tab on the first poster and never on a sort chip, the order chosen with the Sort chip reached by Up from the first row,
@@ -245,7 +259,7 @@ before; another tab then Movies again shows the rows; Ondo started anew shows th
 4. Every difference is wanted: record the references anew (*record_screenshots*) and check the committed images.
    One is not: fix the change, never the reference.
 5. Check at 960 × 540 dp that each row (its name, its cards and their lines) fits under the header, that the top bar
-   shows no playlist line, and that a category's name reads whole above its titles.
+   shows the playlist's status (an icon and a short time) and no playlist line, and that a category's name reads whole above its titles.
 6. Check the path tab → Down → Down with screenshots, on Movies and on Series (`movies-tab-focused`,
    `movies-down-1`, `movies-down-2` and the same for `series`): on the tab, the first row whole under the header and
    no empty area; each Down, the focused card's title in the header at once. The same on a category's titles

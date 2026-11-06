@@ -289,6 +289,7 @@
         <item quantity="many">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
         <item quantity="other">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
     </plurals>
+    <string name="playlist_update_failed">La playlist n’a pas pu être mise à jour</string>
     <string name="updated_ago">Mis à jour %1$s</string>
     <string name="title_added_on">Ajouté le %1$s</string>
     <string name="title_updated_on">Mis à jour le %1$s</string>
@@ -571,4 +572,7 @@
     <string name="subtitle_privacy">Une recherche envoie le titre que vous regardez à ces services, avec votre propre clé ou compte. Rien n’est envoyé avant que vous ne cherchiez. Avec Synchroniser sur ce réseau, vos clés vont aussi vers vos autres appareils Ondo.</string>
     <string name="subtitle_limited">La limite de requêtes de %1$s est atteinte pour le moment : rien n’a été enregistré. Réessayez plus tard.</string>
     <string name="subtitle_incomplete">%1$s : saisissez le nom d’utilisateur et le mot de passe, ou aucun des deux.</string>
+    <string name="tv_field_press_ok">Appuyez sur OK pour écrire</string>
+    <string name="tv_field_show">Afficher les caractères</string>
+    <string name="tv_field_hide">Masquer les caractères</string>
 </resources>

@@ -66,14 +66,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.ui.tv.focusFrame
-import com.markedoe.ondo.ui.tv.rememberNextField
-import com.markedoe.ondo.ui.tv.rememberTvTextField
+import com.markedoe.ondo.ui.tv.TvTextInput
+import com.markedoe.ondo.ui.tv.isTelevision
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -253,10 +254,22 @@ fun AddPlaylistScreen(
     }
 
     // The keyboard's action key goes on to the next field, then to Add; on a TV with the keyboard still open from one
-    // field to the next (it opens with OK, see rememberTvTextField).
+    // field to the next (it opens with OK, see TvTextInput).
     val next = KeyboardOptions(imeAction = ImeAction.Next)
-    val onNext = rememberNextField()
-    val fields = List(6) { rememberTvTextField() }
+    val television = isTelevision()
+    @Composable
+    fun Field(value: String, onValue: (String) -> Unit, label: Int, tag: String, type: KeyboardType = KeyboardType.Text, secret: Boolean = false, placeholder: String? = null) {
+        if (television) {
+            TvTextInput(value, onValue, Modifier.fillMaxWidth().testTag(tag), label = stringResource(label), placeholder = placeholder, secret = secret, keyboardType = type, imeAction = ImeAction.Next)
+        } else {
+            val hint: (@Composable () -> Unit)? = placeholder?.let { text -> @Composable { Text(text) } }
+            OutlinedTextField(
+                value, onValue, label = { Text(stringResource(label)) }, placeholder = hint, singleLine = true,
+                visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
+                keyboardOptions = if (type == KeyboardType.Text) next else next.copy(keyboardType = type), modifier = Modifier.fillMaxWidth().testTag(tag),
+            )
+        }
+    }
 
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).testTag("addPlaylistScreen")) {
         TopAppBar(
@@ -275,14 +288,14 @@ fun AddPlaylistScreen(
                     }
                 }
             }
-            OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name)) }, singleLine = true, keyboardActions = onNext, readOnly = fields[0].readOnly, keyboardOptions = next, modifier = Modifier.fillMaxWidth().then(fields[0].modifier))
+            Field(name, { name = it }, R.string.name, "playlistNameField")
             if (kind == 0) {
-                OutlinedTextField(server, { server = it }, label = { Text(stringResource(R.string.server)) }, placeholder = { Text("http://provider.example:8080") }, singleLine = true, keyboardActions = onNext, readOnly = fields[1].readOnly, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().then(fields[1].modifier).testTag("serverField"))
-                OutlinedTextField(username, { username = it }, label = { Text(stringResource(R.string.username)) }, singleLine = true, keyboardActions = onNext, readOnly = fields[2].readOnly, keyboardOptions = next, modifier = Modifier.fillMaxWidth().then(fields[2].modifier).testTag("usernameField"))
-                OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.password)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), keyboardActions = onNext, readOnly = fields[3].readOnly, keyboardOptions = next.copy(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().then(fields[3].modifier).testTag("passwordField"))
+                Field(server, { server = it }, R.string.server, "serverField", KeyboardType.Uri, placeholder = "http://provider.example:8080")
+                Field(username, { username = it }, R.string.username, "usernameField")
+                Field(password, { password = it }, R.string.password, "passwordField", KeyboardType.Password, secret = true)
                 Text(stringResource(R.string.xtream_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                OutlinedTextField(url, { url = it }, label = { Text(stringResource(R.string.playlist_url)) }, singleLine = true, keyboardActions = onNext, readOnly = fields[4].readOnly, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().then(fields[4].modifier).testTag("urlField"))
+                Field(url, { url = it }, R.string.playlist_url, "urlField", KeyboardType.Uri)
                 if (onPickFile != null) {
                     OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag("pickFile")) {
                         Icon(Icons.Rounded.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -290,7 +303,7 @@ fun AddPlaylistScreen(
                         Text(stringResource(R.string.choose_file))
                     }
                 }
-                OutlinedTextField(epg, { epg = it }, label = { Text(stringResource(R.string.guide_url_optional)) }, singleLine = true, keyboardActions = onNext, readOnly = fields[5].readOnly, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().then(fields[5].modifier))
+                Field(epg, { epg = it }, R.string.guide_url_optional, "epgField", KeyboardType.Uri)
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
             Button(

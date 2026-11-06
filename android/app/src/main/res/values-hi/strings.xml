@@ -279,6 +279,7 @@
         <item quantity="one">%2$d में से पहले %1$d चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।</item>
         <item quantity="other">%2$d में से पहले %1$d चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।</item>
     </plurals>
+    <string name="playlist_update_failed">प्लेलिस्ट अपडेट नहीं हो सकी</string>
     <string name="updated_ago">%1$s अपडेट किया गया</string>
     <string name="title_added_on">%1$s को जोड़ा गया</string>
     <string name="title_updated_on">%1$s को अपडेट किया गया</string>
@@ -557,4 +558,7 @@
     <string name="subtitle_privacy">खोजने पर आप जो देख रहे हैं उसका शीर्षक आपकी अपनी key या खाते के साथ इन सेवाओं को भेजा जाता है। खोजने से पहले कुछ नहीं भेजा जाता। इस नेटवर्क पर सिंक करें चालू होने पर, आपकी keys आपके दूसरे Ondo डिवाइस पर भी जाती हैं।</string>
     <string name="subtitle_limited">%1$s की अनुरोध सीमा अभी पूरी हो गई है, इसलिए कुछ सहेजा नहीं गया। बाद में फिर से कोशिश करें।</string>
     <string name="subtitle_incomplete">%1$s: यूज़रनेम और पासवर्ड दोनों दर्ज करें, या दोनों में से कोई नहीं।</string>
+    <string name="tv_field_press_ok">लिखने के लिए OK दबाएँ</string>
+    <string name="tv_field_show">अक्षर दिखाएँ</string>
+    <string name="tv_field_hide">अक्षर छिपाएँ</string>
 </resources>

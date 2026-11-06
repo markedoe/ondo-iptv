@@ -284,6 +284,8 @@
         <item quantity="one">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
         <item quantity="other">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
     </plurals>
+    <!-- A TV's top bar when downloading the playlist again failed (read by TalkBack). -->
+    <string name="playlist_update_failed">The playlist could not be updated</string>
     <string name="updated_ago">Updated %1$s</string>
     <!-- The date a movie was added by the provider, in the header above a TV's posters ("Added 12 Mar 2026"). -->
     <string name="title_added_on">Added %1$s</string>
@@ -566,4 +568,7 @@
     <string name="subtitle_privacy">Searching sends the title you are watching to these services, with your own key or account. Nothing is sent until you search. With Sync on this network on, your keys also reach your other Ondo devices.</string>
     <string name="subtitle_limited">%1$s’s limit of requests is reached for now, so nothing was saved. Try again later.</string>
     <string name="subtitle_incomplete">%1$s: enter both the username and the password, or neither.</string>
+    <string name="tv_field_press_ok">Press OK to type</string>
+    <string name="tv_field_show">Show characters</string>
+    <string name="tv_field_hide">Hide characters</string>
 </resources>

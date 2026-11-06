@@ -28,6 +28,14 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   « DE - … ») sont écartés comme les catégories masquées, là et dans toutes les autres listes (rangées, grilles,
   Accueil, titres d'une personne, d'un genre, d'une année ou d'un prix, titres similaires, TV en direct et guide),
   quelle que soit leur catégorie (`CategoryTags.titleTag` ; « Portugal: … » ou « PTSD … » ne portent pas d'étiquette). Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
+- **Champs de texte sur TV** (`ui/tv/TvTextInput.kt`) : chaque champ de texte sur une TV (Recherche, formulaire d'une
+  playlist, jeton TMDb, clés et identifiants des services de sous-titres, nom et code d'un profil, code parental, filtre
+  et mots des catégories, nom d'une présélection ou d'une collection) est une ligne avec son libellé et sa valeur ou son
+  exemple ; la télécommande dessus, un contour blanc, un crayon et « Appuyez sur OK pour écrire ». Le clavier ne s'ouvre
+  jamais au passage de la télécommande : OK l'ouvre, le curseur à la fin du texte. Suivant passe au champ dessous,
+  clavier ouvert, OK (Terminé) le ferme et passe dessous (ou donne la réponse du formulaire), Retour le ferme et laisse
+  la télécommande sur le champ. Clés, mots de passe et codes s'affichent en points, avec un bouton Afficher à leur
+  droite ; un code a le clavier de chiffres. `TvTextFieldsEverySurfaceTest` liste chaque champ.
 - **Actualisation automatique** (Réglages → Playlists → Actualisation automatique : Seulement sur demande, Toutes
   les 6 heures, Toutes les 12 heures, Chaque jour (par défaut), Chaque semaine), vérifiée à l'ouverture d'Ondo et
   quand il revient au premier plan (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). Un seul réglage pour
@@ -64,8 +72,16 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   finit par Tout voir, Nouveaux films, Nouvelles séries et Titres primés compris (sur l'Accueil aussi) : leur page
   liste tous les titres de la rangée dans l'ordre de la rangée (« Ordre par défaut » dans Trier ; un autre ordre choisi
   là ne vaut que pour cette page). Continuer à regarder (des cartes de reprise) et Tendances (toujours complète) n'en
-  ont pas. La barre du haut ne porte que les onglets, Recherche et
-  Réglages, aucune ligne de playlist (Réglages → Playlists indique quand chacune a été mise à jour) ; les catégories
+  ont pas. La barre du haut porte les onglets, l'état de la playlist, Recherche et
+  Réglages : avant Recherche, une coche et depuis quand la playlist a été mise à jour, en bref (« 5 min »), un petit
+  indicateur de chargement à la place de la coche pendant qu'elle est téléchargée de nouveau et un signe
+  d'avertissement quand cela a échoué, dans un emplacement que la télécommande saute et qui garde sa largeur (TalkBack
+  lit le nom de la playlist et la phrase entière ; `TvPlaylistStatusTest`). L'Accueil s'ouvre en haut, Lire
+  sélectionné, même quand ses titres à la une arrivent après ses rangées, et Ondo rouvert depuis l'écran d'accueil de
+  la TV y revient, le lecteur laissé ouvert fermé (l'entrée TV, `TvLauncherActivity`, ramène `MainActivity` sur
+  l'Accueil ; l'icône d'un téléphone revient là où on l'avait laissé ; `TvLauncherOpensHomeTest`,
+  `TvHomeOpensAtTheTopTest`). Bas depuis les titres à la
+  une montre la première rangée entière, son nom aussi, quel que soit son type (`TvHomeDownFromHeroTest`) ; les catégories
   montrées se choisissent dans Réglages → Langues et catégories. Les titres d'une catégorie et les pages de genre,
   d'année et de prix sur TV commencent par leurs affiches juste sous l'en-tête : pas de rangée Retour (le Retour de la
   télécommande revient en arrière), le nom de la page sur une ligne au-dessus de la première rangée, pas de champ de
@@ -258,8 +274,8 @@ le seul autorisé à écrire, versionne alors les nouvelles références sur cet
 de la fusionner.
 
 Ce qu'une image ne prouve pas a ses propres tests : `TvLayoutRegressionTest` (l'image de l'en-tête depuis le haut de
-l'écran et cadrée vers son haut, aucune ligne de playlist dans la barre du haut (Accueil, Films, Séries, titres d'une
-catégorie et d'un genre), chaque type de rangée entier sous l'en-tête en 960 × 540 dp, le parcours onglet → Bas → Bas
+l'écran et cadrée vers son haut, aucune ligne de playlist écrite dans la barre du haut (Accueil, Films, Séries, titres d'une
+catégorie et d'un genre : son état seulement), chaque type de rangée entier sous l'en-tête en 960 × 540 dp, le parcours onglet → Bas → Bas
 sur Films et Séries avec l'en-tête sur le titre sélectionné avant son attente, une barre du haut avec les seuls
 onglets, Recherche et Réglages, le nom d'une catégorie entier sur sa ligne, les titres d'une catégorie et d'un genre
 sans rangée à eux au-dessus des affiches, Bas depuis l'onglet sur la première affiche et jamais sur une puce de tri,
@@ -281,7 +297,7 @@ les rangées).
 4. Toutes les différences sont voulues : enregistrer de nouvelles références (*record_screenshots*) et vérifier les
    images versionnées. L'une ne l'est pas : corriger le changement, jamais la référence.
 5. Vérifier en 960 × 540 dp que chaque rangée (son nom, ses cartes et leurs lignes) tient sous l'en-tête, que la
-   barre du haut n'affiche aucune ligne de playlist, et que le nom d'une catégorie se lit en entier au-dessus de ses titres.
+   barre du haut affiche l'état de la playlist (une icône et une durée brève) et aucune ligne de playlist, et que le nom d'une catégorie se lit en entier au-dessus de ses titres.
 6. Vérifier le parcours onglet → Bas → Bas avec les captures, sur Films et sur Séries (`movies-tab-focused`,
    `movies-down-1`, `movies-down-2` et de même pour `series`) : sur l'onglet, la première rangée entière sous
    l'en-tête et aucune zone vide ; à chaque Bas, le titre de la carte sélectionnée aussitôt dans l'en-tête. De même
