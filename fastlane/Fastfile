@@ -259,6 +259,35 @@ def external_groups(app)
   external
 end
 
+# iOS builds on Macs with Apple silicon (App Store Connect API, betaGroups.iosBuildsAvailableForAppleSiliconMac): a
+# setting of each TestFlight group, for all its builds. Ondo has a Mac app under the same bundle ID: TestFlight on a Mac
+# installs the iOS build otherwise, and the Mac build then refuses to install until it is deleted. Spaceship's
+# BetaGroup model drops the attribute, so it is read from the response: group id → [name, true / false / nil].
+def mac_testing_by_group(app)
+  Spaceship::ConnectAPI.get_beta_groups(filter: { app: app.id }).all_pages.flat_map { |page| page.body["data"] || [] }.to_h do |data|
+    attributes = data["attributes"] || {}
+    [data["id"], [attributes["name"], attributes["iosBuildsAvailableForAppleSiliconMac"]]]
+  end
+end
+
+def mac_testing_text(value)
+  value.nil? ? "not returned by the API" : (value ? "on" : "off")
+end
+
+# Turns the setting off in each group where it is on, and only there (logged). Best effort: a refusal leaves the group
+# as it is and the distribution goes on. Only the TestFlight groups change: never the App Store availability or a version.
+def keep_ios_builds_off_macs(app)
+  mac_testing_by_group(app).each do |id, (name, value)|
+    next unless value == true
+    Spaceship::ConnectAPI.patch_group(group_id: id, attributes: { iosBuildsAvailableForAppleSiliconMac: false })
+    UI.important("Group \"#{name}\": iOS builds no longer offered on Apple silicon Macs (the Mac app is)")
+  rescue StandardError => e
+    puts "::warning::Group \"#{name}\": could not stop offering iOS builds on Apple silicon Macs (#{e.message})"
+  end
+rescue StandardError => e
+  puts "::warning::Could not read the TestFlight groups' Apple silicon Mac setting (#{e.message})"
+end
+
 # Beta App Review needs a contact: the App Review contact App Store Connect already holds, copied when the beta review
 # details have none. Neither is in the repository nor printed (the log of a public repository is public).
 def beta_review_contact(app)
@@ -356,6 +385,8 @@ def distribute_to_external_testers(platform)
   app = Spaceship::ConnectAPI::App.find(APP_ID)
   version = app_version
   groups = external_groups(app)
+  # Once, for every group of the app (internal ones included), before the build is offered anywhere.
+  keep_ios_builds_off_macs(app)
   beta_review_contact(app)
   email = feedback_email(app)
   FastlaneCore::BuildWatcher.wait_for_build_processing_to_be_complete(
@@ -555,14 +586,38 @@ lane :status do
   end
 end
 
+# The App Store's "iPhone and iPad Apps on Apple Silicon Mac" availability is not in the App Store Connect API (4.6: no
+# such attribute on apps). With universal purchase, App Store Connect offers it only while no macOS version of the app
+# is on the Mac App Store: what is printed is whether one has been, and where the setting is otherwise.
+def report_ios_on_mac_app_store(app)
+  states = app.get_app_store_versions(filter: { platform: "MAC_OS" }).map(&:app_store_state).uniq
+  released = states.include?("READY_FOR_SALE")
+  UI.message("Mac App Store: macOS version #{released ? 'on sale (Apple then no longer offers the iOS app on Macs)' : 'not on sale yet'} " \
+             "(states: #{states.empty? ? 'none' : states.join(', ')})")
+  return if released
+
+  UI.important("The iOS app may be offered on Apple silicon Macs: App Store Connect → Pricing and Availability → " \
+               "iPhone and iPad Apps on Apple Silicon Mac → \"Make this app available\" (not readable through the API)")
+rescue StandardError => e
+  UI.error("Mac App Store availability: #{e.message}")
+end
+
 # TestFlight as App Store Connect holds it, read only: groups and their testers, Test Information per language, the
 # Beta App Review contact, and each platform's latest builds with their states and What to Test. No contact detail or
 # e-mail address is printed (the log of a public repository is public), only whether each is set.
 def report_testflight(app)
+  mac_testing = begin
+    mac_testing_by_group(app)
+  rescue StandardError => e
+    UI.error("Apple silicon Mac setting of each group (#{e.message})")
+    {}
+  end
   app.get_beta_groups.each do |group|
     UI.message("group \"#{group.name}\": #{group.is_internal_group ? 'internal' : 'external'}, #{tester_count(group)} testers, " \
-               "public link #{group.public_link_enabled ? 'on' : 'off'}")
+               "public link #{group.public_link_enabled ? 'on' : 'off'}, " \
+               "iOS builds on Apple silicon Macs #{mac_testing_text(mac_testing.dig(group.id, 1))}")
   end
+  report_ios_on_mac_app_store(app)
   app.get_beta_app_localizations.sort_by(&:locale).each do |localization|
     UI.message("Test Information #{localization.locale}: description #{localization.description.to_s.empty? ? 'missing' : 'set'}, " \
                "feedback e-mail #{localization.feedback_email.to_s.empty? ? 'missing' : 'set'}, " \
@@ -597,7 +652,7 @@ def report_testflight(app)
   end
 end
 
-desc "Print TestFlight's state, read only: groups, testers, Test Information, latest builds and their beta review"
+desc "Print TestFlight's state, read only: groups, testers, Apple silicon Macs, Test Information, latest builds, beta review"
 lane :testflight_status do
   api_key
   report_testflight(Spaceship::ConnectAPI::App.find(APP_ID))

@@ -277,9 +277,18 @@ réseau, fichiers choisis par l'utilisateur).
      contact de Beta App Review vide est copié du contact de la review App Store. Le premier build d'une version attend
      la Beta App Review (en général un ou deux jours) ; les builds suivants de cette version sont souvent approuvés en
      quelques minutes.
+   - **Pas de build iOS sur les Mac.** Un Mac à puce Apple peut installer le build iOS depuis TestFlight, et l'app Mac
+     (même identifiant de bundle) refuse ensuite de s'installer tant qu'il n'est pas supprimé. Chaque groupe TestFlight a
+     ce réglage (*TestFlight → le groupe → Réglages → Test iPhone and iPad apps on Apple silicon Macs* ; API :
+     `iosBuildsAvailableForAppleSiliconMac`) : le job des testeurs externes le désactive dans chaque groupe où il est
+     actif, et le note. Il ne retire pas un build iOS déjà installé sur un Mac : supprimez-le sur ce Mac, puis
+     installez le build Mac. Le réglage de l'App Store (*Prix et disponibilité → iPhone and iPad Apps on Apple Silicon
+     Mac → Make this app available*) n'est pas dans l'API : App Store Connect ne l'affiche que tant qu'aucune version
+     macOS n'est sur le Mac App Store, et *TestFlight status* dit s'il y en a une.
    - **Pour regarder avant de changer quoi que ce soit** : *Actions → TestFlight status → Run workflow*
-     (`testflight-status.yml`, Linux, en lecture seule, hors de la file des releases) : les groupes et leur nombre de
-     testeurs, les Informations de test par langue (remplies ou non), le contact de la Beta App Review (rempli ou
+     (`testflight-status.yml`, Linux, en lecture seule, hors de la file des releases) : les groupes, leur nombre de
+     testeurs et s'ils proposent les builds iOS sur les Mac à puce Apple, s'il y a une version macOS sur le Mac App
+     Store, les Informations de test par langue (remplies ou non), le contact de la Beta App Review (rempli ou
      non), et les derniers builds de chaque plateforme, s'ils sont dans un groupe externe, leurs
      états interne, externe et de Beta App Review, et leur « À tester ».
    - À la main : *Run workflow*, cible `builds`, `edition` `testflight`, `external` activé.

@@ -40,6 +40,8 @@ submitted, its listing and its review notes are checked here, before any upload:
    nothing, and What to Test (set on every build) writes the build's localizations only. In the workflows, a step that runs the external_testers lanes has `EDITION: app-store` and takes its build
    number from the App Store edition steps (ids ios_app_store, mac_app_store), which build that edition (2.5.19: the
    TestFlight edition, with downloads, is never reviewed or given to external testers).
+   The Fastfile only ever turns off the TestFlight groups' "iOS builds on Apple silicon Macs"
+   (iosBuildsAvailableForAppleSiliconMac): the Mac app, under the same bundle ID, is what a Mac installs.
 
 The addresses of the listing are checked to answer in the release workflow, before the upload.
 
@@ -690,6 +692,15 @@ def check_external_testers(problems: list) -> None:
                             "build given by number (distribute_only: true), never build or upload one")
     elif re.search(r"\bexternal_testers\b", fastfile):
         problems.append("fastlane/Fastfile: the external_testers lanes must go through distribute_to_external_testers")
+
+    for number, line in enumerate(fastfile.splitlines(), start=1):
+        code = line.split(" # ", 1)[0]
+        if code.strip().startswith("#"):
+            continue
+        for value in re.findall(r"\biosBuildsAvailableForAppleSiliconMac\b[\"']?\s*(?::|=>)\s*(\S+?)[\s,}]", code + " "):
+            if value != "false":
+                problems.append(f"fastlane/Fastfile:{number}: sets iosBuildsAvailableForAppleSiliconMac to {value}: it may "
+                                "only turn it off (the Mac app is what a Mac installs, not the iOS build)")
 
     workflows = ROOT / ".github/workflows"
     for path in sorted(workflows.glob("*.y*ml")) if workflows.is_dir() else []:
