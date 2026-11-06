@@ -57,7 +57,10 @@ object Routes {
     /** Settings → Row order: the order of the rows of the Movies and Series tabs. */
     @Serializable data object RowOrder
 
-    /** A selection made of tags (Settings → Row order → New selection): [id] null makes one, shown in [tab] at first. */
+    /** Settings → My selections: the profile's selections, to make, change or delete them. */
+    @Serializable data object Selections
+
+    /** A selection made of tags (Settings → My selections or Row order → New selection): [id] null makes one, shown in [tab] at first. */
     @Serializable data class SelectionEdit(val id: String? = null, val tab: String = "movie")
     /** The profile switcher (the top bar's avatar), and a profile's page: [id] null adds one (docs/PROFILES.md). */
     @Serializable data object Profiles

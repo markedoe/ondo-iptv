@@ -123,6 +123,15 @@ class LenientDecodingTest {
         assertEquals(listOf(2019, null, 2008), series.map { it.year })
     }
 
+    /** A genre's HTML references are decoded: "Action &amp; Adventure" was split into "Action" and "amp; Adventure". */
+    @Test
+    fun genresAreDecoded() {
+        val series = Json.parseToJsonElement("""[{"series_id":1,"genre":"Action &amp; Adventure, Sci-Fi &amp; Fantasy"}]""").lossyList(XtreamSeriesDto::from)
+        assertEquals("Action & Adventure, Sci-Fi & Fantasy", series[0].genre)
+        val info = XtreamInfoDto.from(Json.parseToJsonElement("""{"genre":"War &amp; Politics, Com&eacute;die"}"""))
+        assertEquals("War & Politics, Comédie", info.genre)
+    }
+
     /** A number too large for a double is dropped whether the panel quotes it or not: it could not be saved. */
     @Test
     fun doublesBeyondTheRangeAreIgnored() {

@@ -70,6 +70,7 @@ import androidx.navigation.toRoute
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.library.Genres
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.TitleMetadata
@@ -131,8 +132,12 @@ import com.markedoe.ondo.ui.screens.RowOrderScreen
 import com.markedoe.ondo.ui.screens.SelectionActions
 import com.markedoe.ondo.ui.screens.SelectionScreen
 import com.markedoe.ondo.ui.screens.SelectionUiState
+import com.markedoe.ondo.ui.screens.SelectionsActions
+import com.markedoe.ondo.ui.screens.SelectionsScreen
+import com.markedoe.ondo.ui.screens.SelectionsUiState
 import com.markedoe.ondo.ui.tv.TvRowOrderScreen
 import com.markedoe.ondo.ui.tv.TvSelectionScreen
+import com.markedoe.ondo.ui.tv.TvSelectionsScreen
 import com.markedoe.ondo.ui.screens.WebPageScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
 import com.markedoe.ondo.ui.theme.OndoColors
@@ -321,6 +326,7 @@ private fun MainTabs(viewModel: OndoViewModel, launch: Long) {
                     page<Routes.Profiles>(TvMargins.NONE) { ProfilesDestination(viewModel, navController) }
                     page<Routes.ProfileEdit>(TvMargins.NONE, entry = false) { route -> ParentGated(viewModel, navController) { ProfileEditDestination(viewModel, navController, route.toRoute<Routes.ProfileEdit>().id) } }
                     page<Routes.RowOrder> { ParentGated(viewModel, navController) { RowOrderDestination(viewModel, navController) } }
+                    page<Routes.Selections> { ParentGated(viewModel, navController) { SelectionsDestination(viewModel, navController) } }
                     page<Routes.SelectionEdit> { route -> ParentGated(viewModel, navController) { SelectionDestination(viewModel, navController, route.toRoute()) } }
                     page<Routes.Help> {
                         val open = rememberPageOpener(navController)
@@ -979,6 +985,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onVodBuffer = viewModel::setVodBuffer,
             onCategories = { navController.navigate(Routes.Categories()) },
             onRowOrder = { navController.navigate(Routes.RowOrder) },
+            onSelections = { navController.navigate(Routes.Selections) },
             onAppLanguage = { context.openAppLanguageSettings() },
             onHelp = { navController.navigate(Routes.Help) },
             onPrivacy = { browse(PRIVACY_URL) },
@@ -1035,7 +1042,23 @@ private fun RowOrderDestination(viewModel: OndoViewModel, navController: NavHost
     if (isTelevision()) TvRowOrderScreen(state, actions) else RowOrderScreen(state, actions)
 }
 
-/** A selection made of tags: a new one, or one to change or delete (Settings → Row order). */
+/** Settings → My selections: the open profile's selections, each opening its page; New selection makes one. */
+@Composable
+private fun SelectionsDestination(viewModel: OndoViewModel, navController: NavHostController) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    // The names of the genres the titles give (TMDb's show in the viewer's language without them).
+    val choices by produceKept("selections-names", null as SelectionChoices?, state.content, state.awards) { viewModel.selectionChoices() }
+    val ui = SelectionsUiState(state.library.selections, choices?.genreNames.orEmpty())
+    val actions = SelectionsActions(
+        onBack = { navController.popBackStack() },
+        onNew = { navController.navigate(Routes.SelectionEdit(id = null, tab = RowOrder.HOME)) },
+        onEdit = { id, tab -> navController.navigate(Routes.SelectionEdit(id = id, tab = tab)) },
+        onDelete = viewModel::deleteSelection,
+    )
+    if (isTelevision()) TvSelectionsScreen(ui, actions) else SelectionsScreen(ui, actions)
+}
+
+/** A selection made of tags: a new one, or one to change or delete (Settings → My selections, or Row order). */
 @Composable
 private fun SelectionDestination(viewModel: OndoViewModel, navController: NavHostController, route: Routes.SelectionEdit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -1045,7 +1068,8 @@ private fun SelectionDestination(viewModel: OndoViewModel, navController: NavHos
     val ui = SelectionUiState(
         id = selection?.id,
         name = selection?.name.orEmpty(),
-        tags = selection?.tags.orEmpty(),
+        // An earlier version's genre tags as this version's: saving keeps them so.
+        tags = Genres.canonicalTags(selection?.tags.orEmpty()),
         all = selection?.matchesAll == true,
         tabs = selection?.tabs ?: listOf(route.tab),
         choices = ready,

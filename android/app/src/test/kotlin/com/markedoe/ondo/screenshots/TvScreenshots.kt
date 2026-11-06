@@ -39,9 +39,12 @@ import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.RowOrderActions
 import com.markedoe.ondo.ui.tv.TvRowOrderScreen
 import com.markedoe.ondo.ui.tv.TvSelectionScreen
+import com.markedoe.ondo.ui.tv.TvSelectionsScreen
 import com.markedoe.ondo.ui.SelectionRows
 import com.markedoe.ondo.ui.screens.SelectionActions
 import com.markedoe.ondo.ui.screens.SelectionUiState
+import com.markedoe.ondo.ui.screens.SelectionsActions
+import com.markedoe.ondo.ui.screens.SelectionsUiState
 import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.ui.screens.VodUiState
@@ -238,6 +241,22 @@ class TvScreenshots {
         compose.mainClock.autoAdvance = false
         advance()
         capture("selection")
+    }
+
+    /** Settings → My selections: New selection, then each selection with its tags, its tabs and its Delete button. */
+    @Test
+    fun mySelections() {
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            OndoTheme { TelevisionFrame { TvSelectionsScreen(SelectionsUiState(SelectionScreenshots.examples), SelectionsActions()) } }
+        }
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        compose.mainClock.autoAdvance = false
+        advance()
+        compose.onNodeWithTag("selection-a").requestFocus()
+        advance()
+        capture("selections")
     }
 
     /** Settings → Row order with a row picked up by the remote and moved down once: it shows in the accent colour. */

@@ -222,7 +222,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), la
   télécommande sur une TV (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), les gestes du
   lecteur du téléphone (`PhonePlayerOverlayTest`), captures Roborazzi qui servent de captures
-  Google Play (téléphone, tablettes 7" et 10", TV, anglais et français), comparées à des références versionnées
+  Google Play (téléphone, tablettes 7" et 10", TV, dans chaque langue de la fiche, l'arabe de droite à gauche), comparées à des références versionnées
   (voir [Captures d'écran et régressions](#captures-décran-et-régressions)).
   Chaque classe de test prend `HangGuard` comme première règle (`check_hang_guard.py` en CI) : un test qui dure plus
   de 120 s échoue avec la pile de chaque thread dans le journal et dans `build/reports/tests/hang-guard`, et chaque
@@ -237,8 +237,11 @@ second moteur libVLC ; sur une TV, chaînes du lanceur et recherche vocale.
 Les tests Roborazzi prennent deux sortes de captures à partir du catalogue de démonstration (titres fictifs, films
 libres, chaînes inventées, adresses `example.com`) :
 
-- **Captures de la fiche du store**, en taille réelle, dans `android/app/src/test/screenshots/play/` (non versionnées :
-  le workflow de release les refait).
+- **Captures de la fiche du store**, en taille réelle, dans `android/app/src/test/screenshots/play/<langue>/` (non
+  versionnées : le workflow de release les refait), dans chaque langue de la fiche Google Play
+  (`PlayStoreScreenshots.LOCALES` : les sept langues de l'app ; `es-419` reprend celles d'`es-ES`). Les textes du
+  catalogue de démonstration (résumés, guide, nom de la playlist) existent dans les sept langues
+  (`fixtures/showcase/tools`) ; titres, noms de chaînes et catégories sont ceux du fournisseur et ne changent pas.
 - **Captures de référence**, en demi-taille, versionnées dans `android/app/src/test/snapshots/` : les écrans du store
   de la TV (anglais et français) et du téléphone (anglais), et les onglets de la TV tels que la télécommande les laisse
   (`TvScreenshots` : Films avec une rangée sélectionnée, le parcours onglet → Bas → Bas sur Films et sur Séries

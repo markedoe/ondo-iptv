@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -108,6 +110,7 @@ private val HeroButtonShape = RoundedCornerShape(8.dp)
  * picture, or the blurred poster with the poster at the end, leaving the next shelf in sight. With a remote, Right
  * past the last item and Left past Play turn the page.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HeroCarousel(
     pages: List<HeroPage>,
@@ -179,7 +182,8 @@ fun HeroCarousel(
                 val playBright = !television || playFocused || !listFocused
                 val buttons: @Composable () -> Unit = {
                     CompositionLocalProvider(LocalRippleConfiguration provides if (television) null else LocalRippleConfiguration.current) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // My List goes under Play when both do not fit side by side (a narrow phone, a long word).
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Button(
                                 onClick = { onPlay(page.item) },
                                 shape = HeroButtonShape,

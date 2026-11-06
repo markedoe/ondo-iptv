@@ -1,7 +1,6 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.StableHash
-import com.markedoe.ondo.core.TextNormalizer
 
 /**
  * A selection: a row the viewer makes of tags (docs/SYNC.md, "Selections"): genres, awards, decades and styles, a title
@@ -9,7 +8,11 @@ import com.markedoe.ondo.core.TextNormalizer
  * rules and tests as the Swift `Selections` (IPTVCore); the selections sync (`SyncSelection`, docs/SYNC.md, "Selections").
  */
 object Selections {
-    /** A genre, by its name as [TextNormalizer.normalize] gives it: `genre:drama`. */
+    /**
+     * A genre, by its key ([Genres]): TMDb's genre whatever the language of its name (`genre:adventure` for "Aventure"),
+     * else the name normalised (`genre:erotique`). An earlier version keyed each genre by its name normalised; its tags
+     * are read as this version's ([Genres.canonicalTags]).
+     */
     const val GENRE = "genre:"
 
     /** A festival or ceremony of the awards file (`AwardsCatalogue.Award.group`): `award:cannes`. */
@@ -34,7 +37,10 @@ object Selections {
      */
     const val SPREAD = 2.0
 
-    fun genre(name: String): String? = TextNormalizer.normalize(name).takeIf { it.isNotEmpty() }?.let { GENRE + it }
+    fun genre(name: String): String? = Genres.keys(name).firstOrNull()?.let { GENRE + it }
+
+    /** The genre tags of a genre field ("Action &amp; Adventure, Drame" → `genre:action`, `genre:adventure`, `genre:drama`). */
+    fun genres(field: String?): List<String> = Genres.keys(field).map { GENRE + it }
 
     fun award(group: String): String = AWARD + group
 
@@ -53,7 +59,7 @@ object Selections {
     private fun kindOf(tag: String): String? = listOf(GENRE, AWARD, DECADE, STYLE).firstOrNull { tag.startsWith(it) }
 
     /**
-     * What a title is tagged with: its genres (normalised names), the festivals and ceremonies of its awards (won or
+     * What a title is tagged with: its genres ([Genres.keys]), the festivals and ceremonies of its awards (won or
      * selected), its year, and the styles of its category's name ([stylesOf]).
      */
     data class Facts(
@@ -69,9 +75,9 @@ object Selections {
         return CategoryStyles.order.filterTo(LinkedHashSet()) { CategoryStyles.matches(tokens, it) }
     }
 
-    /** Whether a title of [facts] has [tag]. */
+    /** Whether a title of [facts] has [tag]; a genre tag that joins genres (an earlier version's), each of them. */
     fun has(facts: Facts, tag: String): Boolean = when {
-        tag.startsWith(GENRE) -> tag.substring(GENRE.length) in facts.genres
+        tag.startsWith(GENRE) -> Genres.required(tag).orEmpty().let { keys -> keys.isNotEmpty() && keys.all { it in facts.genres } }
         tag.startsWith(AWARD) -> tag.substring(AWARD.length) in facts.awardGroups
         tag.startsWith(DECADE) -> {
             val start = tag.substring(DECADE.length).toIntOrNull()
@@ -85,10 +91,19 @@ object Selections {
      * Whether a title of [facts] belongs to a selection of [tags]: one of them ([all] false), or each of them. Tags of a
      * kind this version does not know are left out; with no tag left, no title matches.
      */
-    fun matches(tags: Collection<String>, all: Boolean, facts: Facts): Boolean {
+    fun matches(tags: Collection<String>, all: Boolean, facts: Facts): Boolean = matcher(tags, all)(facts)
+
+    /** [matches] for many titles: the tags read once ([Genres.canonicalTags]), then each title's facts. */
+    fun matcher(tags: Collection<String>, all: Boolean): (Facts) -> Boolean {
         val known = tags.filter(::isKnown)
-        if (known.isEmpty()) return false
-        return if (all) known.all { has(facts, it) } else known.any { has(facts, it) }
+        if (known.isEmpty()) return { false }
+        // Each tag as the keys a title needs, those of an earlier version read as this version's.
+        val genres = known.map { Genres.required(it) }
+        fun has(facts: Facts, index: Int): Boolean {
+            val keys = genres[index] ?: return has(facts, known[index])
+            return keys.isNotEmpty() && keys.all { it in facts.genres }
+        }
+        return if (all) { facts -> known.indices.all { has(facts, it) } } else { facts -> known.indices.any { has(facts, it) } }
     }
 
     /**

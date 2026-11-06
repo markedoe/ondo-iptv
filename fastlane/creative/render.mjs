@@ -6,12 +6,14 @@
 //   git fetch origin appstore-screenshots && mkdir -p /tmp/shots && git archive FETCH_HEAD | tar -x -C /tmp/shots
 //   NODE_PATH="$(npm root -g)" node fastlane/creative/render.mjs /tmp/shots
 //
-// Needs Playwright's Chromium and the Inter font. The App Store Connect upload is
+// Needs Playwright's Chromium, the Inter font and, for the feature graphics, Noto Sans Arabic, Devanagari and CJK SC
+// (Debian, Ubuntu: fonts-noto-core, fonts-noto-cjk). The App Store Connect upload is
 // .github/workflows/app-store-assets.yml.
 //
 // With --tv instead of a folder, only what needs no screenshots: the Android TV banners (tv-banner.html), the
 // launcher banner, 320 × 180 at xhdpi, in every density of android/app/src/main/res/drawable-*/tv_banner.png, and
-// the Google Play listing's fastlane/metadata-android/<locale>/images/tvBanner.png and featureGraphic.png
+// the Google Play listing's fastlane/metadata-android/<locale>/images/tvBanner.png and featureGraphic.png, in each
+// listing language
 // (feature.html, 1024 × 500); the release workflow uploads them.
 //
 //   NODE_PATH="$(npm root -g)" node fastlane/creative/render.mjs --tv
@@ -86,7 +88,8 @@ if (tv) {
     for (const [density, scale] of [["mdpi", 1], ["hdpi", 1.5], ["xhdpi", 2], ["xxhdpi", 3], ["xxxhdpi", 4]]) {
       await banner(160 * scale, 90 * scale, join(res, `drawable-${density}`, "tv_banner.png"));
     }
-    for (const locale of ["en-US", "fr-FR"]) {
+    // Every language of the Google Play listing (the banner has no words: the same in each).
+    for (const locale of ["en-US", "fr-FR", "es-ES", "es-419", "pt-BR", "zh-CN", "ar", "hi-IN"]) {
       await banner(1280, 720, join(repository, "fastlane", "metadata-android", locale, "images", "tvBanner.png"));
       await feature(locale, join(repository, "fastlane", "metadata-android", locale, "images", "featureGraphic.png"));
     }

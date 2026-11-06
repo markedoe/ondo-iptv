@@ -31,6 +31,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -199,11 +200,11 @@ private fun LazyListScope.tagGroups(state: SelectionUiState, draft: SelectionDra
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (tag in tags) {
+                    for ((tag, name) in namedTags(title, tags, state)) {
                         FilterChip(
                             selected = tag in draft.tags,
                             onClick = { draft.toggle(tag) },
-                            label = { Text(selectionTagName(tag, state.choices.genreNames)) },
+                            label = { Text(name) },
                             modifier = Modifier.testTag("tag-$tag"),
                         )
                     }
@@ -211,6 +212,18 @@ private fun LazyListScope.tagGroups(state: SelectionUiState, draft: SelectionDra
             }
         }
     }
+}
+
+/**
+ * A group's tags with their names; the genres by the names shown, TMDb's in the viewer's language ("Aventure" among the
+ * A's in French, "Adventure" in English).
+ */
+@Composable
+internal fun namedTags(group: Int, tags: List<String>, state: SelectionUiState): List<Pair<String, String>> {
+    val named = tags.map { it to selectionTagName(it, state.choices.genreNames) }
+    if (group != R.string.selection_genres) return named
+    val collator = remember { java.text.Collator.getInstance().apply { strength = java.text.Collator.PRIMARY } }
+    return named.sortedWith { a, b -> collator.compare(a.second, b.second) }
 }
 
 /** Keeps what was chosen across a rotation. */

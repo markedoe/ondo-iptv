@@ -367,6 +367,32 @@ final class OndoUITests: XCTestCase {
         snapshot("15-selection-row")
     }
 
+    /// Settings → My Selections: none at first; New Selection's page saves one, which the list then shows.
+    func testMySelectionsOpensFromSettingsAndListsANewSelection() {
+        launch(["-uitest-reset", "-uitest-fixture"])
+        XCTAssertTrue(app.tabBars.buttons["Movies"].waitForExistence(timeout: 30), "main interface")
+        let settings = app.buttons["Settings"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 10), "settings button")
+        settings.tap()
+        let row = app.buttons["selectionsRow"].firstMatch
+        for _ in 0..<6 where !(row.exists && row.isHittable) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "My Selections in Settings")
+        row.tap()
+        XCTAssertTrue(app.staticTexts["selectionsNone"].waitForExistence(timeout: 5), "no selection yet")
+        let newSelection = app.buttons["newSelection"].firstMatch
+        XCTAssertTrue(newSelection.waitForExistence(timeout: 5), "New Selection")
+        newSelection.tap()
+        let year = Calendar.current.component(.year, from: .now)
+        let decade = app.buttons["tag-decade:\(year - year % 10)"].firstMatch
+        for _ in 0..<6 where !(decade.exists && decade.isHittable) { app.swipeUp(velocity: .slow) }
+        XCTAssertTrue(decade.waitForExistence(timeout: 5), "this decade's chip")
+        decade.tap()
+        app.buttons["saveSelection"].firstMatch.tap()
+        let made = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'selection-'")).firstMatch
+        XCTAssertTrue(made.waitForExistence(timeout: 5), "the new selection in the list")
+        XCTAssertFalse(app.staticTexts["selectionsNone"].exists)
+    }
+
     // MARK: - Languages chosen from Home's suggestion
 
     /// Home's "Show only your languages?": a language turned off from "Choose…", then Ondo left and opened again.

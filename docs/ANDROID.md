@@ -192,7 +192,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), the remote on a TV
   (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), the phone player's gestures
   (`PhonePlayerOverlayTest`), Roborazzi screenshots that double as Google Play screenshots (phone,
-  7" and 10" tablets, TV, English and French), compared with committed references (see
+  7" and 10" tablets, TV, in each language of the listing, Arabic right to left), compared with committed references (see
   [Screenshots and regressions](#screenshots-and-regressions)).
   Every test class takes `HangGuard` as its first rule (`check_hang_guard.py` in CI): a test that runs over 120 s
   fails with every thread's stack in the log and in `build/reports/tests/hang-guard`, and each test is named as it
@@ -206,8 +206,11 @@ second libVLC engine; on a TV, launcher channels and voice search.
 The Roborazzi tests take two kinds of screenshots from the demo catalogue (fictional titles, open films, made-up
 channels, `example.com` addresses):
 
-- **Store listing screenshots**, full size, in `android/app/src/test/screenshots/play/` (not committed: the release
-  workflow makes them anew).
+- **Store listing screenshots**, full size, in `android/app/src/test/screenshots/play/<locale>/` (not committed: the
+  release workflow makes them anew), in each language of the Google Play listing (`PlayStoreScreenshots.LOCALES`:
+  the app's seven languages; `es-419` shows the `es-ES` ones). The demo catalogue's texts (summaries, guide, playlist
+  name) exist in the seven languages (`fixtures/showcase/tools`); titles, channel names and categories are the
+  provider's and stay as they are.
 - **Reference screenshots**, half size, committed in `android/app/src/test/snapshots/`: the TV's (English and French)
   and the phone's (English) store screens, and the TV's tab pages as the remote leaves them (`TvScreenshots`: Movies
   with a row focused, the path tab → Down → Down on Movies and on Series (`movies-tab-focused`, `movies-down-1`,

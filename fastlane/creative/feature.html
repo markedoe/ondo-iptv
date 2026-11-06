@@ -1,7 +1,8 @@
 <!doctype html>
 <!--
   The Google Play listing's feature graphic (1024 × 500), drawn by render.mjs (--tv) in each listing language:
-  feature.html?locale=en-US|fr-FR. Google shows it behind a play button on some screens: the logo, the name and a
+  feature.html?locale=en-US|fr-FR|es-ES|es-419|pt-BR|zh-CN|ar|hi-IN (the listing's
+  languages; Arabic right to left). Google shows it behind a play button on some screens: the logo, the name and a
   short phrase stay in the middle. The logo is the launcher icon's (ic_launcher_foreground.xml).
 -->
 <html>
@@ -19,7 +20,8 @@
   .brand { display: flex; align-items: center; gap: 26px; }
   svg { display: block; width: 150px; height: 150px; }
   .name { color: #ffffff; font-size: 120px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
-  .line { color: #8e8e93; font-family: "Inter", sans-serif; font-size: 34px; font-weight: 500; letter-spacing: -0.01em; }
+  /* Inter has no Arabic, Devanagari or Chinese letters: Noto's for those. */
+  .line { color: #8e8e93; font-family: "Inter", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans CJK SC", sans-serif; font-size: 34px; font-weight: 500; letter-spacing: -0.01em; }
 </style>
 </head>
 <body>
@@ -36,9 +38,18 @@
   const lines = {
     "en-US": "Movies, series and live TV from your own playlist",
     "fr-FR": "Films, séries et TV en direct depuis votre playlist",
+    "es-ES": "Películas, series y TV en directo desde tu playlist",
+    "es-419": "Películas, series y TV en directo desde tu playlist",
+    "pt-BR": "Filmes, séries e TV ao vivo da sua playlist",
+    "zh-CN": "来自你自己播放列表的电影、剧集和直播",
+    "ar": "أفلام ومسلسلات وبث مباشر من قائمة التشغيل الخاصة بك",
+    "hi-IN": "आपकी अपनी प्लेलिस्ट से फ़िल्में, सीरीज़ और लाइव टीवी",
   };
   const locale = new URLSearchParams(location.search).get("locale") || "en-US";
-  document.getElementById("line").textContent = lines[locale];
+  const line = document.getElementById("line");
+  line.textContent = lines[locale];
+  line.lang = locale;
+  line.dir = locale === "ar" ? "rtl" : "ltr";
   document.fonts.ready.then(() => { document.body.dataset.ready = "1"; });
 </script>
 </body>

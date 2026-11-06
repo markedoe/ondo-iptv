@@ -3,7 +3,8 @@
 
 Inputs, next to this script:
   titles.json    films and series whose pictures may be shown, with each picture's source and licence
-  channels.json  fictional channels, their categories and a bilingual guide
+  channels.json  fictional channels, their categories and a guide in the apps' seven languages (en, fr, es, pt, zh,
+                 ar, hi; a channel from abroad keeps its own language but in English)
 
 Outputs, in fixtures/showcase:
   catalogue.json        what the screenshot tests read (Android: ShowcaseCatalogue)
@@ -215,7 +216,7 @@ def main() -> None:
             "name": channel["name"],
             "category": channel["category"],
             "logo": draw_logo(channel),
-            "programmes": [{"fr": fr, "en": en} for fr, en in shifted],
+            "programmes": [{"fr": programme["fr"], "en": programme["en"], **programme} for programme in shifted],
         })
     categories = titles["categories"] + [{"id": c["id"], "type": "live", "name": c["name"]} for c in channels["categories"]]
     catalogue = {
