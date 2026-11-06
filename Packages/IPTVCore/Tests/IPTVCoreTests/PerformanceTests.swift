@@ -57,9 +57,9 @@ final class PerformanceTests: XCTestCase {
         // Spanish and Arabic descriptions, and the English and Portuguese ones named "(ES)".
         let named: Int = (0..<100_000).filter { $0 % 7 == 0 && (1...2).contains($0 % 4) }.count
         XCTAssertEqual(hidden.count, 50_000 + named)
-        // A fraction of a second on a laptop; the bounds leave a CI machine room and catch a scan that copies each word,
-        // or a hide that reads the descriptions again.
-        XCTAssertLessThan(elapsed, 4)
+        // A fraction of a second on a laptop, about 6.4 s in the Linux CI debug build with coverage; the bounds leave
+        // that room and catch a scan that copies each word, or a hide that reads the descriptions again.
+        XCTAssertLessThan(elapsed, 10)
         XCTAssertLessThan(hideElapsed, 0.5)
     }
 
