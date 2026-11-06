@@ -371,6 +371,17 @@ jobs:
             echo "::error::The App Store edition for the external testers failed (checks $CHECKS, iOS $IOS, macOS $MAC): see its steps above. The TestFlight edition is not affected."
             exit 1
           fi
+      - name: What to Test
+        # Every uploaded build, both editions, gets the listing's release notes as What to Test (fastlane
+        # fill_what_to_test); one that could not be set fails the run once all uploads are done.
+        if: always()
+        env:
+          MISSING: ${{ steps.ios.outputs.what_to_test }} ${{ steps.mac.outputs.what_to_test }} ${{ steps.ios_app_store.outputs.what_to_test }} ${{ steps.mac_app_store.outputs.what_to_test }}
+        run: |
+          case "$MISSING" in
+            *missing*) echo "::error::What to Test could not be set on a build of this run: see the ::error:: lines of the upload steps above."; exit 1 ;;
+            *) echo "What to Test: set on every build this run uploaded." ;;
+          esac
       - name: Build log
         if: failure()
         # Printed in the job log, where GitHub masks the secrets (an uploaded file would not be masked).

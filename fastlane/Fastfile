@@ -160,6 +160,36 @@ rescue StandardError => e
   UI.important("Build #{number}: could not turn off the testers' e-mail (#{e.message})")
 end
 
+# What to Test, the same on every build of both editions, internal and external, iOS and macOS: the listing's release
+# notes in each of its languages (WHATS_NEW). Only the build's localizations change: nothing is distributed or
+# submitted. Set as soon as App Store Connect lists the build. A failure leaves the upload as it is and is reported
+# (::error:: and the step output what_to_test=missing, which step What to Test turns into a failed run).
+def fill_what_to_test(platform, number)
+  api_key
+  app = Spaceship::ConnectAPI::App.find(APP_ID)
+  build = nil
+  40.times do
+    build = Spaceship::ConnectAPI::Build.all(app_id: app.id, build_number: number.to_s, platform: Spaceship::ConnectAPI::Platform.map(platform)).first
+    break if build
+    sleep 15
+  end
+  UI.user_error!("not listed by App Store Connect after 10 minutes") unless build
+  existing = build.get_beta_build_localizations.to_h { |localization| [localization.locale, localization] }
+  whats_new_texts.each do |locale, text|
+    # TestFlight refuses "<" in What to Test (as fastlane's own upload does, it is left out).
+    attributes = { whatsNew: text.delete("<")[0, 4000] }
+    if existing[locale]
+      Spaceship::ConnectAPI.patch_beta_build_localizations(localization_id: existing[locale].id, attributes: attributes)
+    else
+      Spaceship::ConnectAPI.post_beta_build_localizations(build_id: build.id, attributes: attributes.merge(locale: locale))
+    end
+  end
+  UI.message("Build #{number}: What to Test set in #{whats_new_texts.keys.join(', ')}")
+rescue StandardError => e
+  puts "::error::Build #{number} (#{platform}): What to Test not set (#{e.message})"
+  File.write(ENV["GITHUB_OUTPUT"], "what_to_test=missing\n", mode: "a") if ENV["GITHUB_OUTPUT"]
+end
+
 # The build number of this upload for the steps after it (the submission in release.yml).
 def report_build_number(number)
   File.write(ENV["GITHUB_OUTPUT"], "build=#{number}\n", mode: "a") if ENV["GITHUB_OUTPUT"]
@@ -180,11 +210,25 @@ def listing_texts(file)
   end.reject { |_locale, text| text.empty? }
 end
 
+def whats_new_texts
+  listing_texts("release_notes.txt")
+end
+
 # The external group of the app, created the first time (testers are added in App Store Connect, never from here).
+def tester_count(group)
+  Spaceship::ConnectAPI.get_beta_testers(filter: { betaGroups: group.id }, limit: 200).all_pages.sum { |page| page.to_models.size }
+rescue StandardError => e
+  "unknown (#{e.message})"
+end
+
 def external_group(app)
   groups = app.get_beta_groups.select { |group| group.name == EXTERNAL_GROUP }
   UI.user_error!("The TestFlight group \"#{EXTERNAL_GROUP}\" is an internal group: rename it in App Store Connect") if groups.any?(&:is_internal_group)
-  return groups.first unless groups.empty?
+  unless groups.empty?
+    group = groups.first
+    UI.message("Group \"#{EXTERNAL_GROUP}\": external, #{tester_count(group)} testers, public link #{group.public_link_enabled ? 'on' : 'off'}")
+    return group
+  end
   UI.important("Creating the external TestFlight group \"#{EXTERNAL_GROUP}\" (add its testers in App Store Connect)")
   app.create_beta_group(group_name: EXTERNAL_GROUP, is_internal_group: false)
   app.get_beta_groups.find { |group| group.name == EXTERNAL_GROUP && !group.is_internal_group } ||
@@ -196,11 +240,15 @@ end
 def beta_review_contact(app)
   fields = %i[contact_first_name contact_last_name contact_phone contact_email]
   detail = Spaceship::ConnectAPI.get_beta_app_review_detail(filter: { app: app.id }).to_models.first
-  return if detail && fields.all? { |field| !detail.send(field).to_s.empty? }
+  present = detail && fields.all? { |field| !detail.send(field).to_s.empty? }
+  UI.message("Beta App Review contact: #{present ? 'set' : 'missing, copied from the App Review contact'}")
+  return if present
   review = PLATFORMS.values.lazy.flat_map do |platform, _folder|
     app.get_app_store_versions(filter: { platform: platform }, includes: "appStoreReviewDetail").map(&:app_store_review_detail)
   end.find { |candidate| candidate && fields.all? { |field| !candidate.send(field).to_s.empty? } }
-  UI.user_error!("No contact for Beta App Review: fill App Store Connect → TestFlight → Test Information → Beta App Review Information") unless review
+  missing = fields.reject { |field| detail && !detail.send(field).to_s.empty? }.map { |field| field.to_s.sub("contact_", "").tr("_", " ") }
+  UI.user_error!("App Store Connect → TestFlight → Test Information → Beta App Review Information: #{missing.join(', ')} " \
+                 "empty, and no complete App Review contact to copy") unless review
   Spaceship::ConnectAPI.patch_beta_app_review_detail(app_id: app.id, attributes: {
     contactFirstName: review.contact_first_name, contactLastName: review.contact_last_name,
     contactPhone: review.contact_phone, contactEmail: review.contact_email
@@ -211,10 +259,12 @@ end
 # External testers send their feedback to the beta app's feedback e-mail, which is not in the repository (CLAUDE.md,
 # Privacy): set once in App Store Connect, then reused for every language. Never printed.
 def feedback_email(app)
-  email = app.get_beta_app_localizations.map(&:feedback_email).find { |value| !value.to_s.empty? }
+  localizations = app.get_beta_app_localizations
+  email = localizations.map(&:feedback_email).find { |value| !value.to_s.empty? }
+  UI.message("Test Information: feedback e-mail #{email ? 'set' : 'missing'} (#{localizations.map(&:locale).sort.join(', ')})")
   return email if email
-  UI.user_error!("No feedback e-mail for external testers: fill App Store Connect → TestFlight → Test Information → " \
-                 "Feedback Email (English (U.S.)), then run Release again (target builds, external on)")
+  UI.user_error!("App Store Connect → TestFlight → Test Information → Feedback Email is empty in every language: " \
+                 "external testing needs it")
 end
 
 # Apple reviews one build of a version at a time. A build of this version and platform still waiting for Beta App
@@ -273,7 +323,7 @@ def distribute_to_external_testers(platform)
     localized_app_info: descriptions.to_h do |locale, text|
       [locale, { description: text, feedback_email: email, privacy_policy_url: privacy[locale], marketing_url: marketing[locale] }.compact]
     end,
-    localized_build_info: listing_texts("release_notes.txt").to_h { |locale, text| [locale, { whats_new: text }] }
+    localized_build_info: whats_new_texts.to_h { |locale, text| [locale, { whats_new: text }] }
   )
   UI.success("Build #{build} (#{platform} #{version}): sent to the \"#{EXTERNAL_GROUP}\" group through Beta App Review")
 end
@@ -446,6 +496,54 @@ lane :status do
   end
 end
 
+# TestFlight as App Store Connect holds it, read only: groups and their testers, Test Information per language, the
+# Beta App Review contact, and each platform's latest builds with their states and What to Test. No contact detail or
+# e-mail address is printed (the log of a public repository is public), only whether each is set.
+def report_testflight(app)
+  app.get_beta_groups.each do |group|
+    UI.message("group \"#{group.name}\": #{group.is_internal_group ? 'internal' : 'external'}, #{tester_count(group)} testers, " \
+               "public link #{group.public_link_enabled ? 'on' : 'off'}")
+  end
+  app.get_beta_app_localizations.sort_by(&:locale).each do |localization|
+    UI.message("Test Information #{localization.locale}: description #{localization.description.to_s.empty? ? 'missing' : 'set'}, " \
+               "feedback e-mail #{localization.feedback_email.to_s.empty? ? 'missing' : 'set'}, " \
+               "privacy URL #{localization.privacy_policy_url.to_s.empty? ? 'missing' : 'set'}")
+  end
+  detail = Spaceship::ConnectAPI.get_beta_app_review_detail(filter: { app: app.id }).to_models.first
+  fields = %i[contact_first_name contact_last_name contact_phone contact_email]
+  UI.message("Beta App Review contact: #{detail && fields.all? { |field| !detail.send(field).to_s.empty? } ? 'set' : 'missing'}, " \
+             "notes #{detail&.notes.to_s.empty? ? 'missing' : 'set'}, sign-in required: #{detail&.demo_account_required ? 'yes' : 'no'}")
+  external = app.get_beta_groups.reject(&:is_internal_group).select { |group| group.name == EXTERNAL_GROUP }
+  external_builds = external.flat_map { |group| Spaceship::ConnectAPI.get_builds_for_beta_group(group_id: group.id).all_pages.flat_map(&:to_models) }.map(&:id).to_set
+  PLATFORMS.each do |name, (platform, _folder)|
+    builds = Spaceship::ConnectAPI.get_builds(
+      filter: { app: app.id, "preReleaseVersion.platform" => platform }, sort: "-uploadedDate", limit: 6,
+      includes: "preReleaseVersion,buildBetaDetail,betaAppReviewSubmission,betaBuildLocalizations"
+    ).to_models
+    builds.each do |build|
+      detail = build.build_beta_detail
+      # The external group holds only App Store edition builds; the others are the TestFlight edition (or a tag's App
+      # Store edition submitted for App Review).
+      edition = external_builds.include?(build.id) ? "App Store edition (in #{EXTERNAL_GROUP})" : "not in #{EXTERNAL_GROUP}"
+      UI.message("#{name} #{build.app_version} (#{build.version}): #{edition}, #{build.processing_state}, " \
+                 "internal #{detail&.internal_build_state || '?'}, external #{detail&.external_build_state || '?'}, " \
+                 "beta review #{build.beta_app_review_submission&.beta_review_state || 'not submitted'}" \
+                 "#{build.expired ? ', expired' : ''}")
+      localizations = (build.beta_build_localizations || []).sort_by(&:locale)
+      filled = localizations.reject { |localization| localization.whats_new.to_s.empty? }.map(&:locale)
+      UI.message("  What to Test: #{filled.empty? ? 'none' : filled.join(', ')}")
+      english = localizations.find { |localization| localization.locale == "en-US" }&.whats_new.to_s
+      english.lines.first(3).each { |line| UI.message("    #{line.strip}") }
+    end
+  end
+end
+
+desc "Print TestFlight's state, read only: groups, testers, Test Information, latest builds and their beta review"
+lane :testflight_status do
+  api_key
+  report_testflight(Spaceship::ConnectAPI::App.find(APP_ID))
+end
+
 desc "Revoke the development certificates Xcode created on this CI runner (never run it on your own Mac)"
 lane :revoke_runner_certificates do
   # GitHub's macOS runners are discarded after the job: a certificate in their keychain is one this job created.
@@ -478,6 +576,7 @@ platform :ios do
     upload_build("ios")
     quiet_testers("ios", number)
     report_build_number(number)
+    fill_what_to_test("ios", number)
   end
 
   desc "Upload the App Store listing (texts, keywords, URLs, screenshots) without a binary; the age rating is set in App Store Connect"
@@ -581,6 +680,7 @@ platform :mac do
     upload_build("osx")
     quiet_testers("osx", number)
     report_build_number(number)
+    fill_what_to_test("osx", number)
   end
 end
 

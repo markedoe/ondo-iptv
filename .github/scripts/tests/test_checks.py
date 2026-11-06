@@ -632,6 +632,18 @@ class AppStoreTests(CheckTestCase):
             "        run: EDITION=testflight bundle exec fastlane ios beta\n      - name: iOS → TestFlight"))
         self.assertFails("app_store", "step ios_app_store builds what external testers get")
 
+    def test_what_to_test_on_every_build_only_sets_the_build_localizations(self):
+        fill = ("def fill_what_to_test(platform, number)\n"
+                "  Spaceship::ConnectAPI.patch_beta_build_localizations(localization_id: id, attributes: attributes)\n"
+                "  Spaceship::ConnectAPI.post_beta_build_localizations(build_id: build.id, attributes: attributes)\n%send\n")
+        self.external_path(self.EXTERNAL_FASTFILE + fill % "")
+        self.assertPasses("app_store")
+        for extra in ("  Spaceship::ConnectAPI.patch_beta_app_localizations(localization_id: id, attributes: a)\n",
+                      "  build.post_beta_app_review_submission\n", "  build.expire!\n"):
+            with self.subTest(extra=extra):
+                self.external_path(self.EXTERNAL_FASTFILE + fill % extra)
+                self.assertFails("app_store", "fill_what_to_test runs on the TestFlight edition too")
+
     def test_a_workflow_never_runs_pilot_itself(self):
         self.external_path()
         self.write(".github/workflows/other.yml", "      - run: bundle exec fastlane pilot distribute --distribute_external\n")

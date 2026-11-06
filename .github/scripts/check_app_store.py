@@ -37,7 +37,7 @@ submitted, its listing and its review notes are checked here, before any upload:
 9. External testers get the App Store edition only: in fastlane/Fastfile, what distributes a build outside the team
    (an external group, Beta App Review) is in `distribute_to_external_testers` and its helpers, which refuse any
    edition but the App Store one and only distribute a build given by number; the internal TestFlight upload submits
-   nothing. In the workflows, a step that runs the external_testers lanes has `EDITION: app-store` and takes its build
+   nothing, and What to Test (set on every build) writes the build's localizations only. In the workflows, a step that runs the external_testers lanes has `EDITION: app-store` and takes its build
    number from the App Store edition steps (ids ios_app_store, mac_app_store), which build that edition (2.5.19: the
    TestFlight edition, with downloads, is never reviewed or given to external testers).
 
@@ -632,6 +632,12 @@ def check_external_testers(problems: list) -> None:
     if upload and not any(re.search(r"\bskip_submission:\s*true\b", code) for _, code in upload):
         problems.append("fastlane/Fastfile: upload_build (the TestFlight upload) must keep skip_submission: true: it "
                         "distributes nothing and submits nothing for Beta App Review")
+    # What to Test, set on every build of both editions: it writes the build's localizations and nothing else.
+    for number, code in functions.get("fill_what_to_test", []):
+        for write in re.findall(r"\b(?:patch|post|delete)_\w+|\.(?:expire!|add_beta_groups\b|post_beta_app_review_submissions?\b)", code):
+            if write not in ("patch_beta_build_localizations", "post_beta_build_localizations"):
+                problems.append(f"fastlane/Fastfile:{number}: fill_what_to_test runs on the TestFlight edition too: it may "
+                                f"only set What to Test (beta build localizations), not {write}")
     distribute = [code for _, code in functions.get("distribute_to_external_testers", [])]
     if "distribute_to_external_testers" in functions:
         if not distribute or not re.fullmatch(r'\s*UI\.user_error!\(.*\) unless app_store_edition\?', distribute[0]):

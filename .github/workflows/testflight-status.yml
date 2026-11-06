@@ -1,0 +1,32 @@
+name: TestFlight status
+
+# Read only: TestFlight as App Store Connect holds it (fastlane testflight_status): the groups and how many testers each
+# has, Test Information per language and the Beta App Review contact (set or missing, never their values), and each
+# platform's latest builds with their edition, states, beta review and What to Test. Uploads, submits and changes
+# nothing. A workflow of its own on Linux: in release.yml it would wait in the release queue, and a waiting run there
+# would hold back the deliveries (deliver.yml).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    name: TestFlight status (read only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: TestFlight status
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: bundle exec fastlane testflight_status

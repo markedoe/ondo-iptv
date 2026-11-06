@@ -219,6 +219,12 @@ user-selected files).
    Each tester can also turn off the e-mails of an app in the TestFlight app (the app's page, *Email
    Notifications*).
 
+   **What to Test** is the same on every build, internal and external, TestFlight and App Store editions, iOS and
+   macOS, pushes and tags: the release notes of the listing (`fastlane/metadata/<language>/release_notes.txt`) in each
+   of its languages, set as soon as App Store Connect lists the build (`fill_what_to_test`: the build's localizations
+   only, nothing is distributed or submitted). A build where it could not be set fails the run (step *What to Test*)
+   once every upload is done.
+
    **Two editions.** *Run workflow* asks for an `edition`: `testflight` (the default) builds the app with
    downloads, for internal testers only; `app-store` builds it without (Apple's rule 5.2.3 on saving media
    from other sources), and is **the only one to submit**. A tag builds the App Store edition. The App Store
@@ -248,12 +254,18 @@ user-selected files).
      encryption), submits the build for Beta App Review and adds it to the group; the testers are e-mailed once Apple
      approves it. A build of the same version still waiting for beta review is expired and replaced; while one is in
      review, the new build is not sent (the next push's follows). The run holds the release queue until this job ends.
-   - **In App Store Connect, once** (*TestFlight → Test Information*): the **Feedback Email** (the job stops and says
-     so while there is none; it is not in the repository and is reused for every language). The Beta App Review
-     contact is copied from the App Review contact when it is empty. **Add the testers** to the `External testers`
-     group (*TestFlight → External Testing*), by e-mail or with a public link: their addresses are never in the
-     repository. The first build of a version waits for Beta App Review (usually within a day or two); the next
-     builds of that version are often approved within minutes.
+   - **What App Store Connect holds** (*TestFlight → Test Information*, the group and its testers) is read, never
+     assumed: the job logs whether the group is external and how many testers it has, whether the **Feedback Email**
+     and the Beta App Review contact are set (never their values), and stops only when one is really missing, naming
+     the field. The Feedback Email and the testers' addresses are never in the repository; testers are added in
+     *TestFlight → External Testing*, by e-mail or with a public link. An empty Beta App Review contact is copied from
+     the App Review contact. The first build of a version waits for Beta App Review (usually within a day or two);
+     the next builds of that version are often approved within minutes.
+   - **To look before changing anything**: *Actions → TestFlight status → Run workflow* (`testflight-status.yml`,
+     Linux, read only, outside the release queue): the groups and their tester counts, Test Information per language
+     (set or missing), the Beta App Review contact (set or missing), and each platform's latest builds with whether
+     they are in `External testers` (App Store edition), their internal, external and beta review states and their
+     What to Test.
    - By hand: *Run workflow*, target `builds`, `edition` `testflight`, `external` on.
 
    **No beta badge.** No edition shows one. Nothing in the app, its listing or the site pages the listing opens

@@ -359,6 +359,17 @@ class ExternalTestersTests(WorkflowScriptTestCase):
                                          env={**self.environment, "CHECKS": checks, "IOS": ios, "MAC": mac})
                 self.assertEqual(outcome.returncode != 0, fails, outcome.stdout + outcome.stderr)
 
+    def test_a_build_without_what_to_test_turns_the_run_red(self):
+        script = step_script("release.yml", "What to Test")
+        for missing, fails in (("   ", False), (" missing  ", True), ("   missing", True)):
+            with self.subTest(missing=missing):
+                outcome = subprocess.run(["bash", "-e", "-c", script], capture_output=True, text=True,
+                                         env={**self.environment, "MISSING": missing})
+                self.assertEqual(outcome.returncode != 0, fails, outcome.stdout + outcome.stderr)
+        block = "\n".join(job_block("release.yml", "deliver"))
+        for step in ("ios", "mac", "ios_app_store", "mac_app_store"):
+            self.assertIn(f"steps.{step}.outputs.what_to_test", block)
+
     def test_only_a_push_delivery_goes_to_external_testers(self):
         block = "\n".join(job_block("release.yml", "deliver"))
         self.assertIn("EXTERNAL: ${{ github.event.inputs.external == 'true' && github.event.inputs.target == 'builds' && "

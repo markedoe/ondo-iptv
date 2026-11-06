@@ -220,6 +220,12 @@ réseau, fichiers choisis par l'utilisateur).
    l'envoi d'un tag attend le traitement, Apple a donc pu l'envoyer déjà) : l'app TestFlight montre le dernier. Chaque testeur peut aussi couper les e-mails d'une app dans l'app TestFlight (la page de
    l'app, *Notifications par e-mail*).
 
+   **« À tester »** est le même sur chaque build, interne et externe, éditions TestFlight et App Store, iOS et macOS,
+   pushs et tags : les notes de version de la fiche (`fastlane/metadata/<langue>/release_notes.txt`) dans chacune de
+   ses langues, posées dès qu'App Store Connect liste le build (`fill_what_to_test` : seulement les localisations du
+   build, rien n'est distribué ni soumis). Un build où elles n'ont pas pu être posées met le lancement en échec (étape
+   *What to Test*) une fois tous les envois faits.
+
    **Deux éditions.** *Run workflow* demande une `edition` : `testflight` (par défaut) construit l'app avec les
    téléchargements, pour les testeurs internes seulement ; `app-store` la construit sans (règle 5.2.3 d'Apple
    sur l'enregistrement de médias d'autres sources), et c'est **la seule à soumettre**. Un tag construit
@@ -253,12 +259,19 @@ réseau, fichiers choisis par l'utilisateur).
      testeurs reçoivent un e-mail quand Apple l'approuve. Un build de la même version encore en attente de la Beta
      App Review est expiré et remplacé ; tant qu'un autre est en cours de review, le nouveau n'est pas envoyé (celui
      du push suivant suivra). Le lancement garde la file des releases jusqu'à la fin de ce job.
-   - **Dans App Store Connect, une fois** (*TestFlight → Informations de test*) : l'**e-mail de retour** (*Feedback
-     Email* ; le job s'arrête et le dit tant qu'il n'y en a pas ; il n'est pas dans le dépôt et sert pour toutes les
-     langues). Le contact de la Beta App Review est copié du contact de la review App Store s'il est vide.
-     **Ajoutez les testeurs** au groupe `External testers` (*TestFlight → Tests externes*), par e-mail ou avec un lien
-     public : leurs adresses ne sont jamais dans le dépôt. Le premier build d'une version attend la Beta App Review
-     (en général un ou deux jours) ; les builds suivants de cette version sont souvent approuvés en quelques minutes.
+   - **Ce que contient App Store Connect** (*TestFlight → Informations de test*, le groupe et ses testeurs) est lu,
+     jamais supposé : le job note si le groupe est externe et combien il a de testeurs, si l'**e-mail de retour**
+     (*Feedback Email*) et le contact de la Beta App Review sont remplis (jamais leurs valeurs), et ne s'arrête que
+     quand l'un manque vraiment, en nommant le champ. L'e-mail de retour et les adresses des testeurs ne sont jamais
+     dans le dépôt ; les testeurs s'ajoutent dans *TestFlight → Tests externes*, par e-mail ou avec un lien public. Un
+     contact de Beta App Review vide est copié du contact de la review App Store. Le premier build d'une version attend
+     la Beta App Review (en général un ou deux jours) ; les builds suivants de cette version sont souvent approuvés en
+     quelques minutes.
+   - **Pour regarder avant de changer quoi que ce soit** : *Actions → TestFlight status → Run workflow*
+     (`testflight-status.yml`, Linux, en lecture seule, hors de la file des releases) : les groupes et leur nombre de
+     testeurs, les Informations de test par langue (remplies ou non), le contact de la Beta App Review (rempli ou
+     non), et les derniers builds de chaque plateforme, s'ils sont dans `External testers` (édition App Store), leurs
+     états interne, externe et de Beta App Review, et leur « À tester ».
    - À la main : *Run workflow*, cible `builds`, `edition` `testflight`, `external` activé.
 
    **Pas de badge bêta.** Aucune édition n'en affiche. Rien dans l'app, sa fiche ou les pages du site que la fiche
