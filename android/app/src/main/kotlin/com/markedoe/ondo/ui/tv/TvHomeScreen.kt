@@ -186,23 +186,38 @@ fun TvHomeScreen(
     val bar = LocalTvTopBar.current
     // Whether the viewer has pressed a key on Home yet: until then, Home is theirs to start from its top.
     var viewerMoved by rememberSaveable { mutableStateOf(false) }
-    // Home at its top, Play focused, the carousel full size: on the featured titles coming after the rows (the
-    // catalogue, or what the device kept of TMDb, read after Home was drawn), when the viewer has not moved yet; and
-    // on Ondo opened again from the launcher.
+    // Where Home starts: Play; without featured titles (not read yet, or none), the first card of the first row.
+    val firstRow = state.shownRows.firstOrNull()
+    val initialKey: String? = when {
+        hasHero -> HERO_PLAY
+        state.tagSuggestion != null -> "suggestion-keep"
+        else -> when (firstRow) {
+            null -> null
+            RowOrder.HOME_CONTINUE_MOVIES -> resumeMovies.firstOrNull()?.let { "resume:${it.key}" }
+            RowOrder.HOME_CONTINUE_SERIES -> resumeSeries.firstOrNull()?.let { "resume:${it.key}" }
+            RowOrder.MY_LIST -> state.myList.firstOrNull()?.let { "myList:${it.key}" }
+            RowOrder.HOME_CHANNELS -> state.channels.firstOrNull()?.let { "channel:${it.channel.id}" }
+            RowOrder.HOME_NEW_MOVIES -> state.newMovies.firstOrNull()?.let { "newMovies:${it.key}" }
+            RowOrder.HOME_NEW_SERIES -> state.newSeries.firstOrNull()?.let { "newSeries:${it.key}" }
+            RowOrder.TRENDING -> state.trending.firstOrNull()?.let { "trending:${it.key}" }
+            else -> state.selections[firstRow]?.let { row -> row.items.firstOrNull()?.let { "sel:${row.id}:${it.key}" } }
+        }
+    }
+    // Home at its top, the focus where it starts ([initialKey]), the carousel full size: from the first frame, and
+    // again each time what comes first changes before the viewer has pressed a key (the featured titles, or a row,
+    // coming after Home was drawn: the catalogue or what the device kept of TMDb still being read at a cold start);
+    // and on Ondo opened again from the TV's home screen. A row coming above the one with the focus never leaves the
+    // list scrolled down, the rows above cut under the bar.
     suspend fun toTop() {
         listState.scrollToItem(0)
         // After the page's own focus effects (a card given its focus back as the page comes back).
         withFrameNanos { }
-        withFrameNanos { }
         bar?.browsing = false
-        if (state.hero.isNotEmpty()) memory?.handTo(HERO_PLAY) else memory?.given()
+        initialKey?.let { memory?.handTo(it) } ?: memory?.given()
     }
-    // Whether Home has shown its featured titles yet (Home drawn again, back from a page, keeps its place).
-    var heroSeen by rememberSaveable { mutableStateOf(hasHero) }
-    LaunchedEffect(hasHero) {
-        if (!hasHero || heroSeen) return@LaunchedEffect
-        heroSeen = true
-        if (!viewerMoved) toTop()
+    LaunchedEffect(firstItem, initialKey) {
+        if (viewerMoved || bar?.browsing == true) return@LaunchedEffect
+        toTop()
     }
     var handledLaunch by rememberSaveable { mutableLongStateOf(launch) }
     LaunchedEffect(launch) {

@@ -17,6 +17,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.hasTestTag
@@ -79,7 +80,7 @@ class TvHomeOpensAtTheTopTest {
     private var homeState by mutableStateOf(HomeUiState(playlistName = "Example Playlist"))
     private var memory: FocusMemory? = null
 
-    private fun show(initial: HomeUiState) {
+    private fun show(initial: HomeUiState, settleMs: Long = 1_500) {
         homeState = initial
         var inputModes: InputModeManager? = null
         compose.setContent {
@@ -97,7 +98,7 @@ class TvHomeOpensAtTheTopTest {
         compose.waitForIdle()
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
-        advance(1_500)
+        advance(settleMs)
     }
 
     private fun advance(ms: Long) {
@@ -117,7 +118,6 @@ class TvHomeOpensAtTheTopTest {
     private fun assertOpensAtTheTop(rows: HomeUiState, firstShelf: String, paused: Boolean = false) {
         show(rows)
         assertTrue("meanwhile, the focus on the first row ($firstShelf)", focusedIn(firstShelf))
-        assertFalse("the first card's focus was given, not chosen by the viewer", memory?.chosen == true)
         if (paused) {
             // Something over Ondo a moment (a TV's overlay, its standby), then Ondo again.
             compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
@@ -167,6 +167,49 @@ class TvHomeOpensAtTheTopTest {
             val top = compose.onNodeWithTag(shelf, useUnmergedTree = true).getUnclippedBoundsInRoot().top
             assertTrue("the rows at their top: $shelf at $top, the frame ending at $heroBottom", top >= heroBottom + 17.dp && top <= heroBottom + 19.dp)
         }
+    }
+
+    private fun firstCardFocused(shelf: String): Boolean = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag(shelf))).onFirst()
+        .fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true
+
+    /** [shelf], its name too, wholly below the top bar (84 dp), the list at its top: the playlist's name above it. */
+    private fun assertWholeBelowTheBarAtTheTop(shelf: String, step: String) {
+        val top = compose.onNodeWithTag(shelf, useUnmergedTree = true).getUnclippedBoundsInRoot().top
+        assertTrue("$step: $shelf starts at $top, under the top bar", top >= 84.dp)
+        val name = compose.onNode(hasText("Example Playlist") and hasAnyAncestor(hasTestTag("home")), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("$step: the list at its top, the playlist's name at ${name.top}", name.top >= 0.dp && name.bottom <= top)
+    }
+
+    /**
+     * No featured titles (not read yet at a cold start, or none at all), two rows to continue watching: from the first
+     * frames, the first card of the FIRST row has the focus, the list at its top. Then the movies' row comes above the
+     * series' one, which had the focus (the photo of a TV: Series in progress first on screen, the row above cut under
+     * the bar): the list stays at its top, the focus on the new first row.
+     */
+    @Test
+    fun withoutFeaturedTitlesTheFirstRowsFirstCardAndTheListAtItsTop() {
+        val both = HomeUiState(playlistName = "Example Playlist", continueWatching = resume, newMovies = movies, hasVod = true)
+        show(both, settleMs = 300)
+        assertTrue("the first row's first card, from the first frames: ${focusedTag()}", firstCardFocused("shelfResumeMovies"))
+        assertWholeBelowTheBarAtTheTop("shelfResumeMovies", "both rows")
+        advance(3_000)
+        assertTrue("still there, no featured titles", firstCardFocused("shelfResumeMovies"))
+        assertWholeBelowTheBarAtTheTop("shelfResumeMovies", "no featured titles")
+    }
+
+    @Test
+    fun aRowComingAboveTheFocusedOneLeavesTheListAtItsTop() {
+        val seriesOnly = HomeUiState(playlistName = "Example Playlist", continueWatching = resume.filter { it.isSeries }, newMovies = movies, hasVod = true)
+        show(seriesOnly, settleMs = 300)
+        assertTrue("the series' row first, its first card focused", firstCardFocused("shelfResumeSeries"))
+        homeState = seriesOnly.copy(continueWatching = resume)
+        advance(300)
+        assertTrue("the movies' row, now first, has the focus: ${focusedTag()}", firstCardFocused("shelfResumeMovies"))
+        assertWholeBelowTheBarAtTheTop("shelfResumeMovies", "the movies' row came above")
+        // Then the featured titles: Play, the frame full size.
+        homeState = homeState.copy(hero = hero)
+        advance(1_500)
+        assertTrue("Play has the focus", compose.onNodeWithTag("heroPlay").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
     }
 
     @Test
