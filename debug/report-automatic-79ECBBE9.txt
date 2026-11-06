@@ -1,0 +1,38 @@
+Ondo playback report, 2026-11-06T14:52:50Z
+App: Ondo 2.0.0 (1)
+System: iOS 26.5, arm64
+Engine: AVPlayer (MKV remuxed) (setting: automatic)
+Buffer: 0.0 s in use; live automatic, films and series automatic
+Playing: film, .mkv, 480×270
+Duration: 40.0 s
+Position: 25.8 s
+State: playing
+
+Verdict: measuring
+Freezes: 0, 0.0 s
+Lost pictures: 0
+Smoothness: -
+Video bitrate: -; received (10 s): 4.45 Mb/s
+
+Events (seconds since opening):
+  0.0 open film
+  0.0 address 1 of 1 (.mkv) with the system player (MKV remuxed)
+  0.2 remux ready after 0.1 s: avc1.640015, mp4a.40.2, SDR, 4 segments
+  0.2 remux served GET /index.m3u8: 200, 208 bytes in 0 ms
+  0.2 remux served GET /media.m3u8: 200, 284 bytes in 0 ms
+  0.2 remux served GET /init.mp4: 200, 1127 bytes in 0 ms
+  0.2 remux served GET /seg-0.m4s: 200, 382793 bytes in 16 ms
+  0.5 state: loading
+  0.5 remux served GET /seg-1.m4s: 200, 391254 bytes in 5 ms
+  0.5 remux served GET /seg-2.m4s: 200, 381501 bytes in 8 ms
+  1.0 state: playing
+  1.5 picture moving after 1.5 s
+  1.7 seek from 1.0 to 25.0 s
+  2.6 seek done after 0.9 s
+
+Samples (s, position, received kB, used kB (tracks played), pictures shown, lost):
+  0.5 - 383 0 0 0
+  1.0 0.5 1538 35 0 0
+  1.5 1.0 1538 75 0 0
+  2.1 25.2 1538 1905 0 0
+  2.6 25.7 1538 1943 0 0
