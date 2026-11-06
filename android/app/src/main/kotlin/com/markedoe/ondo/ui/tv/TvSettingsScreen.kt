@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
@@ -468,6 +469,10 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
     title(R.string.settings_catalogue)
     item(key = "categories") {
         SettingRow(stringResource(R.string.languages_and_categories), Icons.Rounded.FilterList, subtitle = stringResource(R.string.categories_hint), onClick = actions.onCategories, modifier = Modifier.focusRequester(first).focusMemory("settings-categories").testTag("categoriesRow"))
+    }
+    // Selections are rows: a Kids profile changes neither.
+    if (state.canChangeRowOrder) item(key = "selections") {
+        SettingRow(stringResource(R.string.my_selections), Icons.Rounded.AutoAwesome, subtitle = stringResource(R.string.my_selections_summary), onClick = actions.onSelections, modifier = Modifier.focusMemory("settings-selections").testTag("selectionsRow"))
     }
     if (state.canChangeRowOrder) item(key = "rowOrder") {
         SettingRow(stringResource(R.string.row_order), Icons.Rounded.Reorder, subtitle = stringResource(R.string.row_order_summary), onClick = actions.onRowOrder, modifier = Modifier.focusMemory("settings-rowOrder").testTag("rowOrderRow"))

@@ -6,6 +6,7 @@ it as CI does. Run: python3 -m unittest discover -s .github/scripts/tests
 import datetime
 import json
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -550,7 +551,7 @@ class AppStoreTests(CheckTestCase):
         "def app_store_edition?\n  ENV[\"EDITION\"] == \"app-store\"\nend\n\n"
         "def upload_build(platform)\n  upload_to_testflight(\n    api_key: api_key,\n    skip_submission: true\n  )\nend\n\n"
         "def external_groups(app)\n  external = app.get_beta_groups.reject(&:is_internal_group)\n"
-        "  app.create_beta_group(group_name: EXTERNAL_GROUP, is_internal_group: false) if external.empty?\n"
+        "  Spaceship::ConnectAPI.test_flight_request_client.post(\"v1/betaGroups\", new_external_group_body(app.id)) if external.empty?\n"
         "  UI.user_error!(\"An internal group was selected for external testers\") if external.any?(&:is_internal_group)\n"
         "  external\nend\n\n"
         "def beta_review_slot_free?(app, platform, version, number)\n  waiting.each do |build|\n"
@@ -656,6 +657,12 @@ class AppStoreTests(CheckTestCase):
             with self.subTest(fastfile=fastfile[-300:]):
                 self.external_path(fastfile)
                 self.assertFails("app_store", "must send the build to the app's external groups by id")
+
+    def test_the_group_is_never_created_with_spaceships_create_beta_group(self):
+        self.external_path(self.EXTERNAL_FASTFILE.replace(
+            "Spaceship::ConnectAPI.test_flight_request_client.post(\"v1/betaGroups\", new_external_group_body(app.id))",
+            "app.create_beta_group(group_name: EXTERNAL_GROUP, is_internal_group: false)"))
+        self.assertFails("app_store", "create_beta_group sends publicLinkLimit")
 
     def test_an_internal_group_never_gets_the_external_build(self):
         for fastfile in (self.EXTERNAL_FASTFILE.replace(".reject(&:is_internal_group)", ""),
@@ -892,3 +899,22 @@ class AppStoreTests(CheckTestCase):
                          "android/app/src/main/res/values/strings.xml: the apps link to a way to pay",
                          "App/Features/Support.swift: the apps link to a way to pay",
                          ".github/FUNDING.yml")
+
+
+@unittest.skipUnless(shutil.which("ruby"), "ruby is needed")
+class ExternalGroupRequestTests(unittest.TestCase):
+    """fastlane/Fastfile: the request that creates the external TestFlight group, evaluated by Ruby as the lane builds it."""
+
+    def test_the_group_is_created_with_its_name_and_external_only(self):
+        fastfile = (REPOSITORY / "fastlane/Fastfile").read_text(encoding="utf-8")
+        start = fastfile.index("def new_external_group_body(app_id)")
+        function = fastfile[start:fastfile.index("\nend\n", start) + 5]
+        group = re.search(r'^EXTERNAL_GROUP = "([^"]+)"$', fastfile, re.MULTILINE).group(1)
+        script = (f'require "json"\nEXTERNAL_GROUP = {json.dumps(group)}\n{function}\n'
+                  'puts JSON.generate(new_external_group_body("APP-ID"))\n')
+        result = subprocess.run(["ruby", "-e", script], capture_output=True, text=True, check=True)
+        self.assertEqual(json.loads(result.stdout), {"data": {
+            "type": "betaGroups",
+            "attributes": {"name": group, "isInternalGroup": False},
+            "relationships": {"app": {"data": {"type": "apps", "id": "APP-ID"}}}}})
+

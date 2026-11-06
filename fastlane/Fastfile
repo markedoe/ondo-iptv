@@ -238,6 +238,19 @@ rescue StandardError => e
   "unknown (#{e.message})"
 end
 
+# The request that creates EXTERNAL_GROUP (POST /v1/betaGroups): its name, external, and the app; nothing else.
+# Spaceship's create_beta_group also sends publicLinkLimit, which App Store Connect refuses while the public link is off
+# ("Public link limit cannot be changed when public link is disabled").
+def new_external_group_body(app_id)
+  {
+    data: {
+      type: "betaGroups",
+      attributes: { name: EXTERNAL_GROUP, isInternalGroup: false },
+      relationships: { app: { data: { type: "apps", id: app_id } } }
+    }
+  }
+end
+
 # The external groups of the app, as App Store Connect holds them (each logged: name, testers, public link): every one
 # gets the App Store edition build. Never an internal group (the TestFlight edition's). EXTERNAL_GROUP is created only
 # when the app has no external group at all (testers are added in App Store Connect, never from here).
@@ -248,7 +261,7 @@ def external_groups(app)
   if external.empty?
     UI.user_error!("The TestFlight group \"#{EXTERNAL_GROUP}\" is an internal group: rename it in App Store Connect") if groups.any? { |group| group.name == EXTERNAL_GROUP }
     UI.important("No external TestFlight group: creating \"#{EXTERNAL_GROUP}\" (add its testers in App Store Connect)")
-    app.create_beta_group(group_name: EXTERNAL_GROUP, is_internal_group: false)
+    Spaceship::ConnectAPI.test_flight_request_client.post("v1/betaGroups", new_external_group_body(app.id))
     external = app.get_beta_groups.reject(&:is_internal_group)
     UI.user_error!("The TestFlight group \"#{EXTERNAL_GROUP}\" could not be created") if external.empty?
   end

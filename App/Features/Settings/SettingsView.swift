@@ -158,7 +158,15 @@ struct SettingsView: View {
                 } label: {
                     Label("Languages and Categories", systemImage: "line.3.horizontal.decrease.circle")
                 }
-                // The order is the device's: a kids profile does not change it.
+                // The order is the device's: a kids profile does not change it, nor the selections, which are rows.
+                if model.canChangeRowOrder {
+                    NavigationLink {
+                        SelectionsView()
+                    } label: {
+                        Label("My Selections", systemImage: "sparkles")
+                    }
+                    .accessibilityIdentifier("selectionsRow")
+                }
                 if model.canChangeRowOrder {
                     NavigationLink {
                         RowOrderView()

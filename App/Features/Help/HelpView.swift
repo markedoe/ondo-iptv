@@ -130,6 +130,30 @@ extension HelpTopic {
             """
         ),
         HelpTopic(
+            id: "selections", title: "My Selections: Rows of Your Own", systemImage: "sparkles",
+            body: """
+            A selection is a row of your own, made of tags. Settings → My Selections lists the selections of the profile \
+            open: New Selection makes one, a selection opens its page to change it, and swiping it or its menu \
+            (Control-click on a Mac) deletes it, as does Delete Selection on its page. Settings → Row Order also has New \
+            Selection, beside each tab’s name.
+
+            On its page, give it a name, or leave the name empty and its tags name it. Choose the tabs it shows in: Home, \
+            Movies, Series. Then choose its tags among genres, awards, decades and styles. A title needs one of the tags \
+            chosen; with All Tags on, it needs every one of them.
+
+            A genre is one genre whatever language your provider names it in: Aventure, Abenteuer and Adventure are the \
+            same, shown in your language. Genres come from your provider: a movie’s once its page has been opened, a series’ \
+            always.
+
+            The row is a new pick every day among its titles: the best rated on TMDb come first more often, and the titles \
+            you have watched come last. See All at its end opens all of them.
+
+            Selections belong to each profile and, with Sync on this network, follow on your other devices. A Kids profile \
+            cannot make or change them. A new selection’s row goes to the top of each tab it shows in; Settings → Row Order \
+            moves or hides it like the other rows.
+            """
+        ),
+        HelpTopic(
             id: "my-list", title: "My List and Collections", systemImage: "list.star",
             body: """
             Add to My List keeps a movie, a series or a channel at hand. On iPhone, My List is a tab with Movies, \

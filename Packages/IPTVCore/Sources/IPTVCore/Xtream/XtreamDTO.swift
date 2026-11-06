@@ -226,7 +226,7 @@ struct XtreamSeriesDTO: Decodable {
         name = c.lenientString(.name)?.trimmingCharacters(in: .whitespaces) ?? "Series \(seriesID)"
         cover = c.lenientString(.cover)
         plot = c.lenientString(.plot)?.nilIfBlank
-        genre = c.lenientString(.genre)?.nilIfBlank
+        genre = c.lenientString(.genre).map(HtmlEntities.decode)?.nilIfBlank
         cast = (c.lenientString(.cast) ?? c.lenientString(.actors))?.nilIfBlank
         director = c.lenientString(.director)?.nilIfBlank
         releaseDate = (c.lenientString(.releaseDate) ?? c.lenientString(.releaseDateSnake))?.nilIfBlank
@@ -280,7 +280,7 @@ struct XtreamInfoDTO: Decodable {
         plot = (c.lenientString(.plot) ?? c.lenientString(.description))?.nilIfBlank
         cast = (c.lenientString(.cast) ?? c.lenientString(.actors))?.nilIfBlank
         director = c.lenientString(.director)?.nilIfBlank
-        genre = c.lenientString(.genre)?.nilIfBlank
+        genre = c.lenientString(.genre).map(HtmlEntities.decode)?.nilIfBlank
         releaseDate = (c.lenientString(.releaseDate) ?? c.lenientString(.releaseDateCamel) ?? c.lenientString(.releaseDateSnake))?.nilIfBlank
         durationSecs = c.lenientInt(.durationSecs)
         rating = c.lenientDouble(.rating)

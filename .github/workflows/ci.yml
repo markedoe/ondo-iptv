@@ -309,6 +309,36 @@ jobs:
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 600 \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: Collect crash reports
+        # A test process that crashes leaves no assertion text; its report (and the simulator's) says why. Simulator
+        # and host diagnostics only, filtered to the app and the test runners: no signing material is involved.
+        if: failure()
+        run: |
+          mkdir -p crash-reports
+          for dir in "$HOME/Library/Logs/DiagnosticReports" "$HOME/Library/Logs/CoreSimulator" \
+                     "$HOME/Library/Developer/CoreSimulator/Devices"; do
+            [ -d "$dir" ] || continue
+            find "$dir" -type f \( -name '*.ips' -o -name '*.crash' \) \( -iname '*Ondo*' -o -iname '*xctest*' \
+              -o -iname '*xctrunner*' -o -iname '*testmanagerd*' \) -print0 2>/dev/null |
+              while IFS= read -r -d '' file; do
+                cp "$file" "crash-reports/$(basename "$file")" 2>/dev/null || true
+              done
+          done
+          COUNT=$(find crash-reports -type f | wc -l | tr -d ' ')
+          echo "Crash reports found: $COUNT"
+          find crash-reports -type f -exec basename {} \; | sort | sed 's/^/  - /'
+          echo "### Crash reports" >> "$GITHUB_STEP_SUMMARY"
+          echo "$COUNT file(s) collected (Ondo, xctest, test runner)." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload test result bundle and crash reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-tests-diagnostics
+          path: |
+            build/UITests.xcresult
+            crash-reports
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Test counts
         if: success() || failure()
         run: |

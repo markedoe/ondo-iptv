@@ -62,12 +62,19 @@ extension AppModel {
         let key = parts.joined(separator: "|")
         if let cached = selectionTagsCache, cached.key == key { return cached }
         var names: [String: String] = [:]
+        // Each genre's key (`Genres`): the same genre named in any language is one.
         func genres(_ fields: [String?]) -> Set<String> {
             var result = Set<String>()
-            for genre in fields.flatMap({ Self.genres(in: $0) }) {
-                guard let tag = Selections.genre(genre) else { continue }
-                if names[tag] == nil { names[tag] = genre }
-                result.insert(String(tag.dropFirst(Selections.genrePrefix.count)))
+            for field in fields {
+                for genre in Genres.split(field) {
+                    let keys: [String] = Genres.keys(genre)
+                    // A genre's own name for those TMDb does not have; a name joining genres names none of them.
+                    if keys.count == 1 {
+                        let tag: String = Selections.genrePrefix + keys[0]
+                        if names[tag] == nil { names[tag] = genre }
+                    }
+                    result.formUnion(keys)
+                }
             }
             return result
         }
@@ -138,8 +145,11 @@ extension AppModel {
     }
 
     private func pickSelectionTitles(_ selection: SyncSelection, tab: String, limit: Int, day: String, tags: SelectionTags) -> [ShowcaseItem] {
-        let all = selection.matchesAll
-        func matches(_ id: String) -> Bool { tags.facts[id].map { Selections.matches(tags: selection.tags, all: all, facts: $0) } ?? false }
+        let matcher: (Selections.Facts) -> Bool = Selections.matcher(tags: selection.tags, all: selection.matchesAll)
+        func matches(_ id: String) -> Bool {
+            guard let facts = tags.facts[id] else { return false }
+            return matcher(facts)
+        }
         let excluded = exclusions
         var candidates: [ShowcaseItem] = []
         if tab != SyncRows.series {
@@ -199,14 +209,24 @@ extension AppModel {
             orderedGroups.append(award.group)
         }
         return (
-            genres: genres.compactMap { genre in
-                let tag = Selections.genrePrefix + genre
-                return tags.genreNames[tag].map { (tag: tag, name: $0) }
-            }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending },
+            genres: genreChoices(genres, names: tags.genreNames),
             awardGroups: orderedGroups,
             decades: Selections.decades(movies.map(\.year) + series.map(\.year)),
             styles: CategoryStyles.order.filter { styles.contains($0) }
         )
+    }
+
+    /// The genre tags of `keys` with the names shown (TMDb's genres in the viewer's language), by name.
+    private func genreChoices(_ keys: Set<String>, names: [String: String]) -> [(tag: String, name: String)] {
+        var named: [(tag: String, name: String)] = []
+        for key in keys {
+            let tag: String = Selections.genrePrefix + key
+            named.append((tag: tag, name: genreTagName(tag, names: names)))
+        }
+        named.sort { (left: (tag: String, name: String), right: (tag: String, name: String)) -> Bool in
+            left.name.localizedStandardCompare(right.name) == .orderedAscending
+        }
+        return named
     }
 
     /// The tags a selection's page offers, by group (genres, awards, decades, styles; the empty ones left out): the
@@ -229,11 +249,10 @@ extension AppModel {
         return groups
     }
 
-    /// A tag's name: a genre's as the titles name it, a festival's or ceremony's, a decade ("1990s"), a style's.
+    /// A tag's name: one of TMDb's genres in the viewer's language, another genre as the titles name it, a festival's
+    /// or ceremony's, a decade ("1990s"), a style's. A genre tag of an earlier version names the genres it is read as.
     func selectionTagName(_ tag: String) -> String {
-        if tag.hasPrefix(Selections.genrePrefix) {
-            return selectionTags().genreNames[tag] ?? String(tag.dropFirst(Selections.genrePrefix.count)).capitalized
-        }
+        if tag.hasPrefix(Selections.genrePrefix) { return genreTagName(tag, names: nil) }
         if tag.hasPrefix(Selections.awardPrefix) { return AwardGroup.name(String(tag.dropFirst(Selections.awardPrefix.count))) }
         if tag.hasPrefix(Selections.decadePrefix) {
             let decade = String(tag.dropFirst(Selections.decadePrefix.count))
@@ -241,6 +260,21 @@ extension AppModel {
         }
         if tag.hasPrefix(Selections.stylePrefix) { return CategoryStyleName.name(String(tag.dropFirst(Selections.stylePrefix.count))) }
         return tag
+    }
+
+    /// `names`: the genres' names by tag, nil to read them (`selectionTags`) only when one is needed.
+    private func genreTagName(_ tag: String, names: [String: String]?) -> String {
+        let canonical: [String] = Genres.canonicalTags(tag)
+        if canonical.count > 1 {
+            var parts: [String] = []
+            for one in canonical { parts.append(genreTagName(one, names: names)) }
+            return parts.joined(separator: " & ")
+        }
+        let first: String = canonical.first ?? tag
+        let key = String(first.dropFirst(Selections.genrePrefix.count))
+        if let name = GenreName.name(key) { return name }
+        let known: [String: String] = names ?? selectionTags().genreNames
+        return known[first] ?? known[tag] ?? key.capitalized
     }
 
     /// A selection's name: the one the viewer gave, else its tags' (`Selections.defaultName`).
@@ -255,15 +289,17 @@ extension AppModel {
 
     // MARK: Changes
 
-    /// Saves a selection (Settings → Row Order → New Selection): `id` nil makes a new one, whose row goes to the top of
+    /// Saves a selection (Settings → My Selections or Row Order → New Selection): `id` nil makes a new one, whose row goes to the top of
     /// each tab it shows in; an edited one that now shows in another tab goes to the top of that tab too. The record is
     /// dated for sync. Returns its ID; nil for a Kids profile, which cannot change its rows.
     @discardableResult
     func saveSelection(id: String?, name: String, tags: [String], all: Bool, tabs: [String]) -> String? {
         guard canChangeRowOrder else { return nil }
         let previous = id.flatMap { self.selection($0) }
+        // Genre tags by TMDb's genre (`Genres`), whatever language the page showed them in.
+        let canonical: [String] = Genres.canonicalTags(tags)
         let draft = SyncSelection(id: previous?.id ?? UUID().uuidString.lowercased(), name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                                  tags: tags, match: all ? SyncSelection.all : SyncSelection.any, tabs: tabs, updatedAt: 0)
+                                  tags: canonical, match: all ? SyncSelection.all : SyncSelection.any, tabs: tabs, updatedAt: 0)
         guard var record = SyncSelection.normalized([draft]).first else { return nil }
         if var unchanged = previous {
             unchanged.updatedAt = 0
@@ -312,6 +348,41 @@ extension AppModel {
             var profile = syncState.profileStates[id] ?? ProfileSyncState()
             profile.selections = records
             syncState.profileStates[id] = profile
+        }
+    }
+}
+
+/// The names of TMDb's genres (`Genres.canonical`) in the viewer's language.
+enum GenreName {
+    /// The name of one of TMDb's genres; nil for another genre.
+    static func name(_ key: String) -> String? {
+        switch key {
+        case "action": return String(localized: "Action")
+        case "adventure": return String(localized: "Adventure")
+        case "animation": return String(localized: "Animation")
+        case "comedy": return String(localized: "Comedy")
+        case "crime": return String(localized: "Crime")
+        case "documentary": return String(localized: "Documentary")
+        case "drama": return String(localized: "Drama")
+        case "family": return String(localized: "Family")
+        case "fantasy": return String(localized: "Fantasy")
+        case "history": return String(localized: "History")
+        case "horror": return String(localized: "Horror")
+        case "music": return String(localized: "Music")
+        case "mystery": return String(localized: "Mystery")
+        case "romance": return String(localized: "Romance")
+        case "science fiction": return String(localized: "Science Fiction")
+        case "thriller": return String(localized: "Thriller")
+        case "war": return String(localized: "War")
+        case "western": return String(localized: "Western")
+        case "kids": return String(localized: "Kids")
+        case "news": return String(localized: "News")
+        case "reality": return String(localized: "Reality")
+        case "soap": return String(localized: "Soap")
+        case "talk": return String(localized: "Talk")
+        case "politics": return String(localized: "Politics")
+        case "tv movie": return String(localized: "TV Movie")
+        default: return nil
         }
     }
 }

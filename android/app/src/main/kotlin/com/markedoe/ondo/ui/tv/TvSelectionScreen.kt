@@ -29,9 +29,9 @@ import com.markedoe.ondo.ui.screens.SelectionActions
 import com.markedoe.ondo.ui.screens.SelectionDraft
 import com.markedoe.ondo.ui.screens.SelectionUiState
 import com.markedoe.ondo.ui.screens.draftSaver
+import com.markedoe.ondo.ui.screens.namedTags
 import com.markedoe.ondo.ui.screens.tabName
 import com.markedoe.ondo.ui.screens.title
-import com.markedoe.ondo.ui.selectionTagName
 
 /**
  * A selection's page on a TV: its name (OK opens the keyboard), the tabs it shows in and its tags as chips the remote
@@ -93,8 +93,8 @@ fun TvSelectionScreen(state: SelectionUiState, actions: SelectionActions) {
             for ((group, tags) in state.groups) {
                 item(key = "group-$group") {
                     ChipGroup(stringResource(group)) {
-                        for (tag in tags) {
-                            TvChip(selectionTagName(tag, state.choices.genreNames), tag in draft.tags, "tag-$tag") { draft.toggle(tag) }
+                        for ((tag, name) in namedTags(group, tags, state)) {
+                            TvChip(name, tag in draft.tags, "tag-$tag") { draft.toggle(tag) }
                         }
                     }
                 }
