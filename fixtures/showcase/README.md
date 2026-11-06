@@ -18,3 +18,7 @@ python3 -I fixtures/showcase/tools/build_showcase.py --cache /path/to/cache
 
 Only pictures under a licence that allows reuse (CC BY, CC BY-SA, CC0, public domain everywhere) may be added, with
 their author and source in `titles.json`.
+
+The texts a viewer reads (summaries, the guide, the playlist's name) are in the apps' seven languages (`en`, `fr`,
+`es`, `pt`, `zh`, `ar`, `hi`), one store screenshot per language; the guide of a channel from abroad stays in its own
+language, except in English. Titles, channel names and categories are the provider's and do not change.

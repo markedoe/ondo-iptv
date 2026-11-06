@@ -32,7 +32,7 @@ import kotlinx.serialization.json.Json
  * library in use. Built as a provider would send it: categories with language tags, addresses on example.com (the
  * pictures are answered from the repository by [ShowcaseImages]).
  */
-class ShowcaseCatalogue private constructor(private val file: CatalogueFile, private val french: Boolean) {
+class ShowcaseCatalogue private constructor(private val file: CatalogueFile, private val language: String) {
     companion object {
         const val PLAYLIST_ID = "showcase"
 
@@ -44,13 +44,38 @@ class ShowcaseCatalogue private constructor(private val file: CatalogueFile, pri
             json.decodeFromString(CatalogueFile.serializer(), File("../../fixtures/showcase/catalogue.json").readText())
         }
 
-        fun load(french: Boolean) = ShowcaseCatalogue(source, french)
+        fun load(french: Boolean) = load(if (french) "fr" else "en")
+
+        /** The catalogue in one of the apps' languages: en, fr, es, pt, zh, ar or hi (English for any other). */
+        fun load(language: String) = ShowcaseCatalogue(source, language)
 
         private const val PICTURES = "https://example.com/showcase/"
+
+        /** A season's name as a provider in that language sends it (the apps' `season_number`). */
+        private val SEASON = mapOf("fr" to "Saison %d", "es" to "Temporada %d", "pt" to "Temporada %d", "zh" to "第 %d 季", "ar" to "الموسم %d", "hi" to "सीज़न %d")
     }
 
+    /** A text in the apps' seven languages; one missing reads in English. */
     @Serializable
-    data class Text(val en: String, val fr: String)
+    data class Text(
+        val en: String,
+        val fr: String,
+        val es: String? = null,
+        val pt: String? = null,
+        val zh: String? = null,
+        val ar: String? = null,
+        val hi: String? = null,
+    ) {
+        fun of(language: String): String = when (language) {
+            "fr" -> fr
+            "es" -> es
+            "pt" -> pt
+            "zh" -> zh
+            "ar" -> ar
+            "hi" -> hi
+            else -> null
+        } ?: en
+    }
 
     @Serializable
     data class CatalogueCategory(val id: String, val type: String, val name: String)
@@ -112,7 +137,7 @@ class ShowcaseCatalogue private constructor(private val file: CatalogueFile, pri
         val screens: Screens,
     )
 
-    private fun text(text: Text) = if (french) text.fr else text.en
+    private fun text(text: Text) = text.of(language)
 
     private fun picture(name: String?) = name?.let { PICTURES + it }
 
@@ -240,7 +265,7 @@ class ShowcaseCatalogue private constructor(private val file: CatalogueFile, pri
                 backdropUrl = picture(show.backdrop),
             ),
             seasons = list.groupBy { it.season }.toSortedMap().map { (number, episodes) ->
-                Season(number, (if (french) "Saison " else "Season ") + number, episodes)
+                Season(number, (SEASON[language] ?: "Season %d").replace("%d", number.toString()), episodes)
             },
         )
     }

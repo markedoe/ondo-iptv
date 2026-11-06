@@ -72,9 +72,9 @@ jobs:
           fi
           # GitHub keeps one waiting run per release group, and a new one replaces it: never push out a waiting run
           # (a version tag's release among them). The waiting run, or the next push, delivers this commit. The
-          # release-android group also holds Promote Android and Google Play status. Play catch-up is left out: replacing its
-          # waiting run costs nothing, it runs again within the hour.
-          if [ "$SOURCE" = CI ]; then group_workflows="release.yml"; else group_workflows="release-android.yml promote-android.yml play-status.yml"; fi
+          # release-android group also holds Promote Android, Google Play status and Google Play images. Play catch-up is
+          # left out: replacing its waiting run costs nothing, it runs again within the hour.
+          if [ "$SOURCE" = CI ]; then group_workflows="release.yml"; else group_workflows="release-android.yml promote-android.yml play-status.yml play-images.yml"; fi
           for workflow in $group_workflows; do
             waiting=$(gh run list --repo "$REPO" --workflow "$workflow" --limit 20 --json status \
               --jq '[.[] | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | length')

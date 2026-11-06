@@ -18,3 +18,7 @@ python3 -I fixtures/showcase/tools/build_showcase.py --cache /chemin/du/cache
 
 Seules les images sous une licence qui permet la réutilisation (CC BY, CC BY-SA, CC0, domaine public partout) peuvent
 être ajoutées, avec leur auteur et leur source dans `titles.json`.
+
+Les textes que lit le spectateur (résumés, guide, nom de la playlist) existent dans les sept langues des apps (`en`,
+`fr`, `es`, `pt`, `zh`, `ar`, `hi`), une capture de la fiche par langue ; le guide d'une chaîne étrangère reste dans sa
+langue, sauf en anglais. Titres, noms de chaînes et catégories sont ceux du fournisseur et ne changent pas.

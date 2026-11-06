@@ -1,7 +1,12 @@
 {
  "playlist_name": {
   "en": "My playlist",
-  "fr": "Ma playlist"
+  "fr": "Ma playlist",
+  "es": "Mi playlist",
+  "pt": "Minha playlist",
+  "zh": "我的播放列表",
+  "ar": "قائمة تشغيلي",
+  "hi": "मेरी प्लेलिस्ट"
  },
  "updated_minutes_ago": 12,
  "categories": [
@@ -43,7 +48,12 @@
    "director": "Sacha Goedegebure",
    "plot": {
     "en": "A giant, gentle rabbit takes his revenge on three rodents who spoil his quiet day in the forest.",
-    "fr": "Un lapin géant et paisible se venge de trois rongeurs qui gâchent sa journée tranquille dans la forêt."
+    "fr": "Un lapin géant et paisible se venge de trois rongeurs qui gâchent sa journée tranquille dans la forêt.",
+    "es": "Un conejo gigante y apacible se venga de tres roedores que le arruinan su día tranquilo en el bosque.",
+    "pt": "Um coelho gigante e tranquilo se vinga de três roedores que estragam seu dia sossegado na floresta.",
+    "zh": "一只温和的巨型兔子向三只破坏他林中宁静一天的啮齿动物展开报复。",
+    "ar": "أرنب عملاق ووديع ينتقم من ثلاثة قوارض أفسدت يومه الهادئ في الغابة.",
+    "hi": "एक विशाल और शांत खरगोश उन तीन चूहों से बदला लेता है जो जंगल में उसका सुकून भरा दिन बिगाड़ देते हैं।"
    },
    "poster": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg",
@@ -73,7 +83,12 @@
    "cast": "Halina Reijn, Thom Hoffman",
    "plot": {
     "en": "A lonely young woman searches the wild lands for the baby dragon she raised and lost.",
-    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu."
+    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu.",
+    "es": "Una joven solitaria recorre tierras salvajes en busca de la cría de dragón que crio y perdió.",
+    "pt": "Uma jovem solitária percorre terras selvagens em busca do filhote de dragão que criou e perdeu.",
+    "zh": "一位孤独的年轻女子踏遍荒野，寻找她亲手养大却又失去的幼龙。",
+    "ar": "شابة وحيدة تجوب الأراضي البرية بحثًا عن صغير التنين الذي ربّته ثم فقدته.",
+    "hi": "एक अकेली युवती बीहड़ इलाक़ों में उस नन्हे ड्रैगन को खोजती है जिसे उसने पाला था और फिर खो दिया।"
    },
    "poster": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Sintel_poster.jpg",
@@ -126,7 +141,12 @@
    "cast": "Derek de Lint, Sergio Hasselbaink, Vanja Rukavina, Denise Rebergen",
    "plot": {
     "en": "In a future Amsterdam, a group of scientists tries to save the world from destructive robots.",
-    "fr": "Dans un Amsterdam futuriste, un groupe de scientifiques tente de sauver le monde de robots destructeurs."
+    "fr": "Dans un Amsterdam futuriste, un groupe de scientifiques tente de sauver le monde de robots destructeurs.",
+    "es": "En una Ámsterdam del futuro, un grupo de científicos intenta salvar el mundo de unos robots destructores.",
+    "pt": "Numa Amsterdã do futuro, um grupo de cientistas tenta salvar o mundo de robôs destruidores.",
+    "zh": "在未来的阿姆斯特丹，一群科学家试图从毁灭性的机器人手中拯救世界。",
+    "ar": "في أمستردام المستقبل، تحاول مجموعة من العلماء إنقاذ العالم من روبوتات مدمّرة.",
+    "hi": "भविष्य के एम्स्टर्डम में वैज्ञानिकों का एक दल दुनिया को विनाशकारी रोबोटों से बचाने की कोशिश करता है।"
    },
    "poster": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/7/70/Tos-poster.png",
@@ -157,7 +177,12 @@
    "cast": "Pierre Bokma, Reinout Scholten van Aschat",
    "plot": {
     "en": "On a desolate island, a depressed sheep named Franck meets a salesman who offers him the gift of a lifetime.",
-    "fr": "Sur une île désolée, Franck, un mouton déprimé, rencontre un vendeur qui lui offre le cadeau d'une vie."
+    "fr": "Sur une île désolée, Franck, un mouton déprimé, rencontre un vendeur qui lui offre le cadeau d'une vie.",
+    "es": "En una isla desolada, Franck, una oveja deprimida, conoce a un vendedor que le ofrece el regalo de su vida.",
+    "pt": "Numa ilha desolada, Franck, uma ovelha deprimida, conhece um vendedor que lhe oferece o presente de uma vida.",
+    "zh": "在一座荒凉的小岛上，一只名叫弗兰克的抑郁绵羊遇到一位推销员，对方要送他一份一生难得的礼物。",
+    "ar": "على جزيرة مقفرة، يلتقي خروف مكتئب يُدعى فرانك ببائع يعرض عليه هدية العمر.",
+    "hi": "एक वीरान द्वीप पर फ़्रैंक नाम की एक उदास भेड़ की मुलाक़ात एक सेल्समैन से होती है, जो उसे ज़िंदगी भर का तोहफ़ा देने की पेशकश करता है।"
    },
    "poster": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/CosmosLaundromatPoster.jpg",
@@ -186,7 +211,12 @@
    "director": "Andy Goralczyk",
    "plot": {
     "en": "A shepherd girl and her dog face ancient spirits to continue the cycle of life.",
-    "fr": "Une jeune bergère et son chien affrontent des esprits anciens pour que le cycle de la vie continue."
+    "fr": "Une jeune bergère et son chien affrontent des esprits anciens pour que le cycle de la vie continue.",
+    "es": "Una joven pastora y su perro se enfrentan a espíritus ancestrales para que el ciclo de la vida continúe.",
+    "pt": "Uma jovem pastora e seu cachorro enfrentam espíritos ancestrais para que o ciclo da vida continue.",
+    "zh": "一位牧羊少女和她的狗直面远古神灵，让生命的轮回得以延续。",
+    "ar": "راعية صغيرة وكلبها يواجهان أرواحًا قديمة كي تستمر دورة الحياة.",
+    "hi": "एक चरवाहा लड़की और उसका कुत्ता जीवन-चक्र को जारी रखने के लिए प्राचीन आत्माओं का सामना करते हैं।"
    },
    "poster": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/2/25/Spring2019AlphaPosterBlender.jpg",
@@ -216,7 +246,12 @@
    "cast": "Tygo Gernandt, Cas Jansen",
    "plot": {
     "en": "Two men explore the strange machine world of an endless building, each seeing it in his own way.",
-    "fr": "Deux hommes explorent l'étrange monde mécanique d'un bâtiment sans fin, chacun le voyant à sa manière."
+    "fr": "Deux hommes explorent l'étrange monde mécanique d'un bâtiment sans fin, chacun le voyant à sa manière.",
+    "es": "Dos hombres exploran el extraño mundo mecánico de un edificio sin fin, y cada uno lo ve a su manera.",
+    "pt": "Dois homens exploram o estranho mundo mecânico de um prédio sem fim, cada um à sua maneira.",
+    "zh": "两个男人探索一座无尽建筑中奇异的机械世界，各自以自己的方式看待它。",
+    "ar": "رجلان يستكشفان عالمًا آليًا غريبًا داخل مبنى لا نهاية له، ويراه كلٌّ منهما على طريقته.",
+    "hi": "दो आदमी एक अंतहीन इमारत की अजीब मशीनी दुनिया की खोज करते हैं, और दोनों उसे अपने-अपने ढंग से देखते हैं।"
    },
    "backdrop": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/f/fd/Elephants_Dream_Emo_Proog_s6.jpg",
@@ -239,7 +274,12 @@
    "cast": "Annette Hanshaw, Reena Shah, Aseem Chhabra",
    "plot": {
     "en": "The epic of the Ramayana told through the songs of Annette Hanshaw, alongside a modern break-up.",
-    "fr": "L'épopée du Ramayana racontée sur les chansons d'Annette Hanshaw, en parallèle d'une rupture d'aujourd'hui."
+    "fr": "L'épopée du Ramayana racontée sur les chansons d'Annette Hanshaw, en parallèle d'une rupture d'aujourd'hui.",
+    "es": "La epopeya del Ramayana contada a través de las canciones de Annette Hanshaw, junto a una ruptura actual.",
+    "pt": "A epopeia do Ramayana contada pelas canções de Annette Hanshaw, ao lado de um término dos dias de hoje.",
+    "zh": "借安妮特·汉肖的歌声讲述《罗摩衍那》的史诗，并穿插一段现代的分手故事。",
+    "ar": "ملحمة رامايانا تُروى عبر أغاني آنيت هانشو، إلى جانب قصة انفصال معاصرة.",
+    "hi": "ऐनेट हैनशॉ के गीतों के ज़रिए सुनाया गया रामायण का महाकाव्य, साथ में आज के ज़माने का एक ब्रेकअप।"
    },
    "poster": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/2/24/Sita_STB_Poster_Agni_A2.png",
@@ -267,7 +307,12 @@
    "minutes": 90,
    "plot": {
     "en": "Two friends set out on a journey to find a mysterious lake that nobody seems to know.",
-    "fr": "Deux amis partent à la recherche d'un lac mystérieux que personne ne semble connaître."
+    "fr": "Deux amis partent à la recherche d'un lac mystérieux que personne ne semble connaître.",
+    "es": "Dos amigos emprenden un viaje en busca de un lago misterioso que nadie parece conocer.",
+    "pt": "Dois amigos partem em viagem em busca de um lago misterioso que ninguém parece conhecer.",
+    "zh": "两个朋友踏上旅程，寻找一座似乎无人知晓的神秘湖泊。",
+    "ar": "صديقان ينطلقان في رحلة بحثًا عن بحيرة غامضة لا يبدو أن أحدًا يعرفها.",
+    "hi": "दो दोस्त एक रहस्यमयी झील की तलाश में सफ़र पर निकलते हैं, जिसके बारे में कोई नहीं जानता।"
    },
    "poster": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/d/dc/Valkaama_poster.png",
@@ -291,7 +336,12 @@
    "director": "Georges Méliès",
    "plot": {
     "en": "Members of a geographical society set off on a fantastic journey by train, car and submarine, all the way to the sun.",
-    "fr": "Les membres d'une société de géographie partent pour un voyage fantastique en train, en automobile et en sous-marin, jusqu'au soleil."
+    "fr": "Les membres d'une société de géographie partent pour un voyage fantastique en train, en automobile et en sous-marin, jusqu'au soleil.",
+    "es": "Los miembros de una sociedad geográfica emprenden un viaje fantástico en tren, automóvil y submarino, hasta llegar al sol.",
+    "pt": "Os membros de uma sociedade de geografia partem numa viagem fantástica de trem, automóvel e submarino, até o sol.",
+    "zh": "一个地理学会的成员乘火车、汽车和潜水艇踏上奇幻旅程，一路直抵太阳。",
+    "ar": "ينطلق أعضاء جمعية جغرافية في رحلة خيالية بالقطار والسيارة والغواصة، حتى يبلغوا الشمس.",
+    "hi": "एक भौगोलिक संस्था के सदस्य ट्रेन, कार और पनडुब्बी से एक अद्भुत यात्रा पर निकलते हैं, जो सीधे सूरज तक जाती है।"
    },
    "backdrop": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/0/02/Set_from_Voyage_a_Travers_L%27Impossible.jpg",
@@ -313,7 +363,12 @@
    "director": "Georges Méliès",
    "plot": {
     "en": "A prince sets out to rescue his bride from a wicked witch, through storms, the depths of the sea and an enchanted kingdom.",
-    "fr": "Un prince part délivrer sa fiancée d'une méchante sorcière, à travers les tempêtes, le fond des mers et un royaume enchanté."
+    "fr": "Un prince part délivrer sa fiancée d'une méchante sorcière, à travers les tempêtes, le fond des mers et un royaume enchanté.",
+    "es": "Un príncipe parte a rescatar a su prometida de una bruja malvada, entre tormentas, las profundidades del mar y un reino encantado.",
+    "pt": "Um príncipe parte para resgatar a noiva de uma bruxa malvada, atravessando tempestades, as profundezas do mar e um reino encantado.",
+    "zh": "一位王子穿越风暴、深海和魔法王国，从邪恶女巫手中救出他的新娘。",
+    "ar": "ينطلق أمير لإنقاذ عروسه من ساحرة شريرة، عبر العواصف وأعماق البحر ومملكة مسحورة.",
+    "hi": "एक राजकुमार अपनी दुल्हन को एक दुष्ट चुड़ैल से छुड़ाने निकलता है, तूफ़ानों, समुद्र की गहराइयों और एक जादुई राज्य से होकर।"
    },
    "backdrop": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Royaume_des_fees.jpg",
@@ -336,7 +391,12 @@
    "director": "David Revoy",
    "plot": {
     "en": "A young witch and her cat learn the magic of Chaosah, between failed potions and contests.",
-    "fr": "Une jeune sorcière et son chat apprennent la magie de Chaosah, entre potions ratées et concours."
+    "fr": "Une jeune sorcière et son chat apprennent la magie de Chaosah, entre potions ratées et concours.",
+    "es": "Una joven bruja y su gato aprenden la magia de Chaosah, entre pociones fallidas y concursos.",
+    "pt": "Uma jovem bruxa e seu gato aprendem a magia de Chaosah, entre poções fracassadas e concursos.",
+    "zh": "一位年轻的女巫和她的猫学习 Chaosah 魔法，在失败的药水和比赛之间成长。",
+    "ar": "ساحرة صغيرة وقطّها يتعلّمان سحر كاوساه، بين جرعات فاشلة ومسابقات.",
+    "hi": "एक नन्ही चुड़ैल और उसका बिल्ला नाकाम जादुई घोलों और मुक़ाबलों के बीच Chaosah का जादू सीखते हैं।"
    },
    "poster": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/2/29/2016-02-24_vertical-cover_remake_by-David-Revoy.jpg",
@@ -370,7 +430,12 @@
        },
        "plot": {
         "en": "Pepper needs one last ingredient for her potion.",
-        "fr": "Il manque un dernier ingrédient à la potion de Pepper."
+        "fr": "Il manque un dernier ingrédient à la potion de Pepper.",
+        "es": "A Pepper le falta un último ingrediente para su poción.",
+        "pt": "Falta um último ingrediente para a poção de Pepper.",
+        "zh": "Pepper 的药水还差最后一种原料。",
+        "ar": "تحتاج بيبر إلى مكوّن أخير لجرعتها.",
+        "hi": "पेपर को अपने घोल के लिए एक आख़िरी सामग्री चाहिए।"
        }
       },
       {
@@ -385,7 +450,12 @@
        },
        "plot": {
         "en": "Carrot gets curious about the colourful potions.",
-        "fr": "Carrot s'intéresse de trop près aux potions colorées."
+        "fr": "Carrot s'intéresse de trop près aux potions colorées.",
+        "es": "Carrot siente demasiada curiosidad por las pociones de colores.",
+        "pt": "Carrot fica curioso demais com as poções coloridas.",
+        "zh": "Carrot 对五颜六色的药水产生了好奇。",
+        "ar": "يشعر كاروت بالفضول تجاه الجرعات الملوّنة.",
+        "hi": "कैरट रंग-बिरंगे घोलों को लेकर उत्सुक हो उठता है।"
        }
       },
       {
@@ -400,7 +470,12 @@
        },
        "plot": {
         "en": "A trip to the market of Komona.",
-        "fr": "Une virée au marché de Komona."
+        "fr": "Une virée au marché de Komona.",
+        "es": "Una visita al mercado de Komona.",
+        "pt": "Um passeio pelo mercado de Komona.",
+        "zh": "去 Komona 集市走一趟。",
+        "ar": "جولة في سوق كومونا.",
+        "hi": "कोमोना के बाज़ार की सैर।"
        }
       },
       {
@@ -415,7 +490,12 @@
        },
        "plot": {
         "en": "The night before the contest, Pepper has an idea.",
-        "fr": "La veille du concours, Pepper a une idée."
+        "fr": "La veille du concours, Pepper a une idée.",
+        "es": "La víspera del concurso, Pepper tiene una idea.",
+        "pt": "Na véspera do concurso, Pepper tem uma ideia.",
+        "zh": "比赛前夜，Pepper 想到了一个主意。",
+        "ar": "في الليلة السابقة للمسابقة، تخطر لبيبر فكرة.",
+        "hi": "मुक़ाबले से एक रात पहले पेपर को एक तरकीब सूझती है।"
        }
       },
       {
@@ -430,7 +510,12 @@
        },
        "plot": {
         "en": "Old friends, new rivals.",
-        "fr": "De vieilles amies, de nouvelles rivales."
+        "fr": "De vieilles amies, de nouvelles rivales.",
+        "es": "Viejas amigas, nuevas rivales.",
+        "pt": "Velhas amigas, novas rivais.",
+        "zh": "老朋友，新对手。",
+        "ar": "صديقات قديمات، منافسات جديدات.",
+        "hi": "पुरानी सहेलियाँ, नई प्रतिद्वंद्वी।"
        }
       }
      ]
@@ -471,7 +556,12 @@
   "series": "s-pepper",
   "search": {
    "en": "s",
-   "fr": "s"
+   "fr": "s",
+   "es": "s",
+   "pt": "s",
+   "zh": "s",
+   "ar": "s",
+   "hi": "s"
   },
   "person": "Georges Méliès"
  }

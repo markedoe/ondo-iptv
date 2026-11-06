@@ -534,6 +534,51 @@ platform :android do
     )
   end
 
+  desc "Upload the listing's images alone (LANGUAGES, default all): no build, no track, no text, no release notes"
+  lane :listing_images do
+    # A commit never cancels and restarts a review in progress: while Google reviews something, Google Play refuses
+    # it and nothing changes; otherwise the new images go to Google's review of the listing.
+    require "supply"
+    require "tmpdir"
+    Supply::Client.prepend(KeepPlayReview)
+    source = File.expand_path("metadata-android", __dir__)
+    languages = ENV.fetch("LANGUAGES", "").split
+    languages = Dir.children(source).select { |name| File.directory?(File.join(source, name)) }.sort if languages.empty?
+    Dir.mktmpdir do |folder|
+      # Only the images of the languages asked for: supply reads no text there.
+      languages.each do |language|
+        images = File.join(source, language, "images")
+        UI.user_error!("#{language}: no images in #{images}") unless File.directory?(images)
+        FileUtils.mkdir_p(File.join(folder, language))
+        FileUtils.cp_r(images, File.join(folder, language))
+      end
+      # supply reads a release of a track to attach release notes to (none are sent): internal testing's newest.
+      version_code = google_play_track_version_codes(package_name: ANDROID_PACKAGE, track: "internal",
+                                                     json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON")).max
+      upload_to_play_store(
+        package_name: ANDROID_PACKAGE,
+        json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON"),
+        track: "internal",
+        version_code: version_code,
+        skip_upload_aab: true,
+        skip_upload_apk: true,
+        metadata_path: folder,
+        skip_upload_metadata: true,
+        skip_upload_changelogs: true,
+        skip_upload_images: false,
+        skip_upload_screenshots: false,
+        # An image already on Google Play (same SHA-256, same place) is not sent again.
+        sync_image_upload: true
+      )
+    end
+    UI.success("Listing images sent for #{languages.join(', ')}")
+  rescue FastlaneCore::Interface::FastlaneError => e
+    raise unless e.message.match?(/review/i)
+    UI.important("Google Play has changes in review: the listing images stay as they are; run this again after the review")
+    puts "::error::Google Play has changes in review: nothing was changed (the review goes on); run this again after it (#{e.message.lines.first&.strip})"
+    raise
+  end
+
   desc "Upload only the Google Play listing (texts and images)"
   lane :metadata do
     upload_to_play_store(

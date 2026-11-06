@@ -1,5 +1,7 @@
 package com.markedoe.ondo.screenshots
 
+import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -7,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.R
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.ui.OndoNavigationFrame
 import com.markedoe.ondo.ui.TopLevel
@@ -46,10 +49,12 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Google Play listing screenshots, from the demo catalogue ([ShowcaseCatalogue]: open films with their pictures,
  * fictional channels and their guide, a library in use): phone (1080×1920), 7" (1920×1080) and 10" (2560×1440)
- * tablets and TV (1920×1080, with its top bar and its own pages), in English and French. Written to
+ * tablets and TV (1920×1080, with its top bar and its own pages), in each language of the Google Play listing
+ * ([LOCALES]: the apps' seven languages, Arabic right to left; es-419 reuses es-ES). Written to
  * `src/test/screenshots/play/<locale>/<device>/` by `./gradlew :app:recordRoborazziDebug`; the release workflow copies
- * them into the store listing. The TV's (in both languages) and the phone's (in English) are also the reference
- * screenshots of [BASELINES], at half size, which `./gradlew :app:verifyRoborazziDebug` compares with.
+ * them into the store listing (`.github/scripts/listing_screenshots.py`). The TV's in English and French and the
+ * phone's in English are also the reference screenshots of [BASELINES], at half size, which
+ * `./gradlew :app:verifyRoborazziDebug` compares with.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -64,15 +69,35 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
     }
 
     companion object {
+        /** The Google Play listing's languages (fastlane/metadata-android), each with its resource qualifier. */
+        val LOCALES = linkedMapOf(
+            "en-US" to "en-rUS",
+            "fr-FR" to "fr-rFR",
+            "es-ES" to "es-rES",
+            "pt-BR" to "pt-rBR",
+            "zh-CN" to "zh-rCN",
+            // Right to left, as on a phone set to Arabic.
+            "ar" to "ar-ldrtl",
+            "hi-IN" to "hi-rIN",
+        )
+
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0} {1}")
-        fun parameters(): List<Array<Any>> = Device.entries.flatMap { device -> listOf("en-US", "fr-FR").map { arrayOf<Any>(device, it) } }
+        fun parameters(): List<Array<Any>> = Device.entries.flatMap { device -> LOCALES.keys.map { arrayOf<Any>(device, it) } }
     }
 
-    private val french get() = locale.startsWith("fr")
-    private val labels get() = if (french) com.markedoe.ondo.appLabels("Film", "Série", "Nouvel épisode", Locale.FRANCE) else com.markedoe.ondo.appLabels("Movie", "Series", "New episode", Locale.US)
+    private val language get() = locale.substringBefore('-')
+    private val javaLocale: Locale get() = Locale.forLanguageTag(locale)
 
-    private val catalogue get() = ShowcaseCatalogue.load(french)
+    /** The app's own words in the screenshot's language, as MainActivity gives them to the mappers. */
+    private val strings: Context
+        get() {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            return context.createConfigurationContext(Configuration(context.resources.configuration).apply { setLocale(javaLocale) })
+        }
+    private val labels get() = strings.let { com.markedoe.ondo.appLabels(it.getString(R.string.kind_movie), it.getString(R.string.kind_series), it.getString(R.string.hero_new_episode), javaLocale) }
+
+    private val catalogue get() = ShowcaseCatalogue.load(language)
     private val state get() = catalogue.state()
     private val now = ShowcaseCatalogue.NOW
 
@@ -81,17 +106,22 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
     @Before
     fun pictures() = ShowcaseImages.install(ApplicationProvider.getApplicationContext())
 
-    @After
-    fun noPictures() = ShowcaseImages.reset()
+    private val defaultLocale: Locale = Locale.getDefault()
 
-    /** Whether this screen is also a reference screenshot: the TV's in both languages, the phone's in English. */
-    private val baseline get() = device == Device.TV || (device == Device.PHONE && locale == "en-US")
+    @After
+    fun noPictures() {
+        ShowcaseImages.reset()
+        Locale.setDefault(defaultLocale)
+    }
+
+    /** Whether this screen is also a reference screenshot: the TV's in English and French, the phone's in English. */
+    private val baseline get() = (device == Device.TV && locale in setOf("en-US", "fr-FR")) || (device == Device.PHONE && locale == "en-US")
 
     /** On a TV, the top bar above the tabs' pages ([bar]); the pages beyond them take the whole screen. */
     private fun capture(name: String, tab: TopLevel, bar: Boolean = true, content: @Composable () -> Unit) {
-        val language = locale.substringBefore('-')
-        val region = locale.substringAfter('-')
-        RuntimeEnvironment.setQualifiers("$language-r$region-${device.qualifiers}")
+        RuntimeEnvironment.setQualifiers("${LOCALES.getValue(locale)}-${device.qualifiers}")
+        // The mappers' dates and numbers, as on a device set to this language.
+        Locale.setDefault(javaLocale)
         captureRoboImage(filePath = "src/test/screenshots/play/$locale/${device.folder}/$name.png", roborazziOptions = StoreOptions) {
             screen(tab, bar, content)
         }
@@ -140,7 +170,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
         Box(Modifier.tvSafeArea(tab = true)) {
             // Without the movies in progress, so that My List shows above the fold of a TV.
             val listed = if (tv) state.copy(library = state.library.copy(history = state.library.history.filter { it.kind != ItemKind.MOVIE })) else state
-            VodScreen(UiMappers.vod(listed, series = false, title = if (french) "Films" else "Movies", now = now), VodActions())
+            VodScreen(UiMappers.vod(listed, series = false, title = strings.getString(R.string.movies), now = now), VodActions())
         }
     }
 
