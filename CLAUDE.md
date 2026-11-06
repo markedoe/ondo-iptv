@@ -64,6 +64,12 @@ screenshots.
   it, on each platform the bug touches (Android and Apple when the logic is shared), in the same change. A behaviour
   that must hold on every screen (hidden categories, display titles, D-pad paths) gets one test that lists every
   surface, so a new screen is added to it.
+- **Responsiveness comes first**: an IPTV player must feel instant, above all on Android TV. Launch shows Home at
+  the top (hero focused) from cached content at once; refreshes (playlist, catalogue, guide, metadata) run in the
+  background and never block or move the screen, with a small progress indicator on the Home header while they run;
+  no heavy work on the main thread; zapping, opening a page and starting playback stay fast. Every change that can
+  touch startup, scrolling, focus or playback time is measured (timing tests, call counters, baseline profile) and a
+  slowdown is treated as a bug, with its regression test.
 - **Guard**: `.claude/hooks/leak_guard.py` is wired as a `PreToolUse` hook (`.claude/settings.json`): it
   blocks writing secrets or personal data into the repository and checks the changes before `git commit` /
   `git push`. CI runs it again on the whole history with gitleaks. For a false positive, add a regex to
