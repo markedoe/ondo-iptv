@@ -1,7 +1,12 @@
 {
  "playlist_name": {
   "en": "My playlist",
-  "fr": "Ma playlist"
+  "fr": "Ma playlist",
+  "es": "Mi playlist",
+  "pt": "Minha playlist",
+  "zh": "我的播放列表",
+  "ar": "قائمة تشغيلي",
+  "hi": "मेरी प्लेलिस्ट"
  },
  "updated_minutes_ago": 12,
  "programme_minutes": 60,
@@ -99,7 +104,12 @@
    "director": "Sacha Goedegebure",
    "plot": {
     "en": "A giant, gentle rabbit takes his revenge on three rodents who spoil his quiet day in the forest.",
-    "fr": "Un lapin géant et paisible se venge de trois rongeurs qui gâchent sa journée tranquille dans la forêt."
+    "fr": "Un lapin géant et paisible se venge de trois rongeurs qui gâchent sa journée tranquille dans la forêt.",
+    "es": "Un conejo gigante y apacible se venga de tres roedores que le arruinan su día tranquilo en el bosque.",
+    "pt": "Um coelho gigante e tranquilo se vinga de três roedores que estragam seu dia sossegado na floresta.",
+    "zh": "一只温和的巨型兔子向三只破坏他林中宁静一天的啮齿动物展开报复。",
+    "ar": "أرنب عملاق ووديع ينتقم من ثلاثة قوارض أفسدت يومه الهادئ في الغابة.",
+    "hi": "एक विशाल और शांत खरगोश उन तीन चूहों से बदला लेता है जो जंगल में उसका सुकून भरा दिन बिगाड़ देते हैं।"
    },
    "added_days_ago": 2,
    "backdrop": "m-bbb-backdrop.jpg",
@@ -117,7 +127,12 @@
    "cast": "Halina Reijn, Thom Hoffman",
    "plot": {
     "en": "A lonely young woman searches the wild lands for the baby dragon she raised and lost.",
-    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu."
+    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu.",
+    "es": "Una joven solitaria recorre tierras salvajes en busca de la cría de dragón que crio y perdió.",
+    "pt": "Uma jovem solitária percorre terras selvagens em busca do filhote de dragão que criou e perdeu.",
+    "zh": "一位孤独的年轻女子踏遍荒野，寻找她亲手养大却又失去的幼龙。",
+    "ar": "شابة وحيدة تجوب الأراضي البرية بحثًا عن صغير التنين الذي ربّته ثم فقدته.",
+    "hi": "एक अकेली युवती बीहड़ इलाक़ों में उस नन्हे ड्रैगन को खोजती है जिसे उसने पाला था और फिर खो दिया।"
    },
    "added_days_ago": 1,
    "backdrop": "m-sintel-backdrop.jpg",
@@ -136,7 +151,12 @@
    "cast": "Derek de Lint, Sergio Hasselbaink, Vanja Rukavina, Denise Rebergen",
    "plot": {
     "en": "In a future Amsterdam, a group of scientists tries to save the world from destructive robots.",
-    "fr": "Dans un Amsterdam futuriste, un groupe de scientifiques tente de sauver le monde de robots destructeurs."
+    "fr": "Dans un Amsterdam futuriste, un groupe de scientifiques tente de sauver le monde de robots destructeurs.",
+    "es": "En una Ámsterdam del futuro, un grupo de científicos intenta salvar el mundo de unos robots destructores.",
+    "pt": "Numa Amsterdã do futuro, um grupo de cientistas tenta salvar o mundo de robôs destruidores.",
+    "zh": "在未来的阿姆斯特丹，一群科学家试图从毁灭性的机器人手中拯救世界。",
+    "ar": "في أمستردام المستقبل، تحاول مجموعة من العلماء إنقاذ العالم من روبوتات مدمّرة.",
+    "hi": "भविष्य के एम्स्टर्डम में वैज्ञानिकों का एक दल दुनिया को विनाशकारी रोबोटों से बचाने की कोशिश करता है।"
    },
    "added_days_ago": 4,
    "container": "mkv",
@@ -155,7 +175,12 @@
    "cast": "Pierre Bokma, Reinout Scholten van Aschat",
    "plot": {
     "en": "On a desolate island, a depressed sheep named Franck meets a salesman who offers him the gift of a lifetime.",
-    "fr": "Sur une île désolée, Franck, un mouton déprimé, rencontre un vendeur qui lui offre le cadeau d'une vie."
+    "fr": "Sur une île désolée, Franck, un mouton déprimé, rencontre un vendeur qui lui offre le cadeau d'une vie.",
+    "es": "En una isla desolada, Franck, una oveja deprimida, conoce a un vendedor que le ofrece el regalo de su vida.",
+    "pt": "Numa ilha desolada, Franck, uma ovelha deprimida, conhece um vendedor que lhe oferece o presente de uma vida.",
+    "zh": "在一座荒凉的小岛上，一只名叫弗兰克的抑郁绵羊遇到一位推销员，对方要送他一份一生难得的礼物。",
+    "ar": "على جزيرة مقفرة، يلتقي خروف مكتئب يُدعى فرانك ببائع يعرض عليه هدية العمر.",
+    "hi": "एक वीरान द्वीप पर फ़्रैंक नाम की एक उदास भेड़ की मुलाक़ात एक सेल्समैन से होती है, जो उसे ज़िंदगी भर का तोहफ़ा देने की पेशकश करता है।"
    },
    "added_days_ago": 6,
    "backdrop": "m-cosmos-backdrop.jpg",
@@ -172,7 +197,12 @@
    "director": "Andy Goralczyk",
    "plot": {
     "en": "A shepherd girl and her dog face ancient spirits to continue the cycle of life.",
-    "fr": "Une jeune bergère et son chien affrontent des esprits anciens pour que le cycle de la vie continue."
+    "fr": "Une jeune bergère et son chien affrontent des esprits anciens pour que le cycle de la vie continue.",
+    "es": "Una joven pastora y su perro se enfrentan a espíritus ancestrales para que el ciclo de la vida continúe.",
+    "pt": "Uma jovem pastora e seu cachorro enfrentam espíritos ancestrais para que o ciclo da vida continue.",
+    "zh": "一位牧羊少女和她的狗直面远古神灵，让生命的轮回得以延续。",
+    "ar": "راعية صغيرة وكلبها يواجهان أرواحًا قديمة كي تستمر دورة الحياة.",
+    "hi": "एक चरवाहा लड़की और उसका कुत्ता जीवन-चक्र को जारी रखने के लिए प्राचीन आत्माओं का सामना करते हैं।"
    },
    "added_days_ago": 3,
    "backdrop": "m-spring-backdrop.jpg",
@@ -190,7 +220,12 @@
    "cast": "Tygo Gernandt, Cas Jansen",
    "plot": {
     "en": "Two men explore the strange machine world of an endless building, each seeing it in his own way.",
-    "fr": "Deux hommes explorent l'étrange monde mécanique d'un bâtiment sans fin, chacun le voyant à sa manière."
+    "fr": "Deux hommes explorent l'étrange monde mécanique d'un bâtiment sans fin, chacun le voyant à sa manière.",
+    "es": "Dos hombres exploran el extraño mundo mecánico de un edificio sin fin, y cada uno lo ve a su manera.",
+    "pt": "Dois homens exploram o estranho mundo mecânico de um prédio sem fim, cada um à sua maneira.",
+    "zh": "两个男人探索一座无尽建筑中奇异的机械世界，各自以自己的方式看待它。",
+    "ar": "رجلان يستكشفان عالمًا آليًا غريبًا داخل مبنى لا نهاية له، ويراه كلٌّ منهما على طريقته.",
+    "hi": "दो आदमी एक अंतहीन इमारत की अजीब मशीनी दुनिया की खोज करते हैं, और दोनों उसे अपने-अपने ढंग से देखते हैं।"
    },
    "added_days_ago": 9,
    "backdrop": "m-ed-backdrop.jpg",
@@ -208,7 +243,12 @@
    "cast": "Annette Hanshaw, Reena Shah, Aseem Chhabra",
    "plot": {
     "en": "The epic of the Ramayana told through the songs of Annette Hanshaw, alongside a modern break-up.",
-    "fr": "L'épopée du Ramayana racontée sur les chansons d'Annette Hanshaw, en parallèle d'une rupture d'aujourd'hui."
+    "fr": "L'épopée du Ramayana racontée sur les chansons d'Annette Hanshaw, en parallèle d'une rupture d'aujourd'hui.",
+    "es": "La epopeya del Ramayana contada a través de las canciones de Annette Hanshaw, junto a una ruptura actual.",
+    "pt": "A epopeia do Ramayana contada pelas canções de Annette Hanshaw, ao lado de um término dos dias de hoje.",
+    "zh": "借安妮特·汉肖的歌声讲述《罗摩衍那》的史诗，并穿插一段现代的分手故事。",
+    "ar": "ملحمة رامايانا تُروى عبر أغاني آنيت هانشو، إلى جانب قصة انفصال معاصرة.",
+    "hi": "ऐनेट हैनशॉ के गीतों के ज़रिए सुनाया गया रामायण का महाकाव्य, साथ में आज के ज़माने का एक ब्रेकअप।"
    },
    "added_days_ago": 12,
    "backdrop": "m-sita-backdrop.jpg",
@@ -224,7 +264,12 @@
    "minutes": 90,
    "plot": {
     "en": "Two friends set out on a journey to find a mysterious lake that nobody seems to know.",
-    "fr": "Deux amis partent à la recherche d'un lac mystérieux que personne ne semble connaître."
+    "fr": "Deux amis partent à la recherche d'un lac mystérieux que personne ne semble connaître.",
+    "es": "Dos amigos emprenden un viaje en busca de un lago misterioso que nadie parece conocer.",
+    "pt": "Dois amigos partem em viagem em busca de um lago misterioso que ninguém parece conhecer.",
+    "zh": "两个朋友踏上旅程，寻找一座似乎无人知晓的神秘湖泊。",
+    "ar": "صديقان ينطلقان في رحلة بحثًا عن بحيرة غامضة لا يبدو أن أحدًا يعرفها.",
+    "hi": "दो दोस्त एक रहस्यमयी झील की तलाश में सफ़र पर निकलते हैं, जिसके बारे में कोई नहीं जानता।"
    },
    "added_days_ago": 20,
    "director": "Tim Baumann",
@@ -242,7 +287,12 @@
    "director": "Georges Méliès",
    "plot": {
     "en": "Members of a geographical society set off on a fantastic journey by train, car and submarine, all the way to the sun.",
-    "fr": "Les membres d'une société de géographie partent pour un voyage fantastique en train, en automobile et en sous-marin, jusqu'au soleil."
+    "fr": "Les membres d'une société de géographie partent pour un voyage fantastique en train, en automobile et en sous-marin, jusqu'au soleil.",
+    "es": "Los miembros de una sociedad geográfica emprenden un viaje fantástico en tren, automóvil y submarino, hasta llegar al sol.",
+    "pt": "Os membros de uma sociedade de geografia partem numa viagem fantástica de trem, automóvel e submarino, até o sol.",
+    "zh": "一个地理学会的成员乘火车、汽车和潜水艇踏上奇幻旅程，一路直抵太阳。",
+    "ar": "ينطلق أعضاء جمعية جغرافية في رحلة خيالية بالقطار والسيارة والغواصة، حتى يبلغوا الشمس.",
+    "hi": "एक भौगोलिक संस्था के सदस्य ट्रेन, कार और पनडुब्बी से एक अद्भुत यात्रा पर निकलते हैं, जो सीधे सूरज तक जाती है।"
    },
    "added_days_ago": 8,
    "backdrop": "m-impossible-backdrop.jpg",
@@ -259,7 +309,12 @@
    "director": "Georges Méliès",
    "plot": {
     "en": "A prince sets out to rescue his bride from a wicked witch, through storms, the depths of the sea and an enchanted kingdom.",
-    "fr": "Un prince part délivrer sa fiancée d'une méchante sorcière, à travers les tempêtes, le fond des mers et un royaume enchanté."
+    "fr": "Un prince part délivrer sa fiancée d'une méchante sorcière, à travers les tempêtes, le fond des mers et un royaume enchanté.",
+    "es": "Un príncipe parte a rescatar a su prometida de una bruja malvada, entre tormentas, las profundidades del mar y un reino encantado.",
+    "pt": "Um príncipe parte para resgatar a noiva de uma bruxa malvada, atravessando tempestades, as profundezas do mar e um reino encantado.",
+    "zh": "一位王子穿越风暴、深海和魔法王国，从邪恶女巫手中救出他的新娘。",
+    "ar": "ينطلق أمير لإنقاذ عروسه من ساحرة شريرة، عبر العواصف وأعماق البحر ومملكة مسحورة.",
+    "hi": "एक राजकुमार अपनी दुल्हन को एक दुष्ट चुड़ैल से छुड़ाने निकलता है, तूफ़ानों, समुद्र की गहराइयों और एक जादुई राज्य से होकर।"
    },
    "added_days_ago": 10,
    "backdrop": "m-fairies-backdrop.jpg",
@@ -277,7 +332,12 @@
    "cast": "Halina Reijn, Thom Hoffman",
    "plot": {
     "en": "A lonely young woman searches the wild lands for the baby dragon she raised and lost.",
-    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu."
+    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu.",
+    "es": "Una joven solitaria recorre tierras salvajes en busca de la cría de dragón que crio y perdió.",
+    "pt": "Uma jovem solitária percorre terras selvagens em busca do filhote de dragão que criou e perdeu.",
+    "zh": "一位孤独的年轻女子踏遍荒野，寻找她亲手养大却又失去的幼龙。",
+    "ar": "شابة وحيدة تجوب الأراضي البرية بحثًا عن صغير التنين الذي ربّته ثم فقدته.",
+    "hi": "एक अकेली युवती बीहड़ इलाक़ों में उस नन्हे ड्रैगन को खोजती है जिसे उसने पाला था और फिर खो दिया।"
    },
    "added_days_ago": 1,
    "backdrop": "m-sintel-backdrop.jpg",
@@ -297,7 +357,12 @@
    "cast": "Halina Reijn, Thom Hoffman",
    "plot": {
     "en": "A lonely young woman searches the wild lands for the baby dragon she raised and lost.",
-    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu."
+    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu.",
+    "es": "Una joven solitaria recorre tierras salvajes en busca de la cría de dragón que crio y perdió.",
+    "pt": "Uma jovem solitária percorre terras selvagens em busca do filhote de dragão que criou e perdeu.",
+    "zh": "一位孤独的年轻女子踏遍荒野，寻找她亲手养大却又失去的幼龙。",
+    "ar": "شابة وحيدة تجوب الأراضي البرية بحثًا عن صغير التنين الذي ربّته ثم فقدته.",
+    "hi": "एक अकेली युवती बीहड़ इलाक़ों में उस नन्हे ड्रैगन को खोजती है जिसे उसने पाला था और फिर खो दिया।"
    },
    "added_days_ago": 1,
    "backdrop": "m-sintel-backdrop.jpg",
@@ -317,7 +382,12 @@
    "cast": "Halina Reijn, Thom Hoffman",
    "plot": {
     "en": "A lonely young woman searches the wild lands for the baby dragon she raised and lost.",
-    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu."
+    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu.",
+    "es": "Una joven solitaria recorre tierras salvajes en busca de la cría de dragón que crio y perdió.",
+    "pt": "Uma jovem solitária percorre terras selvagens em busca do filhote de dragão que criou e perdeu.",
+    "zh": "一位孤独的年轻女子踏遍荒野，寻找她亲手养大却又失去的幼龙。",
+    "ar": "شابة وحيدة تجوب الأراضي البرية بحثًا عن صغير التنين الذي ربّته ثم فقدته.",
+    "hi": "एक अकेली युवती बीहड़ इलाक़ों में उस नन्हे ड्रैगन को खोजती है जिसे उसने पाला था और फिर खो दिया।"
    },
    "added_days_ago": 1,
    "backdrop": "m-sintel-backdrop.jpg",
@@ -335,7 +405,12 @@
    "director": "David Revoy",
    "plot": {
     "en": "A young witch and her cat learn the magic of Chaosah, between failed potions and contests.",
-    "fr": "Une jeune sorcière et son chat apprennent la magie de Chaosah, entre potions ratées et concours."
+    "fr": "Une jeune sorcière et son chat apprennent la magie de Chaosah, entre potions ratées et concours.",
+    "es": "Una joven bruja y su gato aprenden la magia de Chaosah, entre pociones fallidas y concursos.",
+    "pt": "Uma jovem bruxa e seu gato aprendem a magia de Chaosah, entre poções fracassadas e concursos.",
+    "zh": "一位年轻的女巫和她的猫学习 Chaosah 魔法，在失败的药水和比赛之间成长。",
+    "ar": "ساحرة صغيرة وقطّها يتعلّمان سحر كاوساه، بين جرعات فاشلة ومسابقات.",
+    "hi": "एक नन्ही चुड़ैल और उसका बिल्ला नाकाम जादुई घोलों और मुक़ाबलों के बीच Chaosah का जादू सीखते हैं।"
    },
    "added_days_ago": 1,
    "backdrop": "s-pepper-backdrop.jpg",
@@ -349,7 +424,12 @@
        "minutes": 22,
        "plot": {
         "en": "Pepper needs one last ingredient for her potion.",
-        "fr": "Il manque un dernier ingrédient à la potion de Pepper."
+        "fr": "Il manque un dernier ingrédient à la potion de Pepper.",
+        "es": "A Pepper le falta un último ingrediente para su poción.",
+        "pt": "Falta um último ingrediente para a poção de Pepper.",
+        "zh": "Pepper 的药水还差最后一种原料。",
+        "ar": "تحتاج بيبر إلى مكوّن أخير لجرعتها.",
+        "hi": "पेपर को अपने घोल के लिए एक आख़िरी सामग्री चाहिए।"
        },
        "still": "s-pepper-s1e1.jpg"
       },
@@ -358,7 +438,12 @@
        "minutes": 22,
        "plot": {
         "en": "Carrot gets curious about the colourful potions.",
-        "fr": "Carrot s'intéresse de trop près aux potions colorées."
+        "fr": "Carrot s'intéresse de trop près aux potions colorées.",
+        "es": "Carrot siente demasiada curiosidad por las pociones de colores.",
+        "pt": "Carrot fica curioso demais com as poções coloridas.",
+        "zh": "Carrot 对五颜六色的药水产生了好奇。",
+        "ar": "يشعر كاروت بالفضول تجاه الجرعات الملوّنة.",
+        "hi": "कैरट रंग-बिरंगे घोलों को लेकर उत्सुक हो उठता है।"
        },
        "still": "s-pepper-s1e2.jpg"
       },
@@ -367,7 +452,12 @@
        "minutes": 23,
        "plot": {
         "en": "A trip to the market of Komona.",
-        "fr": "Une virée au marché de Komona."
+        "fr": "Une virée au marché de Komona.",
+        "es": "Una visita al mercado de Komona.",
+        "pt": "Um passeio pelo mercado de Komona.",
+        "zh": "去 Komona 集市走一趟。",
+        "ar": "جولة في سوق كومونا.",
+        "hi": "कोमोना के बाज़ार की सैर।"
        },
        "still": "s-pepper-s1e3.jpg"
       },
@@ -376,7 +466,12 @@
        "minutes": 21,
        "plot": {
         "en": "The night before the contest, Pepper has an idea.",
-        "fr": "La veille du concours, Pepper a une idée."
+        "fr": "La veille du concours, Pepper a une idée.",
+        "es": "La víspera del concurso, Pepper tiene una idea.",
+        "pt": "Na véspera do concurso, Pepper tem uma ideia.",
+        "zh": "比赛前夜，Pepper 想到了一个主意。",
+        "ar": "في الليلة السابقة للمسابقة، تخطر لبيبر فكرة.",
+        "hi": "मुक़ाबले से एक रात पहले पेपर को एक तरकीब सूझती है।"
        },
        "still": "s-pepper-s1e4.jpg"
       },
@@ -385,7 +480,12 @@
        "minutes": 22,
        "plot": {
         "en": "Old friends, new rivals.",
-        "fr": "De vieilles amies, de nouvelles rivales."
+        "fr": "De vieilles amies, de nouvelles rivales.",
+        "es": "Viejas amigas, nuevas rivales.",
+        "pt": "Velhas amigas, novas rivais.",
+        "zh": "老朋友，新对手。",
+        "ar": "صديقات قديمات، منافسات جديدات.",
+        "hi": "पुरानी सहेलियाँ, नई प्रतिद्वंद्वी।"
        },
        "still": "s-pepper-s1e5.jpg"
       }
@@ -404,35 +504,75 @@
    "programmes": [
     {
      "fr": "Météo",
-     "en": "Weather"
+     "en": "Weather",
+     "es": "El tiempo",
+     "pt": "Previsão do tempo",
+     "zh": "天气预报",
+     "ar": "النشرة الجوية",
+     "hi": "मौसम"
     },
     {
      "fr": "L'invité",
-     "en": "The Interview"
+     "en": "The Interview",
+     "es": "La entrevista",
+     "pt": "A entrevista",
+     "zh": "访谈",
+     "ar": "المقابلة",
+     "hi": "इंटरव्यू"
     },
     {
      "fr": "Le débat",
-     "en": "The Debate"
+     "en": "The Debate",
+     "es": "El debate",
+     "pt": "O debate",
+     "zh": "辩论",
+     "ar": "المناظرة",
+     "hi": "बहस"
     },
     {
      "fr": "Économie",
-     "en": "Business"
+     "en": "Business",
+     "es": "Economía",
+     "pt": "Economia",
+     "zh": "财经",
+     "ar": "اقتصاد",
+     "hi": "कारोबार"
     },
     {
      "fr": "Le 18 h",
-     "en": "Evening News"
+     "en": "Evening News",
+     "es": "Noticias de las 18 h",
+     "pt": "Jornal das 18h",
+     "zh": "18点新闻",
+     "ar": "أخبار السادسة",
+     "hi": "शाम की ख़बरें"
     },
     {
      "fr": "Grand reportage",
-     "en": "Special Report"
+     "en": "Special Report",
+     "es": "Gran reportaje",
+     "pt": "Grande reportagem",
+     "zh": "特别报道",
+     "ar": "تقرير خاص",
+     "hi": "विशेष रिपोर्ट"
     },
     {
      "fr": "Le journal de la nuit",
-     "en": "Late News"
+     "en": "Late News",
+     "es": "Noticias de la noche",
+     "pt": "Jornal da noite",
+     "zh": "晚间新闻",
+     "ar": "نشرة الليل",
+     "hi": "देर रात की ख़बरें"
     },
     {
      "fr": "Le journal",
-     "en": "The News"
+     "en": "The News",
+     "es": "Informativo",
+     "pt": "Jornal",
+     "zh": "新闻",
+     "ar": "نشرة الأخبار",
+     "hi": "समाचार"
     }
    ]
   },
@@ -445,35 +585,75 @@
    "programmes": [
     {
      "fr": "L'invité",
-     "en": "The Interview"
+     "en": "The Interview",
+     "es": "La entrevista",
+     "pt": "A entrevista",
+     "zh": "访谈",
+     "ar": "المقابلة",
+     "hi": "इंटरव्यू"
     },
     {
      "fr": "Le débat",
-     "en": "The Debate"
+     "en": "The Debate",
+     "es": "El debate",
+     "pt": "O debate",
+     "zh": "辩论",
+     "ar": "المناظرة",
+     "hi": "बहस"
     },
     {
      "fr": "Économie",
-     "en": "Business"
+     "en": "Business",
+     "es": "Economía",
+     "pt": "Economia",
+     "zh": "财经",
+     "ar": "اقتصاد",
+     "hi": "कारोबार"
     },
     {
      "fr": "Le 18 h",
-     "en": "Evening News"
+     "en": "Evening News",
+     "es": "Noticias de las 18 h",
+     "pt": "Jornal das 18h",
+     "zh": "18点新闻",
+     "ar": "أخبار السادسة",
+     "hi": "शाम की ख़बरें"
     },
     {
      "fr": "Grand reportage",
-     "en": "Special Report"
+     "en": "Special Report",
+     "es": "Gran reportaje",
+     "pt": "Grande reportagem",
+     "zh": "特别报道",
+     "ar": "تقرير خاص",
+     "hi": "विशेष रिपोर्ट"
     },
     {
      "fr": "Le journal de la nuit",
-     "en": "Late News"
+     "en": "Late News",
+     "es": "Noticias de la noche",
+     "pt": "Jornal da noite",
+     "zh": "晚间新闻",
+     "ar": "نشرة الليل",
+     "hi": "देर रात की ख़बरें"
     },
     {
      "fr": "Le journal",
-     "en": "The News"
+     "en": "The News",
+     "es": "Informativo",
+     "pt": "Jornal",
+     "zh": "新闻",
+     "ar": "نشرة الأخبار",
+     "hi": "समाचार"
     },
     {
      "fr": "Météo",
-     "en": "Weather"
+     "en": "Weather",
+     "es": "El tiempo",
+     "pt": "Previsão do tempo",
+     "zh": "天气预报",
+     "ar": "النشرة الجوية",
+     "hi": "मौसम"
     }
    ]
   },
@@ -486,35 +666,75 @@
    "programmes": [
     {
      "fr": "Le débat",
-     "en": "The Debate"
+     "en": "The Debate",
+     "es": "El debate",
+     "pt": "O debate",
+     "zh": "辩论",
+     "ar": "المناظرة",
+     "hi": "बहस"
     },
     {
      "fr": "Économie",
-     "en": "Business"
+     "en": "Business",
+     "es": "Economía",
+     "pt": "Economia",
+     "zh": "财经",
+     "ar": "اقتصاد",
+     "hi": "कारोबार"
     },
     {
      "fr": "Le 18 h",
-     "en": "Evening News"
+     "en": "Evening News",
+     "es": "Noticias de las 18 h",
+     "pt": "Jornal das 18h",
+     "zh": "18点新闻",
+     "ar": "أخبار السادسة",
+     "hi": "शाम की ख़बरें"
     },
     {
      "fr": "Grand reportage",
-     "en": "Special Report"
+     "en": "Special Report",
+     "es": "Gran reportaje",
+     "pt": "Grande reportagem",
+     "zh": "特别报道",
+     "ar": "تقرير خاص",
+     "hi": "विशेष रिपोर्ट"
     },
     {
      "fr": "Le journal de la nuit",
-     "en": "Late News"
+     "en": "Late News",
+     "es": "Noticias de la noche",
+     "pt": "Jornal da noite",
+     "zh": "晚间新闻",
+     "ar": "نشرة الليل",
+     "hi": "देर रात की ख़बरें"
     },
     {
      "fr": "Le journal",
-     "en": "The News"
+     "en": "The News",
+     "es": "Informativo",
+     "pt": "Jornal",
+     "zh": "新闻",
+     "ar": "نشرة الأخبار",
+     "hi": "समाचार"
     },
     {
      "fr": "Météo",
-     "en": "Weather"
+     "en": "Weather",
+     "es": "El tiempo",
+     "pt": "Previsão do tempo",
+     "zh": "天气预报",
+     "ar": "النشرة الجوية",
+     "hi": "मौसम"
     },
     {
      "fr": "L'invité",
-     "en": "The Interview"
+     "en": "The Interview",
+     "es": "La entrevista",
+     "pt": "A entrevista",
+     "zh": "访谈",
+     "ar": "المقابلة",
+     "hi": "इंटरव्यू"
     }
    ]
   },
@@ -527,35 +747,75 @@
    "programmes": [
     {
      "fr": "Variétés",
-     "en": "Variety Show"
+     "en": "Variety Show",
+     "es": "Variedades",
+     "pt": "Show de variedades",
+     "zh": "综艺节目",
+     "ar": "منوعات",
+     "hi": "मनोरंजन शो"
     },
     {
      "fr": "Téléfilm : L'Été des orages",
-     "en": "TV Movie: Summer Storms"
+     "en": "TV Movie: Summer Storms",
+     "es": "Telefilme: Tormentas de verano",
+     "pt": "Telefilme: Tempestades de verão",
+     "zh": "电视电影：夏日风暴",
+     "ar": "فيلم تلفزيوني: عواصف الصيف",
+     "hi": "टीवी फ़िल्म: गर्मियों के तूफ़ान"
     },
     {
      "fr": "Talk-show",
-     "en": "Talk Show"
+     "en": "Talk Show",
+     "es": "Programa de entrevistas",
+     "pt": "Talk show",
+     "zh": "脱口秀",
+     "ar": "برنامج حواري",
+     "hi": "टॉक शो"
     },
     {
      "fr": "Rediffusion",
-     "en": "Replay"
+     "en": "Replay",
+     "es": "Redifusión",
+     "pt": "Reprise",
+     "zh": "重播",
+     "ar": "إعادة",
+     "hi": "दोबारा प्रसारण"
     },
     {
      "fr": "Le jeu des mots",
-     "en": "Word Game"
+     "en": "Word Game",
+     "es": "Juego de palabras",
+     "pt": "Jogo de palavras",
+     "zh": "文字游戏",
+     "ar": "لعبة الكلمات",
+     "hi": "शब्दों का खेल"
     },
     {
      "fr": "Cuisine du marché",
-     "en": "Market Kitchen"
+     "en": "Market Kitchen",
+     "es": "Cocina de mercado",
+     "pt": "Cozinha da feira",
+     "zh": "市集厨房",
+     "ar": "مطبخ السوق",
+     "hi": "बाज़ार की रसोई"
     },
     {
      "fr": "Feuilleton : La Maison du port",
-     "en": "Drama: Harbour House"
+     "en": "Drama: Harbour House",
+     "es": "Serie: La casa del puerto",
+     "pt": "Novela: A casa do porto",
+     "zh": "连续剧：港口之家",
+     "ar": "مسلسل: بيت الميناء",
+     "hi": "धारावाहिक: बंदरगाह वाला घर"
     },
     {
      "fr": "Magazine santé",
-     "en": "Health Magazine"
+     "en": "Health Magazine",
+     "es": "Revista de salud",
+     "pt": "Revista saúde",
+     "zh": "健康杂志",
+     "ar": "مجلة الصحة",
+     "hi": "सेहत पत्रिका"
     }
    ]
   },
@@ -568,35 +828,75 @@
    "programmes": [
     {
      "fr": "Téléfilm : L'Été des orages",
-     "en": "TV Movie: Summer Storms"
+     "en": "TV Movie: Summer Storms",
+     "es": "Telefilme: Tormentas de verano",
+     "pt": "Telefilme: Tempestades de verão",
+     "zh": "电视电影：夏日风暴",
+     "ar": "فيلم تلفزيوني: عواصف الصيف",
+     "hi": "टीवी फ़िल्म: गर्मियों के तूफ़ान"
     },
     {
      "fr": "Talk-show",
-     "en": "Talk Show"
+     "en": "Talk Show",
+     "es": "Programa de entrevistas",
+     "pt": "Talk show",
+     "zh": "脱口秀",
+     "ar": "برنامج حواري",
+     "hi": "टॉक शो"
     },
     {
      "fr": "Rediffusion",
-     "en": "Replay"
+     "en": "Replay",
+     "es": "Redifusión",
+     "pt": "Reprise",
+     "zh": "重播",
+     "ar": "إعادة",
+     "hi": "दोबारा प्रसारण"
     },
     {
      "fr": "Le jeu des mots",
-     "en": "Word Game"
+     "en": "Word Game",
+     "es": "Juego de palabras",
+     "pt": "Jogo de palavras",
+     "zh": "文字游戏",
+     "ar": "لعبة الكلمات",
+     "hi": "शब्दों का खेल"
     },
     {
      "fr": "Cuisine du marché",
-     "en": "Market Kitchen"
+     "en": "Market Kitchen",
+     "es": "Cocina de mercado",
+     "pt": "Cozinha da feira",
+     "zh": "市集厨房",
+     "ar": "مطبخ السوق",
+     "hi": "बाज़ार की रसोई"
     },
     {
      "fr": "Feuilleton : La Maison du port",
-     "en": "Drama: Harbour House"
+     "en": "Drama: Harbour House",
+     "es": "Serie: La casa del puerto",
+     "pt": "Novela: A casa do porto",
+     "zh": "连续剧：港口之家",
+     "ar": "مسلسل: بيت الميناء",
+     "hi": "धारावाहिक: बंदरगाह वाला घर"
     },
     {
      "fr": "Magazine santé",
-     "en": "Health Magazine"
+     "en": "Health Magazine",
+     "es": "Revista de salud",
+     "pt": "Revista saúde",
+     "zh": "健康杂志",
+     "ar": "مجلة الصحة",
+     "hi": "सेहत पत्रिका"
     },
     {
      "fr": "Variétés",
-     "en": "Variety Show"
+     "en": "Variety Show",
+     "es": "Variedades",
+     "pt": "Show de variedades",
+     "zh": "综艺节目",
+     "ar": "منوعات",
+     "hi": "मनोरंजन शो"
     }
    ]
   },
@@ -609,35 +909,75 @@
    "programmes": [
     {
      "fr": "Talk-show",
-     "en": "Talk Show"
+     "en": "Talk Show",
+     "es": "Programa de entrevistas",
+     "pt": "Talk show",
+     "zh": "脱口秀",
+     "ar": "برنامج حواري",
+     "hi": "टॉक शो"
     },
     {
      "fr": "Rediffusion",
-     "en": "Replay"
+     "en": "Replay",
+     "es": "Redifusión",
+     "pt": "Reprise",
+     "zh": "重播",
+     "ar": "إعادة",
+     "hi": "दोबारा प्रसारण"
     },
     {
      "fr": "Le jeu des mots",
-     "en": "Word Game"
+     "en": "Word Game",
+     "es": "Juego de palabras",
+     "pt": "Jogo de palavras",
+     "zh": "文字游戏",
+     "ar": "لعبة الكلمات",
+     "hi": "शब्दों का खेल"
     },
     {
      "fr": "Cuisine du marché",
-     "en": "Market Kitchen"
+     "en": "Market Kitchen",
+     "es": "Cocina de mercado",
+     "pt": "Cozinha da feira",
+     "zh": "市集厨房",
+     "ar": "مطبخ السوق",
+     "hi": "बाज़ार की रसोई"
     },
     {
      "fr": "Feuilleton : La Maison du port",
-     "en": "Drama: Harbour House"
+     "en": "Drama: Harbour House",
+     "es": "Serie: La casa del puerto",
+     "pt": "Novela: A casa do porto",
+     "zh": "连续剧：港口之家",
+     "ar": "مسلسل: بيت الميناء",
+     "hi": "धारावाहिक: बंदरगाह वाला घर"
     },
     {
      "fr": "Magazine santé",
-     "en": "Health Magazine"
+     "en": "Health Magazine",
+     "es": "Revista de salud",
+     "pt": "Revista saúde",
+     "zh": "健康杂志",
+     "ar": "مجلة الصحة",
+     "hi": "सेहत पत्रिका"
     },
     {
      "fr": "Variétés",
-     "en": "Variety Show"
+     "en": "Variety Show",
+     "es": "Variedades",
+     "pt": "Show de variedades",
+     "zh": "综艺节目",
+     "ar": "منوعات",
+     "hi": "मनोरंजन शो"
     },
     {
      "fr": "Téléfilm : L'Été des orages",
-     "en": "TV Movie: Summer Storms"
+     "en": "TV Movie: Summer Storms",
+     "es": "Telefilme: Tormentas de verano",
+     "pt": "Telefilme: Tempestades de verão",
+     "zh": "电视电影：夏日风暴",
+     "ar": "فيلم تلفزيوني: عواصف الصيف",
+     "hi": "टीवी फ़िल्म: गर्मियों के तूफ़ान"
     }
    ]
   },
@@ -650,35 +990,75 @@
    "programmes": [
     {
      "fr": "Sport soir",
-     "en": "Sport Tonight"
+     "en": "Sport Tonight",
+     "es": "Deportes esta noche",
+     "pt": "Esporte à noite",
+     "zh": "今晚体育",
+     "ar": "رياضة الليلة",
+     "hi": "आज रात खेल"
     },
     {
      "fr": "Football : le multiplex",
-     "en": "Football: Live Round-up"
+     "en": "Football: Live Round-up",
+     "es": "Fútbol: carrusel en directo",
+     "pt": "Futebol: rodada ao vivo",
+     "zh": "足球：多场直播",
+     "ar": "كرة القدم: جولة مباشرة",
+     "hi": "फ़ुटबॉल: लाइव राउंड-अप"
     },
     {
      "fr": "Rugby : avant-match",
-     "en": "Rugby: Pre-match"
+     "en": "Rugby: Pre-match",
+     "es": "Rugby: la previa",
+     "pt": "Rúgbi: pré-jogo",
+     "zh": "橄榄球：赛前",
+     "ar": "الرغبي: ما قبل المباراة",
+     "hi": "रग्बी: मैच से पहले"
     },
     {
      "fr": "Tennis : quart de finale",
-     "en": "Tennis: Quarter-final"
+     "en": "Tennis: Quarter-final",
+     "es": "Tenis: cuartos de final",
+     "pt": "Tênis: quartas de final",
+     "zh": "网球：四分之一决赛",
+     "ar": "التنس: ربع النهائي",
+     "hi": "टेनिस: क्वार्टर फ़ाइनल"
     },
     {
      "fr": "Le résumé",
-     "en": "Highlights"
+     "en": "Highlights",
+     "es": "Resumen",
+     "pt": "Melhores momentos",
+     "zh": "精彩集锦",
+     "ar": "أبرز اللقطات",
+     "hi": "मुख्य अंश"
     },
     {
      "fr": "Basket : direct",
-     "en": "Basketball: Live"
+     "en": "Basketball: Live",
+     "es": "Baloncesto: en directo",
+     "pt": "Basquete: ao vivo",
+     "zh": "篮球：直播",
+     "ar": "كرة السلة: مباشر",
+     "hi": "बास्केटबॉल: लाइव"
     },
     {
      "fr": "Le club du dimanche",
-     "en": "Sunday Club"
+     "en": "Sunday Club",
+     "es": "El club del domingo",
+     "pt": "Clube de domingo",
+     "zh": "周日俱乐部",
+     "ar": "نادي الأحد",
+     "hi": "संडे क्लब"
     },
     {
      "fr": "Cyclisme : l'étape",
-     "en": "Cycling: The Stage"
+     "en": "Cycling: The Stage",
+     "es": "Ciclismo: la etapa",
+     "pt": "Ciclismo: a etapa",
+     "zh": "自行车：赛段",
+     "ar": "الدراجات: المرحلة",
+     "hi": "साइक्लिंग: आज का चरण"
     }
    ]
   },
@@ -691,35 +1071,75 @@
    "programmes": [
     {
      "fr": "Football : le multiplex",
-     "en": "Football: Live Round-up"
+     "en": "Football: Live Round-up",
+     "es": "Fútbol: carrusel en directo",
+     "pt": "Futebol: rodada ao vivo",
+     "zh": "足球：多场直播",
+     "ar": "كرة القدم: جولة مباشرة",
+     "hi": "फ़ुटबॉल: लाइव राउंड-अप"
     },
     {
      "fr": "Rugby : avant-match",
-     "en": "Rugby: Pre-match"
+     "en": "Rugby: Pre-match",
+     "es": "Rugby: la previa",
+     "pt": "Rúgbi: pré-jogo",
+     "zh": "橄榄球：赛前",
+     "ar": "الرغبي: ما قبل المباراة",
+     "hi": "रग्बी: मैच से पहले"
     },
     {
      "fr": "Tennis : quart de finale",
-     "en": "Tennis: Quarter-final"
+     "en": "Tennis: Quarter-final",
+     "es": "Tenis: cuartos de final",
+     "pt": "Tênis: quartas de final",
+     "zh": "网球：四分之一决赛",
+     "ar": "التنس: ربع النهائي",
+     "hi": "टेनिस: क्वार्टर फ़ाइनल"
     },
     {
      "fr": "Le résumé",
-     "en": "Highlights"
+     "en": "Highlights",
+     "es": "Resumen",
+     "pt": "Melhores momentos",
+     "zh": "精彩集锦",
+     "ar": "أبرز اللقطات",
+     "hi": "मुख्य अंश"
     },
     {
      "fr": "Basket : direct",
-     "en": "Basketball: Live"
+     "en": "Basketball: Live",
+     "es": "Baloncesto: en directo",
+     "pt": "Basquete: ao vivo",
+     "zh": "篮球：直播",
+     "ar": "كرة السلة: مباشر",
+     "hi": "बास्केटबॉल: लाइव"
     },
     {
      "fr": "Le club du dimanche",
-     "en": "Sunday Club"
+     "en": "Sunday Club",
+     "es": "El club del domingo",
+     "pt": "Clube de domingo",
+     "zh": "周日俱乐部",
+     "ar": "نادي الأحد",
+     "hi": "संडे क्लब"
     },
     {
      "fr": "Cyclisme : l'étape",
-     "en": "Cycling: The Stage"
+     "en": "Cycling: The Stage",
+     "es": "Ciclismo: la etapa",
+     "pt": "Ciclismo: a etapa",
+     "zh": "自行车：赛段",
+     "ar": "الدراجات: المرحلة",
+     "hi": "साइक्लिंग: आज का चरण"
     },
     {
      "fr": "Sport soir",
-     "en": "Sport Tonight"
+     "en": "Sport Tonight",
+     "es": "Deportes esta noche",
+     "pt": "Esporte à noite",
+     "zh": "今晚体育",
+     "ar": "رياضة الليلة",
+     "hi": "आज रात खेल"
     }
    ]
   },
@@ -732,35 +1152,75 @@
    "programmes": [
     {
      "fr": "Court métrage",
-     "en": "Short Film"
+     "en": "Short Film",
+     "es": "Cortometraje",
+     "pt": "Curta-metragem",
+     "zh": "短片",
+     "ar": "فيلم قصير",
+     "hi": "लघु फ़िल्म"
     },
     {
      "fr": "Les coulisses",
-     "en": "Behind the Scenes"
+     "en": "Behind the Scenes",
+     "es": "Entre bastidores",
+     "pt": "Bastidores",
+     "zh": "幕后花絮",
+     "ar": "كواليس",
+     "hi": "परदे के पीछे"
     },
     {
      "fr": "Western du soir",
-     "en": "Evening Western"
+     "en": "Evening Western",
+     "es": "Western de la noche",
+     "pt": "Faroeste da noite",
+     "zh": "晚间西部片",
+     "ar": "ويسترن المساء",
+     "hi": "शाम का वेस्टर्न"
     },
     {
      "fr": "Cinéma muet",
-     "en": "Silent Cinema"
+     "en": "Silent Cinema",
+     "es": "Cine mudo",
+     "pt": "Cinema mudo",
+     "zh": "默片",
+     "ar": "السينما الصامتة",
+     "hi": "मूक सिनेमा"
     },
     {
      "fr": "Bande-annonce",
-     "en": "Trailers"
+     "en": "Trailers",
+     "es": "Tráileres",
+     "pt": "Trailers",
+     "zh": "预告片",
+     "ar": "مقاطع دعائية",
+     "hi": "ट्रेलर"
     },
     {
      "fr": "Film noir",
-     "en": "Film Noir"
+     "en": "Film Noir",
+     "es": "Cine negro",
+     "pt": "Filme noir",
+     "zh": "黑色电影",
+     "ar": "فيلم نوار",
+     "hi": "फ़िल्म नुआर"
     },
     {
      "fr": "Nuit du cinéma",
-     "en": "Movie Night"
+     "en": "Movie Night",
+     "es": "Noche de cine",
+     "pt": "Noite de cinema",
+     "zh": "电影之夜",
+     "ar": "ليلة السينما",
+     "hi": "फ़िल्मी रात"
     },
     {
      "fr": "Ciné-club : Le Voyage dans la Lune",
-     "en": "Film Club: A Trip to the Moon"
+     "en": "Film Club: A Trip to the Moon",
+     "es": "Cineclub: Viaje a la Luna",
+     "pt": "Cineclube: Viagem à Lua",
+     "zh": "电影俱乐部：月球旅行记",
+     "ar": "نادي السينما: رحلة إلى القمر",
+     "hi": "फ़िल्म क्लब: चाँद की सैर"
     }
    ]
   },
@@ -773,35 +1233,75 @@
    "programmes": [
     {
      "fr": "Les coulisses",
-     "en": "Behind the Scenes"
+     "en": "Behind the Scenes",
+     "es": "Entre bastidores",
+     "pt": "Bastidores",
+     "zh": "幕后花絮",
+     "ar": "كواليس",
+     "hi": "परदे के पीछे"
     },
     {
      "fr": "Western du soir",
-     "en": "Evening Western"
+     "en": "Evening Western",
+     "es": "Western de la noche",
+     "pt": "Faroeste da noite",
+     "zh": "晚间西部片",
+     "ar": "ويسترن المساء",
+     "hi": "शाम का वेस्टर्न"
     },
     {
      "fr": "Cinéma muet",
-     "en": "Silent Cinema"
+     "en": "Silent Cinema",
+     "es": "Cine mudo",
+     "pt": "Cinema mudo",
+     "zh": "默片",
+     "ar": "السينما الصامتة",
+     "hi": "मूक सिनेमा"
     },
     {
      "fr": "Bande-annonce",
-     "en": "Trailers"
+     "en": "Trailers",
+     "es": "Tráileres",
+     "pt": "Trailers",
+     "zh": "预告片",
+     "ar": "مقاطع دعائية",
+     "hi": "ट्रेलर"
     },
     {
      "fr": "Film noir",
-     "en": "Film Noir"
+     "en": "Film Noir",
+     "es": "Cine negro",
+     "pt": "Filme noir",
+     "zh": "黑色电影",
+     "ar": "فيلم نوار",
+     "hi": "फ़िल्म नुआर"
     },
     {
      "fr": "Nuit du cinéma",
-     "en": "Movie Night"
+     "en": "Movie Night",
+     "es": "Noche de cine",
+     "pt": "Noite de cinema",
+     "zh": "电影之夜",
+     "ar": "ليلة السينما",
+     "hi": "फ़िल्मी रात"
     },
     {
      "fr": "Ciné-club : Le Voyage dans la Lune",
-     "en": "Film Club: A Trip to the Moon"
+     "en": "Film Club: A Trip to the Moon",
+     "es": "Cineclub: Viaje a la Luna",
+     "pt": "Cineclube: Viagem à Lua",
+     "zh": "电影俱乐部：月球旅行记",
+     "ar": "نادي السينما: رحلة إلى القمر",
+     "hi": "फ़िल्म क्लब: चाँद की सैर"
     },
     {
      "fr": "Court métrage",
-     "en": "Short Film"
+     "en": "Short Film",
+     "es": "Cortometraje",
+     "pt": "Curta-metragem",
+     "zh": "短片",
+     "ar": "فيلم قصير",
+     "hi": "लघु फ़िल्म"
     }
    ]
   },
@@ -814,35 +1314,75 @@
    "programmes": [
     {
      "fr": "Atelier bricolage",
-     "en": "Craft Corner"
+     "en": "Craft Corner",
+     "es": "Rincón de manualidades",
+     "pt": "Oficina de artesanato",
+     "zh": "手工角",
+     "ar": "ركن الأشغال اليدوية",
+     "hi": "हस्तकला कोना"
     },
     {
      "fr": "Les Lamas de Patagonie",
-     "en": "Llamas of Patagonia"
+     "en": "Llamas of Patagonia",
+     "es": "Las llamas de la Patagonia",
+     "pt": "As lhamas da Patagônia",
+     "zh": "巴塔哥尼亚的羊驼",
+     "ar": "لاما باتاغونيا",
+     "hi": "पैटागोनिया के लामा"
     },
     {
      "fr": "Jeu : Qui sait ?",
-     "en": "Quiz: Who Knows?"
+     "en": "Quiz: Who Knows?",
+     "es": "Concurso: ¿Quién lo sabe?",
+     "pt": "Quiz: Quem sabe?",
+     "zh": "问答：谁知道？",
+     "ar": "مسابقة: من يعرف؟",
+     "hi": "क्विज़: कौन जानता है?"
     },
     {
      "fr": "Musique pour enfants",
-     "en": "Kids' Music"
+     "en": "Kids' Music",
+     "es": "Música infantil",
+     "pt": "Música infantil",
+     "zh": "儿童音乐",
+     "ar": "موسيقى الأطفال",
+     "hi": "बच्चों का संगीत"
     },
     {
      "fr": "Dessins animés",
-     "en": "Cartoons"
+     "en": "Cartoons",
+     "es": "Dibujos animados",
+     "pt": "Desenhos animados",
+     "zh": "动画片",
+     "ar": "رسوم متحركة",
+     "hi": "कार्टून"
     },
     {
      "fr": "Dessins animés",
-     "en": "Cartoons"
+     "en": "Cartoons",
+     "es": "Dibujos animados",
+     "pt": "Desenhos animados",
+     "zh": "动画片",
+     "ar": "رسوم متحركة",
+     "hi": "कार्टून"
     },
     {
      "fr": "Les petits explorateurs",
-     "en": "Little Explorers"
+     "en": "Little Explorers",
+     "es": "Pequeños exploradores",
+     "pt": "Pequenos exploradores",
+     "zh": "小小探险家",
+     "ar": "المستكشفون الصغار",
+     "hi": "नन्हे खोजी"
     },
     {
      "fr": "Contes du soir",
-     "en": "Bedtime Stories"
+     "en": "Bedtime Stories",
+     "es": "Cuentos para dormir",
+     "pt": "Histórias para dormir",
+     "zh": "睡前故事",
+     "ar": "حكايات قبل النوم",
+     "hi": "सोने से पहले की कहानियाँ"
     }
    ]
   },
@@ -855,35 +1395,75 @@
    "programmes": [
     {
      "fr": "Les Lamas de Patagonie",
-     "en": "Llamas of Patagonia"
+     "en": "Llamas of Patagonia",
+     "es": "Las llamas de la Patagonia",
+     "pt": "As lhamas da Patagônia",
+     "zh": "巴塔哥尼亚的羊驼",
+     "ar": "لاما باتاغونيا",
+     "hi": "पैटागोनिया के लामा"
     },
     {
      "fr": "Jeu : Qui sait ?",
-     "en": "Quiz: Who Knows?"
+     "en": "Quiz: Who Knows?",
+     "es": "Concurso: ¿Quién lo sabe?",
+     "pt": "Quiz: Quem sabe?",
+     "zh": "问答：谁知道？",
+     "ar": "مسابقة: من يعرف؟",
+     "hi": "क्विज़: कौन जानता है?"
     },
     {
      "fr": "Musique pour enfants",
-     "en": "Kids' Music"
+     "en": "Kids' Music",
+     "es": "Música infantil",
+     "pt": "Música infantil",
+     "zh": "儿童音乐",
+     "ar": "موسيقى الأطفال",
+     "hi": "बच्चों का संगीत"
     },
     {
      "fr": "Dessins animés",
-     "en": "Cartoons"
+     "en": "Cartoons",
+     "es": "Dibujos animados",
+     "pt": "Desenhos animados",
+     "zh": "动画片",
+     "ar": "رسوم متحركة",
+     "hi": "कार्टून"
     },
     {
      "fr": "Dessins animés",
-     "en": "Cartoons"
+     "en": "Cartoons",
+     "es": "Dibujos animados",
+     "pt": "Desenhos animados",
+     "zh": "动画片",
+     "ar": "رسوم متحركة",
+     "hi": "कार्टून"
     },
     {
      "fr": "Les petits explorateurs",
-     "en": "Little Explorers"
+     "en": "Little Explorers",
+     "es": "Pequeños exploradores",
+     "pt": "Pequenos exploradores",
+     "zh": "小小探险家",
+     "ar": "المستكشفون الصغار",
+     "hi": "नन्हे खोजी"
     },
     {
      "fr": "Contes du soir",
-     "en": "Bedtime Stories"
+     "en": "Bedtime Stories",
+     "es": "Cuentos para dormir",
+     "pt": "Histórias para dormir",
+     "zh": "睡前故事",
+     "ar": "حكايات قبل النوم",
+     "hi": "सोने से पहले की कहानियाँ"
     },
     {
      "fr": "Atelier bricolage",
-     "en": "Craft Corner"
+     "en": "Craft Corner",
+     "es": "Rincón de manualidades",
+     "pt": "Oficina de artesanato",
+     "zh": "手工角",
+     "ar": "ركن الأشغال اليدوية",
+     "hi": "हस्तकला कोना"
     }
    ]
   },
@@ -896,35 +1476,75 @@
    "programmes": [
     {
      "fr": "Espace : la Lune",
-     "en": "Space: The Moon"
+     "en": "Space: The Moon",
+     "es": "Espacio: la Luna",
+     "pt": "Espaço: a Lua",
+     "zh": "太空：月球",
+     "ar": "الفضاء: القمر",
+     "hi": "अंतरिक्ष: चाँद"
     },
     {
      "fr": "Artisans du monde",
-     "en": "Makers of the World"
+     "en": "Makers of the World",
+     "es": "Artesanos del mundo",
+     "pt": "Artesãos do mundo",
+     "zh": "世界匠人",
+     "ar": "حرفيو العالم",
+     "hi": "दुनिया के कारीगर"
     },
     {
      "fr": "Les forêts",
-     "en": "Forests"
+     "en": "Forests",
+     "es": "Los bosques",
+     "pt": "As florestas",
+     "zh": "森林",
+     "ar": "الغابات",
+     "hi": "जंगल"
     },
     {
      "fr": "Les océans",
-     "en": "Oceans"
+     "en": "Oceans",
+     "es": "Los océanos",
+     "pt": "Os oceanos",
+     "zh": "海洋",
+     "ar": "المحيطات",
+     "hi": "महासागर"
     },
     {
      "fr": "Volcans actifs",
-     "en": "Active Volcanoes"
+     "en": "Active Volcanoes",
+     "es": "Volcanes activos",
+     "pt": "Vulcões ativos",
+     "zh": "活火山",
+     "ar": "براكين نشطة",
+     "hi": "सक्रिय ज्वालामुखी"
     },
     {
      "fr": "Histoire des trains",
-     "en": "History of Railways"
+     "en": "History of Railways",
+     "es": "Historia del ferrocarril",
+     "pt": "História das ferrovias",
+     "zh": "铁路历史",
+     "ar": "تاريخ السكك الحديدية",
+     "hi": "रेल का इतिहास"
     },
     {
      "fr": "Le monde sauvage",
-     "en": "Wild World"
+     "en": "Wild World",
+     "es": "El mundo salvaje",
+     "pt": "Mundo selvagem",
+     "zh": "野性世界",
+     "ar": "العالم البري",
+     "hi": "जंगली दुनिया"
     },
     {
      "fr": "Les grandes villes",
-     "en": "Great Cities"
+     "en": "Great Cities",
+     "es": "Grandes ciudades",
+     "pt": "Grandes cidades",
+     "zh": "伟大城市",
+     "ar": "مدن كبرى",
+     "hi": "महान शहर"
     }
    ]
   },
@@ -937,35 +1557,75 @@
    "programmes": [
     {
      "fr": "Artisans du monde",
-     "en": "Makers of the World"
+     "en": "Makers of the World",
+     "es": "Artesanos del mundo",
+     "pt": "Artesãos do mundo",
+     "zh": "世界匠人",
+     "ar": "حرفيو العالم",
+     "hi": "दुनिया के कारीगर"
     },
     {
      "fr": "Les forêts",
-     "en": "Forests"
+     "en": "Forests",
+     "es": "Los bosques",
+     "pt": "As florestas",
+     "zh": "森林",
+     "ar": "الغابات",
+     "hi": "जंगल"
     },
     {
      "fr": "Les océans",
-     "en": "Oceans"
+     "en": "Oceans",
+     "es": "Los océanos",
+     "pt": "Os oceanos",
+     "zh": "海洋",
+     "ar": "المحيطات",
+     "hi": "महासागर"
     },
     {
      "fr": "Volcans actifs",
-     "en": "Active Volcanoes"
+     "en": "Active Volcanoes",
+     "es": "Volcanes activos",
+     "pt": "Vulcões ativos",
+     "zh": "活火山",
+     "ar": "براكين نشطة",
+     "hi": "सक्रिय ज्वालामुखी"
     },
     {
      "fr": "Histoire des trains",
-     "en": "History of Railways"
+     "en": "History of Railways",
+     "es": "Historia del ferrocarril",
+     "pt": "História das ferrovias",
+     "zh": "铁路历史",
+     "ar": "تاريخ السكك الحديدية",
+     "hi": "रेल का इतिहास"
     },
     {
      "fr": "Le monde sauvage",
-     "en": "Wild World"
+     "en": "Wild World",
+     "es": "El mundo salvaje",
+     "pt": "Mundo selvagem",
+     "zh": "野性世界",
+     "ar": "العالم البري",
+     "hi": "जंगली दुनिया"
     },
     {
      "fr": "Les grandes villes",
-     "en": "Great Cities"
+     "en": "Great Cities",
+     "es": "Grandes ciudades",
+     "pt": "Grandes cidades",
+     "zh": "伟大城市",
+     "ar": "مدن كبرى",
+     "hi": "महान शहर"
     },
     {
      "fr": "Espace : la Lune",
-     "en": "Space: The Moon"
+     "en": "Space: The Moon",
+     "es": "Espacio: la Luna",
+     "pt": "Espaço: a Lua",
+     "zh": "太空：月球",
+     "ar": "الفضاء: القمر",
+     "hi": "अंतरिक्ष: चाँद"
     }
    ]
   },
@@ -978,35 +1638,75 @@
    "programmes": [
     {
      "fr": "Reprise",
-     "en": "Replay"
+     "en": "Replay",
+     "es": "Redifusión",
+     "pt": "Reprise",
+     "zh": "重播",
+     "ar": "إعادة",
+     "hi": "दोबारा प्रसारण"
     },
     {
      "fr": "Le téléjournal",
-     "en": "The Evening News"
+     "en": "The Evening News",
+     "es": "El telediario",
+     "pt": "O telejornal",
+     "zh": "电视新闻",
+     "ar": "نشرة الأخبار المسائية",
+     "hi": "शाम का समाचार बुलेटिन"
     },
     {
      "fr": "Météo du Québec",
-     "en": "Quebec Weather"
+     "en": "Quebec Weather",
+     "es": "El tiempo en Quebec",
+     "pt": "Tempo em Quebec",
+     "zh": "魁北克天气",
+     "ar": "طقس كيبيك",
+     "hi": "क्यूबेक का मौसम"
     },
     {
      "fr": "Hockey : avant-match",
-     "en": "Hockey: Pre-game"
+     "en": "Hockey: Pre-game",
+     "es": "Hockey: la previa",
+     "pt": "Hóquei: pré-jogo",
+     "zh": "冰球：赛前",
+     "ar": "الهوكي: ما قبل المباراة",
+     "hi": "हॉकी: मैच से पहले"
     },
     {
      "fr": "Tout le monde jase",
-     "en": "Everybody's Talking"
+     "en": "Everybody's Talking",
+     "es": "Todos hablan",
+     "pt": "Todo mundo fala",
+     "zh": "大家都在聊",
+     "ar": "الجميع يتحدث",
+     "hi": "सब बोल रहे हैं"
     },
     {
      "fr": "Cuisine en région",
-     "en": "Regional Kitchen"
+     "en": "Regional Kitchen",
+     "es": "Cocina regional",
+     "pt": "Cozinha regional",
+     "zh": "地方美食",
+     "ar": "مطبخ المناطق",
+     "hi": "क्षेत्रीय रसोई"
     },
     {
      "fr": "Les nouvelles de 22 h",
-     "en": "10 pm News"
+     "en": "10 pm News",
+     "es": "Noticias de las 22 h",
+     "pt": "Jornal das 22h",
+     "zh": "22点新闻",
+     "ar": "أخبار العاشرة",
+     "hi": "रात 10 बजे की ख़बरें"
     },
     {
      "fr": "Le grand rendez-vous",
-     "en": "The Big Show"
+     "en": "The Big Show",
+     "es": "La gran cita",
+     "pt": "O grande show",
+     "zh": "重磅节目",
+     "ar": "الموعد الكبير",
+     "hi": "बड़ा शो"
     }
    ]
   },
@@ -1019,35 +1719,75 @@
    "programmes": [
     {
      "fr": "Le téléjournal",
-     "en": "The Evening News"
+     "en": "The Evening News",
+     "es": "El telediario",
+     "pt": "O telejornal",
+     "zh": "电视新闻",
+     "ar": "نشرة الأخبار المسائية",
+     "hi": "शाम का समाचार बुलेटिन"
     },
     {
      "fr": "Météo du Québec",
-     "en": "Quebec Weather"
+     "en": "Quebec Weather",
+     "es": "El tiempo en Quebec",
+     "pt": "Tempo em Quebec",
+     "zh": "魁北克天气",
+     "ar": "طقس كيبيك",
+     "hi": "क्यूबेक का मौसम"
     },
     {
      "fr": "Hockey : avant-match",
-     "en": "Hockey: Pre-game"
+     "en": "Hockey: Pre-game",
+     "es": "Hockey: la previa",
+     "pt": "Hóquei: pré-jogo",
+     "zh": "冰球：赛前",
+     "ar": "الهوكي: ما قبل المباراة",
+     "hi": "हॉकी: मैच से पहले"
     },
     {
      "fr": "Tout le monde jase",
-     "en": "Everybody's Talking"
+     "en": "Everybody's Talking",
+     "es": "Todos hablan",
+     "pt": "Todo mundo fala",
+     "zh": "大家都在聊",
+     "ar": "الجميع يتحدث",
+     "hi": "सब बोल रहे हैं"
     },
     {
      "fr": "Cuisine en région",
-     "en": "Regional Kitchen"
+     "en": "Regional Kitchen",
+     "es": "Cocina regional",
+     "pt": "Cozinha regional",
+     "zh": "地方美食",
+     "ar": "مطبخ المناطق",
+     "hi": "क्षेत्रीय रसोई"
     },
     {
      "fr": "Les nouvelles de 22 h",
-     "en": "10 pm News"
+     "en": "10 pm News",
+     "es": "Noticias de las 22 h",
+     "pt": "Jornal das 22h",
+     "zh": "22点新闻",
+     "ar": "أخبار العاشرة",
+     "hi": "रात 10 बजे की ख़बरें"
     },
     {
      "fr": "Le grand rendez-vous",
-     "en": "The Big Show"
+     "en": "The Big Show",
+     "es": "La gran cita",
+     "pt": "O grande show",
+     "zh": "重磅节目",
+     "ar": "الموعد الكبير",
+     "hi": "बड़ा शो"
     },
     {
      "fr": "Reprise",
-     "en": "Replay"
+     "en": "Replay",
+     "es": "Redifusión",
+     "pt": "Reprise",
+     "zh": "重播",
+     "ar": "إعادة",
+     "hi": "दोबारा प्रसारण"
     }
    ]
   },
@@ -1060,35 +1800,75 @@
    "programmes": [
     {
      "fr": "Garden Rescue",
-     "en": "Garden Rescue"
+     "en": "Garden Rescue",
+     "es": "Garden Rescue",
+     "pt": "Garden Rescue",
+     "zh": "Garden Rescue",
+     "ar": "Garden Rescue",
+     "hi": "Garden Rescue"
     },
     {
      "fr": "Quiz Night",
-     "en": "Quiz Night"
+     "en": "Quiz Night",
+     "es": "Quiz Night",
+     "pt": "Quiz Night",
+     "zh": "Quiz Night",
+     "ar": "Quiz Night",
+     "hi": "Quiz Night"
     },
     {
      "fr": "The Six O'Clock News",
-     "en": "The Six O'Clock News"
+     "en": "The Six O'Clock News",
+     "es": "The Six O'Clock News",
+     "pt": "The Six O'Clock News",
+     "zh": "The Six O'Clock News",
+     "ar": "The Six O'Clock News",
+     "hi": "The Six O'Clock News"
     },
     {
      "fr": "Comedy Hour",
-     "en": "Comedy Hour"
+     "en": "Comedy Hour",
+     "es": "Comedy Hour",
+     "pt": "Comedy Hour",
+     "zh": "Comedy Hour",
+     "ar": "Comedy Hour",
+     "hi": "Comedy Hour"
     },
     {
      "fr": "Drama: The Lighthouse",
-     "en": "Drama: The Lighthouse"
+     "en": "Drama: The Lighthouse",
+     "es": "Drama: The Lighthouse",
+     "pt": "Drama: The Lighthouse",
+     "zh": "Drama: The Lighthouse",
+     "ar": "Drama: The Lighthouse",
+     "hi": "Drama: The Lighthouse"
     },
     {
      "fr": "Late Debate",
-     "en": "Late Debate"
+     "en": "Late Debate",
+     "es": "Late Debate",
+     "pt": "Late Debate",
+     "zh": "Late Debate",
+     "ar": "Late Debate",
+     "hi": "Late Debate"
     },
     {
      "fr": "Weather",
-     "en": "Weather"
+     "en": "Weather",
+     "es": "Weather",
+     "pt": "Weather",
+     "zh": "Weather",
+     "ar": "Weather",
+     "hi": "Weather"
     },
     {
      "fr": "Breakfast News",
-     "en": "Breakfast News"
+     "en": "Breakfast News",
+     "es": "Breakfast News",
+     "pt": "Breakfast News",
+     "zh": "Breakfast News",
+     "ar": "Breakfast News",
+     "hi": "Breakfast News"
     }
    ]
   },
@@ -1101,35 +1881,75 @@
    "programmes": [
     {
      "fr": "Quiz Night",
-     "en": "Quiz Night"
+     "en": "Quiz Night",
+     "es": "Quiz Night",
+     "pt": "Quiz Night",
+     "zh": "Quiz Night",
+     "ar": "Quiz Night",
+     "hi": "Quiz Night"
     },
     {
      "fr": "The Six O'Clock News",
-     "en": "The Six O'Clock News"
+     "en": "The Six O'Clock News",
+     "es": "The Six O'Clock News",
+     "pt": "The Six O'Clock News",
+     "zh": "The Six O'Clock News",
+     "ar": "The Six O'Clock News",
+     "hi": "The Six O'Clock News"
     },
     {
      "fr": "Comedy Hour",
-     "en": "Comedy Hour"
+     "en": "Comedy Hour",
+     "es": "Comedy Hour",
+     "pt": "Comedy Hour",
+     "zh": "Comedy Hour",
+     "ar": "Comedy Hour",
+     "hi": "Comedy Hour"
     },
     {
      "fr": "Drama: The Lighthouse",
-     "en": "Drama: The Lighthouse"
+     "en": "Drama: The Lighthouse",
+     "es": "Drama: The Lighthouse",
+     "pt": "Drama: The Lighthouse",
+     "zh": "Drama: The Lighthouse",
+     "ar": "Drama: The Lighthouse",
+     "hi": "Drama: The Lighthouse"
     },
     {
      "fr": "Late Debate",
-     "en": "Late Debate"
+     "en": "Late Debate",
+     "es": "Late Debate",
+     "pt": "Late Debate",
+     "zh": "Late Debate",
+     "ar": "Late Debate",
+     "hi": "Late Debate"
     },
     {
      "fr": "Weather",
-     "en": "Weather"
+     "en": "Weather",
+     "es": "Weather",
+     "pt": "Weather",
+     "zh": "Weather",
+     "ar": "Weather",
+     "hi": "Weather"
     },
     {
      "fr": "Breakfast News",
-     "en": "Breakfast News"
+     "en": "Breakfast News",
+     "es": "Breakfast News",
+     "pt": "Breakfast News",
+     "zh": "Breakfast News",
+     "ar": "Breakfast News",
+     "hi": "Breakfast News"
     },
     {
      "fr": "Garden Rescue",
-     "en": "Garden Rescue"
+     "en": "Garden Rescue",
+     "es": "Garden Rescue",
+     "pt": "Garden Rescue",
+     "zh": "Garden Rescue",
+     "ar": "Garden Rescue",
+     "hi": "Garden Rescue"
     }
    ]
   },
@@ -1142,35 +1962,75 @@
    "programmes": [
     {
      "fr": "Reisereportage",
-     "en": "Travel Report"
+     "en": "Travel Report",
+     "es": "Reisereportage",
+     "pt": "Reisereportage",
+     "zh": "Reisereportage",
+     "ar": "Reisereportage",
+     "hi": "Reisereportage"
     },
     {
      "fr": "Sport am Abend",
-     "en": "Evening Sport"
+     "en": "Evening Sport",
+     "es": "Sport am Abend",
+     "pt": "Sport am Abend",
+     "zh": "Sport am Abend",
+     "ar": "Sport am Abend",
+     "hi": "Sport am Abend"
     },
     {
      "fr": "Kochstudio",
-     "en": "Cooking Studio"
+     "en": "Cooking Studio",
+     "es": "Kochstudio",
+     "pt": "Kochstudio",
+     "zh": "Kochstudio",
+     "ar": "Kochstudio",
+     "hi": "Kochstudio"
     },
     {
      "fr": "Talkrunde",
-     "en": "Talk Round"
+     "en": "Talk Round",
+     "es": "Talkrunde",
+     "pt": "Talkrunde",
+     "zh": "Talkrunde",
+     "ar": "Talkrunde",
+     "hi": "Talkrunde"
     },
     {
      "fr": "Spätnachrichten",
-     "en": "Late News"
+     "en": "Late News",
+     "es": "Spätnachrichten",
+     "pt": "Spätnachrichten",
+     "zh": "Spätnachrichten",
+     "ar": "Spätnachrichten",
+     "hi": "Spätnachrichten"
     },
     {
      "fr": "Nachrichten",
-     "en": "News"
+     "en": "News",
+     "es": "Nachrichten",
+     "pt": "Nachrichten",
+     "zh": "Nachrichten",
+     "ar": "Nachrichten",
+     "hi": "Nachrichten"
     },
     {
      "fr": "Wetter",
-     "en": "Weather"
+     "en": "Weather",
+     "es": "Wetter",
+     "pt": "Wetter",
+     "zh": "Wetter",
+     "ar": "Wetter",
+     "hi": "Wetter"
     },
     {
      "fr": "Tatort-Nacht",
-     "en": "Crime Night"
+     "en": "Crime Night",
+     "es": "Tatort-Nacht",
+     "pt": "Tatort-Nacht",
+     "zh": "Tatort-Nacht",
+     "ar": "Tatort-Nacht",
+     "hi": "Tatort-Nacht"
     }
    ]
   },
@@ -1183,35 +2043,75 @@
    "programmes": [
     {
      "fr": "Cocina de casa",
-     "en": "Home Cooking"
+     "en": "Home Cooking",
+     "es": "Cocina de casa",
+     "pt": "Cocina de casa",
+     "zh": "Cocina de casa",
+     "ar": "Cocina de casa",
+     "hi": "Cocina de casa"
     },
     {
      "fr": "Concurso",
-     "en": "Game Show"
+     "en": "Game Show",
+     "es": "Concurso",
+     "pt": "Concurso",
+     "zh": "Concurso",
+     "ar": "Concurso",
+     "hi": "Concurso"
     },
     {
      "fr": "Documental",
-     "en": "Documentary"
+     "en": "Documentary",
+     "es": "Documental",
+     "pt": "Documental",
+     "zh": "Documental",
+     "ar": "Documental",
+     "hi": "Documental"
     },
     {
      "fr": "Noticias de la noche",
-     "en": "Late News"
+     "en": "Late News",
+     "es": "Noticias de la noche",
+     "pt": "Noticias de la noche",
+     "zh": "Noticias de la noche",
+     "ar": "Noticias de la noche",
+     "hi": "Noticias de la noche"
     },
     {
      "fr": "Noticias",
-     "en": "News"
+     "en": "News",
+     "es": "Noticias",
+     "pt": "Noticias",
+     "zh": "Noticias",
+     "ar": "Noticias",
+     "hi": "Noticias"
     },
     {
      "fr": "El tiempo",
-     "en": "Weather"
+     "en": "Weather",
+     "es": "El tiempo",
+     "pt": "El tiempo",
+     "zh": "El tiempo",
+     "ar": "El tiempo",
+     "hi": "El tiempo"
     },
     {
      "fr": "Telenovela",
-     "en": "Telenovela"
+     "en": "Telenovela",
+     "es": "Telenovela",
+     "pt": "Telenovela",
+     "zh": "Telenovela",
+     "ar": "Telenovela",
+     "hi": "Telenovela"
     },
     {
      "fr": "Fútbol: la previa",
-     "en": "Football: Pre-match"
+     "en": "Football: Pre-match",
+     "es": "Fútbol: la previa",
+     "pt": "Fútbol: la previa",
+     "zh": "Fútbol: la previa",
+     "ar": "Fútbol: la previa",
+     "hi": "Fútbol: la previa"
     }
    ]
   },
@@ -1224,35 +2124,75 @@
    "programmes": [
     {
      "fr": "Forêt tropicale",
-     "en": "Rainforest"
+     "en": "Rainforest",
+     "es": "Selva tropical",
+     "pt": "Floresta tropical",
+     "zh": "热带雨林",
+     "ar": "الغابة المطيرة",
+     "hi": "वर्षावन"
     },
     {
      "fr": "Glaciers",
-     "en": "Glaciers"
+     "en": "Glaciers",
+     "es": "Glaciares",
+     "pt": "Geleiras",
+     "zh": "冰川",
+     "ar": "الأنهار الجليدية",
+     "hi": "हिमनद"
     },
     {
      "fr": "Côtes sauvages",
-     "en": "Wild Coasts"
+     "en": "Wild Coasts",
+     "es": "Costas salvajes",
+     "pt": "Costas selvagens",
+     "zh": "荒野海岸",
+     "ar": "سواحل برية",
+     "hi": "जंगली तट"
     },
     {
      "fr": "Montagnes en 4K",
-     "en": "Mountains in 4K"
+     "en": "Mountains in 4K",
+     "es": "Montañas en 4K",
+     "pt": "Montanhas em 4K",
+     "zh": "4K 山脉",
+     "ar": "جبال بدقة 4K",
+     "hi": "4K में पहाड़"
     },
     {
      "fr": "Récifs coralliens",
-     "en": "Coral Reefs"
+     "en": "Coral Reefs",
+     "es": "Arrecifes de coral",
+     "pt": "Recifes de coral",
+     "zh": "珊瑚礁",
+     "ar": "الشعاب المرجانية",
+     "hi": "मूंगा चट्टानें"
     },
     {
      "fr": "Aurores boréales",
-     "en": "Northern Lights"
+     "en": "Northern Lights",
+     "es": "Auroras boreales",
+     "pt": "Auroras boreais",
+     "zh": "北极光",
+     "ar": "الشفق القطبي",
+     "hi": "उत्तरी ध्रुवीय ज्योति"
     },
     {
      "fr": "Déserts",
-     "en": "Deserts"
+     "en": "Deserts",
+     "es": "Desiertos",
+     "pt": "Desertos",
+     "zh": "沙漠",
+     "ar": "الصحارى",
+     "hi": "रेगिस्तान"
     },
     {
      "fr": "Villes la nuit",
-     "en": "Cities at Night"
+     "en": "Cities at Night",
+     "es": "Ciudades de noche",
+     "pt": "Cidades à noite",
+     "zh": "夜色城市",
+     "ar": "مدن في الليل",
+     "hi": "रात में शहर"
     }
    ]
   }
@@ -1290,7 +2230,12 @@
   "series": "s-pepper",
   "search": {
    "en": "s",
-   "fr": "s"
+   "fr": "s",
+   "es": "s",
+   "pt": "s",
+   "zh": "s",
+   "ar": "s",
+   "hi": "s"
   },
   "person": "Georges Méliès"
  }

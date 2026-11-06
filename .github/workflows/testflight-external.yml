@@ -1,8 +1,8 @@
 name: TestFlight external
 
 # External testers (CLAUDE.md, App Store): the App Store edition builds a push's Release run uploaded (release.yml, job
-# external, which alone starts this workflow: a run started by anyone else stops) go to the TestFlight group "External
-# testers" once App Store Connect has processed them, through Beta App Review; never App Review. The TestFlight edition
+# external, which alone starts this workflow: a run started by anyone else stops) go to every external TestFlight group
+# of the app once App Store Connect has processed them, through Beta App Review; never App Review. The TestFlight edition
 # never comes here (check_app_store.py). Linux: the wait costs no macOS minutes. Its own queue: a wait of up to 3 hours
 # never holds back a tag's release or the next delivery; a newer push's builds replace builds still waiting here.
 on:

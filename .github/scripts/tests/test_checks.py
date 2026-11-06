@@ -549,7 +549,10 @@ class AppStoreTests(CheckTestCase):
         "def testflight_edition?\n  ENV[\"EDITION\"] == \"testflight\"\nend\n\n"
         "def app_store_edition?\n  ENV[\"EDITION\"] == \"app-store\"\nend\n\n"
         "def upload_build(platform)\n  upload_to_testflight(\n    api_key: api_key,\n    skip_submission: true\n  )\nend\n\n"
-        "def external_group(app)\n  app.create_beta_group(group_name: EXTERNAL_GROUP, is_internal_group: false)\nend\n\n"
+        "def external_groups(app)\n  external = app.get_beta_groups.reject(&:is_internal_group)\n"
+        "  app.create_beta_group(group_name: EXTERNAL_GROUP, is_internal_group: false) if external.empty?\n"
+        "  UI.user_error!(\"An internal group was selected for external testers\") if external.any?(&:is_internal_group)\n"
+        "  external\nend\n\n"
         "def beta_review_slot_free?(app, platform, version, number)\n  waiting.each do |build|\n"
         "    UI.user_error!(\"attached\") if app_store_version_build?(build)\n    build.expire!\n  end\nend\n\n"
         "def fill_what_to_test(platform, number)\n"
@@ -560,8 +563,9 @@ class AppStoreTests(CheckTestCase):
         "def distribute_to_external_testers(platform)\n"
         "  UI.user_error!(\"Only the App Store edition\") unless app_store_edition?\n"
         "  UI.user_error!(\"Never a tag's build\") if ENV[\"GITHUB_REF_TYPE\"] == \"tag\"\n"
+        "  groups = external_groups(app)\n"
         "  upload_to_testflight(\n    distribute_only: true,\n    distribute_external: true,\n"
-        "    groups: [EXTERNAL_GROUP],\n    submit_beta_review: true\n  )\nend\n\n"
+        "    groups: groups.map(&:id),\n    submit_beta_review: true\n  )\nend\n\n"
         "platform :ios do\n  lane :external_testers do\n    distribute_to_external_testers(\"ios\")\n  end\nend\n")
     EXTERNAL_RELEASE = (
         "      EDITION: ${{ github.event.inputs.edition || 'app-store' }}\n"
@@ -611,6 +615,15 @@ class AppStoreTests(CheckTestCase):
                 self.external_path(self.EXTERNAL_FASTFILE + "\nlane :anything do\n" + extra + "end\n")
                 self.assertFails("app_store", "gives a build to external testers or Beta App Review outside")
 
+    def test_ios_builds_on_apple_silicon_macs_are_only_ever_turned_off(self):
+        patch = "  Spaceship::ConnectAPI.patch_group(group_id: id, attributes: { iosBuildsAvailableForAppleSiliconMac: %s })\n"
+        self.external_path(self.EXTERNAL_FASTFILE + "\ndef keep_ios_builds_off_macs(app)\n" + patch % "false" + "end\n")
+        self.assertPasses("app_store")
+        for value in ("true", "value", "!value"):
+            with self.subTest(value=value):
+                self.external_path(self.EXTERNAL_FASTFILE + "\ndef keep_ios_builds_off_macs(app)\n" + patch % value + "end\n")
+                self.assertFails("app_store", "sets iosBuildsAvailableForAppleSiliconMac to")
+
     def test_a_line_starting_with_end_does_not_end_a_function(self):
         # `end_time = …` at column 0 inside a function must not end it: the lines after it stay checked as its own.
         self.external_path(self.EXTERNAL_FASTFILE.replace(
@@ -635,6 +648,22 @@ class AppStoreTests(CheckTestCase):
                 self.assertEqual(code, 1, output)
                 self.assertTrue("must first refuse any edition but the App Store one" in output
                                 or "app_store_edition? must be" in output, output)
+
+    def test_the_build_goes_to_every_external_group_by_id(self):
+        for fastfile in (self.EXTERNAL_FASTFILE.replace("    groups: groups.map(&:id),\n", "    groups: [\"External testers\"],\n"),
+                         self.EXTERNAL_FASTFILE.replace("    groups: groups.map(&:id),\n", "    groups: app.get_beta_groups.map(&:id),\n"),
+                         self.EXTERNAL_FASTFILE.replace("  groups = external_groups(app)\n", "  groups = app.get_beta_groups\n")):
+            with self.subTest(fastfile=fastfile[-300:]):
+                self.external_path(fastfile)
+                self.assertFails("app_store", "must send the build to the app's external groups by id")
+
+    def test_an_internal_group_never_gets_the_external_build(self):
+        for fastfile in (self.EXTERNAL_FASTFILE.replace(".reject(&:is_internal_group)", ""),
+                         self.EXTERNAL_FASTFILE.replace(
+                             "  UI.user_error!(\"An internal group was selected for external testers\") if external.any?(&:is_internal_group)\n", "")):
+            with self.subTest(fastfile=fastfile[-300:]):
+                self.external_path(fastfile)
+                self.assertFails("app_store", "external_groups must leave the internal groups out")
 
     def test_a_tags_build_never_goes_to_external_testers(self):
         self.external_path(self.EXTERNAL_FASTFILE.replace(

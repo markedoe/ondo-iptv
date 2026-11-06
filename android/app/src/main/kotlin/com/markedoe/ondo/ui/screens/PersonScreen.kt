@@ -3,6 +3,8 @@ package com.markedoe.ondo.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -150,6 +152,7 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PersonHeader(state: PersonUiState, television: Boolean, actions: PersonActions, onCollections: () -> Unit) {
     val held = state.collections.any { it.contains }
@@ -162,15 +165,18 @@ private fun PersonHeader(state: PersonUiState, television: Boolean, actions: Per
             TvCircleAction(myListIcon, stringResource(R.string.my_list), onClick = actions.onToggleMyList, modifier = Modifier.focusMemory("person-myList").semantics { stateDescription = myListState }.testTag("personMyList"))
             TvCircleAction(collectionIcon, stringResource(R.string.collection), onClick = onCollections, modifier = Modifier.focusMemory("person-collection").testTag("personCollection"))
         } else {
-            FilledTonalButton(onClick = actions.onToggleMyList, modifier = Modifier.semantics { stateDescription = myListState }.testTag("personMyList")) {
-                Icon(myListIcon, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.my_list))
-            }
-            FilledTonalButton(onClick = onCollections, modifier = Modifier.testTag("personCollection")) {
-                Icon(collectionIcon, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.collection))
+            // Beside the photo; on a narrow phone, Collection goes under My List rather than being squeezed.
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(onClick = actions.onToggleMyList, modifier = Modifier.semantics { stateDescription = myListState }.testTag("personMyList")) {
+                    Icon(myListIcon, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.my_list), maxLines = 1)
+                }
+                FilledTonalButton(onClick = onCollections, modifier = Modifier.testTag("personCollection")) {
+                    Icon(collectionIcon, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.collection), maxLines = 1)
+                }
             }
         }
     }

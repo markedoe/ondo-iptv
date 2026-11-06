@@ -141,13 +141,9 @@ jobs:
           fi
       - name: Listing screenshots
         if: env.TRACK != 'internal' || env.LISTING != 'skip'
+        # Every listing language gets each kind of screenshot (es-419 the Spanish ones), or the run stops here.
         run: |
-          for dir in android/app/src/test/screenshots/play/*/*/; do
-            locale=$(basename "$(dirname "$dir")")
-            kind=$(basename "$dir")
-            mkdir -p "fastlane/metadata-android/$locale/images/$kind"
-            cp "$dir"*.png "fastlane/metadata-android/$locale/images/$kind/"
-          done
+          python3 -I .github/scripts/listing_screenshots.py android/app/src/test/screenshots/play fastlane/metadata-android
           find fastlane/metadata-android -name "*.png" | sort
       - name: Release bundle
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -14,17 +14,116 @@
     {"id": "l-4k", "name": "4K | UHD"}
   ],
   "kinds": {
-    "news": [["Le journal", "The News"], ["Météo", "Weather"], ["L'invité", "The Interview"], ["Le débat", "The Debate"], ["Économie", "Business"], ["Le 18 h", "Evening News"], ["Grand reportage", "Special Report"], ["Le journal de la nuit", "Late News"]],
-    "general": [["Le jeu des mots", "Word Game"], ["Cuisine du marché", "Market Kitchen"], ["Feuilleton : La Maison du port", "Drama: Harbour House"], ["Magazine santé", "Health Magazine"], ["Variétés", "Variety Show"], ["Téléfilm : L'Été des orages", "TV Movie: Summer Storms"], ["Talk-show", "Talk Show"], ["Rediffusion", "Replay"]],
-    "sport": [["Football : le multiplex", "Football: Live Round-up"], ["Rugby : avant-match", "Rugby: Pre-match"], ["Tennis : quart de finale", "Tennis: Quarter-final"], ["Le résumé", "Highlights"], ["Basket : direct", "Basketball: Live"], ["Le club du dimanche", "Sunday Club"], ["Cyclisme : l'étape", "Cycling: The Stage"], ["Sport soir", "Sport Tonight"]],
-    "cinema": [["Ciné-club : Le Voyage dans la Lune", "Film Club: A Trip to the Moon"], ["Court métrage", "Short Film"], ["Les coulisses", "Behind the Scenes"], ["Western du soir", "Evening Western"], ["Cinéma muet", "Silent Cinema"], ["Bande-annonce", "Trailers"], ["Film noir", "Film Noir"], ["Nuit du cinéma", "Movie Night"]],
-    "kids": [["Dessins animés", "Cartoons"], ["Les petits explorateurs", "Little Explorers"], ["Contes du soir", "Bedtime Stories"], ["Atelier bricolage", "Craft Corner"], ["Les Lamas de Patagonie", "Llamas of Patagonia"], ["Jeu : Qui sait ?", "Quiz: Who Knows?"], ["Musique pour enfants", "Kids' Music"], ["Dessins animés", "Cartoons"]],
-    "docs": [["Les océans", "Oceans"], ["Volcans actifs", "Active Volcanoes"], ["Histoire des trains", "History of Railways"], ["Le monde sauvage", "Wild World"], ["Les grandes villes", "Great Cities"], ["Espace : la Lune", "Space: The Moon"], ["Artisans du monde", "Makers of the World"], ["Les forêts", "Forests"]],
-    "qc": [["Le téléjournal", "The Evening News"], ["Météo du Québec", "Quebec Weather"], ["Hockey : avant-match", "Hockey: Pre-game"], ["Tout le monde jase", "Everybody's Talking"], ["Cuisine en région", "Regional Kitchen"], ["Les nouvelles de 22 h", "10 pm News"], ["Le grand rendez-vous", "The Big Show"], ["Reprise", "Replay"]],
-    "uk": [["Breakfast News", "Breakfast News"], ["Garden Rescue", "Garden Rescue"], ["Quiz Night", "Quiz Night"], ["The Six O'Clock News", "The Six O'Clock News"], ["Comedy Hour", "Comedy Hour"], ["Drama: The Lighthouse", "Drama: The Lighthouse"], ["Late Debate", "Late Debate"], ["Weather", "Weather"]],
-    "de": [["Nachrichten", "News"], ["Wetter", "Weather"], ["Tatort-Nacht", "Crime Night"], ["Reisereportage", "Travel Report"], ["Sport am Abend", "Evening Sport"], ["Kochstudio", "Cooking Studio"], ["Talkrunde", "Talk Round"], ["Spätnachrichten", "Late News"]],
-    "es": [["Noticias", "News"], ["El tiempo", "Weather"], ["Telenovela", "Telenovela"], ["Fútbol: la previa", "Football: Pre-match"], ["Cocina de casa", "Home Cooking"], ["Concurso", "Game Show"], ["Documental", "Documentary"], ["Noticias de la noche", "Late News"]],
-    "4k": [["Montagnes en 4K", "Mountains in 4K"], ["Récifs coralliens", "Coral Reefs"], ["Aurores boréales", "Northern Lights"], ["Déserts", "Deserts"], ["Villes la nuit", "Cities at Night"], ["Forêt tropicale", "Rainforest"], ["Glaciers", "Glaciers"], ["Côtes sauvages", "Wild Coasts"]]
+    "news": [
+      {"en": "The News", "fr": "Le journal", "es": "Informativo", "pt": "Jornal", "zh": "新闻", "ar": "نشرة الأخبار", "hi": "समाचार"},
+      {"en": "Weather", "fr": "Météo", "es": "El tiempo", "pt": "Previsão do tempo", "zh": "天气预报", "ar": "النشرة الجوية", "hi": "मौसम"},
+      {"en": "The Interview", "fr": "L'invité", "es": "La entrevista", "pt": "A entrevista", "zh": "访谈", "ar": "المقابلة", "hi": "इंटरव्यू"},
+      {"en": "The Debate", "fr": "Le débat", "es": "El debate", "pt": "O debate", "zh": "辩论", "ar": "المناظرة", "hi": "बहस"},
+      {"en": "Business", "fr": "Économie", "es": "Economía", "pt": "Economia", "zh": "财经", "ar": "اقتصاد", "hi": "कारोबार"},
+      {"en": "Evening News", "fr": "Le 18 h", "es": "Noticias de las 18 h", "pt": "Jornal das 18h", "zh": "18点新闻", "ar": "أخبار السادسة", "hi": "शाम की ख़बरें"},
+      {"en": "Special Report", "fr": "Grand reportage", "es": "Gran reportaje", "pt": "Grande reportagem", "zh": "特别报道", "ar": "تقرير خاص", "hi": "विशेष रिपोर्ट"},
+      {"en": "Late News", "fr": "Le journal de la nuit", "es": "Noticias de la noche", "pt": "Jornal da noite", "zh": "晚间新闻", "ar": "نشرة الليل", "hi": "देर रात की ख़बरें"}
+    ],
+    "general": [
+      {"en": "Word Game", "fr": "Le jeu des mots", "es": "Juego de palabras", "pt": "Jogo de palavras", "zh": "文字游戏", "ar": "لعبة الكلمات", "hi": "शब्दों का खेल"},
+      {"en": "Market Kitchen", "fr": "Cuisine du marché", "es": "Cocina de mercado", "pt": "Cozinha da feira", "zh": "市集厨房", "ar": "مطبخ السوق", "hi": "बाज़ार की रसोई"},
+      {"en": "Drama: Harbour House", "fr": "Feuilleton : La Maison du port", "es": "Serie: La casa del puerto", "pt": "Novela: A casa do porto", "zh": "连续剧：港口之家", "ar": "مسلسل: بيت الميناء", "hi": "धारावाहिक: बंदरगाह वाला घर"},
+      {"en": "Health Magazine", "fr": "Magazine santé", "es": "Revista de salud", "pt": "Revista saúde", "zh": "健康杂志", "ar": "مجلة الصحة", "hi": "सेहत पत्रिका"},
+      {"en": "Variety Show", "fr": "Variétés", "es": "Variedades", "pt": "Show de variedades", "zh": "综艺节目", "ar": "منوعات", "hi": "मनोरंजन शो"},
+      {"en": "TV Movie: Summer Storms", "fr": "Téléfilm : L'Été des orages", "es": "Telefilme: Tormentas de verano", "pt": "Telefilme: Tempestades de verão", "zh": "电视电影：夏日风暴", "ar": "فيلم تلفزيوني: عواصف الصيف", "hi": "टीवी फ़िल्म: गर्मियों के तूफ़ान"},
+      {"en": "Talk Show", "fr": "Talk-show", "es": "Programa de entrevistas", "pt": "Talk show", "zh": "脱口秀", "ar": "برنامج حواري", "hi": "टॉक शो"},
+      {"en": "Replay", "fr": "Rediffusion", "es": "Redifusión", "pt": "Reprise", "zh": "重播", "ar": "إعادة", "hi": "दोबारा प्रसारण"}
+    ],
+    "sport": [
+      {"en": "Football: Live Round-up", "fr": "Football : le multiplex", "es": "Fútbol: carrusel en directo", "pt": "Futebol: rodada ao vivo", "zh": "足球：多场直播", "ar": "كرة القدم: جولة مباشرة", "hi": "फ़ुटबॉल: लाइव राउंड-अप"},
+      {"en": "Rugby: Pre-match", "fr": "Rugby : avant-match", "es": "Rugby: la previa", "pt": "Rúgbi: pré-jogo", "zh": "橄榄球：赛前", "ar": "الرغبي: ما قبل المباراة", "hi": "रग्बी: मैच से पहले"},
+      {"en": "Tennis: Quarter-final", "fr": "Tennis : quart de finale", "es": "Tenis: cuartos de final", "pt": "Tênis: quartas de final", "zh": "网球：四分之一决赛", "ar": "التنس: ربع النهائي", "hi": "टेनिस: क्वार्टर फ़ाइनल"},
+      {"en": "Highlights", "fr": "Le résumé", "es": "Resumen", "pt": "Melhores momentos", "zh": "精彩集锦", "ar": "أبرز اللقطات", "hi": "मुख्य अंश"},
+      {"en": "Basketball: Live", "fr": "Basket : direct", "es": "Baloncesto: en directo", "pt": "Basquete: ao vivo", "zh": "篮球：直播", "ar": "كرة السلة: مباشر", "hi": "बास्केटबॉल: लाइव"},
+      {"en": "Sunday Club", "fr": "Le club du dimanche", "es": "El club del domingo", "pt": "Clube de domingo", "zh": "周日俱乐部", "ar": "نادي الأحد", "hi": "संडे क्लब"},
+      {"en": "Cycling: The Stage", "fr": "Cyclisme : l'étape", "es": "Ciclismo: la etapa", "pt": "Ciclismo: a etapa", "zh": "自行车：赛段", "ar": "الدراجات: المرحلة", "hi": "साइक्लिंग: आज का चरण"},
+      {"en": "Sport Tonight", "fr": "Sport soir", "es": "Deportes esta noche", "pt": "Esporte à noite", "zh": "今晚体育", "ar": "رياضة الليلة", "hi": "आज रात खेल"}
+    ],
+    "cinema": [
+      {"en": "Film Club: A Trip to the Moon", "fr": "Ciné-club : Le Voyage dans la Lune", "es": "Cineclub: Viaje a la Luna", "pt": "Cineclube: Viagem à Lua", "zh": "电影俱乐部：月球旅行记", "ar": "نادي السينما: رحلة إلى القمر", "hi": "फ़िल्म क्लब: चाँद की सैर"},
+      {"en": "Short Film", "fr": "Court métrage", "es": "Cortometraje", "pt": "Curta-metragem", "zh": "短片", "ar": "فيلم قصير", "hi": "लघु फ़िल्म"},
+      {"en": "Behind the Scenes", "fr": "Les coulisses", "es": "Entre bastidores", "pt": "Bastidores", "zh": "幕后花絮", "ar": "كواليس", "hi": "परदे के पीछे"},
+      {"en": "Evening Western", "fr": "Western du soir", "es": "Western de la noche", "pt": "Faroeste da noite", "zh": "晚间西部片", "ar": "ويسترن المساء", "hi": "शाम का वेस्टर्न"},
+      {"en": "Silent Cinema", "fr": "Cinéma muet", "es": "Cine mudo", "pt": "Cinema mudo", "zh": "默片", "ar": "السينما الصامتة", "hi": "मूक सिनेमा"},
+      {"en": "Trailers", "fr": "Bande-annonce", "es": "Tráileres", "pt": "Trailers", "zh": "预告片", "ar": "مقاطع دعائية", "hi": "ट्रेलर"},
+      {"en": "Film Noir", "fr": "Film noir", "es": "Cine negro", "pt": "Filme noir", "zh": "黑色电影", "ar": "فيلم نوار", "hi": "फ़िल्म नुआर"},
+      {"en": "Movie Night", "fr": "Nuit du cinéma", "es": "Noche de cine", "pt": "Noite de cinema", "zh": "电影之夜", "ar": "ليلة السينما", "hi": "फ़िल्मी रात"}
+    ],
+    "kids": [
+      {"en": "Cartoons", "fr": "Dessins animés", "es": "Dibujos animados", "pt": "Desenhos animados", "zh": "动画片", "ar": "رسوم متحركة", "hi": "कार्टून"},
+      {"en": "Little Explorers", "fr": "Les petits explorateurs", "es": "Pequeños exploradores", "pt": "Pequenos exploradores", "zh": "小小探险家", "ar": "المستكشفون الصغار", "hi": "नन्हे खोजी"},
+      {"en": "Bedtime Stories", "fr": "Contes du soir", "es": "Cuentos para dormir", "pt": "Histórias para dormir", "zh": "睡前故事", "ar": "حكايات قبل النوم", "hi": "सोने से पहले की कहानियाँ"},
+      {"en": "Craft Corner", "fr": "Atelier bricolage", "es": "Rincón de manualidades", "pt": "Oficina de artesanato", "zh": "手工角", "ar": "ركن الأشغال اليدوية", "hi": "हस्तकला कोना"},
+      {"en": "Llamas of Patagonia", "fr": "Les Lamas de Patagonie", "es": "Las llamas de la Patagonia", "pt": "As lhamas da Patagônia", "zh": "巴塔哥尼亚的羊驼", "ar": "لاما باتاغونيا", "hi": "पैटागोनिया के लामा"},
+      {"en": "Quiz: Who Knows?", "fr": "Jeu : Qui sait ?", "es": "Concurso: ¿Quién lo sabe?", "pt": "Quiz: Quem sabe?", "zh": "问答：谁知道？", "ar": "مسابقة: من يعرف؟", "hi": "क्विज़: कौन जानता है?"},
+      {"en": "Kids' Music", "fr": "Musique pour enfants", "es": "Música infantil", "pt": "Música infantil", "zh": "儿童音乐", "ar": "موسيقى الأطفال", "hi": "बच्चों का संगीत"},
+      {"en": "Cartoons", "fr": "Dessins animés", "es": "Dibujos animados", "pt": "Desenhos animados", "zh": "动画片", "ar": "رسوم متحركة", "hi": "कार्टून"}
+    ],
+    "docs": [
+      {"en": "Oceans", "fr": "Les océans", "es": "Los océanos", "pt": "Os oceanos", "zh": "海洋", "ar": "المحيطات", "hi": "महासागर"},
+      {"en": "Active Volcanoes", "fr": "Volcans actifs", "es": "Volcanes activos", "pt": "Vulcões ativos", "zh": "活火山", "ar": "براكين نشطة", "hi": "सक्रिय ज्वालामुखी"},
+      {"en": "History of Railways", "fr": "Histoire des trains", "es": "Historia del ferrocarril", "pt": "História das ferrovias", "zh": "铁路历史", "ar": "تاريخ السكك الحديدية", "hi": "रेल का इतिहास"},
+      {"en": "Wild World", "fr": "Le monde sauvage", "es": "El mundo salvaje", "pt": "Mundo selvagem", "zh": "野性世界", "ar": "العالم البري", "hi": "जंगली दुनिया"},
+      {"en": "Great Cities", "fr": "Les grandes villes", "es": "Grandes ciudades", "pt": "Grandes cidades", "zh": "伟大城市", "ar": "مدن كبرى", "hi": "महान शहर"},
+      {"en": "Space: The Moon", "fr": "Espace : la Lune", "es": "Espacio: la Luna", "pt": "Espaço: a Lua", "zh": "太空：月球", "ar": "الفضاء: القمر", "hi": "अंतरिक्ष: चाँद"},
+      {"en": "Makers of the World", "fr": "Artisans du monde", "es": "Artesanos del mundo", "pt": "Artesãos do mundo", "zh": "世界匠人", "ar": "حرفيو العالم", "hi": "दुनिया के कारीगर"},
+      {"en": "Forests", "fr": "Les forêts", "es": "Los bosques", "pt": "As florestas", "zh": "森林", "ar": "الغابات", "hi": "जंगल"}
+    ],
+    "qc": [
+      {"en": "The Evening News", "fr": "Le téléjournal", "es": "El telediario", "pt": "O telejornal", "zh": "电视新闻", "ar": "نشرة الأخبار المسائية", "hi": "शाम का समाचार बुलेटिन"},
+      {"en": "Quebec Weather", "fr": "Météo du Québec", "es": "El tiempo en Quebec", "pt": "Tempo em Quebec", "zh": "魁北克天气", "ar": "طقس كيبيك", "hi": "क्यूबेक का मौसम"},
+      {"en": "Hockey: Pre-game", "fr": "Hockey : avant-match", "es": "Hockey: la previa", "pt": "Hóquei: pré-jogo", "zh": "冰球：赛前", "ar": "الهوكي: ما قبل المباراة", "hi": "हॉकी: मैच से पहले"},
+      {"en": "Everybody's Talking", "fr": "Tout le monde jase", "es": "Todos hablan", "pt": "Todo mundo fala", "zh": "大家都在聊", "ar": "الجميع يتحدث", "hi": "सब बोल रहे हैं"},
+      {"en": "Regional Kitchen", "fr": "Cuisine en région", "es": "Cocina regional", "pt": "Cozinha regional", "zh": "地方美食", "ar": "مطبخ المناطق", "hi": "क्षेत्रीय रसोई"},
+      {"en": "10 pm News", "fr": "Les nouvelles de 22 h", "es": "Noticias de las 22 h", "pt": "Jornal das 22h", "zh": "22点新闻", "ar": "أخبار العاشرة", "hi": "रात 10 बजे की ख़बरें"},
+      {"en": "The Big Show", "fr": "Le grand rendez-vous", "es": "La gran cita", "pt": "O grande show", "zh": "重磅节目", "ar": "الموعد الكبير", "hi": "बड़ा शो"},
+      {"en": "Replay", "fr": "Reprise", "es": "Redifusión", "pt": "Reprise", "zh": "重播", "ar": "إعادة", "hi": "दोबारा प्रसारण"}
+    ],
+    "uk": [
+      {"en": "Breakfast News", "fr": "Breakfast News", "es": "Breakfast News", "pt": "Breakfast News", "zh": "Breakfast News", "ar": "Breakfast News", "hi": "Breakfast News"},
+      {"en": "Garden Rescue", "fr": "Garden Rescue", "es": "Garden Rescue", "pt": "Garden Rescue", "zh": "Garden Rescue", "ar": "Garden Rescue", "hi": "Garden Rescue"},
+      {"en": "Quiz Night", "fr": "Quiz Night", "es": "Quiz Night", "pt": "Quiz Night", "zh": "Quiz Night", "ar": "Quiz Night", "hi": "Quiz Night"},
+      {"en": "The Six O'Clock News", "fr": "The Six O'Clock News", "es": "The Six O'Clock News", "pt": "The Six O'Clock News", "zh": "The Six O'Clock News", "ar": "The Six O'Clock News", "hi": "The Six O'Clock News"},
+      {"en": "Comedy Hour", "fr": "Comedy Hour", "es": "Comedy Hour", "pt": "Comedy Hour", "zh": "Comedy Hour", "ar": "Comedy Hour", "hi": "Comedy Hour"},
+      {"en": "Drama: The Lighthouse", "fr": "Drama: The Lighthouse", "es": "Drama: The Lighthouse", "pt": "Drama: The Lighthouse", "zh": "Drama: The Lighthouse", "ar": "Drama: The Lighthouse", "hi": "Drama: The Lighthouse"},
+      {"en": "Late Debate", "fr": "Late Debate", "es": "Late Debate", "pt": "Late Debate", "zh": "Late Debate", "ar": "Late Debate", "hi": "Late Debate"},
+      {"en": "Weather", "fr": "Weather", "es": "Weather", "pt": "Weather", "zh": "Weather", "ar": "Weather", "hi": "Weather"}
+    ],
+    "de": [
+      {"en": "News", "fr": "Nachrichten", "es": "Nachrichten", "pt": "Nachrichten", "zh": "Nachrichten", "ar": "Nachrichten", "hi": "Nachrichten"},
+      {"en": "Weather", "fr": "Wetter", "es": "Wetter", "pt": "Wetter", "zh": "Wetter", "ar": "Wetter", "hi": "Wetter"},
+      {"en": "Crime Night", "fr": "Tatort-Nacht", "es": "Tatort-Nacht", "pt": "Tatort-Nacht", "zh": "Tatort-Nacht", "ar": "Tatort-Nacht", "hi": "Tatort-Nacht"},
+      {"en": "Travel Report", "fr": "Reisereportage", "es": "Reisereportage", "pt": "Reisereportage", "zh": "Reisereportage", "ar": "Reisereportage", "hi": "Reisereportage"},
+      {"en": "Evening Sport", "fr": "Sport am Abend", "es": "Sport am Abend", "pt": "Sport am Abend", "zh": "Sport am Abend", "ar": "Sport am Abend", "hi": "Sport am Abend"},
+      {"en": "Cooking Studio", "fr": "Kochstudio", "es": "Kochstudio", "pt": "Kochstudio", "zh": "Kochstudio", "ar": "Kochstudio", "hi": "Kochstudio"},
+      {"en": "Talk Round", "fr": "Talkrunde", "es": "Talkrunde", "pt": "Talkrunde", "zh": "Talkrunde", "ar": "Talkrunde", "hi": "Talkrunde"},
+      {"en": "Late News", "fr": "Spätnachrichten", "es": "Spätnachrichten", "pt": "Spätnachrichten", "zh": "Spätnachrichten", "ar": "Spätnachrichten", "hi": "Spätnachrichten"}
+    ],
+    "es": [
+      {"en": "News", "fr": "Noticias", "es": "Noticias", "pt": "Noticias", "zh": "Noticias", "ar": "Noticias", "hi": "Noticias"},
+      {"en": "Weather", "fr": "El tiempo", "es": "El tiempo", "pt": "El tiempo", "zh": "El tiempo", "ar": "El tiempo", "hi": "El tiempo"},
+      {"en": "Telenovela", "fr": "Telenovela", "es": "Telenovela", "pt": "Telenovela", "zh": "Telenovela", "ar": "Telenovela", "hi": "Telenovela"},
+      {"en": "Football: Pre-match", "fr": "Fútbol: la previa", "es": "Fútbol: la previa", "pt": "Fútbol: la previa", "zh": "Fútbol: la previa", "ar": "Fútbol: la previa", "hi": "Fútbol: la previa"},
+      {"en": "Home Cooking", "fr": "Cocina de casa", "es": "Cocina de casa", "pt": "Cocina de casa", "zh": "Cocina de casa", "ar": "Cocina de casa", "hi": "Cocina de casa"},
+      {"en": "Game Show", "fr": "Concurso", "es": "Concurso", "pt": "Concurso", "zh": "Concurso", "ar": "Concurso", "hi": "Concurso"},
+      {"en": "Documentary", "fr": "Documental", "es": "Documental", "pt": "Documental", "zh": "Documental", "ar": "Documental", "hi": "Documental"},
+      {"en": "Late News", "fr": "Noticias de la noche", "es": "Noticias de la noche", "pt": "Noticias de la noche", "zh": "Noticias de la noche", "ar": "Noticias de la noche", "hi": "Noticias de la noche"}
+    ],
+    "4k": [
+      {"en": "Mountains in 4K", "fr": "Montagnes en 4K", "es": "Montañas en 4K", "pt": "Montanhas em 4K", "zh": "4K 山脉", "ar": "جبال بدقة 4K", "hi": "4K में पहाड़"},
+      {"en": "Coral Reefs", "fr": "Récifs coralliens", "es": "Arrecifes de coral", "pt": "Recifes de coral", "zh": "珊瑚礁", "ar": "الشعاب المرجانية", "hi": "मूंगा चट्टानें"},
+      {"en": "Northern Lights", "fr": "Aurores boréales", "es": "Auroras boreales", "pt": "Auroras boreais", "zh": "北极光", "ar": "الشفق القطبي", "hi": "उत्तरी ध्रुवीय ज्योति"},
+      {"en": "Deserts", "fr": "Déserts", "es": "Desiertos", "pt": "Desertos", "zh": "沙漠", "ar": "الصحارى", "hi": "रेगिस्तान"},
+      {"en": "Cities at Night", "fr": "Villes la nuit", "es": "Ciudades de noche", "pt": "Cidades à noite", "zh": "夜色城市", "ar": "مدن في الليل", "hi": "रात में शहर"},
+      {"en": "Rainforest", "fr": "Forêt tropicale", "es": "Selva tropical", "pt": "Floresta tropical", "zh": "热带雨林", "ar": "الغابة المطيرة", "hi": "वर्षावन"},
+      {"en": "Glaciers", "fr": "Glaciers", "es": "Glaciares", "pt": "Geleiras", "zh": "冰川", "ar": "الأنهار الجليدية", "hi": "हिमनद"},
+      {"en": "Wild Coasts", "fr": "Côtes sauvages", "es": "Costas salvajes", "pt": "Costas selvagens", "zh": "荒野海岸", "ar": "سواحل برية", "hi": "जंगली तट"}
+    ]
   },
   "channels": [
     {"id": "c01", "name": "Le Fil Info", "category": "l-fr-info", "kind": "news", "color": "#C62828"},
