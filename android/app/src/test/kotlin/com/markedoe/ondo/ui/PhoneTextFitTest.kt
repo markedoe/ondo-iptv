@@ -31,6 +31,7 @@ import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.screenshots.ShowcaseCatalogue
 import com.markedoe.ondo.screenshots.ShowcaseImages
 import java.util.Locale
+import kotlin.math.roundToInt
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -89,11 +90,18 @@ class PhoneTextFitTest(private val language: String) {
             return context.createConfigurationContext(Configuration(context.resources.configuration).apply { setLocale(locale) })
         }
 
+    /**
+     * How many lines each [text] on screen takes, from the height it is drawn at: the layout semantics give is made
+     * anew at the widest width allowed, not at the width the text was laid out at.
+     */
     private fun lines(text: String): List<Int> =
         compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { node ->
             val layouts = mutableListOf<TextLayoutResult>()
             node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
-            layouts.singleOrNull()?.lineCount
+            layouts.singleOrNull()?.let { layout ->
+                val lineHeight = layout.size.height.toFloat() / layout.lineCount
+                maxOf(layout.lineCount, (node.size.height / lineHeight).roundToInt())
+            }
         }
 
     @Test
