@@ -8,6 +8,7 @@ import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.CatalogueMatcher
 import com.markedoe.ondo.core.library.CreditRecord
 import com.markedoe.ondo.core.library.EpisodeTitles
+import com.markedoe.ondo.core.library.Genres
 import com.markedoe.ondo.core.library.InMemoryMetadataStore
 import com.markedoe.ondo.core.library.MetadataFreshness
 import com.markedoe.ondo.core.library.MetadataKey
@@ -1183,7 +1184,8 @@ class OndoRepository(
                 SyncSelection(
                     id = previous?.id ?: java.util.UUID.randomUUID().toString().lowercase(),
                     name = name.trim(),
-                    tags = tags,
+                    // Genre tags by TMDb's genre (Genres), whatever language the editor showed them in.
+                    tags = Genres.canonicalTags(tags),
                     match = if (all) SyncSelection.ALL else SyncSelection.ANY,
                     tabs = tabs,
                     updatedAt = 0,

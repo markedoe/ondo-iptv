@@ -11,6 +11,7 @@ import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
 import com.markedoe.ondo.core.library.RecentReleases
 import com.markedoe.ondo.core.library.RowOrder
+import com.markedoe.ondo.core.library.Genres
 import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
@@ -1041,11 +1042,13 @@ object UiMappers {
      * Longer than any genre: a field without separators in a long run of text. A genre opens its own page, and the
      * genre goes with the page into what Android keeps of the screens (a binder transaction, 1 MB at most).
      */
-    const val MAX_GENRE_LENGTH = 200
+    const val MAX_GENRE_LENGTH = Genres.MAX_LENGTH
 
-    /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"), each once ("Action & Adventure, Adventure"). */
-    fun genres(field: String?): List<String> =
-        field.orEmpty().split(',', '/', '|', '&').map { it.trim() }.filter { it.length in 1..MAX_GENRE_LENGTH }.distinct()
+    /**
+     * The genres of a genre field ("Drama, Thriller", "Action / Adventure"), each once ("Action & Adventure, Adventure"),
+     * its HTML references decoded first ("Action &amp; Adventure" is no "amp; Adventure"): [Genres.split].
+     */
+    fun genres(field: String?): List<String> = Genres.split(field)
 
     /**
      * The titles of the playlist sharing a value of a movie's or a series' page, hidden categories left out, in
@@ -1110,8 +1113,9 @@ object UiMappers {
                 )
             }
             BrowseKind.GENRE -> {
-                val wanted = TextNormalizer.normalize(value)
-                fun has(field: String?) = genres(field).any { TextNormalizer.normalize(it) == wanted }
+                // The genre in any language ([Genres]): "Aventure" opens the titles of "Adventure" and "Abenteuer" too.
+                val wanted = Genres.keys(value)
+                fun has(field: String?) = wanted.isNotEmpty() && Genres.keys(field).containsAll(wanted)
                 // A movie's genre is known once its page was opened; a series' comes with the catalogue. TMDb's genres
                 // (kept on the device, or its most popular titles of the genre) add those of the pages never opened.
                 val foundMovies = found.mapNotNullTo(HashSet()) { (it as? TrendingMatch.MovieMatch)?.movie?.id }

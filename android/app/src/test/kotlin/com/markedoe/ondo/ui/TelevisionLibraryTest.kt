@@ -32,6 +32,9 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.core.library.RowOrder
+import com.markedoe.ondo.core.library.Selections
+import com.markedoe.ondo.core.sync.SyncSelection
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.CrashLog
@@ -543,5 +546,48 @@ class TelevisionLibraryTest {
             waitFor { favourite() == (round == 0) }
         }
         assertTrue("the channel was ${channel}", channel.isNotEmpty())
+    }
+
+    /**
+     * Settings → My selections with the remote only: its row under Catalogue, the list (New selection first, then each
+     * selection), a selection opened and Back to it, Right to its Delete button, and New selection's empty page.
+     */
+    @Test
+    fun mySelectionsAreReachedAndManagedWithTheRemote() {
+        val dramas = SyncSelection("s1", "Dramas", listOf(Selections.genre("Drama")!!), SyncSelection.ANY, listOf(RowOrder.MOVIES), 1)
+        val nineties = SyncSelection("s2", "", listOf(Selections.decade(1990)), SyncSelection.ANY, listOf(RowOrder.HOME), 1)
+        start(library = LibraryState(selections = listOf(dramas, nineties)))
+        openSettingsRow("settingsCatalogue", "categoriesRow")
+        pressUntil(Key.DirectionDown) { focusedTag() == "selectionsRow" }
+        press(Key.DirectionCenter)
+        waitFor { exists("selections") && !exists("settings") }
+        waitFor { focusedTag() == "newSelection" }
+        assertTrue(exists("selection-s1") && exists("selection-s2"))
+        // A selection opens its page; Back comes back to the list.
+        pressUntil(Key.DirectionDown) { focusedTag() == "selection-s1" }
+        press(Key.DirectionCenter)
+        waitFor { exists("selection") && exists("deleteSelection") && !exists("selections") }
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        waitFor { exists("selections") }
+        settle()
+        pressUntil(Key.DirectionDown) { focusedTag() == "selection-s1" }
+        // Right reaches its Delete button.
+        press(Key.DirectionRight)
+        assertEquals("deleteSelection-s1", focusedTag())
+        press(Key.DirectionCenter)
+        waitFor { repository.state.value.library.selections.map { it.id } == listOf("s2") }
+        waitFor { !exists("selection-s1") }
+        waitFor { focusedTag().isNotEmpty() }
+        // New selection opens an empty page.
+        pressUntil(Key.DirectionUp) { focusedTag() == "newSelection" }
+        press(Key.DirectionCenter)
+        waitFor { exists("selection") && exists("saveSelection") && !exists("deleteSelection") }
+        // Back to the list, then to its row in Settings.
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        waitFor { exists("selections") }
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        waitFor { exists("settings") && !exists("selections") }
+        settle()
+        assertEquals("selectionsRow", focusedTag())
     }
 }

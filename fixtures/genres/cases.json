@@ -1,0 +1,52 @@
+{
+ "about": "Genre fields and the keys both cores give them (Genres, docs/SYNC.md \"Selections\"); tags saved by an earlier version and how this version reads them; HTML references.",
+ "fields": [
+  {"field": "Action &amp; Adventure", "keys": ["action", "adventure"]},
+  {"field": "Sci-Fi &amp; Fantasy", "keys": ["science fiction", "fantasy"]},
+  {"field": "War &amp; Politics", "keys": ["war", "politics"]},
+  {"field": "Science-Fiction &amp; Fantastique", "keys": ["science fiction", "fantasy"]},
+  {"field": "Action & Adventure", "keys": ["action", "adventure"]},
+  {"field": "Action &amp;amp; Adventure", "keys": ["action", "adventure"]},
+  {"field": "Abenteuer, Adventure, Aventure", "keys": ["adventure"]},
+  {"field": "Animação / Animation", "keys": ["animation"]},
+  {"field": "Comédia, Comédie, Comedy", "keys": ["comedy"]},
+  {"field": "Crime | Crimen | Policier", "keys": ["crime"]},
+  {"field": "Documentaire, Documentaires, Documentario, Documentary, Documentaire série", "keys": ["documentary"]},
+  {"field": "Drama, Drame", "keys": ["drama"]},
+  {"field": "Família, Familial, Familie, Famille, Family, Divertissement familial", "keys": ["family"]},
+  {"field": "Fantastic, Fantastique, Fantasy", "keys": ["fantasy"]},
+  {"field": "Épouvante-horreur", "keys": ["horror"]},
+  {"field": "SF; Science Fiction; Sci-Fi", "keys": ["science fiction"]},
+  {"field": "Téléfilm, TV Movie", "keys": ["tv movie"]},
+  {"field": "Acción y Aventura", "keys": ["action", "adventure"]},
+  {"field": "Action-Adventure", "keys": ["action", "adventure"]},
+  {"field": "Drama series", "keys": ["drama"]},
+  {"field": "Animation Adulte", "keys": ["animation"]},
+  {"field": "Comédies romantiques", "keys": ["comedy", "romance"]},
+  {"field": "Com&eacute;die, Myst&egrave;re", "keys": ["comedy", "mystery"]},
+  {"field": "喜剧, 科幻", "keys": ["comedy", "science fiction"]},
+  {"field": "كوميديا، دراما", "keys": ["comedy", "drama"]},
+  {"field": "Érotique, Erotiques", "keys": ["erotique"]},
+  {"field": "Film noir", "keys": ["film noir"]},
+  {"field": "amp; Fantastique, quot Politics", "keys": ["fantasy", "politics"]},
+  {"field": "  ,  / ", "keys": []},
+  {"field": "", "keys": []}
+ ],
+ "tags": [
+  {"tag": "genre:aventure", "canonical": ["genre:adventure"]},
+  {"tag": "genre:drame", "canonical": ["genre:drama"]},
+  {"tag": "genre:science fiction", "canonical": ["genre:science fiction"]},
+  {"tag": "genre:action adventure", "canonical": ["genre:action", "genre:adventure"]},
+  {"tag": "genre:amp adventure", "canonical": ["genre:adventure"]},
+  {"tag": "genre:erotiques", "canonical": ["genre:erotique"]},
+  {"tag": "award:cannes", "canonical": ["award:cannes"]},
+  {"tag": "mood:dark", "canonical": ["mood:dark"]}
+ ],
+ "entities": [
+  {"in": "Action &amp; Adventure", "out": "Action & Adventure"},
+  {"in": "L&#39;Odyss&eacute;e &#x27;&quot;&lt;&gt;", "out": "L'Odyssée '\"<>"},
+  {"in": "Tom & Jerry &unknown; &#0; &", "out": "Tom & Jerry &unknown; &#0; &"},
+  {"in": "&amp;amp;", "out": "&"},
+  {"in": "Fran&ccedil;ais&nbsp;&mdash;&hellip;", "out": "Français —…"}
+ ]
+}

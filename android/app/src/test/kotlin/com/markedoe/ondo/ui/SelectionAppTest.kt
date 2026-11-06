@@ -37,6 +37,11 @@ import com.markedoe.ondo.ui.screens.RowOrderScreen
 import com.markedoe.ondo.ui.screens.SelectionActions
 import com.markedoe.ondo.ui.screens.SelectionScreen
 import com.markedoe.ondo.ui.screens.SelectionUiState
+import com.markedoe.ondo.ui.screens.SelectionsActions
+import com.markedoe.ondo.ui.screens.SelectionsScreen
+import com.markedoe.ondo.ui.screens.SelectionsUiState
+import com.markedoe.ondo.ui.screens.SettingsActions
+import com.markedoe.ondo.ui.screens.SettingsScreen
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
@@ -254,5 +259,83 @@ class SelectionAppTest {
         press(Key.DirectionCenter)
         // Drama, then the genre after it: Mystery.
         assertEquals(listOf("genre:drama", "genre:mystery"), saved)
+    }
+
+    /**
+     * The bugs of the genres: the same genre in each language was a tag of its own (Aventure, Abenteuer, Adventure), and
+     * "Action &amp; Adventure" gave the tag "amp; Adventure". Now one genre, named in the viewer's language, matching
+     * the titles of every language, and the tags an earlier version saved still match.
+     */
+    @Test
+    fun aGenreInEveryLanguageIsOneTagNamedInTheViewersLanguage() {
+        val films = Fixtures.content.movies.filter { it.categoryId != Fixtures.adultMovies.id }.take(3)
+        val genres = listOf("Aventure, Drame", "Abenteuer", "Action &amp; Adventure")
+        val state = Fixtures.state().copy(movieDetails = films.zip(genres).associate { (film, genre) -> film.id to MediaDetails(title = film.name, genre = genre) })
+        val choices = SelectionRows.choices(state, emptyMap())
+        val tags = choices.genres.map { it.first }
+        assertEquals(1, tags.count { it == "genre:adventure" })
+        assertTrue("genre:action" in tags && "genre:drama" in tags)
+        assertTrue(tags.none { it in setOf("genre:aventure", "genre:abenteuer", "genre:drame", "genre:amp adventure", "genre:action adventure") })
+        // A tag saved by an earlier version from the French name matches the three films.
+        val old = SyncSelection("s5", "", listOf("genre:aventure"), SyncSelection.ANY, listOf(RowOrder.MOVIES), 1)
+        val oldState = state.copy(library = state.library.copy(selections = listOf(old)))
+        assertEquals(films.map { it.name }.toSet(), titles(oldState, RowOrder.MOVIES).toSet())
+        // The page shows it as this version's tag, named in English here.
+        val ui = SelectionUiState("s5", "", com.markedoe.ondo.core.library.Genres.canonicalTags(old.tags), false, old.tabs, choices)
+        compose.setContent { OndoTheme { SelectionScreen(ui, SelectionActions()) } }
+        compose.onNodeWithTag("selectionList").performScrollToNode(hasTestTag("tag-genre:adventure"))
+        assertTrue(compose.onAllNodesWithText("Adventure").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(compose.onAllNodesWithText("amp; Adventure").fetchSemanticsNodes().isEmpty())
+    }
+
+    /**
+     * On a phone: Settings → My selections lists the profile's selections; a selection opens its page, its bin deletes
+     * it, New selection makes one. A Kids profile has no such row, as no Row order.
+     */
+    @Test
+    fun aPhoneOpensMySelectionsFromSettings() {
+        var page by mutableStateOf(0)
+        var edited: Pair<String, String>? = null
+        var deleted: String? = null
+        var made = 0
+        val state = state(dramaOfTheTwenties)
+        val settings = UiMappers.settings(state, "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
+        compose.setContent {
+            OndoTheme {
+                when (page) {
+                    0 -> SettingsScreen(settings, SettingsActions(onSelections = { page = 1 }))
+                    else -> SelectionsScreen(
+                        SelectionsUiState(state.library.selections),
+                        SelectionsActions(onNew = { made++ }, onEdit = { id, tab -> edited = id to tab }, onDelete = { deleted = it }),
+                    )
+                }
+            }
+        }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("selectionsRow"))
+        compose.onNodeWithTag("selectionsRow").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("selections").assertExists()
+        // Its name, its tags and its tabs.
+        compose.onNodeWithText("Recent dramas").assertExists()
+        compose.onNodeWithText("All of: 2020s, Drama").assertExists()
+        compose.onNodeWithText("Home · Movies · Series").assertExists()
+        compose.onNodeWithTag("selection-s1").performClick()
+        assertEquals("s1" to RowOrder.HOME, edited)
+        compose.onNodeWithTag("deleteSelection-s1").performClick()
+        assertEquals("s1", deleted)
+        compose.onNodeWithTag("newSelection").performClick()
+        assertEquals(1, made)
+    }
+
+    @Test
+    fun aKidsProfileHasNoSelectionsRowInSettings() {
+        val kids = Profile(id = "k", name = "Kids", isKids = true)
+        val base = state(dramaOfTheTwenties)
+        val kidsState = base.copy(profiles = listOf(Profile(id = Profile.DEFAULT_ID, name = "Me"), kids), settings = base.settings.copy(activeProfileId = kids.id))
+        val settings = UiMappers.settings(kidsState, "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
+        assertFalse(settings.canChangeRowOrder)
+        compose.setContent { OndoTheme { SettingsScreen(settings, SettingsActions()) } }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("categoriesRow"))
+        assertTrue(compose.onAllNodesWithTag("selectionsRow").fetchSemanticsNodes().isEmpty())
     }
 }

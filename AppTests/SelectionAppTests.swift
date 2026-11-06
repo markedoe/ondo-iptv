@@ -153,6 +153,34 @@ final class SelectionAppTests: XCTestCase {
         XCTAssertEqual(model.selection("s2")?.tabs, [SyncRows.home])
     }
 
+    /// The bugs of the genres: the same genre in each language was a tag of its own (Aventure, Abenteuer, Adventure),
+    /// and "Action &amp; Adventure" gave the tag "amp; Adventure". Now one genre, named in the viewer's language,
+    /// matching the titles of every language; the tags an earlier version saved still match, and are saved as this
+    /// version's.
+    func testAGenreInEveryLanguageIsOneTagNamedInTheViewersLanguage() async throws {
+        let model = try await device()
+        let fields: [String: String] = ["Pulp Fiction": "Aventure, Drame", "Northern Lights": "Abenteuer", "Spirited Away": "Action &amp; Adventure"]
+        for movie in model.content.movies {
+            guard let genre = fields[movie.name] else { continue }
+            model.movieDetailsCache[movie.id] = MediaDetails(title: movie.name, genre: genre)
+        }
+        let tags: [String] = model.selectionChoices().genres.map(\.tag)
+        XCTAssertEqual(tags.filter { $0 == "genre:adventure" }.count, 1)
+        XCTAssertTrue(tags.contains("genre:action") && tags.contains("genre:drama"))
+        for stale in ["genre:aventure", "genre:abenteuer", "genre:drame", "genre:amp adventure"] { XCTAssertFalse(tags.contains(stale), stale) }
+        let all: Set<String> = ["Pulp Fiction", "Northern Lights", "Spirited Away"]
+        XCTAssertEqual(names(model, ["genre:adventure"]), all)
+        // A tag saved by an earlier version from the French name.
+        XCTAssertEqual(names(model, ["genre:aventure"]), all)
+        XCTAssertEqual(model.selectionTagName("genre:aventure"), "Adventure")
+        XCTAssertEqual(model.selectionTagName("genre:adventure"), "Adventure")
+        let id = try XCTUnwrap(model.saveSelection(id: nil, name: "", tags: ["genre:aventure", "genre:adventure", "genre:drame"], all: false, tabs: [SyncRows.movies]))
+        XCTAssertEqual(model.selection(id)?.tags, ["genre:adventure", "genre:drama"])
+        // A genre's page: its titles whatever the language of their genres.
+        XCTAssertEqual(Set(model.titles(for: .genre("Aventure")).movies.map(\.name)), all)
+        XCTAssertEqual(AppModel.genres(in: "Action &amp; Adventure"), ["Action", "Adventure"])
+    }
+
     func testEachProfileHasItsOwnAndAKidsProfileCannotMakeOne() async throws {
         let model = try await device()
         let id = try XCTUnwrap(model.saveSelection(id: nil, name: "Anime", tags: [Selections.style("manga")], all: false, tabs: [SyncRows.movies]))

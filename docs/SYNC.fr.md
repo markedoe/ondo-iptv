@@ -296,11 +296,16 @@ session à l’autre, comme pour l’interrupteur Enfant ; un masquage reçu s�
 pour adultes restent masquées dans un profil Enfant quoi que dise la liste. Les catégories d’une playlist fichier, sur son
 seul appareil, ne sont pas envoyées.
 
-**Présélections** (des rangées que le spectateur compose de tags : Réglages → Ordre des rangées → Nouvelle
-présélection) — `{"id", "name", "tags", "match", "tabs", "updatedAt"}`. `id` est un UUID en minuscules ; `name` le nom
-donné (vide quand aucun n’a été saisi : chaque appareil montre alors les noms des tags, dans sa langue) ; `tags` les tags qui choisissent un titre : `genre:<nom>` (un genre,
-son nom tel que les deux applications normalisent le texte : en minuscules, sans accents, mots séparés d’une espace ; les
-genres du fournisseur, et sur Android ceux de TMDb gardés sur l’appareil), `award:<groupe>` (un festival ou une cérémonie
+**Présélections** (des rangées que le spectateur compose de tags : Réglages → Mes présélections, ou Ordre des
+rangées → Nouvelle présélection) — `{"id", "name", "tags", "match", "tabs", "updatedAt"}`. `id` est un UUID en minuscules ; `name` le nom
+donné (vide quand aucun n’a été saisi : chaque appareil montre alors les noms des tags, dans sa langue) ; `tags` les tags qui choisissent un titre : `genre:<clé>` (un genre,
+quelle que soit la langue de son nom : l’un des genres de TMDb par son nom anglais tel que les deux applications
+normalisent le texte, en minuscules, sans accents, mots séparés d’une espace, `adventure` pour Aventure, Abenteuer ou
+Adventure, `science fiction`, `tv movie` ; les noms de chacun sont dans `fixtures/genres/table.txt`, la même table et les
+mêmes cas dans les deux cœurs, `Genres` ; un autre genre par son propre nom normalisé, le « s » du pluriel de chaque mot
+retiré ; un champ de genres est découpé sur `,` `/` `|` `&` `;` une fois ses références HTML décodées, « Sci-Fi &amp;
+Fantasy » donnant `science fiction` et `fantasy` ; les genres du fournisseur, et sur Android ceux de TMDb gardés sur
+l’appareil), `award:<groupe>` (un festival ou une cérémonie
 du fichier des récompenses : `cannes`, `oscars`, `emmys`… ; un titre qui y a une récompense ou une sélection),
 `decade:<première année>` (`decade:1990`), `style:<style>` (un style des noms de catégories : `manga`, `kids`,
 `documentary`…) ; `match` vaut `any` (un titre qui a l’un des tags) ou `all` (qui a chacun d’eux) ; `tabs` les onglets où
@@ -324,6 +329,16 @@ fois chacun, triés en unités de code UTF-16, 200 au plus, et gardent les 100 p
 l’instantané et dans `profileData`. Un instantané sans `selections` (une version antérieure) n’en retire aucune. Chaque
 profil a les siennes : celles du profil principal sont `selections`, celles d’un autre profil sont dans son
 `profileData`. Un profil Enfant ne peut pas changer les siennes.
+
+Les tags de genre d’une version antérieure, qui gardait chaque genre par son nom normalisé (`genre:aventure`,
+`genre:drame`, `genre:action adventure` venu de « Action & Adventure » de TMDb, `genre:amp adventure` venu de « Action
+&amp; Adventure » découpé sur son `&`), sont lus comme ceux de cette version quand ils sont comparés et affichés
+(`genre:adventure` ; `genre:action adventure` vaut les deux genres, un titre devant avoir chacun d’eux), et l’élément
+n’est pas réécrit : la fusion, sa chaîne de départage et les empreintes restent ce qu’elles étaient. La page d’une
+présélection les montre comme ceux de cette version, et l’enregistrer les garde ainsi. Un tag que cette version
+enregistre arrive tel quel sur un appareil de la version antérieure : là, `genre:adventure` choisit les titres dont le
+genre s’appelle Adventure en anglais (chaque clé est son nom anglais normalisé), pas ceux nommés dans une autre langue,
+comme avant.
 
 **Profils** (docs/PROFILES.fr.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` est un UUID
 en minuscules ; celui du profil principal est `00000000-0000-0000-0000-000000000001`. `symbol` vaut `initial`, un nom

@@ -264,10 +264,15 @@ hide with its own time, and nothing changes from one session to the next, as for
 applies. Categories that look adult stay hidden in a Kids profile whatever the list says. The categories of a file
 playlist, on its device only, are not sent.
 
-**Selections** (rows the viewer makes of tags: Settings → Row order → New selection) — `{"id", "name", "tags",
+**Selections** (rows the viewer makes of tags: Settings → My selections, or Row order → New selection) — `{"id", "name", "tags",
 "match", "tabs", "updatedAt"}`. `id` is a UUID in lowercase; `name` the name the viewer gave (empty when they
-typed none: each device then shows the tags' names, in its own language); `tags` the tags a title is picked by: `genre:<name>` (a genre, its name as both apps normalise text: lowercase,
-without accents, words separated by one space; the provider's genres, and on Android TMDb's kept on the device),
+typed none: each device then shows the tags' names, in its own language); `tags` the tags a title is picked by: `genre:<key>` (a genre whatever the language its
+name is in: one of TMDb's genres by its English name as both apps normalise text, lowercase, without accents, words
+separated by one space, `adventure` for Aventure, Abenteuer or Adventure, `science fiction`, `tv movie`; the names of
+each are in `fixtures/genres/table.txt`, the same table and cases in both cores, `Genres`; another genre by its own name
+normalised, each word's plural "s" left out; a genre field is split on `,` `/` `|` `&` `;` once its HTML references are
+decoded, "Sci-Fi &amp; Fantasy" giving `science fiction` and `fantasy`; the provider's genres, and on Android TMDb's kept
+on the device),
 `award:<group>` (a festival or ceremony of the awards file: `cannes`, `oscars`, `emmys`…; a title with an award or a
 selection there), `decade:<first year>` (`decade:1990`), `style:<style>` (a style of the category names: `manga`,
 `kids`, `documentary`…); `match` is `any` (a title with one of the tags) or `all` (with each of them); `tabs` the tabs it
@@ -288,6 +293,14 @@ sorted in UTF-16 code units, 200 at most, and keep the 100 selections changed la
 smaller key). The list is left out when it is empty, in the snapshot and in `profileData`. A snapshot without
 `selections` (an older version) removes none. Each profile has its own: the main profile's is `selections`, another
 profile's is in its `profileData`. A Kids profile cannot change its own.
+
+Genre tags of an earlier version, which kept each genre by its name normalised (`genre:aventure`, `genre:drame`,
+`genre:action adventure` from TMDb's "Action & Adventure", `genre:amp adventure` from "Action &amp; Adventure" split on
+its `&`), are read as this version's when they are matched and shown (`genre:adventure`; `genre:action adventure` is both
+genres, a title needing each), and the record is not rewritten: the merge, its tie string and the digests stay as
+they were. The page of a selection shows them as this version's, and saving it keeps them so. A tag this version saves
+reaches a device of the earlier version as it is: there, `genre:adventure` matches the titles whose genre is named
+Adventure in English (each key is its English name normalised), not those named in another language, as before.
 
 **Profiles** (docs/PROFILES.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` is a UUID in
 lowercase; the main profile's is `00000000-0000-0000-0000-000000000001`. `symbol` is `initial`, an icon name or an

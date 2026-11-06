@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.Genres
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.TitleMetadata
@@ -81,11 +82,13 @@ object SelectionRows {
         val names = HashMap<String, String>()
         fun genres(vararg fields: String?, tmdb: TitleMetadata?): Set<String> {
             val result = HashSet<String>()
-            val all = fields.flatMap { UiMappers.genres(it) } + tmdb?.genres.orEmpty().map { it.name }
+            // Each genre's key (Genres): the same genre named in any language is one; TMDb's "Action & Adventure" is two.
+            val all = fields.flatMap { Genres.split(it) } + tmdb?.genres.orEmpty().flatMap { Genres.split(it.name) }
             for (genre in all) {
-                val tag = Selections.genre(genre) ?: continue
-                names.putIfAbsent(tag, genre)
-                result += tag.removePrefix(Selections.GENRE)
+                val keys = Genres.keys(genre)
+                // A genre's own name for those TMDb does not have; a name joining genres names none of them.
+                if (keys.size == 1) names.putIfAbsent(Selections.GENRE + keys[0], genre)
+                result += keys
             }
             return result
         }
@@ -128,8 +131,8 @@ object SelectionRows {
         val tagged = tagged(state, kept)
         val hidden = UiMappers.hiddenCategoryIds(state)
         val byName = CategoryFilter.hiddenTitles(state)
-        val all = selection.matchesAll
-        fun matches(key: String) = tagged.facts[key]?.let { Selections.matches(selection.tags, all, it) } == true
+        val matcher = Selections.matcher(selection.tags, selection.matchesAll)
+        fun matches(key: String) = tagged.facts[key]?.let(matcher) == true
         val candidates = ArrayList<ShowcaseItem>()
         if (tab != RowOrder.SERIES) {
             val watched = UiMappers.hiddenMovieIds(state)
@@ -169,7 +172,9 @@ object SelectionRows {
         val names = tagged(state, kept).genreNames
         return selections.associate { selection ->
             Selections.rowKey(selection.id) to SelectionRow(
-                selection.id, selection.name, selection.tags, selection.tags.mapNotNull { tag -> names[tag]?.let { tag to it } }.toMap(),
+                selection.id, selection.name, selection.tags,
+                // By this version's tags: an earlier version's `genre:erotiques` is named as `genre:erotique`.
+                Genres.canonicalTags(selection.tags).mapNotNull { tag -> names[tag]?.let { tag to it } }.toMap(),
                 titles(state, selection, tab, now, kept, limit),
             )
         }
@@ -187,7 +192,8 @@ object SelectionRows {
         val styles = facts.flatMapTo(HashSet()) { it.styles }
         val collator = java.text.Collator.getInstance().apply { strength = java.text.Collator.PRIMARY }
         return SelectionChoices(
-            genres = genres.mapNotNull { genre -> (Selections.GENRE + genre).let { tag -> tagged.genreNames[tag]?.let { tag to it } } }
+            // Sorted again by the names shown (TMDb's genres in the viewer's language) on the page.
+            genres = genres.map { genre -> (Selections.GENRE + genre).let { tag -> tag to (tagged.genreNames[tag] ?: fallbackGenreName(tag)) } }
                 .sortedWith { a, b -> collator.compare(a.second, b.second) },
             awardGroups = state.awards.groups.filter { it in groups },
             decades = Selections.decades((movies.map { it.year } + series.map { it.year })),
@@ -199,14 +205,57 @@ object SelectionRows {
     internal fun fallbackGenreName(tag: String): String = tag.removePrefix(Selections.GENRE).replaceFirstChar { it.titlecase() }
 }
 
-/** A tag's name: a genre's as the titles name it, a festival's or ceremony's, a decade ("1990s"), a style's. */
+/**
+ * A tag's name: one of TMDb's genres in the viewer's language, another genre as the titles name it, a festival's or
+ * ceremony's, a decade ("1990s"), a style's. A genre tag of an earlier version names the genres it is read as.
+ */
 @Composable
 fun selectionTagName(tag: String, genreNames: Map<String, String>): String = when {
-    tag.startsWith(Selections.GENRE) -> genreNames[tag] ?: SelectionRows.fallbackGenreName(tag)
+    tag.startsWith(Selections.GENRE) -> genreTagName(tag, genreNames)
     tag.startsWith(Selections.AWARD) -> awardGroupName(tag.removePrefix(Selections.AWARD))
     tag.startsWith(Selections.DECADE) -> stringResource(R.string.selection_decade, tag.removePrefix(Selections.DECADE))
     tag.startsWith(Selections.STYLE) -> styleName(tag.removePrefix(Selections.STYLE))
     else -> tag
+}
+
+@Composable
+private fun genreTagName(tag: String, genreNames: Map<String, String>): String {
+    val tags = Genres.canonicalTags(tag)
+    if (tags.size > 1) return tags.map { genreTagName(it, genreNames) }.joinToString(" & ")
+    val canonical = tags.first()
+    val key = canonical.removePrefix(Selections.GENRE)
+    genreNameRes(key)?.let { return stringResource(it) }
+    return genreNames[canonical] ?: genreNames[tag] ?: SelectionRows.fallbackGenreName(canonical)
+}
+
+/** The name of one of TMDb's genres ([Genres.canonical]) in the viewer's language; null for another genre. */
+fun genreNameRes(key: String): Int? = when (key) {
+    "action" -> R.string.genre_action
+    "adventure" -> R.string.genre_adventure
+    "animation" -> R.string.genre_animation
+    "comedy" -> R.string.genre_comedy
+    "crime" -> R.string.genre_crime
+    "documentary" -> R.string.genre_documentary
+    "drama" -> R.string.genre_drama
+    "family" -> R.string.genre_family
+    "fantasy" -> R.string.genre_fantasy
+    "history" -> R.string.genre_history
+    "horror" -> R.string.genre_horror
+    "music" -> R.string.genre_music
+    "mystery" -> R.string.genre_mystery
+    "romance" -> R.string.genre_romance
+    "science fiction" -> R.string.genre_science_fiction
+    "thriller" -> R.string.genre_thriller
+    "war" -> R.string.genre_war
+    "western" -> R.string.genre_western
+    "kids" -> R.string.genre_kids
+    "news" -> R.string.genre_news
+    "reality" -> R.string.genre_reality
+    "soap" -> R.string.genre_soap
+    "talk" -> R.string.genre_talk
+    "politics" -> R.string.genre_politics
+    "tv movie" -> R.string.genre_tv_movie
+    else -> null
 }
 
 /** A selection's name: the one the viewer gave, else its tags' ([Selections.defaultName]). */

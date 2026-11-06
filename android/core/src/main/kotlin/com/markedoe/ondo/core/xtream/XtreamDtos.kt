@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.xtream
 
+import com.markedoe.ondo.core.HtmlEntities
 import com.markedoe.ondo.core.isNewline
 import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.nilIfBlank
@@ -163,7 +164,7 @@ internal data class XtreamSeriesDto(
                 name = o["name"].lenientString()?.trim() ?: "Series $seriesId",
                 cover = o["cover"].lenientString(),
                 plot = o["plot"].lenientString()?.nilIfBlank(),
-                genre = o["genre"].lenientString()?.nilIfBlank(),
+                genre = o["genre"].lenientString()?.let(HtmlEntities::decode)?.nilIfBlank(),
                 cast = (o["cast"].lenientString() ?: o["actors"].lenientString())?.nilIfBlank(),
                 director = o["director"].lenientString()?.nilIfBlank(),
                 releaseDate = releaseDate,
@@ -205,7 +206,7 @@ internal data class XtreamInfoDto(
                 plot = (o["plot"].lenientString() ?: o["description"].lenientString())?.nilIfBlank(),
                 cast = (o["cast"].lenientString() ?: o["actors"].lenientString())?.nilIfBlank(),
                 director = o["director"].lenientString()?.nilIfBlank(),
-                genre = o["genre"].lenientString()?.nilIfBlank(),
+                genre = o["genre"].lenientString()?.let(HtmlEntities::decode)?.nilIfBlank(),
                 releaseDate = (
                     o["releasedate"].lenientString() ?: o["releaseDate"].lenientString() ?: o["release_date"].lenientString()
                     )?.nilIfBlank(),

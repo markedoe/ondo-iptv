@@ -50,9 +50,14 @@ extension AppModel {
             return SearchResults(movies: titles.compactMap { if case .movie(let movie) = $0 { return movie } else { return nil } },
                                  series: titles.compactMap { if case .series(let series) = $0 { return series } else { return nil } })
         case .genre(let genre):
-            let wanted = TextNormalizer.normalize(genre)
+            // The genre in any language (`Genres`): "Aventure" opens the titles of "Adventure" and "Abenteuer" too.
+            let wanted: Set<String> = Set(Genres.keys(genre))
             let excluded = exclusions
-            func has(_ field: String?) -> Bool { Self.genres(in: field).contains { TextNormalizer.normalize($0) == wanted } }
+            func has(_ field: String?) -> Bool {
+                guard !wanted.isEmpty else { return false }
+                let keys: Set<String> = Set(Genres.keys(field))
+                return wanted.isSubset(of: keys)
+            }
             // A movie's genre is known once its page was opened; a series' comes with the catalogue.
             let movies = movieDetailsCache.compactMap { id, details -> Movie? in
                 guard has(details.genre), let movie = index.moviesByID[id], !excluded.contains(movie) else { return nil }
@@ -76,11 +81,7 @@ extension AppModel {
         return seriesAwards[series.id]?.first { $0.awardID == id }
     }
 
-    /// The genres of a genre field ("Drama, Thriller", "Action / Adventure").
-    static func genres(in field: String?) -> [String] {
-        guard let field else { return [] }
-        return field.split(whereSeparator: { ",/|&".contains($0) })
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-    }
+    /// The genres of a genre field ("Drama, Thriller", "Action / Adventure"), each once, its HTML references decoded
+    /// first ("Action &amp; Adventure" is no "amp; Adventure"): `Genres.split`.
+    static func genres(in field: String?) -> [String] { Genres.split(field) }
 }

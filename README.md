@@ -102,9 +102,11 @@ interface changes.
   See All. New categories go to the end, one the provider removes keeps its place, and the order syncs. Every row
   that holds more than it shows (New Movies, New Series, Award Winners, on Home too) ends with See All: all its
   titles, in the row's order.
-- **Selections** (Settings → Row order → New selection): rows of your own made of tags (genres, awards, decades,
-  styles), a title needing any tag or all of them, in Home, Movies or Series; a new pick every day, the best rated on
-  TMDb more often first and the titles watched last, with See All. They move and hide like the other rows, and sync.
+- **Selections** (Settings → My selections, or Row order → New selection): rows of your own made of tags (genres,
+  awards, decades, styles), a title needing any tag or all of them, in Home, Movies or Series; a new pick every day,
+  the best rated on TMDb more often first and the titles watched last, with See All. A genre is one tag whatever the
+  language your provider names it in (Aventure, Abenteuer and Adventure), shown in yours. They move and hide like the
+  other rows, belong to each profile, and sync.
 - **Offline downloads** (movies, episodes; TestFlight edition, not the App Store one), with their speed and time left, the reason in plain words when the
   provider refuses, limits connections or sends nothing, and their details to share.
 - **Data**: JSON backup / restore, clearable cache. Posters, thumbnails and the movie and series pages stay on the
@@ -146,9 +148,11 @@ interface changes.
   series" at the top by default, with the catalogue's count: the latest additions, then See all. The order syncs.
   Every row that holds more than it shows (New movies, New series, Award winners, on Home too) ends with See all:
   all its titles, in the row's order.
-- **Selections** (Settings → Row order → New selection): rows of your own made of tags (genres, awards, decades,
-  styles), a title needing any tag or all of them, in Home, Movies or Series; a new pick every day, the best rated on
-  TMDb more often first and the titles watched last, with See all. They move and hide like the other rows, and sync.
+- **Selections** (Settings → My selections, or Row order → New selection): rows of your own made of tags (genres,
+  awards, decades, styles), a title needing any tag or all of them, in Home, Movies or Series; a new pick every day,
+  the best rated on TMDb more often first and the titles watched last, with See all. A genre is one tag whatever the
+  language your provider names it in (Aventure, Abenteuer and Adventure), shown in yours. They move and hide like the
+  other rows, belong to each profile, and sync.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), watched movies hidden if you like, a film's versions grouped (badges on its page, chips on a TV;
   [docs/VERSIONS.md](docs/VERSIONS.md)), detail pages (Resume, From Start, next

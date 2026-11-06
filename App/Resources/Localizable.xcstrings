@@ -27442,6 +27442,1126 @@
           }
         }
       }
+    },
+    "Action": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acción"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "动作"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أكشن"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक्शन"
+          }
+        }
+      }
+    },
+    "Adventure": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aventure"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aventura"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aventura"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "冒险"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مغامرة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "साहसिक"
+          }
+        }
+      }
+    },
+    "Comedy": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comédie"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comedia"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comédia"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "喜剧"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كوميديا"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कॉमेडी"
+          }
+        }
+      }
+    },
+    "Crime": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crime"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crimen"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crime"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "犯罪"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جريمة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपराध"
+          }
+        }
+      }
+    },
+    "Documentary": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentaire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documental"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentário"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "纪录"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وثائقي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वृत्तचित्र"
+          }
+        }
+      }
+    },
+    "Drama": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drame"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drama"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drama"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剧情"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دراما"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ड्रामा"
+          }
+        }
+      }
+    },
+    "Family": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familial"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familia"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Família"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "家庭"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عائلي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पारिवारिक"
+          }
+        }
+      }
+    },
+    "Fantasy": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fantastique"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fantasía"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fantasia"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "奇幻"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فانتازيا"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ैंटेसी"
+          }
+        }
+      }
+    },
+    "History": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Histoire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historia"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "História"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "历史"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تاريخي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इतिहास"
+          }
+        }
+      }
+    },
+    "Mystery": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mystère"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misterio"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mistério"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悬疑"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غموض"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रहस्य"
+          }
+        }
+      }
+    },
+    "Romance": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romance"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romance"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "爱情"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رومانسي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रोमांस"
+          }
+        }
+      }
+    },
+    "Science Fiction": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Science-fiction"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciencia ficción"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ficção científica"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "科幻"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خيال علمي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "साइंस फ़िक्शन"
+          }
+        }
+      }
+    },
+    "Thriller": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thriller"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suspense"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suspense"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "惊悚"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إثارة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "थ्रिलर"
+          }
+        }
+      }
+    },
+    "War": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guerre"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bélica"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guerra"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "战争"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حرب"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "युद्ध"
+          }
+        }
+      }
+    },
+    "Western": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Western"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Western"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faroeste"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "西部"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غربي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वेस्टर्न"
+          }
+        }
+      }
+    },
+    "News": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualités"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noticias"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notícias"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新闻"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أخبار"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "समाचार"
+          }
+        }
+      }
+    },
+    "Reality": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléréalité"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reality"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reality show"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "真人秀"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تلفزيون الواقع"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रियलिटी"
+          }
+        }
+      }
+    },
+    "Soap": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feuilleton"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telenovela"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novela"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "肥皂剧"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مسلسل طويل"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सोप ओपेरा"
+          }
+        }
+      }
+    },
+    "Talk": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Talk-show"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrevistas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Talk show"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "脱口秀"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "برامج حوارية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टॉक शो"
+          }
+        }
+      }
+    },
+    "Politics": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Politique"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Política"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Política"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "政治"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سياسة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "राजनीति"
+          }
+        }
+      }
+    },
+    "TV Movie": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléfilm"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Película de TV"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filme para TV"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电视电影"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فيلم تلفزيوني"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टीवी फ़िल्म"
+          }
+        }
+      }
+    },
+    "My Selections": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mes présélections"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis preselecciones"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minhas pré-seleções"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的精选"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تشكيلاتي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरे चयन"
+          }
+        }
+      }
+    },
+    "Rows of your own, made of genres, awards, decades and styles.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des rangées bien à vous, faites de genres, récompenses, décennies et styles."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filas propias, hechas de géneros, premios, décadas y estilos."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fileiras suas, feitas de gêneros, prêmios, décadas e estilos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由类型、奖项、年代和风格组成的专属行。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صفوف خاصة بك، من الأنواع والجوائز والعقود والأساليب."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी अपनी पंक्तियाँ, जॉनर, पुरस्कारों, दशकों और स्टाइल से बनी।"
+          }
+        }
+      }
+    },
+    "Each selection is a row of your own in Home, Movies or Series, a new pick every day. Settings → Row Order places its row.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque présélection est une rangée bien à vous dans l’Accueil, Films ou Séries, renouvelée chaque jour. Réglages → Ordre des rangées place sa rangée."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada preselección es una fila propia en Inicio, Películas o Series, renovada cada día. Ajustes → Orden de las filas coloca su fila."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada pré-seleção é uma fileira sua em Início, Filmes ou Séries, renovada todo dia. Ajustes → Ordem das fileiras posiciona a fileira."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个精选都是“首页”“电影”或“剧集”中的一行专属内容，每天重新挑选。在“设置 → 行顺序”中调整它的位置。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كل تشكيلة صف خاص بك في الرئيسية أو الأفلام أو المسلسلات، باختيار جديد كل يوم. يضع الإعدادات ← ترتيب الصفوف صفها في مكانه."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हर चयन होम, फ़िल्मों या सीरीज़ में आपकी अपनी पंक्ति है, हर दिन नए चुनाव के साथ। सेटिंग्स → पंक्तियों का क्रम उसकी पंक्ति की जगह तय करता है।"
+          }
+        }
+      }
+    },
+    "No selection yet: New Selection makes one.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune présélection pour l’instant : Nouvelle présélection en crée une."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay preselecciones: Nueva preselección crea una."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma pré-seleção ainda: Nova pré-seleção cria uma."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有精选：用“新建精选”创建一个。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد تشكيلات بعد: تشكيلة جديدة تنشئ واحدة."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी कोई चयन नहीं: नया चयन एक बनाता है।"
+          }
+        }
+      }
+    },
+    "All of: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous : %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas: %@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部：%@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كلها: %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सभी: %@"
+          }
+        }
+      }
+    },
+    "My Selections: Rows of Your Own": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mes présélections : des rangées bien à vous"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis preselecciones: filas propias"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minhas pré-seleções: fileiras suas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的精选：专属行"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تشكيلاتي: صفوف خاصة بك"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरे चयन: आपकी अपनी पंक्तियाँ"
+          }
+        }
+      }
+    },
+    "A selection is a row of your own, made of tags. Settings → My Selections lists the selections of the profile open: New Selection makes one, a selection opens its page to change it, and swiping it or its menu (Control-click on a Mac) deletes it, as does Delete Selection on its page. Settings → Row Order also has New Selection, beside each tab’s name.\n\nOn its page, give it a name, or leave the name empty and its tags name it. Choose the tabs it shows in: Home, Movies, Series. Then choose its tags among genres, awards, decades and styles. A title needs one of the tags chosen; with All Tags on, it needs every one of them.\n\nA genre is one genre whatever language your provider names it in: Aventure, Abenteuer and Adventure are the same, shown in your language. Genres come from your provider: a movie’s once its page has been opened, a series’ always.\n\nThe row is a new pick every day among its titles: the best rated on TMDb come first more often, and the titles you have watched come last. See All at its end opens all of them.\n\nSelections belong to each profile and, with Sync on this network, follow on your other devices. A Kids profile cannot make or change them. A new selection’s row goes to the top of each tab it shows in; Settings → Row Order moves or hides it like the other rows.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une présélection est une rangée bien à vous, faite de tags. Réglages → Mes présélections liste les présélections du profil ouvert : Nouvelle présélection en crée une, une présélection ouvre sa page pour la modifier, et la balayer ou son menu (Contrôle-clic sur un Mac) la supprime, tout comme Supprimer la présélection, sur sa page. Réglages → Ordre des rangées propose aussi Nouvelle présélection, à côté du nom de chaque onglet.\n\nSur sa page, donnez-lui un nom, ou laissez le nom vide : ses tags la nomment. Choisissez les onglets où elle s’affiche : Accueil, Films, Séries. Puis choisissez ses tags parmi les genres, récompenses, décennies et styles. Un titre doit avoir l’un des tags choisis ; avec Tous les tags, il doit les avoir tous.\n\nUn genre est un seul genre quelle que soit la langue où votre fournisseur le nomme : Aventure, Abenteuer et Adventure sont le même, affiché dans votre langue. Les genres viennent de votre fournisseur : ceux d’un film une fois sa page ouverte, ceux d’une série toujours.\n\nLa rangée est un nouveau tirage chaque jour parmi ses titres : les mieux notés sur TMDb viennent plus souvent en tête, et les titres que vous avez vus en dernier. Tout voir, à sa fin, les ouvre tous.\n\nLes présélections sont propres à chaque profil et, avec Synchroniser sur ce réseau, suivent sur vos autres appareils. Un profil enfant ne peut ni en créer ni en modifier. La rangée d’une nouvelle présélection va en haut de chaque onglet où elle s’affiche ; Réglages → Ordre des rangées la déplace ou la masque comme les autres rangées."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una preselección es una fila propia, hecha de etiquetas. Ajustes → Mis preselecciones muestra las preselecciones del perfil abierto: Nueva preselección crea una, una preselección abre su página para cambiarla, y deslizarla o su menú (Control-clic en un Mac) la elimina, igual que Eliminar preselección en su página. Ajustes → Orden de las filas también tiene Nueva preselección, junto al nombre de cada pestaña.\n\nEn su página, dale un nombre, o deja el nombre vacío y sus etiquetas la nombran. Elige las pestañas donde se muestra: Inicio, Películas, Series. Luego elige sus etiquetas entre géneros, premios, décadas y estilos. Un título necesita una de las etiquetas elegidas; con Todas las etiquetas, las necesita todas.\n\nUn género es uno solo sea cual sea el idioma en que tu proveedor lo nombra: Aventure, Abenteuer y Adventure son el mismo, mostrado en tu idioma. Los géneros vienen de tu proveedor: los de una película una vez abierta su página, los de una serie siempre.\n\nLa fila es una nueva selección cada día entre sus títulos: los mejor valorados en TMDb salen primero más a menudo, y los títulos que ya viste al final. Ver todo, al final, los abre todos.\n\nLas preselecciones son de cada perfil y, con Sincronizar en esta red, te siguen en tus otros dispositivos. Un perfil infantil no puede crearlas ni cambiarlas. La fila de una nueva preselección va arriba en cada pestaña donde se muestra; Ajustes → Orden de las filas la mueve u oculta como las demás filas."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma pré-seleção é uma fileira sua, feita de tags. Ajustes → Minhas pré-seleções lista as pré-seleções do perfil aberto: Nova pré-seleção cria uma, uma pré-seleção abre a página dela para alterá-la, e deslizá-la ou o menu dela (Control-clique no Mac) a exclui, assim como Excluir pré-seleção na página dela. Ajustes → Ordem das fileiras também tem Nova pré-seleção, ao lado do nome de cada aba.\n\nNa página dela, dê um nome, ou deixe o nome vazio e as tags dão o nome. Escolha as abas em que ela aparece: Início, Filmes, Séries. Depois escolha as tags entre gêneros, prêmios, décadas e estilos. Um título precisa de uma das tags escolhidas; com Todas as tags, precisa de todas.\n\nUm gênero é um só, seja qual for o idioma em que seu provedor o nomeia: Aventure, Abenteuer e Adventure são o mesmo, mostrado no seu idioma. Os gêneros vêm do seu provedor: os de um filme depois que a página dele foi aberta, os de uma série sempre.\n\nA fileira é uma nova escolha todo dia entre os títulos dela: os mais bem avaliados no TMDb vêm primeiro com mais frequência, e os títulos que você já assistiu por último. Ver tudo, no fim, abre todos.\n\nAs pré-seleções são de cada perfil e, com Sincronizar nesta rede, acompanham você nos seus outros dispositivos. Um perfil infantil não pode criá-las nem alterá-las. A fileira de uma nova pré-seleção vai para o topo de cada aba em que aparece; Ajustes → Ordem das fileiras a move ou oculta como as outras fileiras."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精选是由标签组成的专属行。“设置 → 我的精选”列出当前资料的所有精选：“新建精选”创建一个，选择一个精选会打开它的页面以便修改，轻扫它或打开它的菜单（在 Mac 上按住 Control 键点按）即可删除，它页面上的“删除精选”也可以。“设置 → 行顺序”中每个标签页名称旁边也有“新建精选”。\n\n在它的页面上，为它起个名字；名称留空时，用它的标签命名。选择它显示在哪些标签页：首页、电影、剧集。然后从类型、奖项、年代和风格中选择标签。作品只需带有所选标签之一；打开“全部标签”后，需要带有全部标签。\n\n无论服务商用哪种语言命名，同一类型都只算一个：Aventure、Abenteuer 和 Adventure 是同一类型，并以你的语言显示。类型来自你的服务商：电影的类型在打开其页面后获得，剧集的类型始终可用。\n\n这一行每天都会从其作品中重新挑选：TMDb 评分越高的作品越常排在前面，你看过的作品排在最后。行末的“查看全部”会打开所有作品。\n\n精选属于各个资料，开启“在此网络上同步”后会同步到你的其他设备。儿童资料不能创建或修改精选。新精选的行会出现在它所显示的每个标签页顶部；在“设置 → 行顺序”中可以像其他行一样移动或隐藏它。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التشكيلة صف خاص بك مكوّن من وسوم. تعرض الإعدادات ← تشكيلاتي تشكيلات الملف الشخصي المفتوح: تشكيلة جديدة تنشئ واحدة، واختيار تشكيلة يفتح صفحتها لتعديلها، وسحبها أو قائمتها (Control مع النقر على Mac) يحذفها، وكذلك حذف التشكيلة في صفحتها. وفي الإعدادات ← ترتيب الصفوف أيضاً تشكيلة جديدة بجانب اسم كل تبويب.\n\nفي صفحتها، أعطها اسماً، أو اترك الاسم فارغاً لتسمّيها وسومها. اختر التبويبات التي تظهر فيها: الرئيسية، الأفلام، المسلسلات. ثم اختر وسومها من الأنواع والجوائز والعقود والأساليب. يكفي العمل أن يحمل أحد الوسوم المختارة؛ ومع كل الوسوم يجب أن يحملها كلها.\n\nالنوع نوع واحد مهما كانت اللغة التي يسمّيه بها مزوّدك: Aventure وAbenteuer وAdventure نوع واحد يظهر بلغتك. تأتي الأنواع من مزوّدك: أنواع الفيلم بعد فتح صفحته، وأنواع المسلسل دائماً.\n\nالصف اختيار جديد كل يوم من بين أعماله: الأعلى تقييماً على TMDb يأتي أولاً في أغلب الأحيان، والأعمال التي شاهدتها في الآخر. عرض الكل في نهايته يفتحها كلها.\n\nالتشكيلات خاصة بكل ملف شخصي، ومع المزامنة على هذه الشبكة تتبعك على أجهزتك الأخرى. لا يمكن لملف الأطفال إنشاؤها أو تعديلها. يظهر صف التشكيلة الجديدة في أعلى كل تبويب تظهر فيه؛ ويحرّكه الإعدادات ← ترتيب الصفوف أو يخفيه مثل باقي الصفوف."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चयन टैग से बनी आपकी अपनी पंक्ति है। सेटिंग्स → मेरे चयन खुले प्रोफ़ाइल के चयन दिखाता है: नया चयन एक बनाता है, किसी चयन को चुनने से उसका पेज बदलने के लिए खुलता है, और उसे स्वाइप करना या उसका मेन्यू (Mac पर Control-क्लिक) उसे हटाता है, जैसे उसके पेज पर चयन हटाएँ। सेटिंग्स → पंक्तियों का क्रम में भी हर टैब के नाम के पास नया चयन है।\n\nउसके पेज पर उसे नाम दें, या नाम खाली छोड़ें ताकि उसके टैग उसका नाम बनें। चुनें कि वह किन टैब में दिखे: होम, फ़िल्में, सीरीज़। फिर जॉनर, पुरस्कारों, दशकों और स्टाइल में से उसके टैग चुनें। किसी टाइटल में चुने गए टैग में से एक होना काफ़ी है; सभी टैग चालू होने पर सभी होने चाहिए।\n\nआपका प्रोवाइडर किसी जॉनर को किसी भी भाषा में नाम दे, वह एक ही जॉनर है: Aventure, Abenteuer और Adventure एक ही हैं, आपकी भाषा में दिखते हैं। जॉनर आपके प्रोवाइडर से आते हैं: फ़िल्म के उसका पेज खुलने के बाद, सीरीज़ के हमेशा।\n\nपंक्ति हर दिन अपने टाइटल में से नया चुनाव है: TMDb पर सबसे अच्छी रेटिंग वाले अक्सर पहले आते हैं, और जो टाइटल आप देख चुके हैं वे आख़िर में। उसके अंत में सभी देखें सभी खोलता है।\n\nचयन हर प्रोफ़ाइल के अपने होते हैं और इस नेटवर्क पर सिंक करें से आपके दूसरे डिवाइस पर भी आते हैं। बच्चों का प्रोफ़ाइल उन्हें बना या बदल नहीं सकता। नए चयन की पंक्ति हर उस टैब में सबसे ऊपर जाती है जिसमें वह दिखता है; सेटिंग्स → पंक्तियों का क्रम उसे दूसरी पंक्तियों की तरह हिलाता या छिपाता है।"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -108,10 +108,12 @@ chaque changement de l'interface.
   fournisseur retire garde sa place, et l'ordre se synchronise. Chaque rangée qui contient plus qu'elle n'affiche
   (Nouveaux films, Nouvelles séries, Titres primés, sur l'Accueil aussi) finit par Tout voir : tous ses titres, dans
   l'ordre de la rangée.
-- **Présélections** (Réglages → Ordre des rangées → Nouvelle présélection) : des rangées à vous composées de tags
-  (genres, récompenses, décennies, styles), un titre devant avoir l'un des tags ou tous, dans l'Accueil, Films ou Séries ;
-  une nouvelle sélection chaque jour, les mieux notés sur TMDb plus souvent en tête et les titres déjà vus à la fin, avec
-  Tout voir. Elles se déplacent et se masquent comme les autres rangées, et se synchronisent.
+- **Présélections** (Réglages → Mes présélections, ou Ordre des rangées → Nouvelle présélection) : des rangées à vous
+  composées de tags (genres, récompenses, décennies, styles), un titre devant avoir l'un des tags ou tous, dans l'Accueil,
+  Films ou Séries ; une nouvelle sélection chaque jour, les mieux notés sur TMDb plus souvent en tête et les titres déjà
+  vus à la fin, avec Tout voir. Un genre est un seul tag quelle que soit la langue où votre fournisseur le nomme
+  (Aventure, Abenteuer et Adventure), affiché dans la vôtre. Elles se déplacent et se masquent comme les autres rangées,
+  sont propres à chaque profil, et se synchronisent.
 - **Téléchargements** hors ligne (films, épisodes ; édition TestFlight, pas celle de l'App Store), avec leur vitesse et le temps restant, la raison en clair
   quand le fournisseur refuse, limite les connexions ou n'envoie rien, et leurs détails à partager.
 - **Données** : sauvegarde / restauration JSON, cache vidable. Les affiches, les vignettes et les pages des films et
@@ -162,10 +164,12 @@ chaque changement de l'interface.
   les derniers ajouts, puis Tout voir. L'ordre se synchronise. Chaque rangée qui contient plus qu'elle n'affiche
   (Nouveaux films, Nouvelles séries, Titres primés, sur l'Accueil aussi) finit par Tout voir : tous ses titres, dans
   l'ordre de la rangée.
-- **Présélections** (Réglages → Ordre des rangées → Nouvelle présélection) : des rangées à vous composées de tags
-  (genres, récompenses, décennies, styles), un titre devant avoir l'un des tags ou tous, dans l'Accueil, Films ou Séries ;
-  une nouvelle sélection chaque jour, les mieux notés sur TMDb plus souvent en tête et les titres déjà vus à la fin, avec
-  Tout voir. Elles se déplacent et se masquent comme les autres rangées, et se synchronisent.
+- **Présélections** (Réglages → Mes présélections, ou Ordre des rangées → Nouvelle présélection) : des rangées à vous
+  composées de tags (genres, récompenses, décennies, styles), un titre devant avoir l'un des tags ou tous, dans l'Accueil,
+  Films ou Séries ; une nouvelle sélection chaque jour, les mieux notés sur TMDb plus souvent en tête et les titres déjà
+  vus à la fin, avec Tout voir. Un genre est un seul tag quelle que soit la langue où votre fournisseur le nomme
+  (Aventure, Abenteuer et Adventure), affiché dans la vôtre. Elles se déplacent et se masquent comme les autres rangées,
+  sont propres à chaque profil, et se synchronisent.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), films déjà vus masqués si vous le souhaitez, versions d'un film regroupées (badges sur sa fiche,
   pastilles sur une TV ; [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (Reprendre, Depuis le début,
