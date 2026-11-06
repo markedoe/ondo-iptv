@@ -28323,46 +28323,6 @@
         }
       }
     },
-    "Rows of your own, made of genres, awards, decades and styles.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Des rangées bien à vous, faites de genres, récompenses, décennies et styles."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filas propias, hechas de géneros, premios, décadas y estilos."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fileiras suas, feitas de gêneros, prêmios, décadas e estilos."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "由类型、奖项、年代和风格组成的专属行。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "صفوف خاصة بك، من الأنواع والجوائز والعقود والأساليب."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "आपकी अपनी पंक्तियाँ, जॉनर, पुरस्कारों, दशकों और स्टाइल से बनी।"
-          }
-        }
-      }
-    },
     "Each selection is a row of your own in Home, Movies or Series, a new pick every day. Settings → Row Order places its row.": {
       "localizations": {
         "fr": {
