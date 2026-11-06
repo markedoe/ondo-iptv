@@ -115,6 +115,10 @@ fun TvTextInput(
             if (moveOn) focusManager.moveFocus(FocusDirection.Down)
         }
     }
+    // Built once: the keyboard's actions run the latest [act], and the dots are the same each time.
+    val currentAct by rememberUpdatedState(act)
+    val actions = remember { KeyboardActions(onDone = { currentAct() }, onNext = { currentAct() }, onSearch = { currentAct() }, onGo = { currentAct() }, onSend = { currentAct() }) }
+    val dots = remember { PasswordVisualTransformation() }
     val editing = field.editing
     val shape = RoundedCornerShape(12.dp)
     val input: @Composable (Modifier) -> Unit = { fieldModifier ->
@@ -128,13 +132,13 @@ fun TvTextInput(
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
             cursorBrush = SolidColor(Color.White),
-            visualTransformation = if (secret && !revealed) PasswordVisualTransformation() else VisualTransformation.None,
+            visualTransformation = if (secret && !revealed) dots else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(
                 autoCorrectEnabled = if (secret || keyboardType != KeyboardType.Text) false else null,
                 keyboardType = if (secret && keyboardType == KeyboardType.Text) KeyboardType.Password else keyboardType,
                 imeAction = imeAction,
             ),
-            keyboardActions = KeyboardActions(onDone = { act() }, onNext = { act() }, onSearch = { act() }, onGo = { act() }, onSend = { act() }),
+            keyboardActions = actions,
             modifier = fieldModifier.defaultMinSize(minWidth = 280.dp).onFocusChanged { focused = it.isFocused }.then(field.modifier),
             decorationBox = { inner ->
                 Row(
