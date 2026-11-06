@@ -10,11 +10,12 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalRippleConfiguration
@@ -34,6 +35,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -57,13 +60,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.launch
 
 /**
@@ -295,22 +299,50 @@ fun Modifier.focusFrame(shape: Shape = RoundedCornerShape(12.dp), grow: Float = 
 
 /**
  * A single-line text field on a TV ([rememberTvTextField]): give it [readOnly] and [modifier]. Elsewhere, both leave
- * the field as it is.
+ * the field as it is. [editing]: its keyboard is open (OK pressed); [stop] closes it, the remote staying on the field.
  */
-class TvTextField(val readOnly: Boolean, val modifier: Modifier)
+@Stable
+class TvTextField internal constructor(private val television: Boolean) {
+    var editing by mutableStateOf(false)
+        private set
+    val readOnly: Boolean get() = television && !editing
+    var modifier: Modifier = Modifier
+        internal set
+    internal var onEdit: () -> Unit = {}
+    internal var hide: () -> Unit = {}
+
+    internal fun edit() {
+        editing = true
+        onEdit()
+    }
+
+    /** The keyboard closes; the field reads again until OK. */
+    fun stop() {
+        if (!editing) return
+        editing = false
+        hide()
+    }
+
+    internal fun left() {
+        editing = false
+    }
+}
 
 /**
  * A single-line text field on a TV: its keyboard opens when the viewer presses OK on it, not when the remote passes
  * over it (the keyboard would then take the remote's arrows until closed, empty). Until OK the field is read-only:
  * Compose's text fields open the keyboard as soon as they take the focus otherwise. Up and Down move on from the
- * field, from whatever device they come (a phone used as the TV's remote sends its arrows from a virtual device, which
- * Compose keeps in a text field). Elsewhere, nothing changes.
+ * field, and Left and Right too until OK, from whatever device they come (a phone used as the TV's remote sends its
+ * arrows from a virtual device, which Compose keeps in a text field). Back closes the keyboard and leaves the remote on
+ * the field, as does the keyboard closing by itself (its own Back key). [onEdit] runs each time typing starts (the
+ * caret goes to the end, [TvTextInput]). Elsewhere, nothing changes.
  */
 @Composable
-fun rememberTvTextField(openOnFirstFocus: Boolean = false): TvTextField {
+fun rememberTvTextField(openOnFirstFocus: Boolean = false, onEdit: () -> Unit = {}): TvTextField {
     val television = isTelevision()
-    var editing by remember { mutableStateOf(false) }
-    if (!television) return TvTextField(readOnly = false, modifier = Modifier)
+    val field = remember(television) { TvTextField(television) }
+    if (!television) return field
+    val currentOnEdit by rememberUpdatedState(onEdit)
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val handoff = LocalKeyboardHandoff.current
@@ -318,6 +350,10 @@ fun rememberTvTextField(openOnFirstFocus: Boolean = false): TvTextField {
     // (Search). Not again when the viewer comes back to it from the results.
     var opened by rememberSaveable { mutableStateOf(false) }
     var showKeyboard by remember { mutableStateOf(false) }
+    // A Back that closed the keyboard: its release is the field's too (not the page's).
+    var backTaken by remember { mutableStateOf(false) }
+    field.onEdit = { currentOnEdit() }
+    field.hide = { keyboard?.hide() }
     LaunchedEffect(showKeyboard) {
         if (showKeyboard) {
             // Once the field is writable (the next frame).
@@ -326,53 +362,60 @@ fun rememberTvTextField(openOnFirstFocus: Boolean = false): TvTextField {
             showKeyboard = false
         }
     }
-    val modifier = Modifier
+    // The keyboard closed by itself (Back on the TV's keyboard, which takes that key first): the field reads again, so
+    // the next Back closes the page. Read outside the composition: the fields do not recompose as the keyboard moves.
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    val editing = field.editing
+    LaunchedEffect(editing) {
+        if (!editing) return@LaunchedEffect
+        snapshotFlow { ime.getBottom(density) > 0 }.dropWhile { !it }.first { !it }
+        field.left()
+    }
+    field.modifier = Modifier
         .onFocusChanged {
-            // On from the field before with its keyboard open ([rememberNextField]): typing goes on here.
+            // On from the field before with its keyboard open (Next, [TvTextInput]): typing goes on here.
             if (it.isFocused) {
                 if (handoff.take()) {
-                    editing = true
+                    field.edit()
                 } else if (openOnFirstFocus && !opened) {
                     opened = true
-                    editing = true
+                    field.edit()
                     showKeyboard = true
                 }
             } else {
-                editing = false
+                field.left()
             }
         }
         .onPreviewKeyEvent { event ->
+            val down = event.type == KeyEventType.KeyDown
             when {
-                event.type != KeyEventType.KeyDown -> false
+                event.key == Key.Back && down && field.editing -> {
+                    field.stop()
+                    backTaken = true
+                    true
+                }
+                event.key == Key.Back && !down && backTaken -> {
+                    backTaken = false
+                    true
+                }
+                !down -> false
                 event.key == Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
                 event.key == Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
+                // Until OK, Left and Right go to what is beside the field (a button, a secret's Show).
+                !field.editing && event.key == Key.DirectionLeft -> focusManager.moveFocus(FocusDirection.Left)
+                !field.editing && event.key == Key.DirectionRight -> focusManager.moveFocus(FocusDirection.Right)
                 // OK: the field becomes writable and its keyboard opens (again, once closed). Enter too, the first time
                 // only: then it is the keyboard's own action key (Done, Next), for the field.
-                event.key == Key.DirectionCenter || (!editing && (event.key == Key.Enter || event.key == Key.NumPadEnter)) -> {
-                    editing = true
+                event.key == Key.DirectionCenter || (!field.editing && (event.key == Key.Enter || event.key == Key.NumPadEnter)) -> {
+                    field.edit()
                     keyboard?.show()
                     true
                 }
                 else -> false
             }
         }
-    return TvTextField(readOnly = !editing, modifier = modifier)
-}
-
-/**
- * The keyboard's Next key of a form's field: on to the next field as everywhere, and on a TV with the keyboard still
- * open when that one is a text field too ([rememberTvTextField]), the way a form is typed.
- */
-@Composable
-fun rememberNextField(): KeyboardActions {
-    val television = isTelevision()
-    val handoff = LocalKeyboardHandoff.current
-    return remember(television, handoff) {
-        KeyboardActions(onNext = {
-            if (television) handoff.give()
-            defaultKeyboardAction(ImeAction.Next)
-        })
-    }
+    return field
 }
 
 /** The keyboard handed from a field to the next one by its Next key, for a moment (the focus moves after it). */

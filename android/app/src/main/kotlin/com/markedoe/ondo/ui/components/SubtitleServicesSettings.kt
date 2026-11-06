@@ -37,8 +37,7 @@ import com.markedoe.ondo.data.SubtitleServices
 import com.markedoe.ondo.ui.tv.TvActionButton
 import com.markedoe.ondo.ui.tv.TvSwitchRow
 import com.markedoe.ondo.ui.tv.isTelevision
-import com.markedoe.ondo.ui.tv.rememberLeaveField
-import com.markedoe.ondo.ui.tv.rememberTvTextField
+import com.markedoe.ondo.ui.tv.TvTextInput
 import kotlinx.coroutines.launch
 
 /** What a service's check is doing, or said. */
@@ -107,27 +106,40 @@ fun SubtitleServicesSettings(services: SubtitleServices, modifier: Modifier = Mo
             val answer = answers[service]
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(service.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                val leaveField = rememberLeaveField()
                 for (field in fields) {
-                    val tvField = rememberTvTextField()
                     val secret = field != SubtitleCredential.OPEN_SUBTITLES_USERNAME
-                    OutlinedTextField(
-                        value = typed[field].orEmpty(),
-                        onValueChange = {
-                            typed[field] = it
-                            answers.remove(service)
-                        },
-                        label = { Text(stringResource(label(field))) },
-                        singleLine = true,
-                        visualTransformation = if (secret) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-                        keyboardOptions = KeyboardOptions(keyboardType = if (secret) KeyboardType.Password else KeyboardType.Text, imeAction = ImeAction.Done, autoCorrectEnabled = false),
-                        keyboardActions = KeyboardActions(onDone = {
-                            if (field == fields.last()) check(service)
-                            if (!leaveField()) defaultKeyboardAction(ImeAction.Done)
-                        }),
-                        readOnly = tvField.readOnly,
-                        modifier = Modifier.fillMaxWidth().then(tvField.modifier).testTag("subtitleField-${field.name}"),
-                    )
+                    val onValue: (String) -> Unit = {
+                        typed[field] = it
+                        answers.remove(service)
+                    }
+                    val tag = Modifier.fillMaxWidth().testTag("subtitleField-${field.name}")
+                    if (television) {
+                        // On a TV, the keyboard goes on from a service's field to the next; the last one's Done checks.
+                        val last = field == fields.last()
+                        TvTextInput(
+                            value = typed[field].orEmpty(),
+                            onValueChange = onValue,
+                            label = stringResource(label(field)),
+                            secret = secret,
+                            imeAction = if (last) ImeAction.Done else ImeAction.Next,
+                            onImeAction = { if (last) check(service) },
+                            modifier = tag,
+                        )
+                    } else {
+                        OutlinedTextField(
+                            value = typed[field].orEmpty(),
+                            onValueChange = onValue,
+                            label = { Text(stringResource(label(field))) },
+                            singleLine = true,
+                            visualTransformation = if (secret) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+                            keyboardOptions = KeyboardOptions(keyboardType = if (secret) KeyboardType.Password else KeyboardType.Text, imeAction = ImeAction.Done, autoCorrectEnabled = false),
+                            keyboardActions = KeyboardActions(onDone = {
+                                if (field == fields.last()) check(service)
+                                defaultKeyboardAction(ImeAction.Done)
+                            }),
+                            modifier = tag,
+                        )
+                    }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     val enabled = fields.any { !typed[it].isNullOrBlank() } && answer != KeyState.Checking

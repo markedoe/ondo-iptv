@@ -28,6 +28,14 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   « DE - … ») sont écartés comme les catégories masquées, là et dans toutes les autres listes (rangées, grilles,
   Accueil, titres d'une personne, d'un genre, d'une année ou d'un prix, titres similaires, TV en direct et guide),
   quelle que soit leur catégorie (`CategoryTags.titleTag` ; « Portugal: … » ou « PTSD … » ne portent pas d'étiquette). Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
+- **Champs de texte sur TV** (`ui/tv/TvTextInput.kt`) : chaque champ de texte sur une TV (Recherche, formulaire d'une
+  playlist, jeton TMDb, clés et identifiants des services de sous-titres, nom et code d'un profil, code parental, filtre
+  et mots des catégories, nom d'une présélection ou d'une collection) est une ligne avec son libellé et sa valeur ou son
+  exemple ; la télécommande dessus, un contour blanc, un crayon et « Appuyez sur OK pour écrire ». Le clavier ne s'ouvre
+  jamais au passage de la télécommande : OK l'ouvre, le curseur à la fin du texte. Suivant passe au champ dessous,
+  clavier ouvert, OK (Terminé) le ferme et passe dessous (ou donne la réponse du formulaire), Retour le ferme et laisse
+  la télécommande sur le champ. Clés, mots de passe et codes s'affichent en points, avec un bouton Afficher à leur
+  droite ; un code a le clavier de chiffres. `TvTextFieldsEverySurfaceTest` liste chaque champ.
 - **Actualisation automatique** (Réglages → Playlists → Actualisation automatique : Seulement sur demande, Toutes
   les 6 heures, Toutes les 12 heures, Chaque jour (par défaut), Chaque semaine), vérifiée à l'ouverture d'Ondo et
   quand il revient au premier plan (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). Un seul réglage pour

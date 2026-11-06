@@ -539,4 +539,7 @@
     <string name="subtitle_privacy">Al buscar, se envía el título que estás viendo a estos servicios, con tu propia clave o cuenta. No se envía nada hasta que buscas. Con Sincronizar en esta red activado, tus claves también llegan a tus otros dispositivos Ondo.</string>
     <string name="subtitle_limited">Se alcanzó por ahora el límite de solicitudes de %1$s, así que no se guardó nada. Vuelve a intentarlo más tarde.</string>
     <string name="subtitle_incomplete">%1$s: escribe el nombre de usuario y la contraseña, o ninguno de los dos.</string>
+    <string name="tv_field_press_ok">Pulsa OK para escribir</string>
+    <string name="tv_field_show">Mostrar caracteres</string>
+    <string name="tv_field_hide">Ocultar caracteres</string>
 </resources>

@@ -12,16 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.FilterChip
@@ -47,7 +43,6 @@ import com.markedoe.ondo.ui.selectionTagName
 fun TvSelectionScreen(state: SelectionUiState, actions: SelectionActions) {
     val draft = rememberSaveable(state.id, saver = draftSaver(state)) { SelectionDraft(state) }
     val title = draft.title(state)
-    val leaveField = rememberLeaveField()
     FocusEntry(Modifier.fillMaxSize().background(TvTokens.Ink)) {
         LazyColumn(
             Modifier.fillMaxSize().testTag("selection"),
@@ -71,17 +66,12 @@ fun TvSelectionScreen(state: SelectionUiState, actions: SelectionActions) {
                 )
             }
             item(key = "name") {
-                val field = rememberTvTextField()
-                OutlinedTextField(
+                TvTextInput(
                     value = draft.name,
                     onValueChange = { draft.name = it },
-                    singleLine = true,
-                    label = { androidx.compose.material3.Text(stringResource(R.string.selection_name)) },
-                    placeholder = { androidx.compose.material3.Text(title) },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { leaveField() }),
-                    readOnly = field.readOnly,
-                    modifier = Modifier.padding(horizontal = 12.dp).widthIn(max = 640.dp).fillMaxWidth().then(field.modifier).testTag("selectionName"),
+                    label = stringResource(R.string.selection_name),
+                    placeholder = title,
+                    modifier = Modifier.padding(horizontal = 12.dp).widthIn(max = 640.dp).fillMaxWidth().testTag("selectionName"),
                 )
             }
             item(key = "tabs") {

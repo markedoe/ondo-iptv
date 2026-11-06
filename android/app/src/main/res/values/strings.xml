@@ -534,4 +534,7 @@
     <string name="subtitle_privacy">Searching sends the title you are watching to these services, with your own key or account. Nothing is sent until you search. With Sync on this network on, your keys also reach your other Ondo devices.</string>
     <string name="subtitle_limited">%1$s’s limit of requests is reached for now, so nothing was saved. Try again later.</string>
     <string name="subtitle_incomplete">%1$s: enter both the username and the password, or neither.</string>
+    <string name="tv_field_press_ok">Press OK to type</string>
+    <string name="tv_field_show">Show characters</string>
+    <string name="tv_field_hide">Hide characters</string>
 </resources>

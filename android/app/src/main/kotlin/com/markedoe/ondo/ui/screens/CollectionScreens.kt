@@ -72,7 +72,8 @@ import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
-import com.markedoe.ondo.ui.tv.rememberTvTextField
+import com.markedoe.ondo.ui.tv.TvTextInput
+import com.markedoe.ondo.ui.tv.isTelevision
 
 /** A collection in My List: its name, how many items of the current playlist it holds, and whether every profile shares it. */
 data class CollectionRow(val id: String, val name: String, val count: Int, val shared: Boolean = false)
@@ -333,18 +334,28 @@ fun CollectionNameDialog(title: String, initial: String, confirm: String, onConf
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            val field = rememberTvTextField()
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                label = { Text(stringResource(R.string.name)) },
-                // The keyboard's Done (the TV's too) makes the collection.
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (name.isNotBlank()) onConfirm(name.trim()) }),
-                readOnly = field.readOnly,
-                modifier = Modifier.then(field.modifier).testTag("collectionName"),
-            )
+            if (isTelevision()) {
+                // The TV's Done makes the collection; with no name, the keyboard closes on the field.
+                TvTextInput(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = stringResource(R.string.name),
+                    onImeAction = { if (name.isNotBlank()) onConfirm(name.trim()) },
+                    moveOn = false,
+                    modifier = Modifier.testTag("collectionName"),
+                )
+            } else {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.name)) },
+                    // The keyboard's Done makes the collection.
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { if (name.isNotBlank()) onConfirm(name.trim()) }),
+                    modifier = Modifier.testTag("collectionName"),
+                )
+            }
         },
         confirmButton = { TextButton(onClick = { onConfirm(name.trim()) }, enabled = name.isNotBlank()) { Text(confirm) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },

@@ -23,8 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
@@ -32,8 +30,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -102,7 +98,6 @@ fun TvSearchScreen(
             focused = runCatching { fieldFocus.requestFocus() }.isSuccess
         }
     }
-    val leaveField = rememberLeaveField()
     val nothing = state.people.isEmpty() && state.movies.isEmpty() && state.series.isEmpty() && state.channels.isEmpty()
     val titles = listOf(R.string.movies, R.string.series, R.string.channels, R.string.people).map { stringResource(it) }
     LazyColumn(
@@ -116,28 +111,16 @@ fun TvSearchScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Search opens ready to type: the keyboard is up at once.
-                val field = rememberTvTextField(openOnFirstFocus = true)
-                OutlinedTextField(
+                // Search opens ready to type: the keyboard is up at once. Results follow each letter; Done goes on
+                // to them.
+                TvTextInput(
                     value = state.query,
                     onValueChange = onQuery,
-                    singleLine = true,
-                    leadingIcon = { androidx.compose.material3.Icon(Icons.Rounded.Search, contentDescription = null) },
-                    placeholder = { androidx.compose.material3.Text(stringResource(R.string.search_prompt)) },
-                    // Done goes on to the results.
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
-                    readOnly = field.readOnly,
-                    // A filled grey field, ringed in white when the remote is on it: the look of the rest of the TV.
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = OndoColors.SurfaceHigh,
-                        unfocusedContainerColor = OndoColors.Surface,
-                        focusedBorderColor = androidx.compose.ui.graphics.Color.White,
-                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                        cursorColor = androidx.compose.ui.graphics.Color.White,
-                    ),
-                    modifier = Modifier.weight(1f).focusRequester(fieldFocus).then(field.modifier).focusMemory("search-field", initial = true).testTag("searchField"),
+                    placeholder = stringResource(R.string.search_prompt),
+                    leadingIcon = Icons.Rounded.Search,
+                    imeAction = ImeAction.Search,
+                    openOnFirstFocus = true,
+                    modifier = Modifier.weight(1f).focusRequester(fieldFocus).focusMemory("search-field", initial = true).testTag("searchField"),
                 )
                 TvActionButton(
                     onClick = { editingFilters = true },

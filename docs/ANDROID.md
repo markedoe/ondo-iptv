@@ -27,6 +27,13 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   list (rows, grids, Home, a person's, genre's, year's or award's titles, similar titles, Live TV and the guide),
   whatever their category (`CategoryTags.titleTag`; "Portugal: …" or "PTSD …" carry no tag). On a TV, Search opens on its field with the
   keyboard up.
+- **TV text fields** (`ui/tv/TvTextInput.kt`): every text field on a TV (Search, a playlist's form, the TMDb token,
+  the subtitle services' keys and logins, a profile's name and PIN, the parent PIN, the categories' filter and words, a
+  selection's or a collection's name) is a row with its label and its value or placeholder; with the remote on it, a
+  white ring, a pencil and "Press OK to type". The keyboard never opens as the remote passes: OK opens it, the caret at
+  the end of the text. Next goes on to the field below with the keyboard open, Done closes it and goes on below (or
+  gives the form's answer), Back closes it and leaves the remote on the field. Keys, passwords and PINs show dots, with
+  a Show button to their right; a PIN gets the digits keyboard. `TvTextFieldsEverySurfaceTest` lists every field.
 - **Automatic refresh** (Settings → Playlists → Automatic refresh: Only when I ask, Every 6 hours, Every 12 hours,
   Every day (default), Every week), checked when Ondo opens and when it comes back to the front
   (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). One setting for all the playlists on Android (Apple has
