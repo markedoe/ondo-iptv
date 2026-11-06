@@ -70,6 +70,18 @@ final class ResumePlaybackTests: XCTestCase {
         add(attachment)
     }
 
+    /// The controller's own log (what it opened, AVPlayer's errors, the engine it fell back to) joins the timeline; a
+    /// network error of AVPlayer on Apple's sample server (it gave up opening the stream) is the server's or the
+    /// runner's network, not the resume: the test is skipped, naming it.
+    private func noteLogAndSkipNetworkFailure(_ controller: PlayerController) throws {
+        let lines = controller.log.entries.map { String(format: "%6.1fs log ", $0.time) + $0.event }
+        timeline.append(contentsOf: lines)
+        if let failure = lines.first(where: { $0.contains("AVPlayer failed: NSURLErrorDomain") }) {
+            controller.stop()
+            throw XCTSkip("Apple's sample server could not be reached in time: \(failure)")
+        }
+    }
+
     /// Whether the sample stream plays from its beginning here (tells a stalled resume from a missing network).
     private func samplePlaysFromTheBeginning() async throws -> Bool {
         timeline.append("— control: the same stream from the beginning —")
@@ -94,6 +106,7 @@ final class ResumePlaybackTests: XCTestCase {
         controller.load(film(startingAt: 300))
         try await wait(controller, seconds: 45) { controller.state == .playing }
         guard controller.state == .playing else {
+            try noteLogAndSkipNetworkFailure(controller)
             controller.stop()
             if try await samplePlaysFromTheBeginning() {
                 return XCTFail("The stream plays from the beginning but the resume never started")
@@ -124,6 +137,7 @@ final class ResumePlaybackTests: XCTestCase {
         }
         XCTAssertNotEqual(controller.state, .playing, "the viewer paused while it was opening")
         guard controller.player.currentItem?.status == .readyToPlay else {
+            try noteLogAndSkipNetworkFailure(controller)
             controller.stop()
             if try await samplePlaysFromTheBeginning() {
                 return XCTFail("The stream plays from the beginning but the paused resume never got ready")
