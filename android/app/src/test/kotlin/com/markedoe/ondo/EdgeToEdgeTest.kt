@@ -7,7 +7,7 @@ import org.junit.Test
 
 /**
  * Edge to edge as Google Play asks from Android 15: no deprecated window attribute in the themes, and every activity
- * calls enableEdgeToEdge() (Play Console, "deprecated APIs or parameters for edge-to-edge").
+ * that shows a window calls enableEdgeToEdge() (Play Console, "deprecated APIs or parameters for edge-to-edge").
  */
 class EdgeToEdgeTest {
     @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
@@ -27,7 +27,9 @@ class EdgeToEdgeTest {
     @Test
     fun everyActivityGoesEdgeToEdge() {
         val manifest = File("src/main/AndroidManifest.xml").readText()
-        val activities = Regex("""<activity\s+android:name="\.([\w.]+)"""").findAll(manifest).map { it.groupValues[1] }.toList()
+        // An activity that shows no window (Theme.NoDisplay: the TV home screen's entry) has no edges to draw to.
+        val activities = Regex("""<activity\s+android:name="\.([\w.]+)"[^>]*>""").findAll(manifest)
+            .filter { "Theme.NoDisplay" !in it.value }.map { it.groupValues[1] }.toList()
         assertTrue(activities.size >= 2)
         activities.forEach { name ->
             val source = File("src/main/kotlin/com/markedoe/ondo/${name.replace('.', '/')}.kt").readText()
