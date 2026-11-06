@@ -683,6 +683,8 @@ def check_external_testers(problems: list) -> None:
 
     for number, line in enumerate(fastfile.splitlines(), start=1):
         code = line.split(" # ", 1)[0]
+        if code.strip().startswith("#"):
+            continue
         for value in re.findall(r"\biosBuildsAvailableForAppleSiliconMac\b[\"']?\s*(?::|=>)\s*(\S+?)[\s,}]", code + " "):
             if value != "false":
                 problems.append(f"fastlane/Fastfile:{number}: sets iosBuildsAvailableForAppleSiliconMac to {value}: it may "
