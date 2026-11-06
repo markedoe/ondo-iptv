@@ -17,6 +17,8 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import com.markedoe.ondo.HangGuard
@@ -103,7 +105,7 @@ class TvHomeOpensAtTheTopTest {
         homeState = rows.copy(hero = hero)
         advance(1_500)
         fun exists(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size
-        assertTrue("Play there: home ${exists("home")}, hero ${exists("hero")}, heroFrame ${exists("heroFrame")}, heroPlay ${exists("heroPlay")}, focus on ${focusedTag()}", exists("heroPlay") == 1)
+        assertTrue("Play there: home ${exists("home")}, hero ${exists("hero")}, heroFrame ${exists("heroFrame")}, heroPlay ${exists("heroPlay")}, focus on ${focusedTag()}\n${compose.onRoot(useUnmergedTree = true).printToString(maxDepth = 8)}", exists("heroPlay") == 1)
         assertTrue("Play has the focus, not ${focusedTag()}", compose.onNodeWithTag("heroPlay").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
         val frame = compose.onNodeWithTag("heroFrame", useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertTrue("the frame full size: ${frame.height}", frame.height >= 260.dp)

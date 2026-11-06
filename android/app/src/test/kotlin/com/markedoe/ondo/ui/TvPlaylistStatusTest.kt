@@ -119,7 +119,7 @@ class TvPlaylistStatusTest {
         assertTrue(exists("playlistUpdated"))
         assertEquals(shortAge(now - 5 * 60_000L, now, locale), ageText())
         assertTrue("short: ${ageText()}", ageText().contains("5") && ageText().contains("min") && ageText().length <= 6)
-        assertTrue("TalkBack: the name and the sentence ($description)", description().let { name in it && "Updated 5 minutes ago" in it })
+        assertTrue("TalkBack: the name and the sentence (${description()})", description().let { name in it && "Updated 5 minutes ago" in it })
         assertTrue("nothing else written in the bar", compose.onAllNodes(hasAnyAncestor(hasTestTag("topBar")) and androidx.compose.ui.test.hasText(name, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
         assertClearOfTheTabsAndSearch()
     }
