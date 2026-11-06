@@ -51,18 +51,22 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Ondo.Starting">
 
-        <!-- singleTask: the launcher's intent reaches the running app (onNewIntent), which goes back to Home, the
-             player left on top of it closed. -->
+        <!-- A phone's or a tablet's app icon: Ondo comes back where it was left. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- The Android TV home screen (with the banner). -->
+        </activity>
+
+        <!-- The Android TV home screen (with the banner): Ondo opens on Home, also when it is running (TvLauncherActivity). -->
+        <activity
+            android:name=".TvLauncherActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />

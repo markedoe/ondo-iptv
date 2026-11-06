@@ -69,8 +69,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   indicateur de chargement à la place de la coche pendant qu'elle est téléchargée de nouveau et un signe
   d'avertissement quand cela a échoué, dans un emplacement que la télécommande saute et qui garde sa largeur (TalkBack
   lit le nom de la playlist et la phrase entière ; `TvPlaylistStatusTest`). L'Accueil s'ouvre en haut, Lire
-  sélectionné, même quand ses titres à la une arrivent après ses rangées, et Ondo rouvert depuis le lanceur y revient
-  (`MainActivity` est `singleTask` ; `TvLauncherOpensHomeTest`, `TvHomeOpensAtTheTopTest`). Bas depuis les titres à la
+  sélectionné, même quand ses titres à la une arrivent après ses rangées, et Ondo rouvert depuis l'écran d'accueil de
+  la TV y revient, le lecteur laissé ouvert fermé (l'entrée TV, `TvLauncherActivity`, ramène `MainActivity` sur
+  l'Accueil ; l'icône d'un téléphone revient là où on l'avait laissé ; `TvLauncherOpensHomeTest`,
+  `TvHomeOpensAtTheTopTest`). Bas depuis les titres à la
   une montre la première rangée entière, son nom aussi, quel que soit son type (`TvHomeDownFromHeroTest`) ; les catégories
   montrées se choisissent dans Réglages → Langues et catégories. Les titres d'une catégorie et les pages de genre,
   d'année et de prix sur TV commencent par leurs affiches juste sous l'en-tête : pas de rangée Retour (le Retour de la

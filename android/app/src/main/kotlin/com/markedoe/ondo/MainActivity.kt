@@ -32,15 +32,15 @@ import com.markedoe.ondo.ui.theme.OndoTheme
 
 class MainActivity : ComponentActivity() {
     /**
-     * When Ondo was last opened from the launcher while running (its task brought back, this the single instance on
-     * top of it; the device's uptime, 0: not since this screen was made): each time, Home again, at its top.
+     * When Ondo was last opened from the TV's home screen while running ([TvLauncherActivity]; the device's uptime, 0:
+     * not since this screen was made): each time, Home again, at its top.
      */
     private var launch by mutableLongStateOf(0L)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (isLauncherIntent(intent)) launch = SystemClock.uptimeMillis()
+        if (opensHome(intent)) launch = SystemClock.uptimeMillis()
     }
 
     override fun onStart() {
@@ -96,9 +96,11 @@ class MainActivity : ComponentActivity() {
     private fun animationsOn(): Boolean = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
 
     companion object {
-        /** Whether [intent] is the launcher's: the TV's home screen, a phone's app icon (a reminder opens the same way). */
-        fun isLauncherIntent(intent: Intent?): Boolean = intent?.action == Intent.ACTION_MAIN &&
-            (intent.hasCategory(Intent.CATEGORY_LAUNCHER) || intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER))
+        /** Set by [TvLauncherActivity]: Home, at its top, whatever page was left open. */
+        const val EXTRA_OPEN_HOME = "com.markedoe.ondo.OPEN_HOME"
+
+        /** Whether [intent] asks for Home ([EXTRA_OPEN_HOME]): the TV's home screen. */
+        fun opensHome(intent: Intent?): Boolean = intent?.getBooleanExtra(EXTRA_OPEN_HOME, false) == true
 
         /** Longest wait for the saved catalogue behind the splash screen: Home then appears without it (never as empty). */
         const val SPLASH_RESTORE_LIMIT_MS = 2_000L

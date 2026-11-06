@@ -62,7 +62,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   the check's place while it is fetched again and a warning sign when that failed, in one slot that the remote passes
   over and that keeps its width (TalkBack reads the playlist's name and the whole sentence; `TvPlaylistStatusTest`).
   Home opens at its top with Play focused, also when its featured titles come after its rows, and Ondo opened again
-  from the launcher goes back to it (`MainActivity` is `singleTask`; `TvLauncherOpensHomeTest`,
+  from the TV's home screen goes back to it, the player left open closed (the TV's entry, `TvLauncherActivity`,
+  brings `MainActivity` back for Home; a phone's icon comes back where it was left; `TvLauncherOpensHomeTest`,
   `TvHomeOpensAtTheTopTest`). Down from the featured titles shows the first row whole, its name too, whatever kind of
   row it is (`TvHomeDownFromHeroTest`); which categories show is in Settings → Languages
   and categories. A category's titles and the genre, year and award pages on a TV start with their posters right

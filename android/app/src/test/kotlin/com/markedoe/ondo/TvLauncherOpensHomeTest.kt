@@ -25,18 +25,20 @@ import com.markedoe.ondo.data.SqliteMetadataStore
 import java.io.File
 import java.time.Duration
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * Ondo opened from the TV's launcher always shows Home at its top, Play focused: also when it was left on another page
- * (a title's page) and is still running. The launcher's intent reaches the running app ([MainActivity] is the task's
- * single instance), which goes back to Home; any other intent leaves the page as it is.
+ * Ondo opened from the TV's home screen always shows Home at its top, Play focused: also when it was left on another
+ * page (a title's page) and is still running. The TV's entry ([TvLauncherActivity]) brings [MainActivity] back with the
+ * pages over it closed and asks it for Home; a phone's app icon, or any other intent, leaves the page as it is.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -52,12 +54,13 @@ class TvLauncherOpensHomeTest {
     @After
     fun close() {
         // The scenario knows its activity by the intent it started it with, which onNewIntent replaced (setIntent).
-        scenario?.onActivity { it.intent = launcher() }
+        scenario?.onActivity { it.intent = phoneLauncher() }
         scenario?.close()
     }
 
-    private fun launcher(category: String = Intent.CATEGORY_LEANBACK_LAUNCHER) =
-        Intent(Intent.ACTION_MAIN).addCategory(category).setClass(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    /** A phone's app icon: MainActivity itself. */
+    private fun phoneLauncher() =
+        Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClass(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     private fun settle(ms: Long = 200) {
         val deadline = System.currentTimeMillis() + ms
@@ -89,7 +92,7 @@ class TvLauncherOpensHomeTest {
         val now = System.currentTimeMillis()
         store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content.copy(fetchedAt = now))
         SqliteMetadataStore(app).save(Fixtures.released(Fixtures.content, now).values.toList())
-        scenario = ActivityScenario.launch(launcher())
+        scenario = ActivityScenario.launch(phoneLauncher())
         waitFor("Home's Play") { exists("heroPlay") }
         // A remote's key: the TV's keyboard mode, where items take the focus.
         compose.onRoot().performKeyInput { pressKey(Key.ShiftLeft) }
@@ -100,25 +103,25 @@ class TvLauncherOpensHomeTest {
     private fun leaveOnATitlesPageAndOpen(intent: Intent) {
         compose.onNodeWithTag("heroInfo").performSemanticsAction(SemanticsActions.OnClick)
         waitFor("the title's page") { exists("detailPlay") }
-        // The launcher's intent, as Android hands it to the running instance (onNewIntent).
+        // The intent, as Android hands it to the running instance (onNewIntent).
         scenario!!.onActivity { InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(it, intent) }
         settle(1_500)
     }
 
     @Test
-    fun theLeanbackLauncherOpensHomeWithPlayFocused() {
+    fun theTvsHomeScreenOpensHomeWithPlayFocused() {
         start()
-        leaveOnATitlesPageAndOpen(launcher())
+        // What TvLauncherActivity starts: MainActivity, the pages over it closed (clear top), its running instance kept.
+        leaveOnATitlesPageAndOpen(TvLauncherActivity.homeIntent(app))
         waitFor("Home") { !exists("detailPlay") && exists("heroPlay") }
         waitFor("Play focused") { focusedTag() == "heroPlay" }
     }
 
     @Test
-    fun thePhonesLauncherIconOpensHomeToo() {
+    fun thePhonesAppIconComesBackWhereItWasLeft() {
         start()
-        leaveOnATitlesPageAndOpen(launcher(Intent.CATEGORY_LAUNCHER))
-        waitFor("Home") { !exists("detailPlay") && exists("heroPlay") }
-        waitFor("Play focused") { focusedTag() == "heroPlay" }
+        leaveOnATitlesPageAndOpen(phoneLauncher())
+        assertTrue("still on the title's page", exists("detailPlay"))
     }
 
     @Test
@@ -129,20 +132,29 @@ class TvLauncherOpensHomeTest {
     }
 
     @Test
-    fun whichIntentsAreTheLaunchers() {
-        assertTrue(MainActivity.isLauncherIntent(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)))
-        assertTrue(MainActivity.isLauncherIntent(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)))
-        assertFalse(MainActivity.isLauncherIntent(Intent(Intent.ACTION_MAIN)))
-        assertFalse(MainActivity.isLauncherIntent(Intent(Intent.ACTION_VIEW).addCategory(Intent.CATEGORY_LAUNCHER)))
-        assertFalse(MainActivity.isLauncherIntent(null))
+    fun theTvsEntryStartsMainActivityForHomeAndCloses() {
+        val entry = Robolectric.buildActivity(TvLauncherActivity::class.java).create().get()
+        assertTrue("nothing of its own stays", entry.isFinishing)
+        val started = shadowOf(entry).nextStartedActivity
+        assertEquals(MainActivity::class.java.name, started.component?.className)
+        assertTrue("Home asked for", MainActivity.opensHome(started))
+        val flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        assertEquals("the running MainActivity kept, the pages over it closed", flags, started.flags and flags)
+        assertFalse(MainActivity.opensHome(phoneLauncher()))
+        assertFalse(MainActivity.opensHome(null))
     }
 
-    /** The launcher's intent reaches the running app: it is the task's only Ondo screen, the player on top of it closed. */
+    /** The TV's home screen opens TvLauncherActivity; a phone's icon opens MainActivity, which keeps its launch mode. */
     @Test
-    fun mainActivityIsTheTasksSingleInstance() {
+    fun theManifestsEntries() {
         val manifest = File("src/main/AndroidManifest.xml").readText()
-        val main = Regex("""<activity\s+android:name="\.MainActivity"[^>]*>""").find(manifest)?.value.orEmpty()
+        fun activity(name: String) = Regex("""<activity\s+android:name="\.$name"[^>]*>(.*?)</activity>""", RegexOption.DOT_MATCHES_ALL).find(manifest)?.value.orEmpty()
+        val main = activity("MainActivity")
+        val tv = activity("TvLauncherActivity")
         assertTrue("MainActivity in the manifest", main.isNotEmpty())
-        assertTrue("android:launchMode=\"singleTask\": $main", "android:launchMode=\"singleTask\"" in main)
+        assertFalse("MainActivity's own launch mode: a phone comes back where it was left", "launchMode" in main)
+        assertTrue("a phone's icon opens MainActivity", "android.intent.category.LAUNCHER\"" in main)
+        assertFalse("the TV's home screen does not open MainActivity directly", "LEANBACK_LAUNCHER" in main)
+        assertTrue("the TV's home screen opens TvLauncherActivity", "LEANBACK_LAUNCHER" in tv)
     }
 }
