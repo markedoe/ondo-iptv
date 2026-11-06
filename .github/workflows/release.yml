@@ -2,7 +2,8 @@ name: Release
 
 # A version tag (v1.2.0: the user's go, CLAUDE.md) releases iOS and macOS: App Store edition builds, the listing, and
 # the submission for App Review, a submission of the same version still waiting being withdrawn first; then the
-# TestFlight edition is built again. A push to main reaches TestFlight only (deliver.yml, target builds).
+# TestFlight edition is built again. A push to main reaches TestFlight only (deliver.yml, target builds, external): the
+# TestFlight edition for internal testers and the App Store edition for external testers, through Beta App Review.
 on:
   push:
     tags: ["v*"]
@@ -28,6 +29,10 @@ on:
         default: ""
       submit:
         description: "release by hand: also submit for App Review (off: a rehearsal that builds, uploads the listing and stops there)"
+        type: boolean
+        default: false
+      external:
+        description: "builds, testflight edition: first the App Store edition for external testers, through Beta App Review (what a push to main does)"
         type: boolean
         default: false
 
@@ -61,6 +66,11 @@ jobs:
     runs-on: macos-26
     # A release waits for App Store Connect's processing of both builds.
     timeout-minutes: 240
+    # The App Store edition builds for external testers, handed by the job external below to testflight-external.yml
+    # (on Linux, outside this release queue). Empty when not built.
+    outputs:
+      ios_app_store_build: ${{ steps.ios_app_store.outputs.build }}
+      mac_app_store_build: ${{ steps.mac_app_store.outputs.build }}
     # actions: read: the step "CI passed on this commit" reads this repository's CI runs.
     permissions:
       actions: read
@@ -80,6 +90,9 @@ jobs:
       EDITION: ${{ github.event.inputs.target == 'release' && 'app-store' || github.event.inputs.edition || 'app-store' }}
       # A tag submits; a release run by hand submits only when asked.
       SUBMIT: ${{ github.event_name == 'push' || github.event.inputs.submit == 'true' }}
+      # A push to main (deliver.yml): the App Store edition for external testers too, built before the TestFlight edition
+      # so that the internal testers' latest build stays the TestFlight edition one.
+      EXTERNAL: ${{ github.ref == 'refs/heads/main' && github.event.inputs.external == 'true' && github.event.inputs.target == 'builds' && github.event.inputs.edition == 'testflight' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -190,21 +203,62 @@ jobs:
           path: build/spm
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
           restore-keys: spm-${{ runner.os }}-
-      - name: iOS → TestFlight
-        id: ios
-        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'release'
+      # External testers (CLAUDE.md, App Store): the App Store edition, the build App Review would get, is checked as
+      # for a release, built and uploaded without waiting; the job external sends it through Beta App Review. A failure
+      # here never stops the TestFlight edition (continue-on-error), and step External testers builds turns the run red.
+      - name: App Store edition checks (external testers)
+        id: external_checks
+        if: env.EXTERNAL == 'true'
+        continue-on-error: true
+        run: |
+          python3 .github/scripts/check_app_store.py
+          OWNER=$(echo "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')
+          python3 .github/scripts/check_review_playlist.py --online "https://$OWNER.github.io/ondo-iptv/review/ondo-review.m3u"
+          for file in fastlane/metadata/*/*_url.txt; do
+            url=$(tr -d '[:space:]' < "$file")
+            curl -fsSL --retry 2 --max-time 30 -o /dev/null "$url" || { echo "::error::$file: $url does not answer"; exit 1; }
+          done
+      - name: iOS App Store edition → TestFlight (external testers)
+        id: ios_app_store
+        if: env.EXTERNAL == 'true' && steps.external_checks.outcome == 'success'
+        continue-on-error: true
         env:
-          WAIT_FOR_PROCESSING: ${{ env.TARGET == 'release' }}
+          EDITION: app-store
+          WAIT_FOR_PROCESSING: false
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: bundle exec fastlane ios beta
+      - name: iOS → TestFlight
+        id: ios
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'release'
+        env:
+          WAIT_FOR_PROCESSING: ${{ env.TARGET == 'release' }}
+          AFTER_BUILD_NUMBER: ${{ steps.ios_app_store.outputs.build }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: bundle exec fastlane ios beta
+      - name: macOS App Store edition → TestFlight (external testers)
+        id: mac_app_store
+        if: env.EXTERNAL == 'true' && steps.external_checks.outcome == 'success'
+        continue-on-error: true
+        env:
+          EDITION: app-store
+          WAIT_FOR_PROCESSING: false
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: bundle exec fastlane mac beta
       - name: macOS → TestFlight
         id: mac
         if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'mac' || env.TARGET == 'release'
         env:
           WAIT_FOR_PROCESSING: ${{ env.TARGET == 'release' }}
+          AFTER_BUILD_NUMBER: ${{ steps.mac_app_store.outputs.build }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
@@ -304,6 +358,30 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           if [ "$TARGET" = withdraw-ios ]; then bundle exec fastlane ios withdraw; else bundle exec fastlane mac withdraw; fi
+      - name: External testers builds
+        # The TestFlight edition went up; a failed App Store edition check or build for the external testers fails the run.
+        if: always() && env.EXTERNAL == 'true'
+        env:
+          CHECKS: ${{ steps.external_checks.outcome }}
+          IOS: ${{ steps.ios_app_store.outcome }}
+          MAC: ${{ steps.mac_app_store.outcome }}
+        run: |
+          echo "App Store edition for external testers: checks $CHECKS, iOS $IOS, macOS $MAC"
+          if [ "$CHECKS" = failure ] || [ "$IOS" = failure ] || [ "$MAC" = failure ]; then
+            echo "::error::The App Store edition for the external testers failed (checks $CHECKS, iOS $IOS, macOS $MAC): see its steps above. The TestFlight edition is not affected."
+            exit 1
+          fi
+      - name: What to Test
+        # Every uploaded build, both editions, gets the listing's release notes as What to Test (fastlane
+        # fill_what_to_test); one that could not be set fails the run once all uploads are done.
+        if: "!cancelled() && (env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'mac' || env.TARGET == 'release')"
+        env:
+          MISSING: ${{ steps.ios.outputs.what_to_test }} ${{ steps.mac.outputs.what_to_test }} ${{ steps.ios_app_store.outputs.what_to_test }} ${{ steps.mac_app_store.outputs.what_to_test }}
+        run: |
+          case "$MISSING" in
+            *missing*) echo "::error::What to Test could not be set on a build of this run: see the ::error:: lines of the upload steps above."; exit 1 ;;
+            *) echo "What to Test: set on every build this run uploaded." ;;
+          esac
       - name: Build log
         if: failure()
         # Printed in the job log, where GitHub masks the secrets (an uploaded file would not be masked).
@@ -312,7 +390,7 @@ jobs:
         # Signing makes Xcode create an Apple Development certificate on each new runner; its key dies with the
         # runner and Apple caps how many a team may hold (see fastlane/Fastfile). Only the certificates found in
         # this runner's keychain are revoked, matched by serial number; distribution certificates are not touched.
-        if: always() && (steps.ios.outcome == 'success' || steps.ios.outcome == 'failure' || steps.mac.outcome == 'success' || steps.mac.outcome == 'failure')
+        if: always() && (steps.ios.outcome == 'success' || steps.ios.outcome == 'failure' || steps.mac.outcome == 'success' || steps.mac.outcome == 'failure' || steps.ios_app_store.outcome == 'success' || steps.ios_app_store.outcome == 'failure' || steps.mac_app_store.outcome == 'success' || steps.mac_app_store.outcome == 'failure')
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -345,3 +423,25 @@ jobs:
             exit 0
           fi
           gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f target=builds -f edition=testflight
+
+  # External testers (CLAUDE.md, App Store): the App Store edition builds the job deliver uploaded go to
+  # testflight-external.yml, which waits for App Store Connect's processing and sends them through Beta App Review, never
+  # App Review. A workflow of its own, with its own queue: its wait (up to 3 hours) never holds back a tag or the next
+  # delivery. Also after a failed TestFlight edition: the two editions are independent.
+  external:
+    name: External testers
+    needs: deliver
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && (needs.deliver.outputs.ios_app_store_build != '' || needs.deliver.outputs.mac_app_store_build != '') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      IOS_BUILD: ${{ needs.deliver.outputs.ios_app_store_build }}
+      MAC_BUILD: ${{ needs.deliver.outputs.mac_app_store_build }}
+    steps:
+      - name: Start the external testers distribution
+        run: |
+          gh workflow run testflight-external.yml --repo "$GITHUB_REPOSITORY" --ref main -f ios_build="$IOS_BUILD" -f mac_build="$MAC_BUILD"
+          echo "External testers: App Store edition builds iOS ${IOS_BUILD:-none}, macOS ${MAC_BUILD:-none} handed to TestFlight external."

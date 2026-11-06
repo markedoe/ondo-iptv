@@ -34,6 +34,13 @@ submitted, its listing and its review notes are checked here, before any upload:
    example.com in placeholders), and the review notes give the test playlist hosted there (site/review, checked by
    check_review_playlist.py). The listing never names Addic7ed, a subtitle source without an official API.
 
+9. External testers get the App Store edition only: in fastlane/Fastfile, what distributes a build outside the team
+   (an external group, Beta App Review) is in `distribute_to_external_testers` and its helpers, which refuse any
+   edition but the App Store one and only distribute a build given by number; the internal TestFlight upload submits
+   nothing, and What to Test (set on every build) writes the build's localizations only. In the workflows, a step that runs the external_testers lanes has `EDITION: app-store` and takes its build
+   number from the App Store edition steps (ids ios_app_store, mac_app_store), which build that edition (2.5.19: the
+   TestFlight edition, with downloads, is never reviewed or given to external testers).
+
 The addresses of the listing are checked to answer in the release workflow, before the upload.
 
 Usage: check_app_store.py [repository root]. Exit code 1 lists each problem.
@@ -558,6 +565,175 @@ def check_playlists(problems: list) -> None:
                         "(https://<user>.github.io/ondo-iptv/review/ondo-review.m3u)")
 
 
+# What gives a build to testers outside the team or sends it to Beta App Review (fastlane/Fastfile).
+EXTERNAL_WORDS = re.compile(
+    r"\bdistribute_external\b|\bsubmit_beta_review\b|\bbeta_app_review_info\b|\bpost_beta_app_review_submissions?\b|"
+    r"\badd_beta_groups(?:_to_build)?\b|\bcreate_beta_group\b|\bpatch_beta_app_review_detail\b|\bgroups:|"
+    r"\blocalized_app_info\b|\bnotify_external_testers\b|\bbeta_app_feedback_email\b|\bpilot\b|\bupload_to_testflight\b|"
+    r"\btestflight\s*\(|\bgroups\s*=>|:groups\b|\b(?:patch|post)_beta_app_localizations\b|\.expire!")
+# The functions allowed to use them: the external distribution and its helpers. upload_build is the internal upload,
+# allowed upload_to_testflight only (checked below: it submits nothing).
+EXTERNAL_FUNCTIONS = {"distribute_to_external_testers", "external_group", "beta_review_contact", "beta_test_information",
+                      "beta_review_slot_free?"}
+EXTERNAL_STEPS = {"ios": "ios_app_store", "mac": "mac_app_store"}
+# The only workflow that runs the external_testers lanes, started by release.yml alone with the App Store edition builds.
+EXTERNAL_WORKFLOW = ".github/workflows/testflight-external.yml"
+# A Fastfile line that would change the edition or the build a lane works on.
+ENV_OVERRIDE = re.compile(r"""ENV\[\s*["'](?:EDITION|BUILD_NUMBER|AFTER_BUILD_NUMBER)["']\s*\]\s*(?:=(?!=)|\|\|=)|"""
+                          r"""\bENV\.(?:store|update|merge!|replace|\[\]=)""")
+# A run: script that sets the edition or the build number itself, past its step's env: (inline, export, GITHUB_ENV).
+RUN_OVERRIDE = re.compile(r"""(?:^|[\s;&|("'])(?:export\s+)?(?:EDITION|BUILD_NUMBER|AFTER_BUILD_NUMBER)=""")
+# What fill_what_to_test (every build, the TestFlight edition too) may write: What to Test, nothing else.
+WHAT_TO_TEST_WRITES = {"patch_beta_build_localizations", "post_beta_build_localizations"}
+WRITE_CALL = re.compile(r"\b(?:patch|post|delete|create|add|remove|expire|submit|update|cancel|distribute|upload|deliver)"
+                        r"_?\w*!?(?=\s*\()|\.(?:expire!|delete!|save!|update\b|(?:post|patch|delete|add|remove|submit|expire|cancel)_\w+)|"
+                        r"\bdeliver\b|\bpilot\b")
+
+
+def ruby_functions(text: str) -> dict:
+    """The top-level `def name … end` of a Fastfile: name → its body's code lines as (line number, code), comments left
+    out."""
+    functions, name, body = {}, None, []
+    for number, line in enumerate(text.splitlines(), start=1):
+        if name is None:
+            match = re.match(r"def ([\w?!]+)", line)
+            if match:
+                name, body = match.group(1), []
+            continue
+        if re.fullmatch(r"end\s*(?:#.*)?", line):
+            functions[name] = body
+            name = None
+            continue
+        code = line.split(" # ", 1)[0].rstrip()
+        if code.strip() and not code.strip().startswith("#"):
+            body.append((number, code))
+    return functions
+
+
+def workflow_steps(text: str) -> list:
+    """Each step of a workflow, as its text: from its `- ` line to the next line indented as much or less."""
+    lines = text.splitlines()
+    steps = []
+    for index, line in enumerate(lines):
+        match = re.match(r"(\s*)- (?:name|uses|id|if|run|env|with):", line)
+        if not match:
+            continue
+        indent = len(match.group(1))
+        block = [line]
+        for following in lines[index + 1:]:
+            if following.strip() and len(following) - len(following.lstrip()) <= indent:
+                break
+            block.append(following)
+        steps.append("\n".join(block))
+    return steps
+
+
+def check_external_testers(problems: list) -> None:
+    fastfile_path = ROOT / "fastlane/Fastfile"
+    fastfile = fastfile_path.read_text(encoding="utf-8") if fastfile_path.is_file() else ""
+    functions = ruby_functions(fastfile)
+    allowed = {number for name in EXTERNAL_FUNCTIONS for number, _ in functions.get(name, [])}
+    upload = functions.get("upload_build", [])
+    # upload_build may call upload_to_testflight (the internal upload), nothing else of the external words.
+    allowed |= {number for number, code in upload
+                if [word.group(0) for word in EXTERNAL_WORDS.finditer(code)] == ["upload_to_testflight"]}
+    for number, line in enumerate(fastfile.splitlines(), start=1):
+        code = line.split(" # ", 1)[0]
+        if code.strip().startswith("#") or not EXTERNAL_WORDS.search(code) or number in allowed:
+            continue
+        problems.append(f"fastlane/Fastfile:{number}: gives a build to external testers or Beta App Review outside "
+                        f"distribute_to_external_testers, which takes the App Store edition only: {line.strip()[:120]}")
+    if upload and not any(re.search(r"\bskip_submission:\s*true\b", code) for _, code in upload):
+        problems.append("fastlane/Fastfile: upload_build (the TestFlight upload) must keep skip_submission: true: it "
+                        "distributes nothing and submits nothing for Beta App Review")
+    # What to Test, set on every build of both editions: it (and the lookup it uses) writes the build's localizations
+    # and nothing else.
+    for function in ("fill_what_to_test", "listed_build"):
+        for number, code in functions.get(function, []):
+            for write in WRITE_CALL.findall(code):
+                if write.lstrip(".") not in WHAT_TO_TEST_WRITES:
+                    problems.append(f"fastlane/Fastfile:{number}: {function} runs on the TestFlight edition too: it may "
+                                    f"only set What to Test (beta build localizations), not {write}")
+    for number, line in enumerate(fastfile.splitlines(), start=1):
+        if not line.strip().startswith("#") and ENV_OVERRIDE.search(line.split(" # ", 1)[0]):
+            problems.append(f"fastlane/Fastfile:{number}: changes EDITION or the build number at run time: the edition "
+                            f"and the build a lane works on come from the workflow step's env only: {line.strip()[:120]}")
+    distribute = [code for _, code in functions.get("distribute_to_external_testers", [])]
+    if "distribute_to_external_testers" in functions:
+        if not distribute or not re.fullmatch(r'\s*UI\.user_error!\(.*\) unless app_store_edition\?', distribute[0]):
+            problems.append("fastlane/Fastfile: distribute_to_external_testers must first refuse any edition but the App "
+                            "Store one (UI.user_error!(…) unless app_store_edition?)")
+        if [code.strip() for _, code in functions.get("app_store_edition?", [])] != ['ENV["EDITION"] == "app-store"']:
+            problems.append('fastlane/Fastfile: app_store_edition? must be ENV["EDITION"] == "app-store"')
+        if not any(re.fullmatch(r'\s*UI\.user_error!\(.*\) if ENV\["GITHUB_REF_TYPE"\] == "tag"', code) for code in distribute[:3]):
+            problems.append("fastlane/Fastfile: distribute_to_external_testers must refuse a tag's build "
+                            '(UI.user_error!(…) if ENV["GITHUB_REF_TYPE"] == "tag", among its first lines)')
+        slot = [code for _, code in functions.get("beta_review_slot_free?", [])]
+        expire = next((index for index, code in enumerate(slot) if ".expire!" in code), None)
+        if expire is not None and not any("app_store_version_build?(" in code for code in slot[:expire]):
+            problems.append("fastlane/Fastfile: beta_review_slot_free? must check app_store_version_build? before it "
+                            "expires a build: a build an App Store version uses is never expired")
+        if not any(re.search(r"\bdistribute_only:\s*true\b", code) for code in distribute):
+            problems.append("fastlane/Fastfile: distribute_to_external_testers must only distribute the App Store edition "
+                            "build given by number (distribute_only: true), never build or upload one")
+    elif re.search(r"\bexternal_testers\b", fastfile):
+        problems.append("fastlane/Fastfile: the external_testers lanes must go through distribute_to_external_testers")
+
+    workflows = ROOT / ".github/workflows"
+    for path in sorted(workflows.glob("*.y*ml")) if workflows.is_dir() else []:
+        text = path.read_text(encoding="utf-8")
+        relative = path.relative_to(ROOT).as_posix()
+        if re.search(r"\bfastlane\s+(?:run\s+)?(?:pilot|upload_to_testflight|testflight)\b", text):
+            problems.append(f"{relative}: runs pilot or upload_to_testflight directly: only the Fastfile's lanes upload "
+                            "and distribute builds")
+        for step in workflow_steps(text):
+            name = (re.search(r"- name:\s*(.+)", step) or re.search(r"- (.+)", step)).group(1).strip()
+            step_id = re.search(r"^\s*(?:- )?id:\s*(\S+)", step, re.MULTILINE)
+            step_id = step_id.group(1) if step_id else None
+            edition = re.search(r"^\s*EDITION:\s*(\S+)\s*$", step, re.MULTILINE)
+            edition = edition.group(1) if edition else None
+            run_text = step.split("run:", 1)[1] if re.search(r"^\s*(?:- )?run:", step, re.MULTILINE) else ""
+            if RUN_OVERRIDE.search(run_text):
+                problems.append(f"{relative}: step \"{name}\" sets EDITION or a build number in its script: they come "
+                                "from the step's env: only, where check_app_store.py reads them")
+            for platform in re.findall(r"\bfastlane\s+(ios|mac)\s+external_testers\b", step):
+                if relative != EXTERNAL_WORKFLOW:
+                    problems.append(f"{relative}: step \"{name}\" sends a build to external testers: only "
+                                    f"{EXTERNAL_WORKFLOW} does, with the App Store edition builds release.yml gives it")
+                if edition != "app-store":
+                    problems.append(f"{relative}: step \"{name}\" sends a build to external testers without "
+                                    "EDITION: app-store: only the App Store edition goes there")
+                build = re.search(r"^\s*BUILD_NUMBER:\s*(.+?)\s*$", step, re.MULTILINE)
+                expected = f"${{{{ inputs.{platform}_build }}}}"
+                if not build or build.group(1) != expected:
+                    problems.append(f"{relative}: step \"{name}\" must take BUILD_NUMBER from the App Store edition build "
+                                    f"release.yml gives ({expected}), never another build")
+            for platform, expected_id in EXTERNAL_STEPS.items():
+                if step_id != expected_id:
+                    continue
+                if edition != "app-store" or not re.search(rf"^\s*run:\s*bundle exec fastlane {platform} beta\s*$", step, re.MULTILINE):
+                    problems.append(f"{relative}: step {expected_id} builds what external testers get: it must run "
+                                    f"`fastlane {platform} beta` with EDITION: app-store")
+        if relative == EXTERNAL_WORKFLOW:
+            on_block = re.search(r"^on:[^\n]*\n((?:[ \t]+[^\n]*\n|\n)*)", text, re.MULTILINE)
+            triggers = re.findall(r"^  (\w+):", on_block.group(1) if on_block else "", re.MULTILINE)
+            if triggers != ["workflow_dispatch"]:
+                problems.append(f"{relative}: must start only by workflow_dispatch from release.yml (on: {triggers})")
+            if not re.search(r"^\s*if:.*github\.actor == 'github-actions\[bot\]'", text, re.MULTILINE):
+                problems.append(f"{relative}: its job must run only when release.yml started it "
+                                "(if: github.actor == 'github-actions[bot]' …)")
+        if re.search(r"\btestflight-external\.yml\b", text) and relative != EXTERNAL_WORKFLOW:
+            dispatch = re.search(r'gh workflow run testflight-external\.yml\b[^\n]*', text)
+            builds = ['-f ios_build="$IOS_BUILD"', '-f mac_build="$MAC_BUILD"',
+                      "IOS_BUILD: ${{ needs.deliver.outputs.ios_app_store_build }}",
+                      "MAC_BUILD: ${{ needs.deliver.outputs.mac_app_store_build }}"]
+            builds += [f"{platform}_app_store_build: ${{{{ steps.{expected_id}.outputs.build }}}}"
+                       for platform, expected_id in EXTERNAL_STEPS.items()]
+            if relative != ".github/workflows/release.yml" or not dispatch or \
+                    any(item not in (dispatch.group(0) if item.startswith("-f") else text) for item in builds):
+                problems.append(f"{relative}: only release.yml starts {EXTERNAL_WORKFLOW}, with the App Store edition "
+                                "builds of its steps ios_app_store and mac_app_store (" + "; ".join(builds) + ")")
+
 def main() -> int:
     problems = []
     check_code(problems)
@@ -571,6 +747,7 @@ def main() -> int:
     check_payments(problems)
     check_local_network(problems)
     check_playlists(problems)
+    check_external_testers(problems)
     for problem in problems:
         print(f"::error::{problem}")
     print(f"App Store edition: {len(problems)} problem(s).")

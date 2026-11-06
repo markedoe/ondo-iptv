@@ -143,7 +143,9 @@ def run_in(status: str, sha: str = "0" * 40, event: str = "workflow_dispatch") -
     return {"headSha": sha, "status": status, "conclusion": "", "event": event, "branch": "main"}
 
 
-TESTFLIGHT = "release.yml --repo owner/ondo-iptv --ref main -f target=builds -f edition=testflight"
+TESTFLIGHT = "release.yml --repo owner/ondo-iptv --ref main -f target=builds -f edition=testflight -f external=true"
+# After a tag's release: the TestFlight edition again, no external testers (the tag submitted the App Store edition).
+TESTFLIGHT_AGAIN = "release.yml --repo owner/ondo-iptv --ref v1.2.0 -f target=builds -f edition=testflight"
 INTERNAL_TESTING = "release-android.yml --repo owner/ondo-iptv --ref main -f track=internal -f status=completed -f listing=skip"
 
 
@@ -273,7 +275,7 @@ class TestFlightEditionAgainTests(WorkflowScriptTestCase):
 
     def test_the_tags_testflight_edition_is_built_again(self):
         output, dispatched = self.start({"release.yml": [run_in("in_progress", event="push")]})
-        self.assertEqual(dispatched, [TESTFLIGHT.replace("--ref main", "--ref v1.2.0")], output)
+        self.assertEqual(dispatched, [TESTFLIGHT_AGAIN], output)
 
     def test_a_waiting_release_is_never_replaced(self):
         # A newer tag's release waits for this one: GitHub would cancel it for the run started here.
@@ -319,6 +321,77 @@ class ReleaseScreenshotsTests(WorkflowScriptTestCase):
         self.assertIn("needs.deliver.result == 'success'", conditions[0])
         self.assertIn("github.ref_type == 'tag'", conditions[0])
         self.assertIn("!cancelled()", conditions[0])
+
+
+
+class ExternalTestersTests(WorkflowScriptTestCase):
+    """release.yml: a push's App Store edition goes to the external testers without holding back the TestFlight edition."""
+
+    def steps(self, job: str = "deliver") -> list:
+        return [line.strip()[len("- name: "):] for line in job_block("release.yml", job) if line.strip().startswith("- name: ")]
+
+    def test_the_app_store_edition_comes_first_so_internal_testers_keep_the_testflight_edition(self):
+        steps = self.steps()
+        checks = steps.index("App Store edition checks (external testers)")
+        for app_store, testflight in (("iOS App Store edition → TestFlight (external testers)", "iOS → TestFlight"),
+                                      ("macOS App Store edition → TestFlight (external testers)", "macOS → TestFlight")):
+            self.assertLess(checks, steps.index(app_store))
+            self.assertLess(steps.index(app_store), steps.index(testflight))
+        block = "\n".join(job_block("release.yml", "deliver"))
+        # The TestFlight edition's number comes after the App Store edition's, which App Store Connect may not list yet.
+        self.assertIn("AFTER_BUILD_NUMBER: ${{ steps.ios_app_store.outputs.build }}", block)
+        self.assertIn("AFTER_BUILD_NUMBER: ${{ steps.mac_app_store.outputs.build }}", block)
+
+    def test_a_failed_external_step_never_stops_the_testflight_edition(self):
+        block = job_block("release.yml", "deliver")
+        for step in ("App Store edition checks (external testers)", "iOS App Store edition → TestFlight (external testers)",
+                     "macOS App Store edition → TestFlight (external testers)"):
+            start = block.index(f"      - name: {step}")
+            end = next(i for i in range(start + 1, len(block)) if block[i].startswith("      - "))
+            self.assertIn("continue-on-error: true", [line.strip() for line in block[start:end]], step)
+
+    def test_a_failed_external_step_turns_the_run_red(self):
+        script = step_script("release.yml", "External testers builds")
+        for checks, ios, mac, fails in (("success", "success", "success", False), ("failure", "skipped", "skipped", True),
+                                        ("success", "failure", "success", True), ("success", "success", "failure", True)):
+            with self.subTest(checks=checks, ios=ios, mac=mac):
+                outcome = subprocess.run(["bash", "-e", "-c", script], capture_output=True, text=True,
+                                         env={**self.environment, "CHECKS": checks, "IOS": ios, "MAC": mac})
+                self.assertEqual(outcome.returncode != 0, fails, outcome.stdout + outcome.stderr)
+
+    def test_a_build_without_what_to_test_turns_the_run_red(self):
+        script = step_script("release.yml", "What to Test")
+        for missing, fails in (("   ", False), (" missing  ", True), ("   missing", True)):
+            with self.subTest(missing=missing):
+                outcome = subprocess.run(["bash", "-e", "-c", script], capture_output=True, text=True,
+                                         env={**self.environment, "MISSING": missing})
+                self.assertEqual(outcome.returncode != 0, fails, outcome.stdout + outcome.stderr)
+        block = "\n".join(job_block("release.yml", "deliver"))
+        for step in ("ios", "mac", "ios_app_store", "mac_app_store"):
+            self.assertIn(f"steps.{step}.outputs.what_to_test", block)
+
+    def test_only_a_push_delivery_goes_to_external_testers(self):
+        block = "\n".join(job_block("release.yml", "deliver"))
+        self.assertIn("EXTERNAL: ${{ github.ref == 'refs/heads/main' && github.event.inputs.external == 'true' && "
+                      "github.event.inputs.target == 'builds' && github.event.inputs.edition == 'testflight' }}", block)
+        self.assertIn("github.ref == 'refs/heads/main'", "\n".join(job_block("release.yml", "external")))
+        # A tag's TestFlight edition again (the tag submitted its App Store edition for App Review) has no external testers.
+        self.assertNotIn("external=true", "\n".join(job_block("release.yml", "testflight")))
+
+    def test_the_builds_go_to_the_external_workflow_outside_the_release_queue(self):
+        self.commit("change", "App/OndoApp.swift")
+        output, dispatched = self.run_script(step_script("release.yml", "Start the external testers distribution"), {},
+                                             IOS_BUILD="51", MAC_BUILD="")
+        self.assertEqual(dispatched, ["testflight-external.yml --repo owner/ondo-iptv --ref main -f ios_build=51 -f mac_build="], output)
+        self.assertIn("needs: deliver", "\n".join(job_block("release.yml", "external")))
+        external = (WORKFLOWS / "testflight-external.yml").read_text(encoding="utf-8")
+        self.assertIn("group: testflight-external", external)
+        self.assertNotIn("release-apple", external)
+        self.assertIn("runs-on: ubuntu-24.04", external)
+        self.assertIn("github.actor == 'github-actions[bot]'", external)
+        steps = [line.strip()[len("- name: "):] for line in job_block("testflight-external.yml", "external")
+                 if line.strip().startswith("- name: ")]
+        self.assertEqual(steps, ["iOS → external testers", "macOS → external testers"])
 
 
 class CorePassedTests(WorkflowScriptTestCase):
