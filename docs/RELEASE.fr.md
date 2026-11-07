@@ -347,7 +347,9 @@ réseau, fichiers choisis par l'utilisateur).
    pourboires sont `READY_TO_SUBMIT`. S'il y en a, et seulement si l'édition App Store vend les pourboires (StoreKit
    dans son build, le test de `check_app_store.py`), deliver envoie la fiche sans soumettre et `asset_library.py
    iap_submit` choisit le build, met la version et la version de chaque pourboire dans une même soumission et la
-   soumet. Sinon (pourboires approuvés, en review, ou édition App Store sans eux) deliver soumet comme avant. Les
+   soumet. Sinon (pourboires approuvés, en review, ou édition App Store sans eux) deliver soumet comme avant. Un
+   pourboire pas prêt (absent, ou sans une de ses parties comme sa capture) arrête la soumission quand le build vend
+   les pourboires : App Review trouverait des pourboires impossibles à acheter. Les
    pourboires partent avec la version iOS ; la version macOS prend ceux qui attendent encore. precheck laisse
    toujours les achats intégrés de côté : il ne peut pas les lire avec une clé d'API App Store Connect. La cible
    `submit` fait de même.

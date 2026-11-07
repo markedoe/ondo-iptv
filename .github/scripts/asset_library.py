@@ -871,17 +871,21 @@ def app_store_edition_sells_tips() -> bool:
     return load_check_app_store().app_store_edition_sells_tips()
 
 
-def pending_tips(client, app: str) -> list:
+NOT_READY = ("missing", "MISSING_METADATA", "WAITING_FOR_UPLOAD", "PROCESSING_CONTENT")
+
+
+def pending_tips(client, app: str, not_ready=None) -> list:
     """The tips ready to go to App Review with a version: READY_TO_SUBMIT, with an editable version (or none yet).
-    Approved ones, and ones App Review already holds, are left out."""
+    Approved ones, and ones App Review already holds, are left out; the ones not ready yet go in not_ready."""
     pending = []
     products = tip_products(client, app)
     for product_id in TIP_PRODUCTS:
         product = products.get(product_id)
         state = product["attributes"].get("state") if product else "missing"
         if state != "READY_TO_SUBMIT":
-            print(f"{product_id}: {state}, not submitted" + (" (run iap_create: it is not ready)" if state in
-                  ("missing", "MISSING_METADATA", "WAITING_FOR_UPLOAD", "PROCESSING_CONTENT") else ""))
+            print(f"{product_id}: {state}, not submitted" + (" (not ready)" if state in NOT_READY else ""))
+            if state in NOT_READY and not_ready is not None:
+                not_ready.append(product_id)
             continue
         versions = client.all(f"/v2/inAppPurchases/{product['id']}/versions")
         if any(item["attributes"].get("state") in ("WAITING_FOR_REVIEW", "IN_REVIEW") for item in versions):
@@ -892,7 +896,9 @@ def pending_tips(client, app: str) -> list:
     return pending
 
 
-def iap_pending(client, platform: str, sells=None):
+def iap_pending(client, platform: str, sells=None, wait=time.sleep):
+    """When the App Store edition sells the tips, a tip not ready stops the submission: the build would offer tips
+    App Review cannot buy (2.1). A screenshot just processed may take a moment to make its tip ready."""
     if platform not in PLATFORMS:
         raise SystemExit(f"Platform: {' or '.join(PLATFORMS)}")
     sells = app_store_edition_sells_tips() if sells is None else sells
@@ -900,7 +906,17 @@ def iap_pending(client, platform: str, sells=None):
         print("The App Store edition has no tips (no StoreKit in its build): no In-App Purchase goes with this version.")
         print("tips to submit: 0")
         return []
-    pending = pending_tips(client, app_id(client))
+    app = app_id(client)
+    for attempt in range(6):
+        not_ready = []
+        pending = pending_tips(client, app, not_ready)
+        if not not_ready:
+            break
+        if attempt < 5:
+            wait(10)
+    else:
+        raise SystemExit(f"The App Store edition sells the tips but {', '.join(not_ready)} is not ready on App Store "
+                         "Connect (run iap_create, check its review screenshot): nothing submitted")
     print(f"tips to submit: {len(pending)}")
     return pending
 
@@ -910,7 +926,7 @@ def iap_submit(client, platform: str, version_string: str, build_number: str, se
     submission: Apple reviews a first In-App Purchase together with an app version."""
     if platform not in PLATFORMS or not version_string or not build_number.isdigit():
         raise SystemExit("Usage: asset_library.py iap_submit IOS|MAC_OS VERSION BUILD_NUMBER")
-    pending = iap_pending(client, platform, sells)
+    pending = iap_pending(client, platform, sells, wait)
     app = app_id(client)
     versions = client.all(f"/v1/apps/{app}/appStoreVersions", query={
         "filter[platform]": platform, "filter[versionString]": version_string, "fields[appStoreVersions]": "versionString,appStoreState,appVersionState"})

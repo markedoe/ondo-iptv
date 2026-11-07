@@ -336,7 +336,9 @@ user-selected files).
    `READY_TO_SUBMIT`. When some are, and only when the App Store edition sells the tips (StoreKit in its build, the
    test of `check_app_store.py`), deliver uploads the listing without submitting and `asset_library.py iap_submit`
    selects the build, puts the version and each tip's version in one review submission and submits it. Otherwise
-   (tips approved, with App Review, or an App Store edition without them) deliver submits as before. The tips go
+   (tips approved, with App Review, or an App Store edition without them) deliver submits as before. A tip not ready
+   (missing, or lacking a part such as its screenshot) stops the submission when the build sells the tips: App
+   Review would find tips it cannot buy. The tips go
    with the iOS version; the macOS version takes those still waiting. precheck still leaves In-App Purchases out:
    it cannot read them with an App Store Connect API key. The `submit` target does the same.
 

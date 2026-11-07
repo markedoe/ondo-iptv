@@ -337,16 +337,29 @@ class AppleSubmitTest(unittest.TestCase):
 
     def test_today_the_app_store_edition_has_no_tips(self):
         # Tips.swift is under #if TESTFLIGHT_DOWNLOADS || DEBUG: a tag submits no In-App Purchase until that changes.
-        self.assertEqual("TESTFLIGHT_DOWNLOADS" in (ROOT / "App/Model/Tips.swift").read_text(encoding="utf-8"),
-                         not asset_library.app_store_edition_sells_tips())
+        gated = re.search(r"^#if TESTFLIGHT_DOWNLOADS", (ROOT / "App/Model/Tips.swift").read_text(encoding="utf-8"), re.M)
+        self.assertEqual(bool(gated), not asset_library.app_store_edition_sells_tips())
 
     def test_only_the_tips_ready_to_submit_are_pending(self):
         fake = right_store()
         fake.products["com.markedoe.ondo.tip.medium"]["attributes"]["state"] = "APPROVED"
         fake.versions["large"] = [{"id": "vlarge", "attributes": {"version": 1, "state": "WAITING_FOR_REVIEW"}}]
-        pending, text = quiet(asset_library.iap_pending, fake, "MAC_OS", sells=True)
+        pending, text = quiet(asset_library.iap_pending, fake, "MAC_OS", sells=True, wait=lambda _: None)
         self.assertEqual(["small"], [product["id"] for product in pending])
         self.assertIn("tips to submit: 1", text)
+        self.assertEqual([], fake.changes)
+
+    def test_a_tip_not_ready_stops_a_build_that_sells_the_tips(self):
+        fake = right_store()
+        fake.products["com.markedoe.ondo.tip.large"]["attributes"]["state"] = "MISSING_METADATA"
+        waits = []
+        with self.assertRaises(SystemExit) as stop:
+            quiet(asset_library.iap_pending, fake, "IOS", sells=True, wait=waits.append)
+        self.assertIn("com.markedoe.ondo.tip.large", str(stop.exception))
+        self.assertEqual(5, len(waits))  # a moment for a screenshot just processed
+        self.assertEqual([], fake.changes)
+        with self.assertRaises(SystemExit):
+            quiet(asset_library.iap_submit, fake, "IOS", "2.0.0", "123", sells=True, wait=lambda _: None)
         self.assertEqual([], fake.changes)
 
     def test_the_version_and_its_tips_go_in_one_submission(self):
