@@ -34,3 +34,6 @@ secrets/
 
 # Android screenshots recorded by the tests (CI publishes them; the release copies them into the listing)
 android/app/src/test/screenshots/
+
+# Claude Code local settings (approved commands saved verbatim, may hold secrets)
+.claude/settings.local.json
