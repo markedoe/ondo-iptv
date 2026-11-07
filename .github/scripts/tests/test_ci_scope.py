@@ -130,7 +130,6 @@ def jobs(*names: str, conclusion: str = "success", **others: str) -> dict:
                     [{"name": name, "conclusion": value} for name, value in others.items()]}
 
 
-RUNS = "repos/o/r/actions/workflows/{}/runs?status=success&per_page=100"
 JOBS = "repos/o/r/actions/runs/{}/jobs?filter=latest&per_page=100"
 CI_JOBS = ci_scope.HEAVY_JOBS["ci"]
 ANDROID_JOBS = ci_scope.HEAVY_JOBS["android"]
@@ -166,6 +165,10 @@ class ShortRunTests(unittest.TestCase):
                 self.assertIn("'long' || 'short'", group)
 
 
+# The night asks GitHub for the runs of main's very commit (s1 in these tests).
+NIGHT = "repos/o/r/actions/workflows/{}/runs?status=success&head_sha=s1&per_page=100"
+
+
 class NightTests(unittest.TestCase):
     """The night's run on main: its long jobs run unless main's commit or tree already passed with them run."""
 
@@ -174,19 +177,25 @@ class NightTests(unittest.TestCase):
                                repository="o/r", run_id=run_id)
 
     def test_main_unchanged_since_a_green_night_skips(self):
-        responses = {RUNS.format("ci.yml"): {"workflow_runs": [run(5, "s1", event="schedule")]},
+        responses = {NIGHT.format("ci.yml"): {"workflow_runs": [run(5, "s1", event="schedule")]},
                      JOBS.format(5): jobs(*CI_JOBS)}
         run_long, why = self.decide("ci", responses)
         self.assertFalse(run_long, why)
         self.assertIn("run 5", why)
 
     def test_the_same_commit_already_passed_by_hand_skips(self):
-        responses = {RUNS.format("ci.yml"): {"workflow_runs": [run(5, "s1", event="workflow_dispatch")]},
+        responses = {NIGHT.format("ci.yml"): {"workflow_runs": [run(5, "s1", event="workflow_dispatch")]},
                      JOBS.format(5): jobs(*CI_JOBS)}
         self.assertFalse(self.decide("ci", responses)[0])
 
-    def test_the_same_tree_already_passed(self):
-        responses = {RUNS.format("android.yml"): {"workflow_runs": [run(6, "other", tree="t1", event="schedule")]},
+    def test_the_same_tree_under_another_commit_runs_again(self):
+        # Production needs a pass on its exact commit: the night gives the commit its own.
+        responses = {NIGHT.format("android.yml"): {"workflow_runs": [run(6, "other", tree="t1", event="schedule")]},
+                     JOBS.format(6): jobs(*ANDROID_JOBS)}
+        self.assertTrue(self.decide("android", responses)[0])
+
+    def test_the_same_commit_on_android(self):
+        responses = {NIGHT.format("android.yml"): {"workflow_runs": [run(6, "s1", event="schedule")]},
                      JOBS.format(6): jobs(*ANDROID_JOBS, **{"Commit the reference screenshots to the branch": "skipped"})}
         self.assertFalse(self.decide("android", responses)[0])
 
@@ -194,32 +203,32 @@ class NightTests(unittest.TestCase):
         # A push runs the short jobs only: its long jobs show as skipped.
         for workflow, file, names in (("ci", "ci.yml", CI_JOBS), ("android", "android.yml", ANDROID_JOBS)):
             with self.subTest(workflow):
-                responses = {RUNS.format(file): {"workflow_runs": [run(5, "s1")]}, JOBS.format(5): jobs(*names, conclusion="skipped")}
+                responses = {NIGHT.format(file): {"workflow_runs": [run(5, "s1")]}, JOBS.format(5): jobs(*names, conclusion="skipped")}
                 self.assertTrue(self.decide(workflow, responses)[0])
 
     def test_a_failed_night_runs_again(self):
         # The listing asks for green runs only; a failed or missing long job does not count either.
         for listed in (jobs(CI_JOBS[0]), jobs(*CI_JOBS, conclusion="failure"), {"jobs": []}):
             with self.subTest(listed=listed):
-                responses = {RUNS.format("ci.yml"): {"workflow_runs": [run(5, "s1", event="schedule")]}, JOBS.format(5): listed}
+                responses = {NIGHT.format("ci.yml"): {"workflow_runs": [run(5, "s1", event="schedule")]}, JOBS.format(5): listed}
                 self.assertTrue(self.decide("ci", responses)[0])
 
     def test_a_run_that_recorded_the_reference_screenshots_does_not_count(self):
-        responses = {RUNS.format("android.yml"): {"workflow_runs": [run(6, "s1", event="workflow_dispatch")]},
+        responses = {NIGHT.format("android.yml"): {"workflow_runs": [run(6, "s1", event="workflow_dispatch")]},
                      JOBS.format(6): jobs(*ANDROID_JOBS, **{"Commit the reference screenshots to the branch": "success"})}
         self.assertTrue(self.decide("android", responses)[0])
 
     def test_a_pull_request_run_does_not_count(self):
         # It tests a merge commit, not the commit it names.
-        responses = {RUNS.format("ci.yml"): {"workflow_runs": [run(5, "s1", event="pull_request")]}}
+        responses = {NIGHT.format("ci.yml"): {"workflow_runs": [run(5, "s1", event="pull_request")]}}
         self.assertTrue(self.decide("ci", responses)[0])
 
     def test_main_changed_runs(self):
-        responses = {RUNS.format("ci.yml"): {"workflow_runs": [run(5, "s0", tree="t0", event="schedule")]}}
+        responses = {NIGHT.format("ci.yml"): {"workflow_runs": [run(5, "s0", tree="t0", event="schedule")]}}
         self.assertTrue(self.decide("ci", responses)[0])
 
     def test_the_run_itself_does_not_count(self):
-        responses = {RUNS.format("ci.yml"): {"workflow_runs": [run(99, "s1", event="schedule")]}}
+        responses = {NIGHT.format("ci.yml"): {"workflow_runs": [run(99, "s1", event="schedule")]}}
         self.assertTrue(self.decide("ci", responses, run_id=99)[0])
 
     def test_unreadable_runs_run_everything(self):

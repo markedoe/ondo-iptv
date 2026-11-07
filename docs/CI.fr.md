@@ -23,8 +23,7 @@ reste un run à la main, hors de la nuit.
   ce run vert, *Deliver* envoie le push sur TestFlight (testeurs internes et externes) et en test interne puis fermé
   sur Google Play, une fois par push. Les jobs longs ne le retiennent pas.
 - **La nuit** (`schedule`, 01:47 UTC : 02:47 à Paris en hiver) lance les jobs longs sur le dernier commit de `main`, sauf
-  si ce commit, ou un commit au même arbre, a déjà réussi le même workflow avec ses jobs longs (une nuit précédente ou
-  un run à la main) : *What to run* les saute alors en quelques secondes. Une nuit en échec ne compte pas : la nuit
+  si ce commit précis a déjà réussi le même workflow avec ses jobs longs (une nuit précédente ou un run à la main) : *What to run* les saute alors en quelques secondes. Une nuit en échec ne compte pas : la nuit
   suivante relance. La nuit publie les branches `ci-screenshots` et `android-screenshots` (un run à la main sur `main`
   aussi).
 - **À la main** (*Run workflow*, ou `gh workflow run ci.yml --ref <branche ou tag>`) : le run complet, jobs courts et
@@ -107,7 +106,8 @@ comptent pas. Quand aucun fichier changé n'est dans la liste, les jobs longs (m
 
 *What to run* cherche un run réussi du même workflow (une nuit ou un run à la main, ou un push, dont les jobs longs sont
 toujours sautés et qui ne compte donc jamais ; jamais une pull request, qui teste un commit de fusion) sur le même
-commit ou sur un commit au même arbre, dont tous les jobs longs ont tourné et réussi et, pour *Android*, qui n'a pas
+commit (pas un autre commit au même arbre : la production exige un succès sur son commit exact), dont tous les jobs
+longs ont tourné et réussi et, pour *Android*, qui n'a pas
 enregistré les captures de référence. S'il en existe un, `main` n'a pas changé et les jobs longs sont sautés ; sinon,
 ou si les runs ne peuvent pas être lus, ils tournent. (Un push sur `main` déjà testé sur sa branche sautait ainsi ses
 jobs lourds : un push ne les lance plus du tout.)

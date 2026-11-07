@@ -15,9 +15,9 @@ only. A push or a pull request never runs the long jobs: the testers' builds lea
 The rule is "when unsure, run everything": any error, a missing main, an empty difference or an unknown path runs
 the long jobs of a night or of a run by hand. They are skipped there in two cases only:
 
-- the night's run (schedule, on main), when main's commit or the same tree already passed the same workflow with its
-  long jobs run (an earlier night or a run by hand; never a pull request, which tests a merge commit): main did not
-  change since;
+- the night's run (schedule, on main), when main's very commit already passed the same workflow with its long jobs
+  run (an earlier night or a run by hand; never a pull request, which tests a merge commit): main did not change
+  since. The commit, not the tree: production needs a pass on its exact commit (`production`);
 - a run started by hand on a working branch whose changes since its merge-base with main touch none of the paths
   the workflow reads (PATHS below, the same ordered patterns as the workflow's push and pull_request filters).
 """
@@ -133,14 +133,14 @@ def decide(workflow: str, event: str, ref: str, sha: str, changed=changed_since_
     if event in ("push", "pull_request"):
         return False, f"{event}: the short jobs only; the long ones run at night on main, or by hand (docs/CI.md)"
     if event == "schedule" and ref == "refs/heads/main":
+        # The exact commit, as production asks: a commit whose tree passed under another commit is tested again.
         try:
-            tree_id = tree() if callable(tree) else tree
-            passed = full_pass(workflow, sha, tree_id, repository, api, run_id)
+            passed = full_pass(workflow, sha, None, repository, api, run_id, exact=True)
         except Exception as error:  # noqa: BLE001 - when unsure, run
             return True, f"earlier runs could not be read ({error})"
         if passed:
-            return False, f"main did not change: run {passed} already passed on this commit or the same tree, long jobs run"
-        return True, "the night's run: no earlier run passed on this commit or the same tree with its long jobs"
+            return False, f"main did not change: run {passed} already passed on this commit, long jobs run"
+        return True, "the night's run: no earlier run passed on this commit with its long jobs"
     return True, f"{event} on {ref}: everything runs"
 
 

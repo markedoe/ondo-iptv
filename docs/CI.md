@@ -22,8 +22,8 @@ emulator) stays a run by hand, outside the night.
   *Deliver* sends the push to TestFlight (internal and external testers) and to Google Play internal then closed
   testing, once per push. The long jobs do not hold it back.
 - **The night** (`schedule`, 01:47 UTC: 02:47 in Paris in winter) runs the long jobs on `main`'s last commit, unless that
-  commit, or a commit with the same tree, already passed the same workflow with its long jobs run (an earlier night or
-  a run by hand): then *What to run* skips them in a few seconds. A night that failed is not a pass: the next night runs
+  very commit already passed the same workflow with its long jobs run (an earlier night or a run by hand): then *What to
+  run* skips them in a few seconds. A night that failed is not a pass: the next night runs
   again. The night publishes the `ci-screenshots` and `android-screenshots` branches (also a run by hand on `main`).
 - **By hand** (*Run workflow*, or `gh workflow run ci.yml --ref <branch or tag>`): the full run, short and long jobs (on a
   working branch, through the path filter below).
@@ -103,9 +103,9 @@ records the Android reference screenshots always runs.
 ### The night, when `main` already passed
 
 *What to run* looks for an earlier successful run of the same workflow (a night or a run by hand, or a push, whose long
-jobs are always skipped and so never count; never a pull request, which tests a merge commit) on the same commit or on
-a commit with the same tree, whose long jobs all ran and passed and, for *Android*, which did not record the reference
-screenshots. When there is one, `main` has not changed and the long jobs are skipped; otherwise, or when the runs cannot
+jobs are always skipped and so never count; never a pull request, which tests a merge commit) on the same commit (not
+another commit with the same tree: production needs a pass on its exact commit), whose long jobs all ran and passed
+and, for *Android*, which did not record the reference screenshots. When there is one, `main` has not changed and the long jobs are skipped; otherwise, or when the runs cannot
 be read, they run. (A push to `main` already tested on its branch used to skip its heavy jobs this way: a push no
 longer runs them at all.)
 
