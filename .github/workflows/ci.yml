@@ -1,12 +1,15 @@
 name: CI
 
-# Apple app and its Swift core: once per commit on main (work branches are pushed to main too), pull requests and on
-# demand (docs/CI.md). The path filter is the ordered list PATHS["ci"] of .github/scripts/ci_scope.py, copied byte for
-# byte (its tests check it): Android-only, documentation-only (but the shared specs docs/SYNC* and docs/PROFILES*),
-# website-only and Google Play listing-only changes skip it; anything else runs it, workflows and scripts included.
-# The leak scan and the neutrality and App Store checks run on every commit (security.yml). A run by hand on a working
-# branch applies the same filter to the branch's changes since main (job "What to run"), and a push to main whose
-# commit or tree already passed with every job run skips the macOS jobs.
+# Apple app and its Swift core (docs/CI.md). The short jobs (lint, configuration checks, Swift core tests on Linux) run
+# once per commit on main (work branches are pushed to main too) and on pull requests: their green run is what Deliver
+# waits for (deliver.yml). The long jobs (the macOS builds and the app tests on a simulator) run at night on main, only
+# when main changed since the last night that passed them, and by hand; App Review gets only a commit they passed on
+# (release.yml, job "Long tests passed on this commit").
+# The path filter is the ordered list PATHS["ci"] of .github/scripts/ci_scope.py, copied byte for byte (its tests check
+# it): Android-only, documentation-only (but the shared specs docs/SYNC* and docs/PROFILES*), website-only and Google
+# Play listing-only changes skip it; anything else runs it, workflows and scripts included. The leak scan and the
+# neutrality and App Store checks run on every commit (security.yml). A run by hand on a working branch applies the same
+# filter to the branch's changes since main (job "What to run").
 on:
   push:
     branches: [main]
@@ -33,10 +36,15 @@ on:
       - 'docs/SYNC*'
       - 'docs/PROFILES*'
       - '!*.md'
+  # The night's run (01:47 UTC: 02:47 in Paris in winter, 03:47 in summer), on main only.
+  schedule:
+    - cron: '47 1 * * *'
   workflow_dispatch:
 
+# The runs with long jobs (night, by hand) in a group of their own: a push never cancels the night's run, and the night
+# never cancels a push's short run, which Deliver waits for.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'long' || 'short' }}
   cancel-in-progress: true
 
 permissions:
@@ -95,7 +103,7 @@ jobs:
     name: What to run
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    # actions: read: the earlier runs of this workflow (a push to main already tested on its branch).
+    # actions: read: the earlier runs of this workflow (a night when main already passed).
     permissions:
       actions: read
       contents: read
@@ -113,8 +121,9 @@ jobs:
         id: scope
         env:
           GH_TOKEN: ${{ github.token }}
-        # When unsure (an error, no main, an unknown path), everything runs. A failure here fails the run: the macOS
-        # jobs are then skipped and the run is red, never green.
+        # A push or a pull request: never the macOS jobs. A night or a run by hand: when unsure (an error, no main, an
+        # unknown path), everything runs. A failure here fails the run: the macOS jobs are then skipped and the run is
+        # red, never green.
         run: python3 -I .github/scripts/ci_scope.py scope ci
 
   build:
@@ -238,8 +247,8 @@ jobs:
             -clonedSourcePackagesDirPath build/spm \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
       - name: Build for iOS Simulator (Release, TestFlight edition)
-        # A push to main goes on to the Release run (deliver.yml), which builds this edition for real.
-        if: (success() || failure()) && github.event_name != 'push'
+        # The night's run tests main, whose pushes the Release run (deliver.yml) already built in this edition for real.
+        if: (success() || failure()) && github.event_name != 'schedule'
         # The release lanes' setting for this edition (fastlane/Fastfile, build_settings_args).
         run: |
           set -o pipefail
@@ -391,7 +400,8 @@ jobs:
     needs: [build, ui-tests]
     # Failed runs too: the screens and the debug/ texts explain a UI test failure. A job of its own, so the
     # write token is never in reach of the build and its dependencies.
-    if: ${{ !cancelled() && github.event_name == 'push' && needs.ui-tests.result != 'skipped' }}
+    # main only: the night's run, or a run by hand on main.
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) && needs.ui-tests.result != 'skipped' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

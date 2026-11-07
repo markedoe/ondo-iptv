@@ -148,7 +148,8 @@ user-selected files).
    than 4000 characters, has test or placeholder words, names another platform, promises a feature to come
    or speaks of downloads.
 2. **The pipeline.** Two events deliver, nothing else is needed:
-   - **A push to `main`.** Once *CI* is green, the *Deliver* workflow starts *Release* with target `builds` and
+   - **A push to `main`.** Once *CI*'s short checks are green (Linux, a few minutes; the long macOS tests run at
+     night, [CI.md](CI.md#short-checks-on-every-push-long-tests-at-night)), the *Deliver* workflow starts *Release* with target `builds` and
      the `testflight` edition and `external` on: for iOS and macOS, first the **App Store edition** (checked as for a
      release: `check_app_store.py`, review playlist, listing addresses), uploaded for the **external testers**, then
      the **TestFlight edition** (internal testers, no review), whose build number comes after it; a job on Linux then
@@ -158,7 +159,12 @@ user-selected files).
      `fastlane/Fastfile`, `Gemfile*`), when a newer push on `main` changes what the app ships (that push's delivery
      sends it), or when the commit carries a version tag.
    - **A version tag: your go for App Review** (CLAUDE.md). The tag must equal `MARKETING_VERSION` in
-     `project.yml` and `versionName` in `android/app/build.gradle.kts` (the run stops otherwise):
+     `project.yml` and `versionName` in `android/app/build.gradle.kts` (the run stops otherwise), and *CI*'s long
+     (macOS) jobs must have passed **on the tagged commit**: the night's run on `main`, or *CI* started by hand on it.
+     Otherwise the first job, *Long tests passed on this commit*, refuses before anything is built, captured or
+     submitted; start *CI* by hand on the tag (`gh workflow run ci.yml --ref v1.1.0`) or wait for the night, then
+     *Re-run all jobs* on the release. The same applies to target `release` with `submit` and to target `submit`
+     (the commit the run is started from):
      ```bash
      git tag v1.1.0 && git push origin v1.1.0
      ```
@@ -180,8 +186,8 @@ user-selected files).
 
    Each run of *Release* (macOS 26, Xcode 26.6 as in CI: `DEVELOPER_DIR` of each macOS job; Xcode 26 is
    required by Apple since April 2026) runs the core tests (a TestFlight edition run skips them when CI already
-   passed, its macOS jobs run, on the same commit or tree, as it has for a push to main; the App Store edition always
-   runs them; [CI.md](CI.md)), then three
+   passed, its macOS jobs run, on the same commit or tree, which a push's run never has: a push's delivery runs them
+   here; the App Store edition always runs them; [CI.md](CI.md)), then three
    checks, any of which stops the run before any build or submission: *Review playlist answers* (App Review
    tests the app with the playlist the review notes give: `check_review_playlist.py --online` fetches it from
    main's site and checks that each of its streams and its guide answer; App Store edition only, every target
@@ -245,8 +251,8 @@ user-selected files).
    - *Release*'s macOS job builds and uploads the App Store edition of iOS then macOS without waiting, each before the
      TestFlight edition of its platform (`AFTER_BUILD_NUMBER`: the TestFlight edition takes the next number, so the
      internal testers' latest build stays the TestFlight edition). A failed check or App Store edition build does not
-     stop the TestFlight edition, and step *External testers builds* turns the run red. The core tests are not run
-     again (CI passed on the commit, and CI builds the App Store edition too). If the TestFlight edition fails after
+     stop the TestFlight edition, and step *External testers builds* turns the run red. The core tests run once in
+     this job, before both editions (a push's *CI* run has the short checks only; its macOS jobs come at night). If the TestFlight edition fails after
      the App Store edition went up, the internal testers' latest build of that platform is the App Store edition one
      (without downloads) until the next delivery; the run is red. Only a run on `main` sends anything to external
      testers (never a tag, never another branch).

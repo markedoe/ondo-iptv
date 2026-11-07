@@ -146,7 +146,8 @@ réseau, fichiers choisis par l'utilisateur).
    l'une manque, est vide ou dépasse 4000 caractères, a un mot de test ou un texte provisoire, nomme une autre
    plateforme, promet une fonction à venir ou parle de téléchargements.
 2. **La chaîne de livraison.** Deux événements livrent, rien d'autre n'est nécessaire :
-   - **Un push sur `main`.** Une fois *CI* au vert, le workflow *Deliver* lance *Release* avec la cible `builds`
+   - **Un push sur `main`.** Une fois les contrôles courts de *CI* au vert (Linux, quelques minutes ; les tests longs
+     sur macOS tournent la nuit, [CI.fr.md](CI.fr.md#contrôles-courts-à-chaque-push-tests-longs-la-nuit)), le workflow *Deliver* lance *Release* avec la cible `builds`
      et l'édition `testflight`, `external` activé : pour iOS et macOS, d'abord **l'édition App Store** (vérifiée comme
      pour une release : `check_app_store.py`, playlist de review, adresses de la fiche), envoyée pour les **testeurs
      externes**, puis **l'édition TestFlight** (testeurs internes, sans review), dont le numéro de build vient après ;
@@ -157,7 +158,11 @@ réseau, fichiers choisis par l'utilisateur).
      embarque (sa propre livraison l'envoie), ou quand le commit porte un tag de version.
    - **Un tag de version : votre go pour la review d'Apple** (CLAUDE.md). Le tag doit être égal à
      `MARKETING_VERSION` de `project.yml` et au `versionName` de `android/app/build.gradle.kts` (sinon le lancement
-     s'arrête) :
+     s'arrête), et les jobs longs (macOS) de *CI* doivent avoir réussi **sur le commit du tag** : le run de la nuit
+     sur `main`, ou *CI* lancé à la main dessus. Sinon le premier job, *Long tests passed on this commit*, refuse avant
+     toute compilation, capture ou soumission ; lancez *CI* à la main sur le tag (`gh workflow run ci.yml --ref
+     v1.1.0`) ou attendez la nuit, puis *Re-run all jobs* sur la release. Il en va de même pour la cible `release`
+     avec `submit` et pour la cible `submit` (le commit depuis lequel le lancement part) :
      ```bash
      git tag v1.1.0 && git push origin v1.1.0
      ```
@@ -180,8 +185,9 @@ réseau, fichiers choisis par l'utilisateur).
 
    Chaque lancement de *Release* (macOS 26, Xcode 26.6 comme la CI : `DEVELOPER_DIR` de chaque job macOS ;
    Xcode 26 est exigé par Apple depuis avril 2026) lance les tests du cœur (un lancement de l'édition TestFlight
-   s'en passe quand la CI a déjà réussi, ses jobs macOS lancés, sur le même commit ou le même arbre, comme pour un
-   push sur main ; l'édition App Store les lance toujours ; [CI.fr.md](CI.fr.md)),
+   s'en passe quand la CI a déjà réussi, ses jobs macOS lancés, sur le même commit ou le même arbre, ce que le run
+   d'un push n'a jamais : la livraison d'un push les lance ici ; l'édition App Store les lance toujours ;
+   [CI.fr.md](CI.fr.md)),
    puis trois vérifications dont chacune arrête le lancement avant toute compilation ou soumission : *Review
    playlist answers* (la review d'Apple teste l'app avec la playlist que donnent les notes :
    `check_review_playlist.py --online` la récupère sur le site de main et vérifie que chacun de ses flux et son
@@ -250,7 +256,8 @@ réseau, fichiers choisis par l'utilisateur).
      l'édition TestFlight de sa plateforme (`AFTER_BUILD_NUMBER` : l'édition TestFlight prend le numéro suivant, donc
      le dernier build des testeurs internes reste l'édition TestFlight). Un contrôle ou un build de l'édition App Store
      en échec n'arrête pas l'édition TestFlight, et l'étape *External testers builds* met le lancement en rouge. Les
-     tests du cœur ne tournent pas à nouveau (CI a réussi sur le commit, et CI construit aussi l'édition App Store).
+     tests du cœur tournent une fois dans ce job, avant les deux éditions (le run *CI* d'un push n'a que les contrôles
+     courts ; ses jobs macOS viennent la nuit).
      Si l'édition TestFlight échoue après l'envoi de l'édition App Store, le dernier build de cette plateforme pour les
      testeurs internes est celui de l'édition App Store (sans téléchargements) jusqu'à la livraison suivante ; le
      lancement est rouge. Seul un lancement sur `main` envoie quoi que ce soit aux testeurs externes (jamais un tag,

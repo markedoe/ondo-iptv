@@ -38,7 +38,9 @@ screenshots.
     internal testing and Google Play closed testing, where Google reviews the release: closed testing receives the
     latest internal build once any review in progress is over, and a push never cancels or restarts a review
     (`.github/workflows/deliver.yml`, `release-android.yml`, `play-catchup.yml`). The user has given a standing go for
-    that: once CI is green, push to `main` without asking first.
+    that: once the short checks are green, push to `main` without asking first; the testers' builds leave after them.
+    The long tests (macOS CI, Android app tests) run at night (`docs/CI.md`): nothing is submitted for App Review or
+    published on Google Play production without a green night (or manual) run of them on that commit.
   - No private API (no class, selector or symbol looked up by name, no method swapping), no code downloaded and run.
   - The Mac sandbox has only the entitlements a feature needs; never `com.apple.security.network.server` (App Review
     refused 1.1.0 for it: a player listens to no one), so the MKV remux and its 127.0.0.1 server are iPhone and iPad only.

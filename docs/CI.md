@@ -5,6 +5,38 @@
 How the GitHub Actions workflows are organized, what decides which jobs run, what they cost and what is left to do.
 Publishing is described in [RELEASE.md](RELEASE.md) (Apple) and [RELEASE-ANDROID.md](RELEASE-ANDROID.md) (Google Play).
 
+## Short checks on every push, long tests at night
+
+Each of *CI* and *Android* has **short jobs**, which run in every run, and **long jobs**, which run at night and by hand
+only:
+
+| | Short: every push to `main` and pull request (and every other run) | Long: at night on `main`, and by hand |
+|---|---|---|
+| *CI* | *Lint + IPTVCore tests (Linux)*: SwiftLint, the configuration checks and their tests, the Swift core tests on Linux (about 2 min) | *Build iOS + macOS (Debug, App Store edition)* and *App tests — unit + UI (iPhone simulator)*, both on macOS (about 20 min of wall clock, 38 job-minutes) |
+| *Android* | *Core (Kotlin) tests* (about 2 min), *App — lint, debug APK, release bundle* (lint, the debug APK and the release bundle shrunk by R8: about 6 min), *Google Play listing limits* | *App — unit, Compose and screenshot tests*: the app's unit and Compose tests with Robolectric and the Roborazzi screenshots compared with the references (about 14 min) |
+
+(Durations: the measurements below, 4 November 2026.) *TV release check* (the release build on an Android TV
+emulator) stays a run by hand, outside the night.
+
+- **The testers' builds leave after the short jobs.** A push to `main` runs the short jobs only; once that run is green,
+  *Deliver* sends the push to TestFlight (internal and external testers) and to Google Play internal then closed
+  testing, once per push. The long jobs do not hold it back.
+- **The night** (`schedule`, 01:47 UTC: 02:47 in Paris in winter) runs the long jobs on `main`'s last commit, unless that
+  commit, or a commit with the same tree, already passed the same workflow with its long jobs run (an earlier night or
+  a run by hand): then *What to run* skips them in a few seconds. A night that failed is not a pass: the next night runs
+  again. The night publishes the `ci-screenshots` and `android-screenshots` branches (also a run by hand on `main`).
+- **By hand** (*Run workflow*, or `gh workflow run ci.yml --ref <branch or tag>`): the full run, short and long jobs (on a
+  working branch, through the path filter below).
+- **Production needs the long jobs on its commit.** A submission for App Review (a `v*` tag, *Release* target `release`
+  with `submit`, target `submit`) and Google Play production (*Release Android* track `production`) refuse to go on
+  unless a run of the platform's workflow passed **on that very commit** with its long jobs run: the night's, or a run
+  by hand (`ci_scope.py production`). Otherwise the run stops at once with an error that says to wait for the night or
+  start the workflow by hand on the commit, then run the release again. When the runs cannot be read, it refuses too.
+  For a tag pushed during the day: `gh workflow run ci.yml --ref v1.2.0` (and `android.yml` for production), then
+  *Re-run all jobs* on the tag's release once it is green.
+- The two kinds of runs never cancel each other: a push's run and a night's or by-hand run are in different concurrency
+  groups (`…-short`, `…-long`), and *Deliver* keeps one queue per source and event.
+
 ## The rule: when unsure, run everything
 
 A job is skipped only when it is certain that it would test nothing new. Any doubt runs it: an unknown path, a
@@ -18,11 +50,11 @@ skipped by *What to run*; but a push or a pull request that *CI*'s path filter l
 
 | Workflow | When | Jobs (runner) | What it checks or does |
 |---|---|---|---|
-| *CI* (`ci.yml`) | push to `main` and pull requests through its path filter; by hand | *What to run* (Linux), *Lint + IPTVCore tests* (Linux), *Build iOS + macOS (Debug, App Store edition)* (macOS), *App tests — unit + UI* (macOS), *Publish screenshots* (Linux, pushes only) | SwiftLint, configuration checks, Swift core tests on Linux and macOS, the macOS debug build and its launch, the Release builds of the App Store edition (iOS and macOS) and, except on pushes, of the TestFlight edition (iOS), the app's unit and UI tests on an iPhone simulator |
-| *Android* (`android.yml`) | push to `main` and pull requests through its path filter; by hand (*record_screenshots*) | *What to run*, *Core (Kotlin) tests*, *App — lint, tests, screenshots, bundle*, *Google Play listing limits*, publishing jobs (all Linux) | Kotlin core tests, Robolectric and Compose tests, Roborazzi screenshots compared with the references, lint, debug APK and release bundle, listing lengths |
+| *CI* (`ci.yml`) | push to `main` and pull requests through its path filter (short jobs); every night on `main` and by hand (long jobs too) | *What to run* (Linux), *Lint + IPTVCore tests* (Linux), *Build iOS + macOS (Debug, App Store edition)* (macOS, long), *App tests — unit + UI* (macOS, long), *Publish screenshots* (Linux, the night and runs by hand on `main`) | SwiftLint, configuration checks, Swift core tests on Linux and (long) macOS, the macOS debug build and its launch, the Release builds of the App Store edition (iOS and macOS) and, except at night, of the TestFlight edition (iOS), the app's unit and UI tests on an iPhone simulator |
+| *Android* (`android.yml`) | push to `main` and pull requests through its path filter (short jobs); every night on `main` and by hand, *record_screenshots* (long job too) | *What to run*, *Core (Kotlin) tests*, *App — lint, debug APK, release bundle*, *Google Play listing limits*, *App — unit, Compose and screenshot tests* (long), publishing jobs (all Linux) | Kotlin core tests, lint, debug APK and release bundle, listing lengths; (long) Robolectric and Compose tests, Roborazzi screenshots compared with the references |
 | *Security* (`security.yml`) | every push to `main`, every pull request, by hand | two Linux jobs | leak guard and gitleaks on every commit of every branch; neutrality, App Store edition and review playlist checks |
-| *Deliver* (`deliver.yml`) | after a green *CI* or *Android* run of a push to `main` | Linux | starts *Release* (TestFlight: the TestFlight edition for internal testers, the App Store edition for external testers) or *Release Android* (internal testing) when what the app ships changed |
-| *Release* (`release.yml`) | `v*` tag; by hand | *App Store screenshots* (called, macOS), *TestFlight / App Store Connect* (macOS), *TestFlight edition again* (Linux), *External testers* (Linux: starts *TestFlight external*) | see RELEASE.md |
+| *Deliver* (`deliver.yml`) | after a green *CI* or *Android* run of a push to `main` (short jobs) | Linux | starts *Release* (TestFlight: the TestFlight edition for internal testers, the App Store edition for external testers) or *Release Android* (internal testing) when what the app ships changed |
+| *Release* (`release.yml`) | `v*` tag; by hand | *Long tests passed on this commit* (Linux: a submission for App Review needs *CI*'s long jobs passed on the commit), *App Store screenshots* (called, macOS), *TestFlight / App Store Connect* (macOS), *TestFlight edition again* (Linux), *External testers* (Linux: starts *TestFlight external*) | see RELEASE.md |
 | *TestFlight external* (`testflight-external.yml`) | started by *Release* only, on `main` | Linux, its own queue | waits for App Store Connect's processing and sends the App Store edition builds to the external testers through Beta App Review |
 | *TestFlight status* (`testflight-status.yml`) | by hand | Linux | read only: TestFlight groups, tester counts and iOS builds on Apple silicon Macs (on or off), whether a macOS version is on the Mac App Store, Test Information per language, Beta App Review contact (set or missing), latest builds with their edition, states and What to Test |
 | *App Store screenshots* (`appstore-screenshots.yml`) | called by *Release*; by hand | one macOS job per device (iPhone, iPad, Mac), *Publish* (Linux) | captures the listing screenshots in English and French and publishes them on the `appstore-screenshots` branch; the iPhone job also captures the review screenshot of the tips (artifact `iap-review-screenshot`, kept off the branch) |
@@ -65,31 +97,34 @@ they differ.
 GitHub applies no path filter to a run started by hand (`gh workflow run ci.yml --ref <branch>`). The first job,
 *What to run*, applies the same list to every file the branch changed since its merge-base with `main` (`git diff
 --no-renames`, so a file moved out of `App/` counts too); merges of `main` into the branch do not count. When no
-changed file is in the list, the heavy jobs (macOS for *CI*, Kotlin and app for *Android*) are skipped. A run that
+changed file is in the list, the long jobs (macOS for *CI*, the app tests for *Android*) are skipped. A run that
 records the Android reference screenshots always runs.
 
-### A push to `main` that already passed on its branch
+### The night, when `main` already passed
 
-A branch tested by hand and then pushed to `main` used to be tested twice. *What to run* now looks for an earlier
-successful run of the same workflow (a push to `main` or a run by hand; never a pull request, which tests a merge commit)
-on the same commit or on a commit with the same tree, whose heavy jobs all ran and passed and, for *Android*, which did
-not record the reference screenshots. When there is one, the heavy jobs are skipped; otherwise, or when the runs cannot
-be read, everything runs.
+*What to run* looks for an earlier successful run of the same workflow (a night or a run by hand, or a push, whose long
+jobs are always skipped and so never count; never a pull request, which tests a merge commit) on the same commit or on
+a commit with the same tree, whose long jobs all ran and passed and, for *Android*, which did not record the reference
+screenshots. When there is one, `main` has not changed and the long jobs are skipped; otherwise, or when the runs cannot
+be read, they run. (A push to `main` already tested on its branch used to skip its heavy jobs this way: a push no
+longer runs them at all.)
 
 ### What a skipped job means
 
 A job skipped by its `if:` shows as *skipped*; GitHub counts it as passing for required checks and the run concludes
-*success*, so *Deliver* still starts. That is right for a push to `main` whose tree already passed. A run by hand on a
-branch never reaches *Deliver* (it reacts to pushes to `main` only). *Release* skips its core tests for a TestFlight
-build only when a run of *CI* on that commit or tree had its macOS jobs run and passed (`ci_scope.py passed ci`): a run
-that skipped them does not count. If *What to run* itself fails, the heavy jobs are skipped and the run is red, never
-green.
+*success*, so *Deliver* still starts after a push's run, whose long jobs are skipped: that is the rule (the testers'
+builds wait for the short jobs). A night's run or a run by hand never reaches *Deliver* (it reacts to pushes to `main`
+only). A skipped long job never proves a commit: *Release* skips its core tests for a TestFlight build only when a run
+of *CI* on that commit or tree had its macOS jobs run and passed (`ci_scope.py passed ci`), which a push's run never
+has, so a push's TestFlight build runs them on its macOS runner; and the production gates (`ci_scope.py production`)
+count only a run whose long jobs passed on the very commit. If *What to run* itself fails, the long jobs are skipped and
+the run is red, never green.
 
 ### Dry run
 
 The only change on a working branch, and what a run by hand starts (`test_ci_scope.py` runs these cases):
 
-| Change | *CI* macOS jobs | *Android* Kotlin and app jobs |
+| Change | *CI* macOS jobs | *Android* app tests (long job) |
 |---|---|---|
 | `android/…` only | skipped | run |
 | `App/…` or `Packages/…` only | run | skipped |
@@ -113,15 +148,16 @@ submit nothing, go on with the screenshots already on the `appstore-screenshots`
 hand to look at the screenshots before a release.
 
 What is lost: a capture test broken at run time shows at release time instead of on the push (the test is compiled by
-*CI* on every run, not run); the branch no longer shows the interface of every push (`ci-screenshots` does, from the
-app's UI tests).
+*CI* on every run, not run); the branch no longer shows the interface of every push (`ci-screenshots` shows `main`'s
+after each night, from the app's UI tests).
 
 ## macOS runners
 
 The account can run a limited number of macOS jobs at once (5 on GitHub's Free plan: check the account's plan). A *CI*
-run takes two macOS jobs (three before this change), *App Store screenshots* three, *Release* one. Hence the working
-rule: **at most two branches run *CI* at a time**, which leaves one macOS runner for *Release* or the screenshots.
-GitHub itself starts a job within seconds while a runner is free; the long waits come from that rule.
+run with its long jobs takes two macOS jobs (three before this change), *App Store screenshots* three, *Release* one; a
+push's *CI* run takes none. Hence the working rule: **at most two branches run *CI* by hand at a time**, which leaves one
+macOS runner for *Release* or the screenshots. GitHub itself starts a job within seconds while a runner is free; the
+long waits come from that rule.
 
 ## Measurements (4 November 2026, before this change)
 
@@ -164,6 +200,7 @@ same for its steps.
 | A push to `main` skips its heavy jobs when its commit or tree already passed with them run | 3 of 8 pushes to `main` were tested twice | about 43 macOS job-minutes per such push |
 | *App Store screenshots* at release time, one job per device | about 75 macOS job-minutes a day, and runners taken from *CI* | most of it; about 40 job-minutes per release |
 | `apple` merged into the build job | a *CI* run takes two macOS runners instead of three | about 2 min of setup per run; two branches fit beside a release |
+| Long jobs (*CI*'s macOS jobs, *Android*'s app tests) at night and by hand only; production gated on them | the testers' builds waited about 20 min for them on every push | about 38 macOS job-minutes per push; the deliveries leave after about 6 min |
 
 ## Not done yet, ready to pick up
 
@@ -178,8 +215,9 @@ same for its steps.
 
 - **Caching DerivedData**: the checkout gives every file a new date, so Xcode builds again anyway; the Swift package
   checkouts are already cached (restored in 0.3–0.4 min).
-- **Building the App Store edition only on `main` and tags**: a break only that edition shows would reach `main` and
-  stop the TestFlight deliveries; it is the build App Review sees (CLAUDE.md).
+- **Building the App Store edition only on `main` and tags**: it is the build App Review sees (CLAUDE.md). Since the long
+  jobs moved to the night, a break only that edition shows reaches `main` and shows in the push's *Release* run (it
+  builds the App Store edition for the external testers) and in the night's run, which then blocks the submission.
 - **Changing the Gradle caches**: they already hit; the build cache serves what did not change.
 - **Self-hosted Linux runners as a priority**: Linux minutes are free for a public repository and Linux is not the
   bottleneck; their gain is a warm Gradle cache. When they come, only our own launches use them and no publishing

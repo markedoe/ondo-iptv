@@ -443,5 +443,106 @@ class CorePassedTests(WorkflowScriptTestCase):
         self.assertEqual(output_file.read_text(encoding="utf-8"), "")
 
 
+class ProductionGateTests(WorkflowScriptTestCase):
+    """release.yml and release-android.yml: App Review and Google Play production get only a commit whose long jobs
+    (at night or by hand) passed on it; the testers' builds leave after the short checks."""
+
+    GATES = {"ci": ("release.yml", "CI's macOS jobs passed on this commit"),
+             "android": ("release-android.yml", "Long tests passed on this commit")}
+
+    def gate(self, workflow: str, runs: list, jobs: dict) -> tuple[int, str]:
+        scripts = self.repository / ".github/scripts"
+        scripts.mkdir(parents=True, exist_ok=True)
+        shutil.copy(WORKFLOWS.parent / "scripts/ci_scope.py", scripts / "ci_scope.py")
+        sha = self.commits.get("change") or self.commit("change", "App/OndoApp.swift")
+        file = ci_scope_file(workflow)
+        responses = {f"repos/owner/ondo-iptv/actions/workflows/{file}/runs?status=success&head_sha={sha}&per_page=100":
+                     {"workflow_runs": [dict(run, head_sha=run["head_sha"] or sha) for run in runs]},
+                     "repos/owner/ondo-iptv/actions/runs/7/jobs?filter=latest&per_page=100": jobs}
+        (self.root / "api.json").write_text(json.dumps(responses), encoding="utf-8")
+        (self.root / "step.sh").write_text(step_script(*self.GATES[workflow]), encoding="utf-8")
+        result = subprocess.run(["bash", "-e", str(self.root / "step.sh")], cwd=self.repository,
+                                env={**self.environment, "GITHUB_SHA": sha}, capture_output=True, text=True)
+        return result.returncode, result.stdout + result.stderr
+
+    def test_only_a_long_run_on_this_very_commit_lets_it_through(self):
+        long_jobs = {"ci": ["Build iOS + macOS (Debug, App Store edition)", "App tests — unit + UI (iPhone simulator)"],
+                     "android": ["App — unit, Compose and screenshot tests"]}
+
+        def night(event: str = "schedule", head: str = "") -> dict:
+            return {"id": 7, "head_sha": head, "head_commit": {"tree_id": "0" * 40}, "event": event, "conclusion": "success"}
+
+        def jobs(workflow: str, conclusion: str) -> dict:
+            return {"jobs": [{"name": name, "conclusion": conclusion} for name in long_jobs[workflow]]}
+
+        for workflow in self.GATES:
+            cases = {"the night's run": ([night()], "success", 0), "a run by hand": ([night("workflow_dispatch")], "success", 0),
+                     "a push's run, long jobs skipped": ([night("push")], "skipped", 1),
+                     "the night failed": ([night()], "failure", 1),
+                     "another commit": ([night(head="1" * 40)], "success", 1), "no run": ([], "success", 1)}
+            for name, (runs, conclusion, expected) in cases.items():
+                with self.subTest(workflow=workflow, case=name):
+                    code, output = self.gate(workflow, runs, jobs(workflow, conclusion))
+                    self.assertEqual(code, expected, output)
+                    if expected:
+                        self.assertIn("at night", output)
+
+    def test_unreadable_runs_refuse(self):
+        for workflow, (file, step) in self.GATES.items():
+            with self.subTest(workflow):
+                scripts = self.repository / ".github/scripts"
+                scripts.mkdir(parents=True, exist_ok=True)
+                shutil.copy(WORKFLOWS.parent / "scripts/ci_scope.py", scripts / "ci_scope.py")
+                sha = self.commits.get("change") or self.commit("change", "App/OndoApp.swift")
+                (self.root / "api.json").write_text("{}", encoding="utf-8")
+                (self.root / "step.sh").write_text(step_script(file, step), encoding="utf-8")
+                result = subprocess.run(["bash", "-e", str(self.root / "step.sh")], cwd=self.repository,
+                                        env={**self.environment, "GITHUB_SHA": sha}, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_every_submission_goes_through_the_gate_before_any_macos_job(self):
+        gate = "\n".join(job_block("release.yml", "gate"))
+        submission = ("github.event_name == 'push' || github.event.inputs.target == 'submit' || "
+                      "(github.event.inputs.target == 'release' && github.event.inputs.submit == 'true')")
+        self.assertIn("runs-on: ubuntu-24.04", gate)
+        self.assertIn(f"if: {submission}", gate)
+        self.assertIn("needs: gate", "\n".join(job_block("release.yml", "screenshots")))
+        deliver = "\n".join(job_block("release.yml", "deliver"))
+        self.assertIn("needs: [gate, screenshots]", deliver)
+        self.assertIn("needs.gate.result == 'success'", deliver)
+        # The steps that submit run only in the deliver job: the gate covers each of them.
+        for workflow in WORKFLOWS.glob("*.yml"):
+            if workflow.name == "release.yml":
+                continue
+            with self.subTest(workflow.name):
+                text = workflow.read_text(encoding="utf-8")
+                self.assertNotIn("fastlane ios release", text)
+                self.assertNotIn("fastlane ios submit", text)
+
+    def test_google_play_production_goes_through_the_gate(self):
+        steps = [line.strip()[len("- name: "):] for line in job_block("release-android.yml", "deliver")
+                 if line.strip().startswith("- name: ")]
+        block = job_block("release-android.yml", "deliver")
+        start = next(i for i, line in enumerate(block) if line.strip() == "- name: Long tests passed on this commit")
+        condition = next(line.strip() for line in block[start + 1:] if line.strip().startswith("if:"))
+        self.assertEqual(condition, "if: env.TRACK == 'production'")
+        # Before the secrets, the build and the upload.
+        self.assertLess(steps.index("Long tests passed on this commit"), steps.index("Check secrets"))
+        self.assertIn("actions: read", "\n".join(block))
+        # Promote Android offers no production track: production comes from Release Android alone.
+        promote = (WORKFLOWS / "promote-android.yml").read_text(encoding="utf-8")
+        self.assertIn("options: [alpha, beta]", promote)
+
+    def test_deliver_waits_for_the_pushs_run_only(self):
+        # The push's run has the short jobs; the night's or a by-hand run never delivers, nor replaces a push's decision.
+        text = (WORKFLOWS / "deliver.yml").read_text(encoding="utf-8")
+        self.assertIn("github.event.workflow_run.event == 'push'", text)
+        self.assertIn("group: deliver-${{ github.event.workflow_run.name }}-${{ github.event.workflow_run.event }}", text)
+
+
+def ci_scope_file(workflow: str) -> str:
+    return {"ci": "ci.yml", "android": "android.yml"}[workflow]
+
+
 if __name__ == "__main__":
     unittest.main()
