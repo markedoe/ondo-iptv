@@ -611,7 +611,7 @@ class PlayTest(unittest.TestCase):
         self.assertIn("options: [status, create]", workflow)
         self.assertIn('python3 -I .github/scripts/play_tips.py "$ACTION"', workflow)
         assets = (ROOT / ".github/workflows/app-store-assets.yml").read_text(encoding="utf-8")
-        self.assertIn("iap_create]", assets)
+        self.assertIn("iap_create,", assets)
 
 
 if __name__ == "__main__":
