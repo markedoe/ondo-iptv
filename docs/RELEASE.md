@@ -327,8 +327,9 @@ user-selected files).
    an error, never a nearby price; the other territories follow Apple's equalization), all territories and the new
    ones, and the review screenshot `fastlane/creative/iap-review.png` when it exists (or the file given:
    `asset_library.py iap_create path/to.png`). It is idempotent: what is already right is left alone, nothing is
-   deleted (a different review screenshot already there is kept: delete it in App Store Connect to replace it),
-   nothing is submitted. A tip App Review holds is not touched.
+   deleted (a different, finished review screenshot already there is kept: delete it in App Store Connect to
+   replace it; a half-uploaded or refused one is replaced), nothing is submitted. The `iap` report shows for each
+   tip version whether Apple holds a review image on the version itself (API 4.4.1): check it after the first run. A tip App Review holds is not touched.
 
    **Submitting the tips**: Apple reviews a first In-App Purchase together with an app version. A tag's release
    uploads the review screenshot its screenshots job captured (artifact `iap-review-screenshot`, `en-US` file) to
@@ -337,8 +338,11 @@ user-selected files).
    test of `check_app_store.py`), deliver uploads the listing without submitting and `asset_library.py iap_submit`
    selects the build, puts the version and each tip's version in one review submission and submits it. Otherwise
    (tips approved, with App Review, or an App Store edition without them) deliver submits as before. A tip not ready
-   (missing, or lacking a part such as its screenshot) stops the submission when the build sells the tips: App
-   Review would find tips it cannot buy. The tips go
+   (missing, or lacking a part such as its screenshot, rejected, needing action, removed from sale) stops the
+   submission when the build sells the tips: App Review would find tips it cannot buy. That check runs before the
+   withdrawal of a waiting submission too, so a release never cancels one and then refuses. Everything is checked
+   before `iap_submit` writes anything; a draft submission left by an interrupted run is completed on the next one
+   when it holds only this version and its tips, never when it holds anything else. The tips go
    with the iOS version; the macOS version takes those still waiting. precheck still leaves In-App Purchases out:
    it cannot read them with an App Store Connect API key. The `submit` target does the same.
 

@@ -439,6 +439,7 @@ end
 ASSET_LIBRARY = File.expand_path("../.github/scripts/asset_library.py", __dir__)
 API_PLATFORMS = { "ios" => "IOS", "osx" => "MAC_OS" }.freeze
 
+# Fails (asset_library.py ends on an error) when the App Store edition sells the tips and one is not ready.
 def tips_to_submit?(platform)
   output = sh("python3", "-I", ASSET_LIBRARY, "iap_pending", API_PLATFORMS.fetch(platform))
   output[/^tips to submit: (\d+)$/, 1].to_i.positive?
@@ -488,6 +489,9 @@ def release_for_review(platform, screenshots)
   build = ENV.fetch("BUILD_NUMBER", "").strip
   UI.user_error!("BUILD_NUMBER must be the App Store edition build uploaded by this run") unless build.match?(/\A\d+\z/)
   submit = ENV["SUBMIT"] == "true"
+  # Before the withdrawal too: a tip that is not ready stops the release here, so a live submission is never
+  # cancelled for a release that would then refuse to submit.
+  tips_to_submit?(platform) if submit
   withdraw_from_review(platform) if submit
   # After the withdrawal: tips it took back out of App Review are waiting again.
   tips = submit && tips_to_submit?(platform)

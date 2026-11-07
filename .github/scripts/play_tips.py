@@ -6,9 +6,10 @@ Usage, with the service account of the GitHub secret PLAY_SERVICE_ACCOUNT_JSON (
                         whether it is as fastlane/tips.json wants it. Changes nothing.
   play_tips.py create   creates or completes the three tips (tip_small, tip_medium, tip_large: android .../Tips.kt)
                         with the one-time products API (monetization.onetimeproducts): one purchase option "buy",
-                        a listing in every Play listing language, the price in euros (1.99, 4.99, 9.99) in every euro
-                        region, the other regions converted by Play (monetization.convertRegionPrices) and the new
-                        regions too, then activates the purchase option. Idempotent: a tip already right is left
+                        a listing in every Play listing language, the price in euros (1.99, 4.99, 9.99, tax included)
+                        in every euro region, the other regions converted by Play (monetization.convertRegionPrices,
+                        from the French price without VAT, as Apple equalizes from its FRA base) and the new regions
+                        too, then activates the purchase option. Idempotent: a tip already right is left
                         alone; nothing is deleted (other purchase options and listings are kept as they are).
 
 The output follows play_status.py's rules for a public log: no address, no long number, no Google error message (an
@@ -20,7 +21,7 @@ import os
 import sys
 import urllib.error
 import urllib.parse
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -80,10 +81,19 @@ def wanted_listings(catalog: dict, size: str) -> list:
     return listings
 
 
+# French VAT: the chosen prices are what a buyer in France pays, tax included (as App Store Connect's FRA base).
+FRANCE_VAT = Decimal("0.20")
+
+
+def price_without_tax(eur: str) -> str:
+    """The French price without VAT, to the cent: what convertRegionPrices takes (a price without tax)."""
+    return str((Decimal(eur) / (1 + FRANCE_VAT)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
 def regional_configs(converted: dict, eur: str) -> list:
-    """Every region Play converted the price to. Play converts from a price without tax and answers with tax: the
-    euro regions get exactly the price chosen (what the buyer pays, as on the App Store), the others Play's
-    conversion."""
+    """Every region Play converted the price to. Play converts from the French price without VAT and answers with
+    each region's tax included, so the other regions follow that price as Apple's equalization follows its FRA base;
+    the euro regions get exactly the price chosen (what the buyer pays, as on the App Store)."""
     configs = []
     for region, item in sorted((converted.get("convertedRegionPrices") or {}).items()):
         price = item.get("price") or {}
@@ -93,15 +103,19 @@ def regional_configs(converted: dict, eur: str) -> list:
     return configs
 
 
-def purchase_option(converted: dict, eur: str) -> dict:
+def purchase_option(converted: dict, eur: str, existing=None) -> dict:
+    """Our "buy" option: the existing one (fields set in Play Console kept, such as its tax and compliance settings
+    or offer tags) with only our fields laid over it."""
     other = converted.get("convertedOtherRegionsPrice") or {}
-    return {
+    option = without_output_fields(existing or {})
+    option.update({
         "purchaseOptionId": OPTION,
         # The app reads the product's single offer (oneTimePurchaseOfferDetails): the legacy compatible one.
-        "buyOption": {"legacyCompatible": True},
+        "buyOption": {**(option.get("buyOption") or {}), "legacyCompatible": True},
         "regionalPricingAndAvailabilityConfigs": regional_configs(converted, eur),
         "newRegionsConfig": {"usdPrice": other.get("usdPrice"), "eurPrice": other.get("eurPrice"), "availability": "AVAILABLE"},
-    }
+    })
+    return option
 
 
 def without_output_fields(option: dict) -> dict:
@@ -114,7 +128,8 @@ def product_body(catalog: dict, size: str, converted: dict, existing=None) -> di
     tip = catalog["tips"][size]
     listings = wanted_listings(catalog, size)
     ours = {listing["languageCode"] for listing in listings}
-    options = [purchase_option(converted, tip["eur"])]
+    current = next((option for option in (existing or {}).get("purchaseOptions", []) if option.get("purchaseOptionId") == OPTION), None)
+    options = [purchase_option(converted, tip["eur"], current)]
     if existing:
         listings += [listing for listing in existing.get("listings", []) if listing.get("languageCode") not in ours]
         options += [without_output_fields(option) for option in existing.get("purchaseOptions", [])
@@ -181,7 +196,7 @@ def create(client, report, catalog=None) -> int:
             report.add(f"{product_id}: to do: {', '.join(found)}")
             if not only_inactive(found):
                 converted = client.call("POST", f"{PUBLISHER}{PACKAGE}/pricing:convertRegionPrices",
-                                        body={"price": to_money(tip["eur"], "EUR")})
+                                        body={"price": to_money(price_without_tax(tip["eur"]), "EUR")})
                 version = (converted.get("regionVersion") or {}).get("version")
                 if not version:
                     raise SystemExit(f"{product_id}: Play gave no regions version with its converted prices")

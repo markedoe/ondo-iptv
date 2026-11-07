@@ -110,6 +110,7 @@ class FakeConnect:
         self.availabilities = availabilities or {}
         self.screenshots = screenshots or {}
         self.submissions = submissions or []
+        self.items = {}
         self.app_version_state = "READY_FOR_REVIEW"
         self.changes = []
         self.bodies = []
@@ -131,9 +132,10 @@ class FakeConnect:
                 return {"data": {"id": f"availability-{ident}", "attributes": {"availableInNewTerritories": availability[0]}}
                         if availability else None}
             if part == "appStoreReviewScreenshot":
-                checksum = self.screenshots.get(ident)
-                return {"data": {"id": "shot", "attributes": {"sourceFileChecksum": checksum, "assetDeliveryState": {"state": "COMPLETE"}}}
-                        if checksum else None}
+                shot = self.screenshots.get(ident)
+                checksum, state = shot if isinstance(shot, tuple) else (shot, "COMPLETE")
+                return {"data": {"id": f"old-{ident}", "attributes": {"sourceFileChecksum": checksum, "assetDeliveryState": {"state": state}}}
+                        if shot else None}
         match = re.fullmatch(r"/v2/inAppPurchases/(\w+)", path)
         if match:
             return {"data": {"id": match.group(1), "attributes": {"state": "READY_TO_SUBMIT"}}}
@@ -178,8 +180,11 @@ class FakeConnect:
             return [{"id": "build", "attributes": {"version": "123", "usesNonExemptEncryption": False}}]
         if path == "/v1/reviewSubmissions":
             return self.submissions
-        if path.endswith("/items"):
-            return []
+        match = re.fullmatch(r"/v1/reviewSubmissions/(\w+)/items", path)
+        if match:
+            return [{"id": f"item-{ident}", "relationships": {"reviewSubmission": {"data": {"id": match.group(1)}},
+                                                              kind: {"data": {"type": kind + "s", "id": ident}}}}
+                    for kind, ident in self.items.get(match.group(1), [])]
         raise AssertionError(f"all {path}")
 
     @staticmethod
@@ -320,6 +325,18 @@ class AppleCreateTest(unittest.TestCase):
         # Outside the checkout: never among the listing's screenshots (fastlane/screenshots).
         self.assertIn("path: ${{ runner.temp }}/iap-review", workflow)
 
+    def test_a_half_uploaded_screenshot_is_replaced_and_a_finished_one_kept(self):
+        self.screenshot.write_bytes(b"\x89PNG new")
+        fake = right_store()
+        fake.screenshots = {"small": (None, "AWAITING_UPLOAD"), "medium": ("other", "FAILED"), "large": ("other", "COMPLETE")}
+        _, text = quiet(asset_library.iap_create, fake, self.screenshot)
+        self.assertEqual([("DELETE", "/v1/inAppPurchaseAppStoreReviewScreenshots/old-small"),
+                          ("POST", "/v1/inAppPurchaseAppStoreReviewScreenshots"), ("PATCH", "/v1/inAppPurchaseAppStoreReviewScreenshots/shot"),
+                          ("DELETE", "/v1/inAppPurchaseAppStoreReviewScreenshots/old-medium"),
+                          ("POST", "/v1/inAppPurchaseAppStoreReviewScreenshots"), ("PATCH", "/v1/inAppPurchaseAppStoreReviewScreenshots/shot")],
+                         fake.changes)
+        self.assertIn("delete the review screenshot of com.markedoe.ondo.tip.large in App Store Connect", text)
+
     def test_a_tip_with_app_review_is_left_alone(self):
         fake = right_store()
         fake.products["com.markedoe.ondo.tip.small"]["attributes"].update(state="IN_REVIEW", reviewNote="old")
@@ -374,16 +391,76 @@ class AppleSubmitTest(unittest.TestCase):
         self.assertEqual({"submitted": True}, fake.bodies[-1]["data"]["attributes"])
         self.assertEqual({"platform": "IOS"}, fake.bodies[1]["data"]["attributes"])
 
-    def test_nothing_is_submitted_while_a_submission_is_in_progress(self):
+    def submit(self, fake):
+        return quiet(asset_library.iap_submit, fake, "IOS", "2.0.0", "123", sells=True, wait=lambda _: None)
+
+    def test_nothing_is_written_while_a_submission_is_in_progress(self):
         fake = right_store()
         fake.submissions = [{"id": "s", "attributes": {"state": "WAITING_FOR_REVIEW"}}]
         with self.assertRaises(SystemExit):
-            quiet(asset_library.iap_submit, fake, "IOS", "2.0.0", "123", sells=True, wait=lambda _: None)
-        self.assertEqual([("PATCH", "/v1/appStoreVersions/asv/relationships/build")], fake.changes)
+            self.submit(fake)
+        self.assertEqual([], fake.changes)
+
+    def test_a_tip_without_a_version_to_submit_stops_before_any_write(self):
+        # No draft is left behind: it would block every later tag (deliver refuses a draft it did not make).
+        fake = right_store()
+        fake.versions["large"] = [{"id": "vlarge", "attributes": {"version": 1, "state": "ACCEPTED"}}]
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(fake)
+        self.assertIn("com.markedoe.ondo.tip.large", str(stop.exception))
+        self.assertEqual([], fake.changes)
+
+    def test_a_tip_with_no_version_yet_gets_one_after_every_check(self):
+        fake = right_store()
+        fake.versions["large"] = []
+        self.submit(fake)
+        self.assertEqual(("POST", "/v1/inAppPurchaseVersions"), fake.changes[0])
+        self.assertEqual("new-large", fake.bodies[-2]["data"]["relationships"]["inAppPurchaseVersion"]["data"]["id"])
+
+    def test_a_draft_left_by_an_interrupted_run_is_completed(self):
+        fake = right_store()
+        fake.submissions = [{"id": "draft", "attributes": {"state": "READY_FOR_REVIEW"}}]
+        fake.items["draft"] = [("appStoreVersion", "asv"), ("inAppPurchaseVersion", "vsmall")]
+        _, text = self.submit(fake)
+        self.assertEqual([("PATCH", "/v1/appStoreVersions/asv/relationships/build")]
+                         + [("POST", "/v1/reviewSubmissionItems")] * 2 + [("PATCH", "/v1/reviewSubmissions/draft")], fake.changes)
+        added = [body["data"]["relationships"]["inAppPurchaseVersion"]["data"]["id"] for body in fake.bodies[1:3]]
+        self.assertEqual(["vmedium", "vlarge"], added)
+        self.assertEqual({"type": "reviewSubmissions", "id": "draft"}, fake.bodies[1]["data"]["relationships"]["reviewSubmission"]["data"])
+        self.assertIn("already in the review submission", text)
+        self.assertFalse([change for change in fake.changes if change[0] == "DELETE"])
+
+    def test_a_draft_holding_anything_else_is_never_used(self):
+        fake = right_store()
+        fake.submissions = [{"id": "draft", "attributes": {"state": "READY_FOR_REVIEW"}}]
+        fake.items["draft"] = [("appStoreVersion", "asv"), ("appEvent", "event")]
+        with self.assertRaises(SystemExit):
+            self.submit(fake)
+        self.assertEqual([], fake.changes)
+
+    def test_a_tip_rejected_or_needing_action_stops_a_build_that_sells_the_tips(self):
+        for state in ("DEVELOPER_ACTION_NEEDED", "REJECTED", "DEVELOPER_REMOVED_FROM_SALE", "MISSING_METADATA"):
+            fake = right_store()
+            fake.products["com.markedoe.ondo.tip.medium"]["attributes"]["state"] = state
+            with self.assertRaises(SystemExit, msg=state):
+                quiet(asset_library.iap_pending, fake, "IOS", sells=True, wait=lambda _: None)
+            self.assertEqual([], fake.changes)
+        for state in ("APPROVED", "WAITING_FOR_REVIEW", "IN_REVIEW", "PENDING_BINARY_APPROVAL"):
+            fake = right_store()
+            fake.products["com.markedoe.ondo.tip.medium"]["attributes"]["state"] = state
+            pending, _ = quiet(asset_library.iap_pending, fake, "IOS", sells=True, wait=lambda _: None)
+            self.assertEqual(["small", "large"], [product["id"] for product in pending], state)
+
+    def test_the_settled_states_are_apples(self):
+        spec_states = {"MISSING_METADATA", "WAITING_FOR_UPLOAD", "PROCESSING_CONTENT", "READY_TO_SUBMIT", "WAITING_FOR_REVIEW",
+                       "IN_REVIEW", "DEVELOPER_ACTION_NEEDED", "PENDING_BINARY_APPROVAL", "APPROVED",
+                       "DEVELOPER_REMOVED_FROM_SALE", "REMOVED_FROM_SALE", "REJECTED"}  # InAppPurchaseState, API 4.6
+        self.assertLessEqual(asset_library.SETTLED, spec_states)
 
     def test_the_tag_lanes_add_the_tips_only_when_they_wait(self):
         fastfile = (ROOT / "fastlane/Fastfile").read_text(encoding="utf-8")
         release = fastfile[fastfile.index("def release_for_review"):fastfile.index("def withdraw_from_review")]
+        self.assertLess(release.index("tips_to_submit?(platform) if submit"), release.index("withdraw_from_review(platform) if submit"))
         self.assertLess(release.index("withdraw_from_review(platform) if submit"), release.index("tips = submit && tips_to_submit?(platform)"))
         self.assertIn("submit_for_review: submit && !tips", release)
         self.assertIn("submit_with_tips(platform, build) if tips", release)
@@ -465,7 +542,9 @@ class PlayTest(unittest.TestCase):
         _, path, params, body = writes[1]
         self.assertEqual("onetimeproducts/tip_small", path)
         self.assertEqual({"allowMissing": "true", "regionsVersion.version": "2025/03", "updateMask": "listings,purchaseOptions"}, params)
-        self.assertEqual({"currencyCode": "EUR", "units": "1", "nanos": 990000000}, writes[0][3]["price"])
+        # Play converts from a price without tax: the French 1.99 without its 20 % VAT.
+        self.assertEqual({"currencyCode": "EUR", "units": "1", "nanos": 660000000}, writes[0][3]["price"])
+        self.assertEqual(["1.66", "4.16", "8.33"], [play_tips.price_without_tax(CATALOG["tips"][size]["eur"]) for size in SIZES])
         option = body["purchaseOptions"][0]
         self.assertEqual("buy", option["purchaseOptionId"])
         self.assertEqual({"legacyCompatible": True}, option["buyOption"])
@@ -500,6 +579,20 @@ class PlayTest(unittest.TestCase):
         body = play_tips.product_body(CATALOG, "small", converted(), existing)
         self.assertIn("de-DE", [listing["languageCode"] for listing in body["listings"]])
         self.assertEqual([{"purchaseOptionId": "other", "buyOption": {}}], body["purchaseOptions"][1:])
+
+    def test_an_update_keeps_what_play_console_set_on_the_buy_option(self):
+        existing = right_play()["tip_small"]
+        option = existing["purchaseOptions"][0]
+        option["taxAndComplianceSettings"] = {"withdrawalRightType": "WITHDRAWAL_RIGHT_SERVICE"}
+        option["offerTags"] = [{"tag": "thanks"}]
+        option["buyOption"]["multiQuantityEnabled"] = True
+        body = play_tips.product_body(CATALOG, "small", converted(), existing)
+        ours = body["purchaseOptions"][0]
+        self.assertEqual({"withdrawalRightType": "WITHDRAWAL_RIGHT_SERVICE"}, ours["taxAndComplianceSettings"])
+        self.assertEqual([{"tag": "thanks"}], ours["offerTags"])
+        self.assertEqual({"legacyCompatible": True, "multiQuantityEnabled": True}, ours["buyOption"])
+        self.assertNotIn("state", ours)
+        self.assertEqual(1, [option["purchaseOptionId"] for option in body["purchaseOptions"]].count("buy"))
 
     def test_a_missing_payments_profile_is_named_and_googles_words_stay_out(self):
         refusal = play_tips.play.ApiError(403, "PERMISSION_DENIED", (), "Project 123456789: the developer has no merchant account")

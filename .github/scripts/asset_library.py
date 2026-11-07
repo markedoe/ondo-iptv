@@ -409,7 +409,8 @@ def iap_product(reader: Reader, product: dict):
         image = reader.attempt("version image", lambda: reader.get(f"/v1/inAppPurchaseVersions/{version['id']}/image"))
         parts = [f"{len(localizations)} localization(s) {', '.join(sorted(item['attributes'].get('locale', '?') for item in localizations))}"
                  if localizations is not None else "localizations unknown",
-                 "image unknown" if image is None else f"image {'yes' if image.get('data') else 'no'}"]
+                 "review image on the version unknown" if image is None else
+                 f"review image on the version (API 4.4.1) {'yes' if image.get('data') else 'NO'}"]
         print(f"  version {version['attributes'].get('version')}: {version['attributes'].get('state')}, {', '.join(parts)}")
     if attributes.get("state") == "READY_TO_SUBMIT":
         print("  ready: submitted with the next version (a version tag), when the App Store edition sells the tips")
@@ -790,11 +791,18 @@ def ensure_review_screenshot(client, product: dict, path: Path = REVIEW_SCREENSH
                .get("data"))
     if current:
         attributes = current.get("attributes", {})
-        if attributes.get("sourceFileChecksum") == checksum:
-            print(f"  review screenshot: already there ({(attributes.get('assetDeliveryState') or {}).get('state', '?')})")
+        state = (attributes.get("assetDeliveryState") or {}).get("state")
+        if state in ("AWAITING_UPLOAD", "FAILED") or (not attributes.get("sourceFileChecksum") and state != "COMPLETE"):
+            # Half uploaded or refused: App Review cannot use it, and only it stands in the way of a new one.
+            client.call("DELETE", f"/v1/inAppPurchaseAppStoreReviewScreenshots/{current['id']}")
+            print(f"  review screenshot: an unfinished one ({state or 'no state'}) removed, uploading again")
+        elif attributes.get("sourceFileChecksum") == checksum:
+            print(f"  review screenshot: already there ({state or '?'})")
+            return
         else:
-            print("  review screenshot: another one is there, left as it is (delete it in App Store Connect to replace it)")
-        return
+            print(f"  review screenshot: another one is there ({state or '?'}), left as it is: to replace it, delete the "
+                  f"review screenshot of {product['attributes'].get('productId')} in App Store Connect, then run this again")
+            return
     reserved = client.call("POST", "/v1/inAppPurchaseAppStoreReviewScreenshots", {"data": {
         "type": "inAppPurchaseAppStoreReviewScreenshots", "attributes": {"fileName": path.name, "fileSize": len(content)},
         "relationships": {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": product["id"]}}}}})["data"]
@@ -871,20 +879,25 @@ def app_store_edition_sells_tips() -> bool:
     return load_check_app_store().app_store_edition_sells_tips()
 
 
-NOT_READY = ("missing", "MISSING_METADATA", "WAITING_FOR_UPLOAD", "PROCESSING_CONTENT")
+# Tip states that need nothing from a version submission: approved, or with App Review already.
+SETTLED = {"APPROVED", "WAITING_FOR_REVIEW", "IN_REVIEW", "PENDING_BINARY_APPROVAL"}
 
 
 def pending_tips(client, app: str, not_ready=None) -> list:
-    """The tips ready to go to App Review with a version: READY_TO_SUBMIT, with an editable version (or none yet).
-    Approved ones, and ones App Review already holds, are left out; the ones not ready yet go in not_ready."""
+    """The tips to put in a version's submission: READY_TO_SUBMIT. Approved ones and ones App Review holds need
+    nothing. Any other state (missing, MISSING_METADATA, DEVELOPER_ACTION_NEEDED, REJECTED, removed from sale…)
+    goes in not_ready: a build that sells the tips must not go to App Review with one of them."""
     pending = []
     products = tip_products(client, app)
     for product_id in TIP_PRODUCTS:
         product = products.get(product_id)
         state = product["attributes"].get("state") if product else "missing"
+        if state in SETTLED:
+            print(f"{product_id}: {state}, nothing to submit")
+            continue
         if state != "READY_TO_SUBMIT":
-            print(f"{product_id}: {state}, not submitted" + (" (not ready)" if state in NOT_READY else ""))
-            if state in NOT_READY and not_ready is not None:
+            print(f"{product_id}: {state}, not ready")
+            if not_ready is not None:
                 not_ready.append(product_id)
             continue
         versions = client.all(f"/v2/inAppPurchases/{product['id']}/versions")
@@ -916,14 +929,27 @@ def iap_pending(client, platform: str, sells=None, wait=time.sleep):
             wait(10)
     else:
         raise SystemExit(f"The App Store edition sells the tips but {', '.join(not_ready)} is not ready on App Store "
-                         "Connect (run iap_create, check its review screenshot): nothing submitted")
+                         "Connect (see its state above; run iap_create, check its review screenshot): nothing submitted")
     print(f"tips to submit: {len(pending)}")
     return pending
 
 
+def draft_items(client, submission: str) -> list:
+    """The items of a review submission, each as (kind, id) of what it submits."""
+    found = []
+    for item in client.all(f"/v1/reviewSubmissions/{submission}/items", query={"include": "appStoreVersion,inAppPurchaseVersion"}):
+        relationships = item.get("relationships", {})
+        linked = [(key, (relationships[key].get("data") or {}).get("id")) for key in relationships
+                  if key != "reviewSubmission" and (relationships[key] or {}).get("data")]
+        found.append(linked[0] if len(linked) == 1 else ("unknown", item.get("id")))
+    return found
+
+
 def iap_submit(client, platform: str, version_string: str, build_number: str, sells=None, wait=time.sleep):
     """deliver's submission (fastlane deliver/submit_for_review.rb) with the pending tips added to the same review
-    submission: Apple reviews a first In-App Purchase together with an app version."""
+    submission: Apple reviews a first In-App Purchase together with an app version. Everything is read and checked
+    before the first write; a draft left by an interrupted run that holds only this version and these tips is
+    completed, never one holding anything else."""
     if platform not in PLATFORMS or not version_string or not build_number.isdigit():
         raise SystemExit("Usage: asset_library.py iap_submit IOS|MAC_OS VERSION BUILD_NUMBER")
     pending = iap_pending(client, platform, sells, wait)
@@ -942,33 +968,51 @@ def iap_submit(client, platform: str, version_string: str, build_number: str, se
     build = builds[0]
     if build["attributes"].get("usesNonExemptEncryption") is None:
         raise SystemExit(f"Build {build_number}: export compliance not answered (ITSAppUsesNonExemptEncryption), nothing submitted")
-    client.call("PATCH", f"/v1/appStoreVersions/{version['id']}/relationships/build", {"data": {"type": "builds", "id": build["id"]}})
-    print(f"{platform} {version_string}: build {build_number} selected")
+    # Each tip's version to submit: an editable one, or none at all yet (created below). Anything else stops here.
+    tip_versions = {}
+    for product in pending:
+        found = editable_iap_version(client, product, create=False)
+        if found is None and client.all(f"/v2/inAppPurchases/{product['id']}/versions"):
+            raise SystemExit(f"{product['attributes'].get('productId')}: no editable version to submit, nothing submitted")
+        tip_versions[product["id"]] = found
     submissions = client.all("/v1/reviewSubmissions", query={"filter[app]": app, "filter[platform]": platform,
                                                             "fields[reviewSubmissions]": "state,platform", "limit": "20"})
     if any(item["attributes"].get("state") in SUBMISSION_IN_REVIEW for item in submissions):
         raise SystemExit(f"A {platform} review submission is already in progress: nothing submitted")
+    ours = {("appStoreVersion", version["id"])} | {("inAppPurchaseVersion", found["id"]) for found in tip_versions.values() if found}
     drafts = [item for item in submissions if item["attributes"].get("state") == "READY_FOR_REVIEW"]
-    for draft in drafts:
-        if client.all(f"/v1/reviewSubmissions/{draft['id']}/items"):
-            raise SystemExit(f"A {platform} review submission draft already holds items: remove them in App Store Connect first")
-    submission = drafts[0] if drafts else client.call("POST", "/v1/reviewSubmissions", {"data": {
+    held_by = {}
+    for candidate in drafts:
+        held_by[candidate["id"]] = set(draft_items(client, candidate["id"]))
+        if not held_by[candidate["id"]] <= ours:
+            raise SystemExit(f"A {platform} review submission draft holds other items than this version and its tips: "
+                             "remove them in App Store Connect first, nothing submitted")
+    draft = drafts[0] if drafts else None
+    held = held_by[draft["id"]] if draft else set()
+    # Writes from here on.
+    for product in pending:
+        if tip_versions[product["id"]] is None:
+            tip_versions[product["id"]] = editable_iap_version(client, product)
+    client.call("PATCH", f"/v1/appStoreVersions/{version['id']}/relationships/build", {"data": {"type": "builds", "id": build["id"]}})
+    print(f"{platform} {version_string}: build {build_number} selected")
+    submission = draft or client.call("POST", "/v1/reviewSubmissions", {"data": {
         "type": "reviewSubmissions", "attributes": {"platform": platform},
         "relationships": {"app": {"data": {"type": "apps", "id": app}}}}})["data"]
+    if draft:
+        print(f"{platform}: the draft review submission of an earlier run is completed")
 
-    def item(relationship: str, kind: str, ident: str):
+    def item(relationship: str, kind: str, ident: str, label: str):
+        if (relationship, ident) in held:
+            print(f"{label}: already in the review submission")
+            return
         client.call("POST", "/v1/reviewSubmissionItems", {"data": {"type": "reviewSubmissionItems", "relationships": {
             "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
             relationship: {"data": {"type": kind, "id": ident}}}}})
+        print(f"{label}: added to the review submission")
 
-    item("appStoreVersion", "appStoreVersions", version["id"])
-    print(f"{platform} {version_string}: added to the review submission")
+    item("appStoreVersion", "appStoreVersions", version["id"], f"{platform} {version_string}")
     for product in pending:
-        iap_version = editable_iap_version(client, product)
-        if iap_version is None:
-            raise SystemExit(f"{product['attributes'].get('productId')}: no version to submit")
-        item("inAppPurchaseVersion", "inAppPurchaseVersions", iap_version["id"])
-        print(f"{product['attributes'].get('productId')}: added to the review submission")
+        item("inAppPurchaseVersion", "inAppPurchaseVersions", tip_versions[product["id"]]["id"], product["attributes"].get("productId"))
     # As deliver does: the version must be READY_FOR_REVIEW before the submission is sent.
     for _ in range(10):
         state = client.call("GET", f"/v1/appStoreVersions/{version['id']}",

@@ -249,7 +249,7 @@ class InAppPurchaseReportTest(unittest.TestCase):
         self.assertNotIn("1.42", text)  # proceeds stay out of the log
         self.assertIn("availability: 3 territories, new territories yes", text)
         self.assertIn("review screenshot: present, COMPLETE", text)
-        self.assertIn("version 1: PREPARE_FOR_SUBMISSION, 2 localization(s) en-US, fr-FR, image no", text)
+        self.assertIn("version 1: PREPARE_FOR_SUBMISSION, 2 localization(s) en-US, fr-FR, review image on the version (API 4.4.1) NO", text)
         self.assertIn("review note no", text)
         self.assertIn("no localization", text)
         self.assertIn("price schedule: NOT SET", text)

@@ -338,7 +338,10 @@ réseau, fichiers choisis par l'utilisateur).
    territoires suivent l'égalisation d'Apple), tous les territoires et les nouveaux, et la capture pour la review
    `fastlane/creative/iap-review.png` quand elle existe (ou le fichier donné : `asset_library.py iap_create
    chemin/vers.png`). Il est idempotent : ce qui est déjà juste n'est pas touché, rien n'est supprimé (une autre
-   capture déjà présente est gardée : supprimez-la dans App Store Connect pour la remplacer), rien n'est soumis. Un
+   capture terminée déjà présente est gardée : supprimez-la dans App Store Connect pour la remplacer ; une capture
+   à moitié envoyée ou refusée est remplacée), rien n'est soumis. Le rapport `iap` montre pour chaque version de
+   pourboire si Apple tient une image pour la review sur la version elle-même (API 4.4.1) : vérifiez-le après la
+   première exécution. Un
    pourboire en cours de review n'est pas modifié.
 
    **Soumettre les pourboires** : Apple examine un premier achat intégré avec une version de l'app. La publication
@@ -348,8 +351,12 @@ réseau, fichiers choisis par l'utilisateur).
    dans son build, le test de `check_app_store.py`), deliver envoie la fiche sans soumettre et `asset_library.py
    iap_submit` choisit le build, met la version et la version de chaque pourboire dans une même soumission et la
    soumet. Sinon (pourboires approuvés, en review, ou édition App Store sans eux) deliver soumet comme avant. Un
-   pourboire pas prêt (absent, ou sans une de ses parties comme sa capture) arrête la soumission quand le build vend
-   les pourboires : App Review trouverait des pourboires impossibles à acheter. Les
+   pourboire pas prêt (absent, ou sans une de ses parties comme sa capture, refusé, en attente d'une action, retiré de
+   la vente) arrête la soumission quand le build vend les pourboires : App Review trouverait des pourboires
+   impossibles à acheter. Cette vérification a lieu aussi avant le retrait d'une soumission en attente : une
+   publication n'en annule jamais une pour refuser ensuite. Tout est vérifié avant que `iap_submit` écrive quoi que
+   ce soit ; un brouillon de soumission laissé par une exécution interrompue est complété à la suivante s'il ne
+   contient que cette version et ses pourboires, jamais s'il contient autre chose. Les
    pourboires partent avec la version iOS ; la version macOS prend ceux qui attendent encore. precheck laisse
    toujours les achats intégrés de côté : il ne peut pas les lire avec une clé d'API App Store Connect. La cible
    `submit` fait de même.
