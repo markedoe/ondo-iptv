@@ -14,6 +14,8 @@ enum UITestFixture {
     /// `-uitest-languages`: two movie categories per language tag (|EN|, |FR|, |DE|, |PT|: a tag counts from two), so Home suggests
     /// keeping only the viewer's.
     static let hasLanguages = ProcessInfo.processInfo.arguments.contains("-uitest-languages")
+    /// `-uitest-tips`: Settings sells the tips at fixed prices, without the App Store (`FixtureTipStore`).
+    static let sellsTips = ProcessInfo.processInfo.arguments.contains("-uitest-tips")
 
     private static let hls = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"
     private static let hlsAdvanced = "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8"

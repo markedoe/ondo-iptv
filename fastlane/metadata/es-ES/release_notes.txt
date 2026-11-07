@@ -1,7 +1,10 @@
-• Un nuevo aspecto en negro y gris, siempre oscuro: los títulos destacados en un marco redondeado en Inicio, tarjetas que se elevan bajo el puntero, el foco o una pulsación, el formato en una insignia con contorno.
-• Con tu token de TMDb: la página de un título muestra las fotos del reparto en una fila y el tráiler cuando tu proveedor no ofrece ninguno, la valoración del proveedor y la de TMDb lado a lado con el número de votos, y las respuestas de TMDb se guardan en tu dispositivo, así que las páginas se abren al instante la próxima vez.
-• Inicio destaca los últimos estrenos: las películas recién estrenadas y las series con un nuevo episodio o temporada, primero las mejor valoradas con tu token de TMDb.
-• Sincronizar en esta red también transmite tu token de TMDb a tus otros dispositivos.
-• Las categorías marcadas QC se llaman Quebec, en los siete idiomas de la app.
-• Las listas de reproducción guardadas en Windows-1252 o UTF-16 se leen tal como se escribieron; las guías de TV con fallos habituales ya no detienen la carga, y las guías grandes usan menos memoria.
-• Numerosas correcciones y mejoras de velocidad.
+• Perfiles: «¿Quién está viendo?», PIN y perfiles Infantil
+• Ajustes → Orden de las filas; Todas las películas y Todas las series
+• Una tarjeta por película; sus versiones (4K, DV, VOSTFR) en su página
+• Títulos limpios
+• Marcada como vista en los créditos finales o a 10 minutos del final
+• Carrusel de Inicio: los estrenos, según los votos de TMDb
+• Los idiomas ocultos se aplican en todas partes
+• Sincronización entre dispositivos más fiable
+• Dejar una propina (Ajustes): tres propinas opcionales a través de App Store. No desbloquean nada: todo Ondo sigue disponible para todos.
+• Muchas correcciones

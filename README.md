@@ -134,6 +134,7 @@ interface changes.
   (main profile only; two Apple devices sync through an Android one). Local addresses only
   ([docs/SYNC.md](docs/SYNC.md)).
 - **Help** in the app (Settings, and Help, Ondo Help on the Mac): one page per feature, in every language.
+- **Leave a tip** (Settings): three optional tips through the App Store, which unlock nothing ([docs/TIPS.md](docs/TIPS.md)).
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi.
 
 ### Android (phones, tablets and TV)
@@ -182,6 +183,7 @@ interface changes.
 - **Categories**: hidden by language or country code (`|PT|`, `FR:`…), by style or word (manga, Bollywood…) or one
   by one, like on Apple.
 - **Help** in Settings.
+- **Leave a tip** (Settings): three optional tips through Google Play, which unlock nothing ([docs/TIPS.md](docs/TIPS.md)).
 - **Awards** on movie and series pages and an "Award winners" row in Movies and in Series, from the same bundled data, updated once a
   week unless turned off in Settings.
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin
@@ -340,8 +342,8 @@ Some defects only show up in real conditions, where tests on simulated data cann
 - **Scripts** (`.github/scripts/check_*.py`, runnable locally): texts translated into every language, a privacy
   manifest covering the APIs used by the shipped code, Mac sandbox entitlements, the same awards data in both
   apps, repository neutrality (no other IPTV app named, IPTV never called free, fictional channels in tests),
-  and the App Store edition: no download code or dormant feature, no private API, never "beta", a listing and
-  review notes App Review accepts (also checked on every change and before each release).
+  and the App Store edition: no download code or dormant feature, no private API, never "beta", the tips in every
+  edition, a listing and review notes App Review accepts (also checked on every change and before each release).
 - **Release builds of the App Store edition** (iOS and macOS, in the job *Build iOS + macOS (Debug, App Store
   edition)*, beside the macOS debug build and its launch): the `#if DEBUG` code and the TestFlight edition's downloads
   (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) are left out, as in the build that is submitted.

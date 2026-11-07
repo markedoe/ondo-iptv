@@ -1,6 +1,3 @@
-// The tips are in the TestFlight edition only until their In-App Purchases are approved on App Store Connect: the
-// App Store edition leaves them out of its build (CLAUDE.md, App Store), never switched off at run time.
-#if TESTFLIGHT_DOWNLOADS || DEBUG
 import Foundation
 import Observation
 import StoreKit
@@ -157,5 +154,36 @@ struct AppStoreTipStore: TipStore {
             await transaction.finish()
         }
     }
+}
+
+extension AppModel {
+    /// The App Store; in a Debug build launched with `-uitest-tips`, the fixed prices of the UI tests and of the
+    /// review screenshot of the tips (UITests/AppStoreScreenshots.swift).
+    nonisolated static var tipStore: any TipStore {
+        #if DEBUG
+        if UITestFixture.sellsTips { return FixtureTipStore() }
+        #endif
+        return AppStoreTipStore()
+    }
+}
+
+#if DEBUG
+/// The tips at their App Store prices (€1.99, €4.99, €9.99, written for the viewer's locale), without the App Store:
+/// a purchase is thanked at once.
+struct FixtureTipStore: TipStore {
+    /// In euro cents.
+    static let prices: [Tip: Int] = [.small: 199, .medium: 499, .large: 999]
+
+    func offers(for tips: [Tip]) async -> [TipOffer] {
+        tips.compactMap { tip in
+            Self.prices[tip].map { cents in
+                TipOffer(tip: tip, price: (Decimal(cents) / 100).formatted(.currency(code: "EUR")))
+            }
+        }
+    }
+
+    func purchase(_ tip: Tip) async -> TipResult { .purchased }
+
+    func settleTransactions(_ settled: @escaping @Sendable (TipResult) async -> Void) async {}
 }
 #endif

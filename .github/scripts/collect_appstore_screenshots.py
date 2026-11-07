@@ -5,7 +5,10 @@ are taken in landscape but XCTest stores them in the device's portrait pixel ori
 turned upright with `sips`. Mac window captures are scaled (and padded if needed) to the largest size
 the App Store accepts (2880×1800, 2560×1600, 1440×900 or 1280×800). Every PNG then loses its metadata
 (png_metadata.py): the capture's orientation tag would have the App Store, GitHub and browsers turn an
-upright iPad screen sideways again."""
+upright iPad screen sideways again.
+
+Captures named `iap-review-…` (the review screenshot of the In-App Purchases) never go with the listing: they are
+copied to `<review target>/<locale>/` when a fifth argument gives that folder, and left out otherwise."""
 import json
 import pathlib
 import re
@@ -39,6 +42,7 @@ def fit_mac(path):
 
 source, target, locale, device = sys.argv[1:5]
 source, target = pathlib.Path(source), pathlib.Path(target) / locale
+review = pathlib.Path(sys.argv[5]) / locale if len(sys.argv) > 5 else None
 target.mkdir(parents=True, exist_ok=True)
 manifest = json.loads((source / "manifest.json").read_text())
 def print_crash(path):
@@ -83,7 +87,14 @@ for test in manifest:
             (target / "failures").mkdir(exist_ok=True)
             shutil.copy(source / exported, target / "failures" / f"{failures}-{device}{pathlib.Path(exported).suffix.lower()}")
             continue
-        out = target / f"{name}-{device}{pathlib.Path(exported).suffix.lower()}"
+        folder = target
+        if name.startswith("iap-review"):
+            # Not a listing screenshot: deliver would upload it with the others.
+            if review is None:
+                continue
+            review.mkdir(parents=True, exist_ok=True)
+            folder = review
+        out = folder / f"{name}-{device}{pathlib.Path(exported).suffix.lower()}"
         shutil.copy(source / exported, out)
         if device == "mac" and out.suffix == ".png":
             fit_mac(out)

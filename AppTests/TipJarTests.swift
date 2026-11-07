@@ -94,6 +94,25 @@ final class TipJarTests: XCTestCase {
         XCTAssertNil(Tip.with(productID: "com.example.other"))
     }
 
+    /// The app sells through the App Store unless a UI test asks for the fixed prices (`-uitest-tips`).
+    func testTheAppSellsThroughTheAppStore() {
+        XCTAssertFalse(UITestFixture.sellsTips)
+        XCTAssertTrue(AppModel.tipStore is AppStoreTipStore)
+    }
+
+    /// The review screenshot of the tips shows the three tips at their App Store prices, in order.
+    func testTheScreenshotStoreSellsTheThreeTipsAtTheirPrices() async {
+        let jar = TipJar(store: FixtureTipStore())
+        await jar.load()
+        XCTAssertEqual(jar.offers?.map(\.tip), Tip.allCases)
+        let prices = jar.offers?.map(\.price) ?? []
+        for (price, amount) in zip(prices, ["1", "4", "9"]) {
+            XCTAssertTrue(price.contains(amount) && price.contains("99") && price.contains("€"), price)
+        }
+        await jar.buy(.small)
+        XCTAssertEqual(jar.outcome, .thanks)
+    }
+
     func testEveryTipTextIsTranslated() throws {
         let keys = ["Leave a tip", "Small tip", "Medium tip", "Large tip", "Thank you for your tip!", "The tip didn’t go through."]
         for language in ["fr", "es", "pt", "zh-Hans", "ar", "hi"] {

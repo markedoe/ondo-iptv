@@ -8,6 +8,11 @@ le monde. Chaque achat est terminé (App Store) ou consommé (Google Play) dès 
 redonné et il n'y a rien à restaurer. Tant que les produits ci-dessous n'existent pas, les Réglages disent que les
 pourboires ne peuvent pas être chargés.
 
+Les pourboires sont dans toutes les éditions : l'édition App Store (iPhone, iPad et Mac) comme l'édition TestFlight,
+construites depuis le même code, sans `#if` autour. `check_app_store.py` échoue si une condition de build les retire
+de l'édition App Store, si les notes pour la review oublient un produit de `enum Tip` ou ne disent pas qu'un pourboire
+ne débloque rien, et si un texte de la fiche parle de pourboires dans certaines langues de la fiche seulement.
+
 Les liens vers les pages de soutien (Stripe) restent sur la page d'accueil du site et dans le README uniquement
 ([FUNDING.fr.md](FUNDING.fr.md)) : dans les apps, l'argent ne passe que par les stores.
 
@@ -51,16 +56,16 @@ Noms et descriptions, un par langue :
 1. *App Store Connect → Ondo → Monétisation → Achats intégrés → +*, type **Consommable**, pour chaque pourboire : nom de
    référence (« Small tip »), identifiant (tableau ci-dessus), prix, nom et description dans chaque langue de la fiche
    (tableau ci-dessus).
-2. **Capture pour la review** : installez le build TestFlight, ouvrez Réglages → Laisser un pourboire (les prix
-   s'affichent dès que les produits existent, en sandbox) et faites une capture ; ajoutez-la à chaque pourboire.
-   **Notes pour la review** : « Optional tip; it unlocks nothing. »
-3. **Les premiers achats intégrés partent avec une nouvelle version.** Pour la 1.2.0, une fois la 1.1.0 approuvée :
-   - lancez *Actions → Release → Run workflow*, cible **release**, édition **app-store**, **submit** décoché : la
-     version 1.2.0 est créée avec sa fiche et son build, sans être soumise ;
-   - sur la page de la version 1.2.0, section *Achats intégrés et abonnements*, sélectionnez les trois pourboires ;
-   - poussez le tag `v1.2.0` : il soumet la version (le tag retire d'abord une soumission encore en attente de
-     review). Si App Store Connect montre les pourboires hors de la soumission, ajoutez-les et soumettez depuis App
-     Store Connect.
+2. **Capture pour la review** : le workflow *App Store screenshots* la prend sur iPhone, en anglais et en français
+   (`testTipsReviewScreenshot` dans `UITests/AppStoreScreenshots.swift`) : Réglages → Laisser un pourboire avec les
+   trois pourboires à des prix fixes (`-uitest-tips`, un store de test présent seulement en Debug). Elle reste hors
+   de la branche `appstore-screenshots`, dont les fichiers partent avec la fiche, dans l'artefact du run
+   **`iap-review-screenshot`** : `en-US/iap-review-tips-iphone-max.png` (et `fr-FR/…`). Ajoutez-la à chaque
+   pourboire. **Notes pour la review** : « Optional tip; it unlocks nothing. »
+3. **Les premiers achats intégrés partent avec une nouvelle version (2.0.0).** Sur la page de la version 2.0.0,
+   section *Achats intégrés et abonnements*, les trois pourboires sont sélectionnés, puis le tag `v2.0.0` soumet la
+   version (le tag retire d'abord une soumission encore en attente de review). Si App Store Connect montre les
+   pourboires hors de la soumission, ajoutez-les et soumettez depuis App Store Connect.
 
    Les notes pour la review (`fastlane/metadata/review_information/notes.txt`) nomment déjà les trois produits ;
    `check_app_store.py` échoue si un produit de `enum Tip` y manque.

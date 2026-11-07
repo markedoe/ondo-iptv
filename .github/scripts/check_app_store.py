@@ -17,8 +17,10 @@ submitted, its listing and its review notes are checked here, before any upload:
    the app or what it plays free, and its copyright is this year's, the same as the app's (2.3). The Google Play
    listing (fastlane/metadata-android, every language) is held to the same words and to Google Play's limits.
 4. The review notes explain every permission, background mode and Mac entitlement the app asks for (2.1, 5.1.1), and
-   each In-App Purchase (the optional tips) and that it unlocks nothing (3.1.1). When the App Store edition leaves the
-   tips out (no StoreKit in its build), neither the listing nor the review notes speak of tips (2.3.1).
+   each In-App Purchase (the optional tips): every product of `enum Tip`, and that it unlocks nothing (3.1.1); they never
+   say there is no in-app purchase. The tips are in every edition: the App Store edition compiles `enum Tip` and its
+   Settings section (no `#if` leaves them out), and a listing text that speaks of tips does so in every language of
+   the listing.
 5. The pages of the website the listing opens (its support, privacy and marketing addresses, which App Review visits)
    have no test words either: the App Store app must not read as a beta (2.2).
 6. No way to pay or donate other than In-App Purchase is reachable from the apps (3.1.1, and Google Play's payments
@@ -117,7 +119,8 @@ DORMANT_FLAG = re.compile(
     r"static\s+(?:let|var|func)\s+(\w+)\s*(?:\(\s*\)\s*->\s*Bool|:\s*Bool)?\s*"
     r"(?:=\s*false\b|=?\s*\{\s*(?:get\s*\{\s*)?(?:return\s+)?false\s*\})")
 
-# The tips in every language of the listing, and their products: only while the App Store edition sells them.
+# The tips in every language of the listing, and their products: a listing text speaks of them in every language or
+# in none.
 TIP_WORDS = re.compile(
     r"(?i)\btips?\b|pourboire|propina|gorjeta|打赏|小费|إكرامي|टिप(?![\u0900-\u097F])|com\.markedoe\.ondo\.tip\.")
 LIMITS = {"name.txt": 30, "subtitle.txt": 30, "keywords.txt": 100, "promotional_text.txt": 170,
@@ -475,16 +478,30 @@ def app_store_edition_sells_tips() -> bool:
     return sells_tips(app_store_edition_code())
 
 
-def check_tips_wording(problems: list) -> None:
-    """Without StoreKit in its build, the App Store edition has no tips: the listing and the notes must not offer them."""
-    if app_store_edition_sells_tips():
+def check_tips(problems: list) -> None:
+    """The tips are in every edition, explained to App Review, and offered alike in every language of the listing."""
+    tips = ROOT / "App/Model/Tips.swift"
+    if not tips.is_file():
         return
-    files = sorted(METADATA.glob("*/*.txt"))
-    for path in files:
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            if TIP_WORDS.search(line):
-                problems.append(f"{path.relative_to(ROOT)}:{number} speaks of tips, which the App Store edition does "
-                                f"not have (2.3.1): {line.strip()[:120]}")
+    app_code = "\n".join(without_comments(edition_source(path.read_text(encoding="utf-8"))) for path in swift_files("App"))
+    if not re.search(r"^\s*import StoreKit\b", app_code, re.MULTILINE) or not re.search(r"\benum Tip\b", app_code):
+        problems.append("App/Model/Tips.swift: the App Store edition must sell the tips too (no `#if` around them): "
+                        "the listing and the review notes offer them")
+    if not re.search(r"\bTipsSection\(", app_code):
+        problems.append("App/: the App Store edition's Settings must show the tips (TipsSection), as every edition does")
+    notes = NOTES.read_text(encoding="utf-8") if NOTES.is_file() else ""
+    if re.search(r"(?i)\bno (?:in-app purchases?|purchases?)\b", notes):
+        problems.append("fastlane/metadata/review_information/notes.txt says there is no in-app purchase: the tips are "
+                        "In-App Purchases (3.1.1)")
+    # A listing text that speaks of tips in one language does so in all of them (the build is the same everywhere).
+    locales = sorted(path for path in METADATA.iterdir() if path.is_dir() and path.name != "review_information")
+    for name in sorted({path.name for locale in locales for path in locale.glob("*.txt")}):
+        speaks = {locale.name for locale in locales
+                  if (locale / name).is_file() and TIP_WORDS.search((locale / name).read_text(encoding="utf-8"))}
+        if speaks and len(speaks) < len(locales):
+            missing = ", ".join(locale.name for locale in locales if locale.name not in speaks)
+            problems.append(f"fastlane/metadata/*/{name}: the tips are offered in {', '.join(sorted(speaks))} "
+                            f"but not in {missing}: every language of the listing, or none")
 
 
 def check_payments(problems: list) -> None:
@@ -786,7 +803,7 @@ def main() -> int:
     check_play_listing(problems)
     check_site(problems)
     check_review_notes(problems)
-    check_tips_wording(problems)
+    check_tips(problems)
     check_payments(problems)
     check_local_network(problems)
     check_playlists(problems)

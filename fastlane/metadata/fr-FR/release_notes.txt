@@ -1,7 +1,10 @@
-• Un nouveau look en noir et gris, toujours sombre : les titres à la une dans un cadre arrondi sur l’Accueil, des cartes qui se soulèvent sous le pointeur, le focus ou un appui, le format en badge détouré.
-• Avec votre jeton TMDb : la page d’un titre montre les photos du casting en rangée et la bande-annonce quand votre fournisseur n’en donne pas, la note du fournisseur et celle de TMDb côte à côte avec le nombre de votes, et les réponses de TMDb sont gardées sur votre appareil : les pages s’ouvrent aussitôt la fois suivante.
-• L’Accueil met en avant les dernières sorties : les films tout juste sortis et les séries avec un nouvel épisode ou une nouvelle saison, les mieux notés d’abord avec votre jeton TMDb.
-• Synchroniser sur ce réseau transmet aussi votre jeton TMDb à vos autres appareils.
-• Les catégories marquées QC s’appellent Québec, dans les sept langues de l’app.
-• Les playlists enregistrées en Windows-1252 ou UTF-16 se lisent telles qu’écrites ; les guides TV avec des erreurs courantes ne bloquent plus le chargement, et les gros guides prennent moins de mémoire.
-• De nombreuses corrections et accélérations.
+• Profils : « Qui regarde ? », code PIN et profils Enfant
+• Réglages → Ordre des rangées ; Tous les films et Toutes les séries
+• Une carte par film ; ses versions (4K, DV, VOSTFR) sur sa page
+• Titres épurés
+• Marqué vu au générique de fin ou à 10 minutes de la fin
+• Carrousel d'accueil : les dernières sorties, classées par les votes TMDb
+• Langues masquées appliquées partout
+• Synchronisation entre appareils plus fiable
+• Laisser un pourboire (Réglages) : trois pourboires facultatifs via l’App Store. Ils ne débloquent rien : tout Ondo reste disponible pour tout le monde.
+• Nombreuses corrections

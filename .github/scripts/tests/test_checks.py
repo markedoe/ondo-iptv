@@ -776,13 +776,46 @@ class AppStoreTests(CheckTestCase):
                         self.write(f"fastlane/metadata/es-ES/{name}", other + "\n")
                 self.assertFails("app_store", f"es-ES/description.txt:1 {reason}")
 
+    TIPS = ("import StoreKit\n\nenum Tip: String, CaseIterable {\n    case small, large\n\n"
+            "    var productID: String { \"com.markedoe.ondo.tip.\\(rawValue)\" }\n}\n")
+    TIPS_NOTES = "Tips: In-App Purchase com.markedoe.ondo.tip.small and com.markedoe.ondo.tip.large; a tip unlocks nothing.\n"
+
+    def sell_tips(self, guard: str = "") -> None:
+        """The tips as the app has them: their model and their section of Settings, under `guard` if given."""
+        wrap = (lambda code: f"{guard}\n{code}#endif\n") if guard else (lambda code: code)
+        self.write("App/Model/Tips.swift", wrap(self.TIPS))
+        self.write("App/Features/Settings/SettingsView.swift", "Form {\n" + wrap("    TipsSection(tips: model.tips)\n") + "}\n")
+        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES + self.TIPS_NOTES)
+
     def test_in_app_purchases_must_be_explained_in_the_review_notes(self):
-        self.write("App/Model/Tips.swift", "import StoreKit\n\nenum Tip: String, CaseIterable {\n    case small, large\n\n"
-                   "    var productID: String { \"com.markedoe.ondo.tip.\\(rawValue)\" }\n}\n")
+        self.sell_tips()
+        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES)
         self.assertFails("app_store", "the review notes do not explain In-App Purchase",
                          "the review notes do not explain com.markedoe.ondo.tip.large", "do not explain unlocks nothing")
-        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES + "Tips: In-App Purchase "
-                   "com.markedoe.ondo.tip.small and com.markedoe.ondo.tip.large; a tip unlocks nothing.\n")
+        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES + self.TIPS_NOTES)
+        self.assertPasses("app_store")
+
+    def test_review_notes_saying_there_is_no_in_app_purchase_fail(self):
+        self.sell_tips()
+        self.write("fastlane/metadata/review_information/notes.txt",
+                   self.NOTES + "No sign-in, no account and no in-app purchase.\n" + self.TIPS_NOTES)
+        self.assertFails("app_store", "notes.txt says there is no in-app purchase")
+
+    def test_tips_left_out_of_the_app_store_edition_fail(self):
+        # The tips are in every edition: a guard that keeps them for the TestFlight edition is an edition difference.
+        for guard in ("#if TESTFLIGHT_DOWNLOADS || DEBUG", "#if TESTFLIGHT_DOWNLOADS", "#if DEBUG"):
+            with self.subTest(guard):
+                self.sell_tips(guard)
+                self.assertFails("app_store", "App/Model/Tips.swift: the App Store edition must sell the tips too",
+                                 "the App Store edition's Settings must show the tips")
+        self.sell_tips()
+        self.assertPasses("app_store")
+
+    def test_tips_in_the_listing_are_in_every_language_or_none(self):
+        self.sell_tips()
+        self.write("fastlane/metadata/en-US/release_notes.txt", "• Leave a tip (Settings): optional, unlocks nothing.\n")
+        self.assertFails("app_store", "fastlane/metadata/*/release_notes.txt: the tips are offered in en-US but not in fr-FR")
+        self.write("fastlane/metadata/fr-FR/release_notes.txt", "• Laisser un pourboire (Réglages) : facultatif.\n")
         self.assertPasses("app_store")
 
     def test_todo_in_a_sentence_is_not_a_placeholder(self):
