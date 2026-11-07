@@ -593,6 +593,12 @@ lane :status do
   api_key
   app = Spaceship::ConnectAPI::App.find(APP_ID)
   PLATFORMS.each { |name, (platform, folder)| report_version(app, name, platform, folder) }
+  # Every version's own state: a COMPLETE review submission does not say whether the version was approved or rejected.
+  PLATFORMS.each do |name, (platform, _folder)|
+    app.get_app_store_versions(filter: { platform: platform }).each do |version|
+      UI.message("#{name} version #{version.version_string}: #{version.app_store_state}")
+    end
+  end
   app.get_review_submissions.each do |submission|
     # The date tells a long wait from a normal one (most reviews take a day or two).
     UI.message("review submission #{submission.platform}: #{submission.state}, submitted #{submission.submitted_date || 'not yet'}")
