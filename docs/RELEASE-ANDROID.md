@@ -212,7 +212,8 @@ a draft, to check and send for review in the console). Start that run from the v
 chosen in *Use workflow from → Tags*: the workflow refuses `production` from a branch, whose bundle would keep
 the default `versionName`. It also refuses `production` unless the *Android* workflow passed **on that commit** with
 its long job (the app's unit, Compose and screenshot tests): the night's run on `main`, or *Android* started by hand on
-the tag (`gh workflow run android.yml --ref vX.Y.Z`); then run it again. Publish production from a bundle built for it
+the tag (`gh workflow run android.yml --ref vX.Y.Z`); then run it again. The check is in the workflow file of the tag the
+run starts from: a tag cut before this change has none, so publish production only from a tag cut after it. Publish production from a bundle built for it
 (the workflow with the `production` track), not by promoting a test release. Choose the countries, then *Send changes for
 review*. The review takes from a few hours to a few days.
 

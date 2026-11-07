@@ -22,11 +22,11 @@ on:
         default: testflight
         options: [testflight, app-store]
       ios_build:
-        description: "submit: the iOS build number of the App Store edition, from its release run's log (empty: iOS is not submitted)"
+        description: "submit (from a version tag): the iOS build number of the App Store edition, from that tag's release run's log (empty: iOS is not submitted)"
         type: string
         default: ""
       mac_build:
-        description: "submit: the macOS build number of the App Store edition, from its release run's log (empty: macOS is not submitted)"
+        description: "submit (from a version tag): the macOS build number of the App Store edition, from that tag's release run's log (empty: macOS is not submitted)"
         type: string
         default: ""
       submit:
@@ -67,9 +67,16 @@ jobs:
         if: github.event_name == 'push' || github.event.inputs.target == 'submit' || (github.event.inputs.target == 'release' && github.event.inputs.submit == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ github.event.inputs.target }}
         # Any doubt refuses (ci_scope.py production): runs that cannot be read, another commit, a run whose macOS jobs
-        # were skipped.
+        # were skipped. Target submit sends builds already uploaded, by number, and App Store Connect does not say which
+        # commit a build came from: it runs from a version tag only, with the build numbers of that tag's own release
+        # run, so the commit checked here is the builds' commit.
         run: |
+          if [ "$TARGET" = submit ] && { [ "$GITHUB_REF_TYPE" != tag ] || [[ "$GITHUB_REF_NAME" != v* ]]; }; then
+            echo "::error::Target submit runs from a version tag (Use workflow from → Tags), with ios_build and mac_build from that tag's own release run: the commit checked must be the builds' commit (this run is on the $GITHUB_REF_TYPE $GITHUB_REF_NAME). Nothing is submitted."
+            exit 1
+          fi
           sha=$(git rev-parse "$GITHUB_SHA^{commit}")
           python3 -I .github/scripts/ci_scope.py production ci "$sha"
 

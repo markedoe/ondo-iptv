@@ -223,7 +223,9 @@ brouillon, à vérifier et envoyer en examen dans la console). Lancez ce workflo
 de la version, choisi dans *Use workflow from → Tags* : le workflow refuse `production` depuis une branche, dont
 le bundle garderait le `versionName` par défaut. Il refuse aussi `production` si le workflow *Android* n'a pas réussi
 **sur ce commit** avec son job long (les tests unitaires, Compose et de captures de l'app) : le run de la nuit sur
-`main`, ou *Android* lancé à la main sur le tag (`gh workflow run android.yml --ref vX.Y.Z`) ; relancez-le ensuite.
+`main`, ou *Android* lancé à la main sur le tag (`gh workflow run android.yml --ref vX.Y.Z`) ; relancez-le ensuite. Le
+contrôle est dans le fichier de workflow du tag d'où part le lancement : un tag créé avant ce changement n'en a pas, donc
+ne publiez la production que depuis un tag créé après lui.
 Publiez la production avec un bundle construit pour
 elle (le workflow avec la piste `production`), pas en promouvant une version de test. Choisissez les pays, puis *Envoyer pour
 examen*. L'examen prend de quelques heures à quelques jours.

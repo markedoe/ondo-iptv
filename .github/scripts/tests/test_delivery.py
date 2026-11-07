@@ -450,7 +450,7 @@ class ProductionGateTests(WorkflowScriptTestCase):
     GATES = {"ci": ("release.yml", "CI's macOS jobs passed on this commit"),
              "android": ("release-android.yml", "Long tests passed on this commit")}
 
-    def gate(self, workflow: str, runs: list, jobs: dict) -> tuple[int, str]:
+    def gate(self, workflow: str, runs: list, jobs: dict, **environment: str) -> tuple[int, str]:
         scripts = self.repository / ".github/scripts"
         scripts.mkdir(parents=True, exist_ok=True)
         shutil.copy(WORKFLOWS.parent / "scripts/ci_scope.py", scripts / "ci_scope.py")
@@ -462,7 +462,7 @@ class ProductionGateTests(WorkflowScriptTestCase):
         (self.root / "api.json").write_text(json.dumps(responses), encoding="utf-8")
         (self.root / "step.sh").write_text(step_script(*self.GATES[workflow]), encoding="utf-8")
         result = subprocess.run(["bash", "-e", str(self.root / "step.sh")], cwd=self.repository,
-                                env={**self.environment, "GITHUB_SHA": sha}, capture_output=True, text=True)
+                                env={**self.environment, "GITHUB_SHA": sha, **environment}, capture_output=True, text=True)
         return result.returncode, result.stdout + result.stderr
 
     def test_only_a_long_run_on_this_very_commit_lets_it_through(self):
@@ -486,6 +486,19 @@ class ProductionGateTests(WorkflowScriptTestCase):
                     self.assertEqual(code, expected, output)
                     if expected:
                         self.assertIn("at night", output)
+
+    def test_target_submit_runs_from_a_version_tag_only(self):
+        # It submits builds already uploaded, by number: only a tag ties them to the commit the gate checks.
+        green = [{"id": 7, "head_sha": "", "head_commit": {"tree_id": "0" * 40}, "event": "schedule", "conclusion": "success"}]
+        jobs = {"jobs": [{"name": name, "conclusion": "success"} for name in
+                         ("Build iOS + macOS (Debug, App Store edition)", "App tests — unit + UI (iPhone simulator)")]}
+        for ref_type, ref_name, target, expected in (("branch", "main", "submit", 1), ("tag", "other", "submit", 1),
+                                                     ("tag", "v1.2.0", "submit", 0), ("branch", "main", "release", 0)):
+            with self.subTest(ref=f"{ref_type} {ref_name}", target=target):
+                code, output = self.gate("ci", green, jobs, TARGET=target, GITHUB_REF_TYPE=ref_type, GITHUB_REF_NAME=ref_name)
+                self.assertEqual(code, expected, output)
+                if expected:
+                    self.assertIn("version tag", output)
 
     def test_unreadable_runs_refuse(self):
         for workflow, (file, step) in self.GATES.items():

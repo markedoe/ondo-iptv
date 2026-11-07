@@ -34,7 +34,12 @@ reste un run à la main, hors de la nuit.
   de la nuit, ou un run à la main (`ci_scope.py production`). Sinon le run s'arrête aussitôt avec une erreur qui dit
   d'attendre la nuit ou de lancer le workflow à la main sur le commit, puis de relancer la release. Quand les runs ne
   peuvent pas être lus, il refuse aussi. Pour un tag poussé dans la journée : `gh workflow run ci.yml --ref v1.2.0` (et
-  `android.yml` pour la production), puis *Re-run all jobs* sur la release du tag une fois le run vert.
+  `android.yml` pour la production), puis *Re-run all jobs* sur la release du tag une fois le run vert. La cible
+  `submit`, qui soumet des builds déjà envoyés par leur numéro, ne part que d'un tag de version, avec les numéros de
+  build du lancement de release de ce tag (App Store Connect ne dit pas de quel commit vient un build). **Seules les
+  références créées après ce changement portent ces verrous** : un lancement à la main utilise le fichier de workflow de
+  la référence d'où il part, donc un tag ou une branche plus ancien n'en a pas ; ne soumettez et ne publiez en
+  production que depuis un tag créé après ce changement.
 - Les deux sortes de runs ne s'annulent jamais : le run d'un push et un run de nuit ou à la main sont dans des groupes
   de concurrence différents (`…-short`, `…-long`), et *Deliver* garde une file par source et par événement.
 

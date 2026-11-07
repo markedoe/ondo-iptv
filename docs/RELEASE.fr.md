@@ -162,7 +162,11 @@ réseau, fichiers choisis par l'utilisateur).
      sur `main`, ou *CI* lancé à la main dessus. Sinon le premier job, *Long tests passed on this commit*, refuse avant
      toute compilation, capture ou soumission ; lancez *CI* à la main sur le tag (`gh workflow run ci.yml --ref
      v1.1.0`) ou attendez la nuit, puis *Re-run all jobs* sur la release. Il en va de même pour la cible `release`
-     avec `submit` et pour la cible `submit` (le commit depuis lequel le lancement part) :
+     avec `submit` (le commit depuis lequel le lancement part, qu'il compile) et pour la cible `submit` (le tag depuis
+     lequel elle part, plus bas). Ce contrôle n'existe que dans les fichiers de workflow des commits faits après son
+     ajout : un lancement à la main utilise le fichier de workflow de la référence d'où il part, donc un tag ou une
+     branche plus ancien n'a pas de contrôle. Ne soumettez et ne publiez en production que depuis un tag créé après ce
+     changement :
      ```bash
      git tag v1.1.0 && git push origin v1.1.0
      ```
@@ -214,8 +218,11 @@ réseau, fichiers choisis par l'utilisateur).
    - `all` : les deux builds, puis la fiche ;
    - `ios` ou `mac` : un seul build ;
    - `metadata` : la fiche seule (`metadata-ios` ou `metadata-mac` pour une seule plateforme) ;
-   - `submit` : la soumission à la review (étape 5) ; laissez `ios_build` ou `mac_build` vide pour ne
-     soumettre qu'une plateforme. Une vérification en échec ne soumet ni l'une ni l'autre ; l'échec de la
+   - `submit` : la soumission à la review (étape 5), lancée depuis le tag de la version (*Use workflow from → Tags* :
+     depuis une branche ou un autre tag le lancement refuse), avec `ios_build` et `mac_build` pris dans **le lancement
+     de release de ce tag** : App Store Connect ne dit pas de quel commit vient un build, donc le tag relie les builds au
+     commit dont le lancement vérifie les tests longs. Laissez `ios_build` ou `mac_build` vide pour ne soumettre qu'une
+     plateforme. Une vérification en échec ne soumet ni l'une ni l'autre ; l'échec de la
      soumission iOS n'arrête pas celle de macOS ;
    - `status`, en lecture seule : l'état de chaque version et son build choisi, si le contact pour la review
      est complet et si les notes pour la review parlent de téléchargements ou de `network.server`, les

@@ -33,7 +33,11 @@ emulator) stays a run by hand, outside the night.
   by hand (`ci_scope.py production`). Otherwise the run stops at once with an error that says to wait for the night or
   start the workflow by hand on the commit, then run the release again. When the runs cannot be read, it refuses too.
   For a tag pushed during the day: `gh workflow run ci.yml --ref v1.2.0` (and `android.yml` for production), then
-  *Re-run all jobs* on the tag's release once it is green.
+  *Re-run all jobs* on the tag's release once it is green. Target `submit`, which submits builds already uploaded by
+  number, runs only from a version tag, with the build numbers of that tag's own release run (App Store Connect does not
+  say which commit a build came from). **Only refs created after this change carry these gates**: a run by hand uses
+  the workflow file of the ref it starts from, so an older tag or branch has none; submit and publish production only
+  from a tag cut after this change.
 - The two kinds of runs never cancel each other: a push's run and a night's or by-hand run are in different concurrency
   groups (`…-short`, `…-long`), and *Deliver* keeps one queue per source and event.
 

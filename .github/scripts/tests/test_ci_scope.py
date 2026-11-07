@@ -272,6 +272,24 @@ class ProductionTests(unittest.TestCase):
                 responses = {EXACT.format("ci.yml", "s1"): {"workflow_runs": runs}, JOBS.format(5): listed}
                 self.assertEqual(self.production("ci", responses), 1)
 
+    def test_a_pass_behind_many_idle_nights_still_counts(self):
+        # Each night that found main unchanged ends green on the same commit with its long jobs skipped: they come first
+        # in the listing, and the run that passed must still be found, on this page or the next.
+        idle = jobs(*CI_JOBS, conclusion="skipped")
+        for count in (11, 150):
+            with self.subTest(idle_nights=count):
+                runs = [run(100 + i, "s1", event="schedule") for i in range(count)] + [run(5, "s1", event="schedule")]
+                responses = {JOBS.format(5): jobs(*CI_JOBS), **{JOBS.format(100 + i): idle for i in range(count)}}
+                pages = [runs[i:i + ci_scope.PAGE] for i in range(0, len(runs), ci_scope.PAGE)]
+                for number, page in enumerate(pages, 1):
+                    path = EXACT.format("ci.yml", "s1") + (f"&page={number}" if number > 1 else "")
+                    responses[path] = {"workflow_runs": page}
+                self.assertEqual(self.production("ci", responses), 0)
+                # The night finds it too, and skips.
+                run_long, why = ci_scope.decide("ci", "schedule", "refs/heads/main", "s1", api=api_from(responses),
+                                                repository="o/r", run_id=999)
+                self.assertFalse(run_long, why)
+
     def test_unreadable_runs_refuse(self):
         # The opposite of the night's rule: when unsure, nothing is published.
         self.assertEqual(self.production("ci", {}), 1)

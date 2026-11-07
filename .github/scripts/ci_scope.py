@@ -48,9 +48,14 @@ HEAVY_JOBS = {
 }
 # Jobs that mark a run that did not compare what it should (a run that recorded the reference screenshots).
 NOT_RUN_JOBS = {"ci": [], "android": ["Commit the reference screenshots to the branch"]}
-# The runs whose long jobs prove a commit: a pull request tests a merge commit, not the commit it names.
+# The runs whose long jobs prove a commit: a pull request tests a merge commit, not the commit it names. A push's run
+# skips its long jobs, so it proves nothing (the jobs are checked either way).
 PROVING_EVENTS = ("push", "workflow_dispatch", "schedule")
+# Without [exact], the newest runs of the same tree looked at; with it, every run of the commit, page after page (a night
+# that skipped its long jobs also ends green on the commit, and many may come before the run that passed them).
 CANDIDATES = 10
+PAGE = 100
+MAX_PAGES = 50
 
 
 def pattern_regex(pattern: str) -> re.Pattern:
@@ -98,14 +103,25 @@ def full_pass(workflow: str, sha: str, tree: str, repository: str, api=gh_api, e
     """The id of a run of [workflow] that passed on [sha] (or on [tree], unless [exact]) with its heavy jobs run, or
     None."""
     runs = f"repos/{repository}/actions/workflows/{WORKFLOW_FILES[workflow]}/runs?status=success"
-    # The exact commit is asked of GitHub by name: a night's run may be older than the last 100 green pushes.
-    listing = api(f"{runs}&head_sha={sha}&per_page=100" if exact else f"{runs}&per_page=100")
-    candidates = [run for run in listing.get("workflow_runs", [])
+    if exact:
+        # The exact commit is asked of GitHub by name (a night's run may be older than the last 100 green pushes), and
+        # every page of it is read.
+        listed = []
+        for page in range(1, MAX_PAGES + 1):
+            batch = api(f"{runs}&head_sha={sha}&per_page={PAGE}" + (f"&page={page}" if page > 1 else "")).get("workflow_runs", [])
+            listed += batch
+            if len(batch) < PAGE:
+                break
+        else:
+            raise RuntimeError(f"more than {MAX_PAGES * PAGE} runs on {sha}")
+    else:
+        listed = api(f"{runs}&per_page={PAGE}").get("workflow_runs", [])
+    candidates = [run for run in listed
                   if run.get("id") != exclude_run and run.get("conclusion") == "success"
                   and run.get("event") in PROVING_EVENTS
                   and (run.get("head_sha") == sha or
                        (not exact and tree and (run.get("head_commit") or {}).get("tree_id") == tree))]
-    for run in candidates[:CANDIDATES]:
+    for run in candidates if exact else candidates[:CANDIDATES]:
         jobs = {job.get("name"): job.get("conclusion")
                 for job in api(f"repos/{repository}/actions/runs/{run['id']}/jobs?filter=latest&per_page=100").get("jobs", [])}
         if all(jobs.get(name) == "success" for name in HEAVY_JOBS[workflow]) and \

@@ -163,8 +163,10 @@ user-selected files).
      (macOS) jobs must have passed **on the tagged commit**: the night's run on `main`, or *CI* started by hand on it.
      Otherwise the first job, *Long tests passed on this commit*, refuses before anything is built, captured or
      submitted; start *CI* by hand on the tag (`gh workflow run ci.yml --ref v1.1.0`) or wait for the night, then
-     *Re-run all jobs* on the release. The same applies to target `release` with `submit` and to target `submit`
-     (the commit the run is started from):
+     *Re-run all jobs* on the release. The same applies to target `release` with `submit` (the commit the run is
+     started from, which it builds) and to target `submit` (the tag it is started from, below). The check exists only
+     in the workflow files of commits made after it was added: a run by hand uses the workflow file of the ref it starts
+     from, so an older tag or branch has no check. Submit and publish production only from a tag cut after this change:
      ```bash
      git tag v1.1.0 && git push origin v1.1.0
      ```
@@ -213,8 +215,10 @@ user-selected files).
    - `all`: both builds, then the listing;
    - `ios` or `mac`: one build;
    - `metadata`: the listing only (`metadata-ios` or `metadata-mac` for one platform);
-   - `submit`: the submission for review (step 5); leave `ios_build` or `mac_build` empty to submit one
-     platform only. A failed check submits neither; a failed iOS submission does not stop the macOS one;
+   - `submit`: the submission for review (step 5), started from the version's tag (*Use workflow from → Tags*: from a
+     branch or another tag the run refuses), with `ios_build` and `mac_build` taken from **that tag's own release run**:
+     App Store Connect does not say which commit a build came from, so the tag ties the builds to the commit whose long
+     tests the run checks. Leave `ios_build` or `mac_build` empty to submit one platform only. A failed check submits neither; a failed iOS submission does not stop the macOS one;
    - `status`, read only: the state of each version and its selected build, whether the review contact is
      complete and the review notes mention downloads or `network.server`, the screenshots compared with the
      `appstore-screenshots` branch, and the review submissions.
