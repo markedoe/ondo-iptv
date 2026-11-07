@@ -7,6 +7,11 @@ Store, Google Play Billing on Android). A tip unlocks nothing: everything in Ond
 purchase is finished (App Store) or consumed (Google Play) as soon as it is paid, so a tip can be given again and there
 is nothing to restore. Until the products below exist, Settings says that the tips cannot be loaded.
 
+The tips are in every edition: the App Store edition (iPhone, iPad and Mac) and the TestFlight edition alike, built
+from the same code, with no `#if` around it. `check_app_store.py` fails if a build condition leaves them out of the App
+Store edition, if the review notes miss a product of `enum Tip` or do not say that a tip unlocks nothing, and if a
+listing text speaks of tips in some languages of the listing only.
+
 The links to the support pages (Stripe) stay on the website's home page and in the README only
 ([FUNDING.md](FUNDING.md)): inside the apps, money goes only through the stores.
 
@@ -49,15 +54,16 @@ Display names and descriptions, one per language:
 1. *App Store Connect → Ondo → Monetization → In-App Purchases → +*, type **Consumable**, for each tip: reference
    name ("Small tip"), product ID (table above), price, and the display name and description in each language of the
    listing (table above).
-2. **Review screenshot**: install the TestFlight build, open Settings → Leave a tip (the prices show once the
-   products exist, in the sandbox) and take a screenshot; add it to each tip. **Review notes**: "Optional tip; it
-   unlocks nothing."
-3. **The first In-App Purchases go with a new version.** For 1.2.0, once 1.1.0 is approved:
-   - run *Actions → Release → Run workflow*, target **release**, edition **app-store**, with **submit** off: it
-     creates version 1.2.0 with its listing and build, without submitting;
-   - on the 1.2.0 version page, section *In-App Purchases and Subscriptions*, select the three tips;
-   - push the tag `v1.2.0`: it submits the version (the tag first withdraws any submission still waiting for review).
-     If App Store Connect shows the tips outside the submission, add them and submit from App Store Connect.
+2. **Review screenshot**: the *App Store screenshots* workflow captures it on the iPhone, in English and French
+   (`testTipsReviewScreenshot` in `UITests/AppStoreScreenshots.swift`): Settings → Leave a tip with the three tips at
+   fixed prices (`-uitest-tips`, a Debug-only test store). It is kept off the `appstore-screenshots` branch, whose
+   files go with the listing, in the run's artifact **`iap-review-screenshot`**:
+   `en-US/iap-review-tips-iphone-max.png` (and `fr-FR/…`). Add it to each tip. **Review notes**: "Optional
+   tip; it unlocks nothing."
+3. **The first In-App Purchases go with a new version (2.0.0).** On the 2.0.0 version page, section *In-App Purchases
+   and Subscriptions*, the three tips are selected, then the tag `v2.0.0` submits the version (the tag first withdraws
+   any submission still waiting for review). If App Store Connect shows the tips outside the submission, add them and
+   submit from App Store Connect.
 
    The review notes (`fastlane/metadata/review_information/notes.txt`) already name the three products;
    `check_app_store.py` fails if a product of `enum Tip` is missing from them.

@@ -2,9 +2,11 @@ name: App Store screenshots
 
 # Captures the App Store screenshots (iPhone 6.9", iPad 13" and Mac, English and French) from the
 # fixture catalogue and publishes them on the `appstore-screenshots` branch (Mac ones under `mac/`);
-# the release workflow uploads them with the listing. Run by the release workflow before it uploads the listing (a
-# version tag, targets release, all and metadata), or by hand to look at them; not on pushes: nothing reads them between
-# releases (docs/CI.md). One macOS job per device builds once and captures each language from that build.
+# the release workflow uploads them with the listing. The iPhone job also captures the review screenshot of the
+# In-App Purchases (artifact iap-review-screenshot, kept off the branch). Run by the release workflow before it uploads
+# the listing (a version tag, targets release, all and metadata), or by hand to look at them; not on pushes: nothing
+# reads them between releases (docs/CI.md). One macOS job per device builds once and captures each language from that
+# build.
 on:
   workflow_dispatch:
   workflow_call:
@@ -87,7 +89,7 @@ jobs:
               CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions || status=1
             mkdir -p "raw-$locale" out
             xcrun xcresulttool export attachments --path "build/Shots-$locale.xcresult" --output-path "raw-$locale" || status=1
-            python3 .github/scripts/collect_appstore_screenshots.py "raw-$locale" out "$locale" ${{ matrix.device }} || status=1
+            python3 .github/scripts/collect_appstore_screenshots.py "raw-$locale" out "$locale" ${{ matrix.device }} iap-review || status=1
           done
           exit $status
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -95,6 +97,15 @@ jobs:
         with:
           name: shots-${{ matrix.device }}
           path: out
+      # The review screenshot of the In-App Purchases (Settings → Leave a tip, iPhone): its own artifact, never on the
+      # appstore-screenshots branch, whose files all go with the listing. The release run that calls this workflow
+      # downloads it from the same run: <locale>/iap-review-tips-iphone-max.png at the root of the artifact.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && matrix.device == 'iphone-max'
+        with:
+          name: iap-review-screenshot
+          path: iap-review
+          if-no-files-found: error
 
   mac:
     name: mac

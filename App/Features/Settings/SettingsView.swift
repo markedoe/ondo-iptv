@@ -412,9 +412,7 @@ struct SettingsView: View {
                 Text("Backups contain your playlists (including logins), My List, collections and history. Keep them private.")
             }
 
-            #if TESTFLIGHT_DOWNLOADS || DEBUG
             TipsSection(tips: model.tips)
-            #endif
 
             Section("About") {
                 NavigationLink {
@@ -815,7 +813,6 @@ struct SetPINView: View {
     }
 }
 
-#if TESTFLIGHT_DOWNLOADS || DEBUG
 /// Settings, Leave a tip: the App Store's prices on three buttons, or why they are not there. A tip unlocks nothing.
 struct TipsSection: View {
     let tips: TipJar
@@ -870,4 +867,3 @@ extension TipOutcome {
         }
     }
 }
-#endif

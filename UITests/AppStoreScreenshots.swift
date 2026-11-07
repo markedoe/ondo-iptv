@@ -112,6 +112,26 @@ final class AppStoreScreenshots: XCTestCase {
         capture("06-tv-guide")
     }
 
+    /// The review screenshot of the In-App Purchases (App Store Connect asks one for each tip): Settings → Leave a tip
+    /// with the three tips at their prices, from a fixed store (`-uitest-tips`, no App Store). One iPhone capture
+    /// serves every tip; it is kept apart from the listing's screenshots (collect_appstore_screenshots.py).
+    func testTipsReviewScreenshot() throws {
+        try XCTSkipIf(isPad, "one iPhone capture serves every tip")
+        launch(["-uitest-tips"])
+        let settings = app.buttons.matching(NSPredicate(format: "label == 'Settings' OR label == 'Réglages'")).firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 30), "settings button")
+        settings.tap()
+        let small = app.buttons["tip-small"].firstMatch
+        let large = app.buttons["tip-large"].firstMatch
+        for _ in 0..<15 where !(small.exists && small.isHittable && large.exists && large.isHittable) {
+            app.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(large.waitForExistence(timeout: 10) && large.isHittable, "the three tips")
+        XCTAssertTrue(small.isHittable, "the first tip")
+        sleep(1)
+        capture("iap-review-tips")
+    }
+
     func testMultiviewScreenshot() throws {
         try XCTSkipUnless(isPad, "multiview is an iPad / Mac feature")
         launch(["-uitest-multiview"])

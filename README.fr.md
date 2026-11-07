@@ -145,6 +145,7 @@ chaque changement de l'interface.
   collections, progression, jeton TMDb et clés des services de sous-titres (profil principal uniquement ; deux appareils Apple se synchronisent via un
   appareil Android). Adresses locales uniquement ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **Aide** dans l'app (Réglages, et Aide, Aide Ondo sur Mac) : une page par fonctionnalité, dans chaque langue.
+- **Laisser un pourboire** (Réglages) : trois pourboires facultatifs via l'App Store, qui ne débloquent rien ([docs/TIPS.fr.md](docs/TIPS.fr.md)).
 - **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi.
 
@@ -200,6 +201,7 @@ chaque changement de l'interface.
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…), par style ou par mot (manga,
   Bollywood…) ou une par une, comme sur Apple.
 - **Aide** dans les Réglages.
+- **Laisser un pourboire** (Réglages) : trois pourboires facultatifs via Google Play, qui ne débloquent rien ([docs/TIPS.fr.md](docs/TIPS.fr.md)).
 - **Prix** sur les fiches des films et des séries et une rangée « Titres primés » dans Films et dans Séries, avec les mêmes données
   embarquées, mises à jour une fois par semaine sauf si c'est désactivé dans les Réglages.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
@@ -372,8 +374,8 @@ Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur donné
   manifeste de confidentialité couvrant les API utilisées par le code livré, entitlements du bac à sable Mac,
   mêmes données de prix dans les deux apps, neutralité du dépôt (aucune autre app IPTV citée, jamais
   « gratuit » pour qualifier l’IPTV, chaînes fictives dans les tests), et l'édition App Store : aucun code
-  de téléchargement ni fonction dormante, aucune API privée, jamais « bêta », une fiche et des notes pour
-  la review qu'App Review accepte (vérifiée aussi à chaque changement et avant chaque publication).
+  de téléchargement ni fonction dormante, aucune API privée, jamais « bêta », les pourboires dans toutes
+  les éditions, une fiche et des notes pour la review qu'App Review accepte (vérifiée aussi à chaque changement et avant chaque publication).
 - **Compilations Release de l'édition App Store** (iOS et macOS, dans le job *Build iOS + macOS (Debug, App Store
   edition)*, à côté du build debug macOS et de son lancement) : le code `#if DEBUG` et les téléchargements de l'édition
   TestFlight (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) en sont exclus, comme dans le build soumis.

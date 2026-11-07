@@ -1,7 +1,10 @@
-• A new look in black and grey, always dark: the featured titles in a rounded frame on Home, cards that rise under the pointer, the focus or a press, the format as an outlined badge.
-• With your TMDb token: a title's page shows the cast's photos in a row and the trailer when your provider gives none, the provider's rating and TMDb's side by side with the number of votes, and what TMDb answers is kept on your device, so pages open at once the next time.
-• Home features the latest releases: movies just out and series with a new episode or season, the best rated first with your TMDb token.
-• Sync on this network also carries your TMDb token to your other devices.
-• Categories tagged QC are named Quebec, in the seven languages of the app.
-• Playlists saved in Windows-1252 or UTF-16 read as written; TV guides with common faults no longer stop loading, and large guides take less memory.
-• Many fixes and speed-ups throughout.
+• Profiles: "Who's watching?", PIN and Kids profiles
+• Settings → Row Order; All Movies and All Series
+• One card per film; its versions (4K, DV, VOSTFR) on its page
+• Clean titles
+• Marked as watched at the end credits or 10 minutes from the end
+• Home carousel: the latest releases, ranked by TMDb votes
+• Hidden languages apply everywhere
+• More reliable sync between devices
+• Leave a tip (Settings): three optional tips through the App Store. They unlock nothing: everything in Ondo stays available to everyone.
+• Many fixes
