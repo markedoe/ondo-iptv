@@ -1,10 +1,13 @@
 name: Deliver
 
-# A push to main, once green, goes to the testers by itself: iOS and macOS to TestFlight when CI passed and the Apple app
-# changed (the TestFlight edition for internal testers, the App Store edition for external testers through Beta App
-# Review), Android to Google Play internal testing (the build alone, not the listing) and then
-# closed testing, which Google reviews, when the Android workflow passed and android/ changed (the owner's standing go,
-# CLAUDE.md). Nothing is submitted for App Review here: a version tag does that (release.yml).
+# A push to main, once its short checks are green, goes to the testers by itself: iOS and macOS to TestFlight when CI's
+# run of the push passed and the Apple app changed (the TestFlight edition for internal testers, the App Store edition
+# for external testers through Beta App Review), Android to Google Play internal testing (the build alone, not the
+# listing) and then closed testing, which Google reviews, when the Android workflow's run of the push passed and
+# android/ changed (the owner's standing go, CLAUDE.md). A push's run has the short jobs only: the long ones run at night
+# (docs/CI.md), and their runs (schedule, by hand) never deliver. Nothing is submitted for App Review (a version tag,
+# release.yml) or published on Google Play production (release-android.yml by hand from a tag) here: both need the long
+# jobs passed on their commit.
 on:
   workflow_run:
     workflows: [CI, Android]
@@ -15,9 +18,10 @@ permissions:
   actions: write
   contents: read
 
-# One decision at a time per source; the release workflows keep their own one-at-a-time order.
+# One decision at a time per source and event: a night's or a by-hand run (no delivery) never replaces a push's decision
+# waiting here. The release workflows keep their own one-at-a-time order.
 concurrency:
-  group: deliver-${{ github.event.workflow_run.name }}
+  group: deliver-${{ github.event.workflow_run.name }}-${{ github.event.workflow_run.event }}
   cancel-in-progress: false
 
 jobs:

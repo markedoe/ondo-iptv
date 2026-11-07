@@ -4,6 +4,8 @@ name: Release
 # the submission for App Review, a submission of the same version still waiting being withdrawn first; then the
 # TestFlight edition is built again. A push to main reaches TestFlight only (deliver.yml, target builds, external): the
 # TestFlight edition for internal testers and the App Store edition for external testers, through Beta App Review.
+# Nothing is submitted for App Review unless CI's long jobs (macOS) passed on the commit: the night's run or a run by
+# hand (job "Long tests passed on this commit").
 on:
   push:
     tags: ["v*"]
@@ -20,11 +22,11 @@ on:
         default: testflight
         options: [testflight, app-store]
       ios_build:
-        description: "submit: the iOS build number of the App Store edition, from its release run's log (empty: iOS is not submitted)"
+        description: "submit (from a version tag): the iOS build number of the App Store edition, from that tag's release run's log (empty: iOS is not submitted)"
         type: string
         default: ""
       mac_build:
-        description: "submit: the macOS build number of the App Store edition, from its release run's log (empty: macOS is not submitted)"
+        description: "submit (from a version tag): the macOS build number of the App Store edition, from that tag's release run's log (empty: macOS is not submitted)"
         type: string
         default: ""
       submit:
@@ -46,11 +48,45 @@ permissions:
   contents: read
 
 jobs:
+  gate:
+    name: Long tests passed on this commit
+    # A submission for App Review (a tag, target release with submit, target submit) waits for no build: CI's macOS jobs
+    # must have passed on this very commit, at night or by hand (docs/CI.md); otherwise nothing runs, not even the
+    # screenshots. The other targets go on.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'push' || github.event.inputs.target == 'submit' || (github.event.inputs.target == 'release' && github.event.inputs.submit == 'true')
+        with:
+          persist-credentials: false
+      - name: CI's macOS jobs passed on this commit
+        if: github.event_name == 'push' || github.event.inputs.target == 'submit' || (github.event.inputs.target == 'release' && github.event.inputs.submit == 'true')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ github.event.inputs.target }}
+        # Any doubt refuses (ci_scope.py production): runs that cannot be read, another commit, a run whose macOS jobs
+        # were skipped. Target submit sends builds already uploaded, by number, and App Store Connect does not say which
+        # commit a build came from: it runs from a version tag only, with the build numbers of that tag's own release
+        # run, so the commit checked here is the builds' commit.
+        run: |
+          if [ "$TARGET" = submit ] && { [ "$GITHUB_REF_TYPE" != tag ] || [[ "$GITHUB_REF_NAME" != v* ]]; }; then
+            echo "::error::Target submit runs from a version tag (Use workflow from → Tags), with ios_build and mac_build from that tag's own release run: the commit checked must be the builds' commit (this run is on the $GITHUB_REF_TYPE $GITHUB_REF_NAME). Nothing is submitted."
+            exit 1
+          fi
+          sha=$(git rev-parse "$GITHUB_SHA^{commit}")
+          python3 -I .github/scripts/ci_scope.py production ci "$sha"
+
   screenshots:
     name: App Store screenshots
     # Fresh captures for the runs that upload the listing (a tag, targets release, all and metadata*); the deliver job
     # waits for them. contents: write lets the called workflow's publish job update the appstore-screenshots branch;
     # no secret is passed to it.
+    # After the gate: a refused submission captures nothing.
+    needs: gate
     if: github.event_name == 'push' || github.event.inputs.target == 'release' || github.event.inputs.target == 'all' || startsWith(github.event.inputs.target, 'metadata')
     permissions:
       contents: write
@@ -60,9 +96,9 @@ jobs:
     name: TestFlight / App Store Connect
     # After the screenshots (skipped for the other targets). Their failure stops a tag and targets release and all
     # before anything is built (step App Store screenshots captured); the metadata targets then take the screenshots
-    # the appstore-screenshots branch already holds.
-    needs: screenshots
-    if: ${{ !cancelled() }}
+    # the appstore-screenshots branch already holds. Never after a refused gate.
+    needs: [gate, screenshots]
+    if: ${{ !cancelled() && needs.gate.result == 'success' }}
     runs-on: macos-26
     # A release waits for App Store Connect's processing of both builds.
     timeout-minutes: 240
@@ -144,8 +180,9 @@ jobs:
           bundler-cache: true
       - name: CI passed on this commit
         id: ci
-        # A TestFlight edition build (a push to main through deliver.yml) of a commit CI passed: CI already ran the core
-        # tests on it, on Linux and macOS. The App Store edition, the one submitted for review, always runs them here.
+        # A TestFlight edition build of a commit whose CI long jobs passed (a night's run or one by hand): CI already ran
+        # the core tests on it, on Linux and macOS. A push to main (deliver.yml) usually comes before the night, so its
+        # build runs them here. The App Store edition, the one submitted for review, always runs them here.
         if: env.TARGET != 'status' && !startsWith(env.TARGET, 'withdraw') && env.EDITION == 'testflight'
         env:
           GH_TOKEN: ${{ github.token }}

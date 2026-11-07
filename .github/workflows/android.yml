@@ -1,16 +1,18 @@
 name: Android
 
-# Core tests, lint, unit and Compose UI tests (Robolectric), screenshots (Roborazzi) compared with the committed
-# reference screenshots, a release bundle and the Google Play listing's length limits. Run by hand on a working
-# branch with record_screenshots, it records the reference screenshots anew and commits them to that branch
-# (docs/ANDROID.md, "Screenshots").
+# The short jobs (Kotlin core tests, lint, the debug APK and the release bundle, the Google Play listing's length limits)
+# run once per commit on main and on pull requests: their green run is what Deliver waits for (deliver.yml). The long
+# job (unit and Compose UI tests with Robolectric, screenshots with Roborazzi compared with the committed references)
+# runs at night on main, only when main changed since the last night that passed it, and by hand; Google Play
+# production gets only a commit it passed on (release-android.yml). Run by hand on a working branch with
+# record_screenshots, it records the reference screenshots anew and commits them to that branch (docs/ANDROID.md,
+# "Screenshots").
 #
 # The path filter is the ordered list PATHS["android"] of .github/scripts/ci_scope.py, copied byte for byte (its tests
 # check it): Apple-only, documentation-only (but the shared specs docs/SYNC* and docs/PROFILES*), website-only and App
 # Store listing-only changes skip it; anything else runs it: android/, the fixtures both cores read (fixtures/), the
 # scripts and workflows, the Google Play listing. A run by hand on a working branch applies the same filter to the
-# branch's changes since main (job "What to run"), and a push to main whose commit or tree already passed with every
-# job run skips the Kotlin and app jobs (docs/CI.md).
+# branch's changes since main (job "What to run", docs/CI.md).
 on:
   push:
     branches: [main]
@@ -53,9 +55,14 @@ on:
         description: "Record the reference screenshots anew and commit them to this branch (a working branch, never main or a tag)"
         type: boolean
         default: false
+  # The night's run (01:47 UTC, beside CI's), on main only.
+  schedule:
+    - cron: '47 1 * * *'
 
+# The runs with the long job (night, by hand) in a group of their own: a push never cancels the night's run, and the
+# night never cancels a push's short run, which Deliver waits for.
 concurrency:
-  group: android-${{ github.ref }}
+  group: android-${{ github.ref }}-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'long' || 'short' }}
   cancel-in-progress: true
 
 permissions:
@@ -66,7 +73,7 @@ jobs:
     name: What to run
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    # actions: read: the earlier runs of this workflow (a push to main already tested on its branch).
+    # actions: read: the earlier runs of this workflow (a night when main already passed).
     permissions:
       actions: read
       contents: read
@@ -85,13 +92,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RECORD: ${{ github.event_name == 'workflow_dispatch' && inputs.record_screenshots }}
-        # When unsure (an error, no main, an unknown path), everything runs. A failure here fails the run.
+        # A push or a pull request: never the long job. A night or a run by hand: when unsure (an error, no main, an
+        # unknown path), everything runs. A failure here fails the run.
         run: python3 -I .github/scripts/ci_scope.py scope android
 
   core:
     name: Core (Kotlin) tests
-    needs: scope
-    if: needs.scope.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -123,11 +129,59 @@ jobs:
           if-no-files-found: ignore
 
   app:
-    name: App — lint, tests, screenshots, bundle
+    # Short: every run, the testers' builds wait for it (with the core tests and the listing limits).
+    name: App — lint, debug APK, release bundle
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Lint
+        # --warning-mode all once in CI, in this job (it configures the app and the included core build): every
+        # Gradle deprecation is named in the log, with the Gradle version that will remove it.
+        run: ./gradlew :app:lintRelease --stacktrace --warning-mode all
+      - name: Debug APK and release bundle
+        # Signed with the debug key (no upload key here): the bundle only proves that R8 and shrinking work.
+        run: ./gradlew :app:assembleDebug :app:bundleRelease --stacktrace
+      - name: Reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-reports
+          path: android/app/build/reports
+          if-no-files-found: ignore
+      - name: Gradle problems report
+        # The deprecations and configuration problems Gradle found in the build, as Gradle writes them (HTML).
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gradle-problems-report
+          path: android/build/reports/problems
+          if-no-files-found: ignore
+      - name: Builds
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-builds
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+
+  app-tests:
+    # Long (about 12 minutes of tests): at night and by hand only (job "What to run").
+    name: App — unit, Compose and screenshot tests
     needs: scope
     if: needs.scope.outputs.run == 'true'
-    runs-on: ubuntu-24.04
     timeout-minutes: 45
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: android
@@ -168,14 +222,12 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Unit and Compose UI tests, screenshots
-        # --warning-mode all once in CI, in this job (it configures the app and the included core build): every
-        # Gradle deprecation is named in the log, with the Gradle version that will remove it.
         env:
           TASK: ${{ steps.shots.outputs.task }}
           FRESH: ${{ steps.shots.outputs.fresh }}
         run: |
           if [ "$FRESH" = "true" ]; then set -- --no-build-cache; fi
-          ./gradlew ":app:${TASK}RoborazziDebug" "$@" --stacktrace --warning-mode all
+          ./gradlew ":app:${TASK}RoborazziDebug" "$@" --stacktrace
       - name: Screenshot differences
         # Each screenshot that no longer matches its reference: in the summary, and the images (reference,
         # difference, new) in the android-screenshot-diffs artifact.
@@ -209,25 +261,12 @@ jobs:
       - name: Test counts
         if: success() || failure()
         run: python3 ../.github/scripts/test_summary.py "Android app tests (unit, Compose, screenshots)" app/build/test-results
-      - name: Lint
-        run: ./gradlew :app:lintRelease --stacktrace
-      - name: Debug APK and release bundle
-        # Signed with the debug key (no upload key here): the bundle only proves that R8 and shrinking work.
-        run: ./gradlew :app:assembleDebug :app:bundleRelease --stacktrace
       - name: Reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: app-reports
+          name: app-test-reports
           path: android/app/build/reports
-          if-no-files-found: ignore
-      - name: Gradle problems report
-        # The deprecations and configuration problems Gradle found in the build, as Gradle writes them (HTML).
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: gradle-problems-report
-          path: android/build/reports/problems
           if-no-files-found: ignore
       - name: Screenshots
         if: always()
@@ -236,19 +275,13 @@ jobs:
           name: android-screenshots
           path: android/app/src/test/screenshots
           if-no-files-found: ignore
-      - name: Builds
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: android-builds
-          path: |
-            android/app/build/outputs/apk/debug/*.apk
-            android/app/build/outputs/bundle/release/*.aab
 
   screenshots:
     # Its own job: only this one can write to the repository, and it runs no Gradle or project code.
     name: Publish screenshots to the android-screenshots branch
-    needs: app
-    if: github.event_name == 'push'
+    needs: app-tests
+    # main only: the night's run, or a run by hand on main.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -278,7 +311,7 @@ jobs:
     # workflow was run on by hand (never main, never a tag). It runs no Gradle and no app code; the token is given to
     # the push step alone.
     name: Commit the reference screenshots to the branch
-    needs: app
+    needs: app-tests
     if: github.event_name == 'workflow_dispatch' && inputs.record_screenshots && github.ref_type == 'branch' && github.ref_name != 'main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10

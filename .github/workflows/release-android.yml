@@ -4,7 +4,8 @@ name: Release Android
 # sends it with the listing to closed testing, for review at once (managed publishing off); a push to main sends the
 # build alone to internal testing (deliver.yml); a run by hand goes to the chosen track. Every build that reaches internal
 # testing then goes to closed testing too, with its release notes, sent for review (CLAUDE.md); while Google reviews
-# closed testing, Play catch-up (play-catchup.yml) sends it there once the review is over.
+# closed testing, Play catch-up (play-catchup.yml) sends it there once the review is over. Production gets only a commit
+# whose long Android tests passed (android.yml at night or by hand: step "Long tests passed on this commit").
 on:
   push:
     tags: ["v*"]
@@ -39,6 +40,10 @@ jobs:
     name: Google Play
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    # actions: read: the step "Long tests passed on this commit" reads this repository's Android runs.
+    permissions:
+      actions: read
+      contents: read
     # Each secret is given only to the step that uses it, not to the tools installed before (gems, Gradle
     # plugins download their own code).
     env:
@@ -61,6 +66,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Long tests passed on this commit
+        # Production (the testers' tracks leave after the short checks): android.yml's unit, Compose and screenshot
+        # tests must have passed on this very commit, at night or by hand (docs/CI.md). Any doubt refuses.
+        if: env.TRACK == 'production'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse "$GITHUB_SHA^{commit}")
+          python3 -I .github/scripts/ci_scope.py production android "$sha"
       - name: The tag is the version of the apps
         # The builds between releases take their version from build.gradle.kts and project.yml: the tag must agree.
         if: github.ref_type == 'tag'
@@ -107,8 +121,8 @@ jobs:
           bundler-cache: true
       - name: Tests and listing screenshots
         # No secret here: the tests run third-party code (test libraries, Robolectric).
-        # A build alone for internal testing (deliver.yml, after the Android workflow passed on this commit) needs
-        # neither the tests again nor the listing's screenshots.
+        # A build alone for internal testing (deliver.yml, after the Android workflow's short checks passed on this
+        # commit; its long tests run at night) needs neither the tests nor the listing's screenshots.
         if: env.TRACK != 'internal' || env.LISTING != 'skip'
         working-directory: android
         run: |
