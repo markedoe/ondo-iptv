@@ -1,8 +1,8 @@
 name: Google Play status
 
 # What Google Play shows of the Android app, read only: tracks and releases, bundles, store listing and images, testers'
-# groups, countries, reviews, generated APKs, crashes and ANRs. Changes nothing: the edit it opens is deleted, never
-# committed. The review of changes and the Android TV review are in no API (Play Console and e-mails).
+# groups, countries, in-app products (the tips) and the missing ones, reviews, generated APKs, crashes and ANRs. Changes
+# nothing: the edit it opens is deleted, never committed. The review of changes and the Android TV review are in no API (Play Console and e-mails).
 on:
   workflow_dispatch:
 

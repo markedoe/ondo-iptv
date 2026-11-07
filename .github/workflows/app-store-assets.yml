@@ -8,6 +8,7 @@ name: App Store header and search results
 #   submit  for review on their own, once an iOS version is approved; refused while one is in review. Run it only
 #           with the user's go (CLAUDE.md)
 #   publish the approved assets onto the live iOS version, without a new version
+#   iap     where the tips' In-App Purchases stand, and every App Store version's state (read only: GET requests only)
 # See docs/RELEASE.md.
 on:
   workflow_dispatch:
@@ -16,7 +17,7 @@ on:
         description: What to do
         type: choice
         default: status
-        options: [status, upload, place, submit, publish]
+        options: [status, upload, place, submit, publish, iap]
 
 permissions:
   contents: read

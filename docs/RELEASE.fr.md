@@ -318,6 +318,15 @@ réseau, fichiers choisis par l'utilisateur).
    rien changer à ce qu'App Review examine. Une fois approuvées par Apple, `publish` les affiche sur la version
    en ligne sans nouvelle version (ou dans App Store Connect : En-tête et résultats de recherche → Parcourir les
    ressources → Publier). Rien n'est soumis sans votre accord.
+
+   **Pourboires (achats intégrés)** : le même workflow avec `iap` lit, sans rien changer (requêtes GET seulement),
+   où en sont les trois pourboires consommables sur App Store Connect (`com.markedoe.ondo.tip.small`, `.medium`,
+   `.large`, d'après `App/Model/Tips.swift`) : pour chaque produit son type, son état, le partage familial, si une note
+   pour la review est remplie, chaque localisation (nom, description remplie ou non), le calendrier de prix (territoire
+   de base et prix client), le nombre de territoires où il est disponible, la capture pour la review et son état de
+   livraison, et ses versions ; puis les pourboires absents d'App Store Connect, et chaque version App Store de chaque
+   plateforme avec son état. Une lecture que la clé d'API ne peut pas faire (HTTP 403) est signalée et le reste
+   continue.
 5. Un tag soumet tout seul (étape 2). À la main, dans chaque version (iOS et macOS, par exemple 1.1.0) : choisissez
    le build de l'édition **app-store** →
    **Add for Review** → **Submit for Review**. Ou *Run workflow* avec la cible `metadata` (la fiche ;

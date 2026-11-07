@@ -15,6 +15,10 @@ ASC_KEY_P8, as for the release workflow):
                             iOS version is approved. Refused while an iOS version or review submission is in review,
                             so that nothing changes what App Review is looking at. Only with the user's go (CLAUDE.md).
   asset_library.py publish  shows the approved assets on the live iOS version's product page, without a new version.
+  asset_library.py iap      where the tips' In-App Purchases stand: each product (type, state, Family Sharing, review
+                            note set or not, localizations, price schedule, availability, review screenshot, versions),
+                            the app's tip products App Store Connect lacks, and every App Store version of each
+                            platform with its state. Reads only (GET); a refused read is reported and the rest goes on.
 
 Prints no secret and no contact detail. Standard library and the openssl command only.
 """
@@ -44,6 +48,8 @@ EDITABLE = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADAT
 # An iOS version Apple is looking at, and one it has approved.
 IN_REVIEW = {"WAITING_FOR_REVIEW", "IN_REVIEW", "READY_FOR_REVIEW", "WAITING_FOR_EXPORT_COMPLIANCE"}
 APPROVED = {"READY_FOR_SALE", "PENDING_DEVELOPER_RELEASE", "PENDING_APPLE_RELEASE", "PROCESSING_FOR_APP_STORE", "ACCEPTED"}
+# The tips the app sells (App/Model/Tips.swift, kept equal by a test).
+TIP_PRODUCTS = tuple(f"{BUNDLE_ID}.tip.{size}" for size in ("small", "medium", "large"))
 # Review submissions under way (READY_FOR_REVIEW is a draft not sent yet).
 SUBMISSION_IN_REVIEW = {"WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES", "CANCELING", "COMPLETING"}
 
@@ -74,6 +80,14 @@ def key_pem(value: str) -> str:
     """The secret holds the .p8 file as is, or its base64 (as the Fastfile accepts)."""
     value = value.strip()
     return value + "\n" if "BEGIN PRIVATE KEY" in value else base64.b64decode(value).decode()
+
+
+class ApiError(SystemExit):
+    """A refused request: ends the run as before, unless a reader reports it and goes on."""
+
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
 
 
 class Client:
@@ -113,7 +127,7 @@ class Client:
             # Apple's error titles and details: no secret in them.
             details = json.loads(error.read().decode() or "{}").get("errors", [])
             message = "; ".join(f"{item.get('title')}: {item.get('detail')}" for item in details)
-            raise SystemExit(f"{method} {path}: HTTP {error.code} {message}") from None
+            raise ApiError(error.code, f"{method} {path}: HTTP {error.code} {message}") from None
 
     def all(self, path: str, query=None):
         """Every item of a list, following the pages."""
@@ -126,8 +140,15 @@ class Client:
             page = self.call("GET", following)
 
 
+APP_QUERY = {"filter[bundleId]": BUNDLE_ID, "fields[apps]": "bundleId"}
+
+
 def app_id(client: Client) -> str:
-    apps = client.call("GET", "/v1/apps", query={"filter[bundleId]": BUNDLE_ID, "fields[apps]": "bundleId"})["data"]
+    return found_app(client.call("GET", "/v1/apps", query=APP_QUERY))
+
+
+def found_app(answer: dict) -> str:
+    apps = answer["data"]
     if not apps:
         raise SystemExit(f"No app with the bundle ID {BUNDLE_ID}")
     return apps[0]["id"]
@@ -239,6 +260,136 @@ def listing_ipad_screenshots(client: Client, version: dict):
                 preview = (asset.get("templateUrl") or "").replace("{w}", "800").replace("{h}", "600").replace("{f}", "png")
                 print(f"listing {localization['attributes']['locale']} {display} {attributes.get('fileName')}: "
                       f"{width}×{height} {shape} {preview}")
+
+
+class Reader:
+    """GET only: the iap report is given this, never the client, so it cannot change anything."""
+
+    def __init__(self, client):
+        self._client = client
+
+    def get(self, path: str, query=None) -> dict:
+        return self._client.call("GET", path, query=query)
+
+    def all(self, path: str, query=None) -> list:
+        return self._client.all(path, query=query)
+
+    @staticmethod
+    def attempt(label: str, read):
+        """One read; a refusal is printed and the report goes on."""
+        try:
+            return read()
+        except ApiError as error:
+            hint = {403: " (the API key's role may lack access to this: App Manager or Admin)",
+                    404: " (not found: nothing set yet, or not readable with this key)"}.get(error.status, "")
+            print(f"  {label}: unavailable, {error}{hint}")
+            return None
+
+
+def describe_localizations(localizations: list) -> list:
+    lines = []
+    for item in sorted(localizations, key=lambda item: item["attributes"].get("locale", "")):
+        attributes = item["attributes"]
+        lines.append(f"  localization {attributes.get('locale')}: name \"{attributes.get('name') or ''}\" "
+                     f"{'set' if attributes.get('name') else 'NOT SET'}, description "
+                     f"{'set' if attributes.get('description') else 'NOT SET'}, {attributes.get('state')}")
+    return lines or ["  no localization"]
+
+
+def describe_screenshot(screenshot) -> str:
+    if not screenshot:
+        return "  review screenshot: none"
+    attributes = screenshot.get("attributes", {})
+    delivery = attributes.get("assetDeliveryState") or {}
+    errors = len(delivery.get("errors") or [])
+    return f"  review screenshot: present, {delivery.get('state', '?')}" + (f", {errors} error(s)" if errors else "")
+
+
+def describe_prices(prices: dict, base: str) -> str:
+    """The customer price in the base territory, read from the price points included with the manual prices."""
+    points = {item["id"]: item.get("attributes", {}) for item in prices.get("included", [])
+              if item.get("type") == "inAppPurchasePricePoints"}
+    for price in prices.get("data", []):
+        point = (price.get("relationships", {}).get("inAppPurchasePricePoint", {}).get("data") or {}).get("id")
+        if point in points and not price.get("attributes", {}).get("endDate"):
+            return f"{base} {points[point].get('customerPrice')}"
+    return f"{base} price not readable"
+
+
+def describe_versions(versions: list) -> list:
+    """Every App Store version by platform, with both states (appVersionState is the newer one)."""
+    lines = []
+    for version in sorted(versions, key=lambda item: (item["attributes"].get("platform") or "", item["attributes"].get("createdDate") or "")):
+        attributes = version["attributes"]
+        lines.append(f"{attributes.get('platform')} {attributes.get('versionString')}: appStoreState "
+                     f"{attributes.get('appStoreState')}, appVersionState {attributes.get('appVersionState')}")
+    return lines or ["no App Store version"]
+
+
+def missing_products(found: list) -> list:
+    return [product for product in TIP_PRODUCTS if product not in found]
+
+
+def iap_product(reader: Reader, product: dict):
+    attributes, ident = product["attributes"], product["id"]
+    print(f"{attributes.get('productId')} \"{attributes.get('name')}\": {attributes.get('inAppPurchaseType')}, "
+          f"{attributes.get('state')}, Family Sharing {'yes' if attributes.get('familySharable') else 'no'}, "
+          f"review note {'yes' if attributes.get('reviewNote') else 'no'}")
+    localizations = reader.attempt("localizations", lambda: reader.all(f"/v2/inAppPurchases/{ident}/inAppPurchaseLocalizations",
+                                                                      query={"limit": "50"}))
+    if localizations is not None:
+        for line in describe_localizations(localizations):
+            print(line)
+    schedule = reader.attempt("price schedule", lambda: reader.get(f"/v2/inAppPurchases/{ident}/iapPriceSchedule"))
+    if schedule is not None:
+        data = schedule.get("data")
+        if not data:
+            print("  price schedule: NOT SET")
+        else:
+            territory = reader.attempt("base territory", lambda: reader.get(
+                f"/v1/inAppPurchasePriceSchedules/{data['id']}/baseTerritory"))
+            base = ((territory or {}).get("data") or {}).get("id", "?")
+            prices = reader.attempt("manual prices", lambda: reader.get(
+                f"/v1/inAppPurchasePriceSchedules/{data['id']}/manualPrices",
+                query={"include": "inAppPurchasePricePoint,territory", "filter[territory]": base, "limit": "50"}
+                if base != "?" else {"include": "inAppPurchasePricePoint,territory", "limit": "50"}))
+            print(f"  price schedule: set, base territory {base}" + (f", {describe_prices(prices, base)}" if prices else ""))
+    availability = reader.attempt("availability", lambda: reader.get(f"/v2/inAppPurchases/{ident}/inAppPurchaseAvailability"))
+    if availability is not None:
+        data = availability.get("data")
+        if not data:
+            print("  availability: NOT SET")
+        else:
+            territories = reader.attempt("territories", lambda: reader.all(
+                f"/v1/inAppPurchaseAvailabilities/{data['id']}/availableTerritories", query={"limit": "200"}))
+            new = "yes" if data.get("attributes", {}).get("availableInNewTerritories") else "no"
+            count = len(territories) if territories is not None else "?"
+            print(f"  availability: {count} territories, new territories {new}")
+    screenshot = reader.attempt("review screenshot", lambda: reader.get(f"/v2/inAppPurchases/{ident}/appStoreReviewScreenshot"))
+    if screenshot is not None:
+        print(describe_screenshot(screenshot.get("data")))
+    versions = reader.attempt("versions", lambda: reader.all(f"/v2/inAppPurchases/{ident}/versions"))
+    for version in versions or []:
+        print(f"  version {version['attributes'].get('version')}: {version['attributes'].get('state')}")
+
+
+def iap(client: Client):
+    """Reads only: everything below goes through the GET-only reader."""
+    reader = Reader(client)
+    app = found_app(reader.get("/v1/apps", query=APP_QUERY))
+    print("== In-App Purchases")
+    products = reader.attempt("In-App Purchases", lambda: reader.all(f"/v1/apps/{app}/inAppPurchasesV2", query={"limit": "200"}))
+    for product in products or []:
+        iap_product(reader, product)
+    if products is not None:
+        if not products:
+            print("no In-App Purchase on App Store Connect")
+        missing = missing_products([product["attributes"].get("productId") for product in products])
+        print(f"missing on App Store Connect: {', '.join(missing) if missing else 'none'}")
+    print("== App Store versions")
+    versions = reader.attempt("App Store versions", lambda: reader.all(f"/v1/apps/{app}/appStoreVersions", query={"limit": "200"}))
+    for line in describe_versions(versions or []) if versions is not None else []:
+        print(line)
 
 
 def upload_file(client: Client, library: str, path: Path, name: str) -> dict:
@@ -392,7 +543,7 @@ def publish(client: Client):
 
 
 def main() -> None:
-    commands = {"status": status, "upload": upload, "place": place, "submit": submit, "publish": publish}
+    commands = {"status": status, "upload": upload, "place": place, "submit": submit, "publish": publish, "iap": iap}
     if len(sys.argv) != 2 or sys.argv[1] not in commands:
         raise SystemExit(f"Usage: asset_library.py {'|'.join(commands)}")
     client = Client(os.environ["ASC_KEY_ID"], os.environ["ASC_ISSUER_ID"], key_pem(os.environ["ASC_KEY_P8"]))

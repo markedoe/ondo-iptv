@@ -6,6 +6,9 @@ Reads with the service account of the GitHub secret PLAY_SERVICE_ACCOUNT_JSON:
   changes waiting for review): the tracks and their releases, the bundles Play holds, the store listings and their
   images (TV screenshots and banner included), the testers' Google Groups and the countries of each track; then the
   reviews of the last week and the APKs Play generated from the latest bundle.
+- Google Play Developer API, outside any edit: the in-app products (the tips), through the one-time products API
+  (monetization.onetimeproducts) and the legacy in-app products API (inappproducts), both read and shown, then the
+  app's tip product IDs that neither of them holds.
 - Google Play Developer Reporting API: the releases each track serves, crashes and ANRs (issues and a few reports).
 No API shows the review of changes, the Android TV review and opt-in or the device catalog: the Play Console and
 Google's e-mails only.
@@ -36,6 +39,8 @@ SCOPES = (
 )
 PUBLISHER = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
 REPORTING = "https://playdeveloperreporting.googleapis.com/v1beta1/"
+# The tips the app sells (android/app/src/main/kotlin/com/markedoe/ondo/data/Tips.kt, kept equal by a test).
+TIP_PRODUCTS = ("tip_small", "tip_medium", "tip_large")
 IMAGE_TYPES = (
     "icon", "featureGraphic", "phoneScreenshots", "sevenInchScreenshots", "tenInchScreenshots",
     "tvBanner", "tvScreenshots", "wearScreenshots",
@@ -279,6 +284,96 @@ def publisher(client, report: Report, package: str = PACKAGE) -> list:
     return codes
 
 
+def money(units, nanos=0, currency: str = "") -> str:
+    """A price as a shop shows it ("1.99 EUR"); never the micros, a long number the log would hide."""
+    cents = round((int(units or 0) * 1_000_000_000 + int(nanos or 0)) / 10_000_000)
+    return f"{cents // 100}.{cents % 100:02d} {currency}".strip()
+
+
+def pages(client, url: str, key: str, token_of, token_param: str) -> list:
+    """Every item of a list, following its page tokens."""
+    items, params = [], {}
+    while True:
+        page = client.call("GET", url, params or None)
+        items += page.get(key, [])
+        token = token_of(page)
+        if not token:
+            return items
+        params = {token_param: token}
+
+
+def describe_one_time_product(product: dict) -> list:
+    """A product of the one-time products API: its purchase options, their prices and its listings' titles."""
+    options = product.get("purchaseOptions", [])
+    lines = [f"Product {product.get('productId', '?')}: {len(options)} purchase option(s)"]
+    for option in options:
+        kind = "buy" if "buyOption" in option else "rent" if "rentOption" in option else "?"
+        if option.get("buyOption", {}).get("legacyCompatible"):
+            kind += ", legacy compatible"
+        configs = option.get("regionalPricingAndAvailabilityConfigs", [])
+        priced = [config for config in configs if config.get("price")]
+        available = [config for config in configs if config.get("availability") == "AVAILABLE"]
+        sample = next((config for config in priced if config.get("regionCode") == "US"), priced[0] if priced else None)
+        price = f" (e.g. {sample.get('regionCode', '?')} {money(sample['price'].get('units'), sample['price'].get('nanos'), sample['price'].get('currencyCode', ''))})" if sample else ""
+        lines.append(f"  option {option.get('purchaseOptionId', '?')}: {option.get('state', '?')}, {kind}, "
+                     f"prices in {len(priced)} region(s){price}, available in {len(available)}")
+    listings = product.get("listings", [])
+    for listing in sorted(listings, key=lambda item: item.get("languageCode", "")):
+        lines.append(f"  listing {listing.get('languageCode', '?')}: \"{listing.get('title', '')}\", description "
+                     f"{'set' if listing.get('description') else 'not set'}")
+    if not listings:
+        lines.append("  no listing")
+    return lines
+
+
+def describe_in_app_product(product: dict) -> list:
+    """A product of the legacy in-app products API."""
+    default = product.get("defaultPrice") or {}
+    price = "not set"
+    if default.get("priceMicros"):
+        price = money(0, int(default["priceMicros"]) * 1000, default.get("currency", ""))
+    lines = [f"Product {product.get('sku', '?')}: {product.get('status', '?')}, {product.get('purchaseType', '?')}, "
+             f"default price {price}, prices in {len(product.get('prices') or {})} region(s), default language "
+             f"{product.get('defaultLanguage', '?')}"]
+    listings = product.get("listings") or {}
+    for language in sorted(listings):
+        listing = listings[language] or {}
+        lines.append(f"  listing {language}: \"{listing.get('title', '')}\", description "
+                     f"{'set' if listing.get('description') else 'not set'}")
+    if not listings:
+        lines.append("  no listing")
+    return lines
+
+
+def products(client, report: Report, package: str = PACKAGE) -> None:
+    """The in-app products, read from both APIs: GET only, no edit."""
+    report.title("In-app products (the tips), read only")
+    found = set()
+    current = report.attempt("One-time products", lambda: pages(
+        client, f"{PUBLISHER}{package}/oneTimeProducts", "oneTimeProducts",
+        lambda page: page.get("nextPageToken"), "pageToken"))
+    if current is not None:
+        report.add(f"One-time products API: {len(current)} product(s)")
+        for product in current:
+            found.add(product.get("productId"))
+            for line in describe_one_time_product(product):
+                report.add(line)
+    legacy = report.attempt("Legacy in-app products", lambda: pages(
+        client, f"{PUBLISHER}{package}/inappproducts", "inappproduct",
+        lambda page: (page.get("tokenPagination") or {}).get("nextPageToken"), "token"))
+    if legacy is not None:
+        report.add(f"Legacy in-app products API: {len(legacy)} product(s)")
+        for product in legacy:
+            found.add(product.get("sku"))
+            for line in describe_in_app_product(product):
+                report.add(line)
+    if current is None and legacy is None:
+        report.add("Missing tips: unknown, neither API answered")
+        return
+    missing = [product for product in TIP_PRODUCTS if product not in found]
+    report.add(f"Missing tips: {', '.join(missing) if missing else 'none'} (the app sells {', '.join(TIP_PRODUCTS)})")
+
+
 def reviews(client, report: Report, package: str = PACKAGE) -> None:
     report.title("Reviews (the last week's, with a comment; no text or author shown)")
     found = report.attempt("Reviews", lambda: client.call("GET", f"{PUBLISHER}{package}/reviews", {"maxResults": 100}))
@@ -373,6 +468,7 @@ def main() -> int:
     report.add("Not shown by any API: the review of changes, the Android TV review and opt-in, the device catalog "
                "(Play Console and Google's e-mails).")
     codes = publisher(client, report)
+    products(client, report)
     reviews(client, report)
     if codes:
         generated(client, report, max(codes))

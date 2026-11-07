@@ -159,3 +159,115 @@ def jpeg_size(data: bytes) -> tuple[int, int]:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FakeReadOnlyConnect:
+    """Answers the iap report's reads from canned JSON; any other method than GET fails the test."""
+
+    def __init__(self, products, refuse=()):
+        self.products, self.refuse, self.methods = products, refuse, []
+
+    def call(self, method, path, body=None, query=None):
+        self.methods.append(method)
+        if method != "GET":
+            raise AssertionError(f"{method} {path}")
+        if any(part in path for part in self.refuse):
+            raise asset_library.ApiError(403, f"GET {path}: HTTP 403 Forbidden")
+        answers = {
+            "/v1/apps": {"data": [{"id": "app"}]},
+            "/v2/inAppPurchases/small/iapPriceSchedule": {"data": {"id": "schedule"}},
+            "/v1/inAppPurchasePriceSchedules/schedule/baseTerritory": {"data": {"id": "FRA", "type": "territories"}},
+            "/v1/inAppPurchasePriceSchedules/schedule/manualPrices": {
+                "data": [{"id": "p", "attributes": {"startDate": None, "endDate": None},
+                          "relationships": {"inAppPurchasePricePoint": {"data": {"type": "inAppPurchasePricePoints", "id": "pp"}}}}],
+                "included": [{"type": "inAppPurchasePricePoints", "id": "pp", "attributes": {"customerPrice": "1.99", "proceeds": "1.42"}}]},
+            "/v2/inAppPurchases/small/inAppPurchaseAvailability": {"data": {"id": "availability", "attributes": {"availableInNewTerritories": True}}},
+            "/v2/inAppPurchases/small/appStoreReviewScreenshot": {"data": {"attributes": {"assetDeliveryState": {"state": "COMPLETE", "errors": []}}}},
+            "/v2/inAppPurchases/medium/iapPriceSchedule": {"data": None},
+            "/v2/inAppPurchases/medium/inAppPurchaseAvailability": {"data": None},
+            "/v2/inAppPurchases/medium/appStoreReviewScreenshot": {"data": None},
+        }
+        if path not in answers:
+            raise AssertionError(path)
+        return answers[path]
+
+    def all(self, path, query=None):
+        if any(part in path for part in self.refuse):
+            self.call("GET", path, query=query)  # refused
+        if path == "/v1/apps/app/inAppPurchasesV2":
+            return self.products
+        if path == "/v1/apps/app/appStoreVersions":
+            return [{"attributes": {"platform": "MAC_OS", "versionString": "1.1.0", "appStoreState": "READY_FOR_SALE", "appVersionState": "READY_FOR_DISTRIBUTION"}},
+                    {"attributes": {"platform": "IOS", "versionString": "2.0.0", "appStoreState": "PREPARE_FOR_SUBMISSION", "appVersionState": "PREPARE_FOR_SUBMISSION"}}]
+        if path == "/v2/inAppPurchases/small/inAppPurchaseLocalizations":
+            return [{"attributes": {"locale": "fr-FR", "name": "Petit pourboire", "description": "Merci", "state": "PREPARE_FOR_SUBMISSION"}},
+                    {"attributes": {"locale": "en-US", "name": "Small tip", "description": "", "state": "PREPARE_FOR_SUBMISSION"}}]
+        if path == "/v2/inAppPurchases/medium/inAppPurchaseLocalizations":
+            return []
+        if path == "/v1/inAppPurchaseAvailabilities/availability/availableTerritories":
+            return [{"id": "FRA"}, {"id": "USA"}, {"id": "BRA"}]
+        if path.endswith("/versions"):
+            return [{"attributes": {"version": "1", "state": "PREPARE_FOR_SUBMISSION"}}] if "small" in path else []
+        raise AssertionError(path)
+
+
+def product(ident, product_id, **attributes):
+    return {"id": ident, "attributes": {"productId": product_id, "name": ident, "inAppPurchaseType": "CONSUMABLE",
+                                        "state": "MISSING_METADATA", **attributes}}
+
+
+class InAppPurchaseReportTest(unittest.TestCase):
+    def report(self, fake):
+        import contextlib
+        import io
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            asset_library.iap(fake)
+        return out.getvalue()
+
+    def test_the_tips_match_the_app(self):
+        source = (Path(__file__).resolve().parents[3] / "App" / "Model" / "Tips.swift").read_text()
+        self.assertIn('"com.markedoe.ondo.tip.\\(rawValue)"', source)
+        self.assertIn("case small, medium, large", source)
+        self.assertEqual(("com.markedoe.ondo.tip.small", "com.markedoe.ondo.tip.medium", "com.markedoe.ondo.tip.large"),
+                         asset_library.TIP_PRODUCTS)
+
+    def test_each_product_its_parts_the_missing_ones_and_the_versions_are_read_only(self):
+        fake = FakeReadOnlyConnect([
+            product("small", "com.markedoe.ondo.tip.small", familySharable=False, reviewNote="Tips unlock nothing"),
+            product("medium", "com.markedoe.ondo.tip.medium", reviewNote=None)])
+        text = self.report(fake)
+        self.assertEqual({"GET"}, set(fake.methods))
+        self.assertIn('com.markedoe.ondo.tip.small "small": CONSUMABLE, MISSING_METADATA, Family Sharing no, review note yes', text)
+        self.assertNotIn("Tips unlock nothing", text)
+        self.assertIn('localization en-US: name "Small tip" set, description NOT SET', text)
+        self.assertLess(text.index("localization en-US"), text.index("localization fr-FR"))
+        self.assertIn("price schedule: set, base territory FRA, FRA 1.99", text)
+        self.assertNotIn("1.42", text)  # proceeds stay out of the log
+        self.assertIn("availability: 3 territories, new territories yes", text)
+        self.assertIn("review screenshot: present, COMPLETE", text)
+        self.assertIn("version 1: PREPARE_FOR_SUBMISSION", text)
+        self.assertIn("review note no", text)
+        self.assertIn("no localization", text)
+        self.assertIn("price schedule: NOT SET", text)
+        self.assertIn("availability: NOT SET", text)
+        self.assertIn("review screenshot: none", text)
+        self.assertIn("missing on App Store Connect: com.markedoe.ondo.tip.large", text)
+        self.assertLess(text.index("IOS 2.0.0: appStoreState PREPARE_FOR_SUBMISSION, appVersionState PREPARE_FOR_SUBMISSION"),
+                        text.index("MAC_OS 1.1.0: appStoreState READY_FOR_SALE"))
+
+    def test_a_refused_read_is_reported_and_the_report_goes_on(self):
+        fake = FakeReadOnlyConnect([product("small", "com.markedoe.ondo.tip.small")], refuse=("iapPriceSchedule",))
+        text = self.report(fake)
+        self.assertIn("price schedule: unavailable, GET /v2/inAppPurchases/small/iapPriceSchedule: HTTP 403", text)
+        self.assertIn("App Manager or Admin", text)
+        self.assertIn("availability: 3 territories", text)
+        self.assertIn("IOS 2.0.0", text)
+
+    def test_no_product_at_all_lists_the_three_tips_as_missing(self):
+        text = self.report(FakeReadOnlyConnect([]))
+        self.assertIn("no In-App Purchase on App Store Connect", text)
+        self.assertIn("missing on App Store Connect: " + ", ".join(asset_library.TIP_PRODUCTS), text)
+
+    def test_the_other_actions_still_end_the_run_on_a_refusal(self):
+        self.assertTrue(issubclass(asset_library.ApiError, SystemExit))

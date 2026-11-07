@@ -136,3 +136,83 @@ class PublisherTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FakeProducts:
+    """Answers the in-app product lists of both APIs, a page at a time; records every call."""
+
+    def __init__(self, current=None, legacy=None, refuse=()):
+        self.current, self.legacy, self.refuse, self.calls = current, legacy, refuse, []
+
+    def call(self, method, url, params=None, body=None):
+        self.calls.append((method, url, params))
+        path = url.split("/applications/com.markedoe.ondo", 1)[-1]
+        if path in self.refuse:
+            raise play_status.ApiError(403, "PERMISSION_DENIED", ["forbidden"])
+        if path == "/oneTimeProducts":
+            if not params:
+                return {"oneTimeProducts": self.current[:1], "nextPageToken": "next"}
+            return {"oneTimeProducts": self.current[1:]}
+        if path == "/inappproducts":
+            return {"inappproduct": self.legacy, "tokenPagination": {}}
+        raise AssertionError(url)
+
+
+ONE_TIME = [
+    {"productId": "tip_small", "listings": [
+        {"languageCode": "fr-FR", "title": "Petit pourboire", "description": "Merci"},
+        {"languageCode": "en-US", "title": "Small tip", "description": ""}],
+     "purchaseOptions": [{"purchaseOptionId": "tip", "state": "ACTIVE", "buyOption": {"legacyCompatible": True},
+                          "regionalPricingAndAvailabilityConfigs": [
+                              {"regionCode": "FR", "price": {"currencyCode": "EUR", "units": "1", "nanos": 990000000}, "availability": "AVAILABLE"},
+                              {"regionCode": "US", "price": {"currencyCode": "USD", "units": "1", "nanos": 990000000}, "availability": "AVAILABLE"},
+                              {"regionCode": "BR", "availability": "NO_LONGER_AVAILABLE"}]}]},
+    {"productId": "tip_medium", "purchaseOptions": [{"purchaseOptionId": "tip", "state": "DRAFT", "buyOption": {}}]},
+]
+LEGACY = [{"sku": "tip_small", "status": "active", "purchaseType": "managedUser", "defaultLanguage": "en-US",
+           "defaultPrice": {"priceMicros": "1990000", "currency": "EUR"}, "prices": {"FR": {}, "US": {}},
+           "listings": {"en-US": {"title": "Small tip", "description": "Thanks"}}}]
+
+
+class ProductsTest(unittest.TestCase):
+    def report(self, play):
+        report = play_status.Report()
+        play_status.products(play, report)
+        return "\n".join(report.lines)
+
+    def test_the_tips_match_the_app(self):
+        source = (Path(__file__).resolve().parents[3] / "android" / "app" / "src" / "main" / "kotlin" / "com" / "markedoe"
+                  / "ondo" / "data" / "Tips.kt").read_text()
+        import re
+        enum = source.split("enum class Tip(", 1)[1].split("}", 1)[0]
+        self.assertEqual(play_status.TIP_PRODUCTS, tuple(re.findall(r'\("([^"]+)"\)', enum)))
+
+    def test_both_apis_are_read_with_their_pages_and_the_missing_tip_named(self):
+        play = FakeProducts(ONE_TIME, LEGACY)
+        text = self.report(play)
+        self.assertEqual({"GET"}, {method for method, _, _ in play.calls})
+        self.assertIn(("GET", play_status.PUBLISHER + "com.markedoe.ondo/oneTimeProducts", {"pageToken": "next"}), play.calls)
+        self.assertIn("One-time products API: 2 product(s)", text)
+        self.assertIn("Product tip_small: 1 purchase option(s)", text)
+        self.assertIn("option tip: ACTIVE, buy, legacy compatible, prices in 2 region(s) (e.g. US 1.99 USD), available in 2", text)
+        self.assertIn('listing en-US: "Small tip", description not set', text)
+        self.assertLess(text.index("listing en-US"), text.index("listing fr-FR"))
+        self.assertIn("option tip: DRAFT, buy, prices in 0 region(s), available in 0", text)
+        self.assertIn("no listing", text)
+        self.assertIn("Legacy in-app products API: 1 product(s)", text)
+        self.assertIn("Product tip_small: active, managedUser, default price 1.99 EUR, prices in 2 region(s)", text)
+        self.assertIn("Missing tips: tip_large", text)
+
+    def test_one_refused_api_leaves_the_other(self):
+        text = self.report(FakeProducts(ONE_TIME, LEGACY, refuse=("/oneTimeProducts",)))
+        self.assertIn("One-time products: unavailable (HTTP 403 PERMISSION_DENIED forbidden)", text)
+        self.assertIn("Legacy in-app products API: 1 product(s)", text)
+        self.assertIn("Missing tips: tip_medium, tip_large", text)
+
+    def test_with_neither_api_the_missing_tips_are_unknown(self):
+        text = self.report(FakeProducts(refuse=("/oneTimeProducts", "/inappproducts")))
+        self.assertIn("Missing tips: unknown", text)
+
+    def test_prices_never_show_as_micros(self):
+        self.assertEqual("1.99 EUR", play_status.money(0, 1_990_000 * 1000, "EUR"))
+        self.assertEqual("12.50 USD", play_status.money("12", 500_000_000, "USD"))

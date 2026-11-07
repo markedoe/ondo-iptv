@@ -309,6 +309,14 @@ user-selected files).
    nothing changes what App Review is looking at. Once Apple approves them, `publish` shows them on the live
    version without a new version (or in App Store Connect: Header and Search Results → Browse Assets →
    Publish). Nothing is submitted without your go.
+
+   **Tips (In-App Purchases)**: the same workflow with `iap` reads, without changing anything (GET requests only),
+   where the three consumable tips stand on App Store Connect (`com.markedoe.ondo.tip.small`, `.medium`, `.large`,
+   from `App/Model/Tips.swift`): for each product its type, state, Family Sharing, whether a review note is set,
+   each localization (name, description set or not), the price schedule (base territory and customer price), the
+   number of territories it is available in, the review screenshot and its delivery state, and its versions; then the
+   tips App Store Connect lacks, and every App Store version of each platform with its state. A read the API key may
+   not make (HTTP 403) is reported and the rest goes on.
 5. A tag submits by itself (step 2). By hand, in each version (iOS and macOS, e.g. 1.1.0): choose the build of the
    **app-store** edition → **Add for Review** → **Submit for Review**. Or *Run workflow* with target `metadata` (the listing;
    `metadata-ios` or `metadata-mac` for one platform, since a version in review cannot be edited), then target
