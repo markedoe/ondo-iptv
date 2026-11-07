@@ -53,7 +53,9 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
+# The checkout to check: the argument when run, this one when imported (asset_library.py reads whether the App Store
+# edition sells the tips).
+ROOT = Path(sys.argv[1]) if __name__ == "__main__" and len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
 METADATA = ROOT / "fastlane/metadata"
 NOTES = METADATA / "review_information/notes.txt"
 ENTITLEMENTS = ROOT / "App/Resources/Ondo-macOS.entitlements"
@@ -447,11 +449,11 @@ def check_review_notes(problems: list) -> None:
     if ENTITLEMENTS.is_file():
         entitlements = plistlib.loads(ENTITLEMENTS.read_bytes())
         asked |= {key for key, value in entitlements.items() if value and key != "com.apple.security.app-sandbox"}
-    app_code = "\n".join(without_comments(edition_source(path.read_text(encoding="utf-8"))) for path in swift_files("App"))
+    app_code = app_store_edition_code()
     if "UNUserNotificationCenter" in app_code:
         asked.add("Notifications")
     # In-App Purchases (the tips): the notes name each product and say what it unlocks (nothing), 3.1.1.
-    if re.search(r"^\s*import StoreKit\b", app_code, re.MULTILINE):
+    if sells_tips(app_code):
         asked |= {"In-App Purchase", "unlocks nothing"}
         asked |= {f"com.markedoe.ondo.tip.{case}" for case in tip_cases(app_code)}
     for item in sorted(asked):
@@ -459,10 +461,23 @@ def check_review_notes(problems: list) -> None:
             problems.append(f"the review notes do not explain {item} (fastlane/metadata/review_information/notes.txt)")
 
 
+def app_store_edition_code() -> str:
+    """The app's Swift code as the App Store edition compiles it, without comments."""
+    return "\n".join(without_comments(edition_source(path.read_text(encoding="utf-8"))) for path in swift_files("App"))
+
+
+def sells_tips(app_code: str) -> bool:
+    """The App Store edition sells the tips when StoreKit is in its build."""
+    return bool(re.search(r"^\s*import StoreKit\b", app_code, re.MULTILINE))
+
+
+def app_store_edition_sells_tips() -> bool:
+    return sells_tips(app_store_edition_code())
+
+
 def check_tips_wording(problems: list) -> None:
     """Without StoreKit in its build, the App Store edition has no tips: the listing and the notes must not offer them."""
-    app_code = "\n".join(without_comments(edition_source(path.read_text(encoding="utf-8"))) for path in swift_files("App"))
-    if re.search(r"^\s*import StoreKit\b", app_code, re.MULTILINE):
+    if app_store_edition_sells_tips():
         return
     files = sorted(METADATA.glob("*/*.txt"))
     for path in files:

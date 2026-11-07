@@ -19,11 +19,30 @@ ASC_KEY_P8, as for the release workflow):
                             note set or not, localizations, price schedule, availability, review screenshot, versions),
                             the app's tip products App Store Connect lacks, and every App Store version of each
                             platform with its state. Reads only (GET); a refused read is reported and the rest goes on.
+  asset_library.py iap_create
+                            creates the three tips (fastlane/tips.json) as consumable In-App Purchases, or completes
+                            them: reference name and review note, a name and description in every listing language,
+                            the price in euros with France as the base territory, every territory and the new ones, and
+                            the review screenshot fastlane/creative/iap-review.png when the file exists. Idempotent: what
+                            is already right is left alone, nothing is deleted, nothing is submitted.
+                            iap_create PNG takes the review screenshot from that file instead.
+  asset_library.py iap_screenshot PNG
+                            the review screenshot of each tip from that file (a tag's release: the
+                            iap-review-screenshot artifact of its screenshots run), where none is set yet.
+  asset_library.py iap_pending IOS|MAC_OS
+                            reads which tips a version submission must take with it (READY_TO_SUBMIT), and none when the
+                            App Store edition does not sell them (no StoreKit in its build). Ends on "tips to submit: N".
+  asset_library.py iap_submit IOS|MAC_OS VERSION BUILD
+                            the submission of a version tag when tips are pending (fastlane/Fastfile, release and
+                            submit lanes, after deliver uploaded the listing): selects the build, puts the version and
+                            each pending tip in one review submission and submits it. Only with the user's go.
 
 Prints no secret and no contact detail. Standard library and the openssl command only.
 """
 import base64
+import decimal
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -37,7 +56,21 @@ from pathlib import Path
 
 API = "https://api.appstoreconnect.apple.com"
 BUNDLE_ID = "com.markedoe.ondo"
-CREATIVE = Path(__file__).resolve().parents[2] / "fastlane" / "creative"
+ROOT = Path(__file__).resolve().parents[2]
+CREATIVE = ROOT / "fastlane" / "creative"
+# The tips' names, descriptions and prices, shared with play_tips.py.
+TIPS_FILE = ROOT / "fastlane" / "tips.json"
+# One screenshot of Settings → Leave a tip, for App Review, used for the three tips.
+REVIEW_SCREENSHOT = CREATIVE / "iap-review.png"
+# The prices are set in euros, France being the base territory: the other territories follow Apple's equalization.
+BASE_TERRITORY = "FRA"
+# App Store Connect's limits on an In-App Purchase's display name and description.
+NAME_LIMIT, DESCRIPTION_LIMIT = 30, 45
+# In-App Purchase versions whose localizations can still change.
+IAP_VERSION_EDITABLE = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "REJECTED", "DEVELOPER_REJECTED"}
+# In-App Purchases App Review holds: nothing about them is changed meanwhile.
+IAP_IN_REVIEW = {"WAITING_FOR_REVIEW", "IN_REVIEW"}
+PLATFORMS = ("IOS", "MAC_OS")
 LOCALES = ("en-US", "fr-FR")
 # Asset → App Store slot.
 SLOTS = {"header": "PRODUCT_PAGE_HEADER_ASSET", "search": "APP_STORE_SEARCH_RESULTS_ASSET"}
@@ -370,7 +403,16 @@ def iap_product(reader: Reader, product: dict):
         print(describe_screenshot(screenshot.get("data")))
     versions = reader.attempt("versions", lambda: reader.all(f"/v2/inAppPurchases/{ident}/versions"))
     for version in versions or []:
-        print(f"  version {version['attributes'].get('version')}: {version['attributes'].get('state')}")
+        # Since API 4.4.1 the localizations App Review reads belong to a version, and so may the review image.
+        localizations = reader.attempt("version localizations", lambda: reader.all(
+            f"/v1/inAppPurchaseVersions/{version['id']}/localizations", query={"limit": "200"}))
+        image = reader.attempt("version image", lambda: reader.get(f"/v1/inAppPurchaseVersions/{version['id']}/image"))
+        parts = [f"{len(localizations)} localization(s) {', '.join(sorted(item['attributes'].get('locale', '?') for item in localizations))}"
+                 if localizations is not None else "localizations unknown",
+                 "image unknown" if image is None else f"image {'yes' if image.get('data') else 'no'}"]
+        print(f"  version {version['attributes'].get('version')}: {version['attributes'].get('state')}, {', '.join(parts)}")
+    if attributes.get("state") == "READY_TO_SUBMIT":
+        print("  ready: submitted with the next version (a version tag), when the App Store edition sells the tips")
 
 
 def iap(client: Client):
@@ -392,6 +434,16 @@ def iap(client: Client):
         print(line)
 
 
+def send_parts(operations: list, content: bytes) -> None:
+    """The file's parts to the addresses a reservation gave (no API token: the addresses carry their own)."""
+    for operation in operations:
+        start, length = operation["offset"], operation["length"]
+        headers = {header["name"]: header["value"] for header in operation.get("requestHeaders") or []}
+        request = urllib.request.Request(operation["url"], data=content[start:start + length], method=operation["method"], headers=headers)
+        with urllib.request.urlopen(request, timeout=300):
+            pass
+
+
 def upload_file(client: Client, library: str, path: Path, name: str) -> dict:
     content = path.read_bytes()
     reserved = client.call("POST", "/v1/appAssetLibraryImages", {"data": {
@@ -399,12 +451,7 @@ def upload_file(client: Client, library: str, path: Path, name: str) -> dict:
         "attributes": {"category": "CREATIVE_ASSETS", "fileName": path.name, "fileSize": len(content), "referenceName": name},
         "relationships": {"assetLibrary": {"data": {"type": "appAssetLibraries", "id": library}}},
     }})["data"]
-    for operation in reserved["attributes"].get("uploadOperations") or []:
-        start, length = operation["offset"], operation["length"]
-        headers = {header["name"]: header["value"] for header in operation.get("requestHeaders") or []}
-        request = urllib.request.Request(operation["url"], data=content[start:start + length], method=operation["method"], headers=headers)
-        with urllib.request.urlopen(request, timeout=300):
-            pass
+    send_parts(reserved["attributes"].get("uploadOperations") or [], content)
     client.call("PATCH", f"/v1/appAssetLibraryImages/{reserved['id']}",
                 {"data": {"type": "appAssetLibraryImages", "id": reserved["id"], "attributes": {"uploaded": True}}})
     # Processing matches the file to a specification, or fails with the reason.
@@ -542,13 +589,396 @@ def publish(client: Client):
     put_on_version(client, live[0], assets)
 
 
+# The tips' In-App Purchases: created and completed (iap_create), then submitted with a version (iap_pending, iap_submit).
+
+def tips_catalog(path: Path = TIPS_FILE) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def review_note(product_id: str) -> str:
+    """What App Review reads about each tip (English): the product, that it unlocks nothing, where to find it."""
+    return (f"{product_id} is an optional tip for the developer, a consumable In-App Purchase. It unlocks nothing: "
+            "every feature of Ondo is there with or without a tip. To find it: Settings → Leave a tip.")
+
+
+def apple_localizations(catalog: dict, size: str) -> dict:
+    """The name and description of a tip in each App Store listing language, checked against Apple's limits."""
+    wanted = {}
+    for locale, language in catalog["apple_locales"].items():
+        texts = catalog["languages"][language]
+        name, description = texts["names"][size], texts["description"]
+        if len(name) > NAME_LIMIT or len(description) > DESCRIPTION_LIMIT:
+            raise SystemExit(f"{locale} {size}: the name takes {NAME_LIMIT} characters and the description "
+                             f"{DESCRIPTION_LIMIT}, fastlane/tips.json has {len(name)} and {len(description)}")
+        wanted[locale] = {"name": name, "description": description}
+    return wanted
+
+
+def localization_changes(wanted: dict, existing: list) -> list:
+    """("create", locale, texts) for a missing language, ("update", id, locale, texts) for one that differs. Never a
+    deletion: a language App Store Connect has and the file has not is left as it is."""
+    found = {item["attributes"].get("locale"): item for item in existing}
+    changes = []
+    for locale, texts in wanted.items():
+        item = found.get(locale)
+        if item is None:
+            changes.append(("create", locale, texts))
+        elif any((item["attributes"].get(key) or "") != value for key, value in texts.items()):
+            changes.append(("update", item["id"], locale, texts))
+    return changes
+
+
+def same_price(customer_price, wanted: str) -> bool:
+    try:
+        return decimal.Decimal(str(customer_price)) == decimal.Decimal(wanted)
+    except decimal.InvalidOperation:
+        return False
+
+
+def exact_price_point(points: list, wanted: str, territory: str = BASE_TERRITORY) -> str:
+    """The price point whose customer price is exactly the one chosen; none is an error, never a nearby price."""
+    for point in points:
+        if same_price(point.get("attributes", {}).get("customerPrice"), wanted):
+            return point["id"]
+    raise SystemExit(f"No {territory} price point of exactly {wanted}: nothing priced (pick a price App Store Connect offers)")
+
+
+def schedule_is_right(base: str, prices: dict, wanted: str) -> bool:
+    """The base territory is France and its current manual price is the one chosen."""
+    if base != BASE_TERRITORY:
+        return False
+    points = {item["id"]: item.get("attributes", {}) for item in prices.get("included", [])
+              if item.get("type") == "inAppPurchasePricePoints"}
+    for price in prices.get("data", []):
+        point = (price.get("relationships", {}).get("inAppPurchasePricePoint", {}).get("data") or {}).get("id")
+        if not price.get("attributes", {}).get("endDate") and point in points and same_price(points[point].get("customerPrice"), wanted):
+            return True
+    return False
+
+
+def price_schedule_body(product: str, point: str) -> dict:
+    """A schedule with one manual price in the base territory, from now on (startDate null), as POST
+    /v1/inAppPurchasePriceSchedules takes it: the price inline, by a local id."""
+    local = "${price}"
+    return {
+        "data": {"type": "inAppPurchasePriceSchedules", "relationships": {
+            "inAppPurchase": {"data": {"type": "inAppPurchases", "id": product}},
+            "baseTerritory": {"data": {"type": "territories", "id": BASE_TERRITORY}},
+            "manualPrices": {"data": [{"type": "inAppPurchasePrices", "id": local}]}}},
+        "included": [{"type": "inAppPurchasePrices", "id": local, "attributes": {"startDate": None},
+                      "relationships": {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": product}},
+                                        "inAppPurchasePricePoint": {"data": {"type": "inAppPurchasePricePoints", "id": point}}}}],
+    }
+
+
+def availability_is_right(availability, available: list, territories: list) -> bool:
+    if not availability or not availability.get("attributes", {}).get("availableInNewTerritories"):
+        return False
+    return set(territories) <= {item["id"] for item in available}
+
+
+def optional(read):
+    """A relationship not set yet answers 404 on some reads: that is "nothing", not an error."""
+    try:
+        return read()
+    except ApiError as error:
+        if error.status == 404:
+            return None
+        raise
+
+
+def editable_iap_version(client, product: dict, create: bool = True):
+    """The version of the tip whose texts can change: the latest editable one; a new one when it has none at all.
+    None when every version is with App Review or approved."""
+    versions = client.all(f"/v2/inAppPurchases/{product['id']}/versions")
+    editable = [item for item in versions if item["attributes"].get("state") in IAP_VERSION_EDITABLE]
+    if editable:
+        return max(editable, key=lambda item: int(item["attributes"].get("version") or 0))
+    if versions or not create:
+        return None
+    return client.call("POST", "/v1/inAppPurchaseVersions", {"data": {
+        "type": "inAppPurchaseVersions",
+        "relationships": {"inAppPurchase": {"data": {"type": "inAppPurchases", "id": product["id"]}}}}})["data"]
+
+
+def ensure_product(client, app: str, products: dict, tip: dict):
+    attributes = {"name": tip["reference"], "reviewNote": review_note(tip["apple"])}
+    product = products.get(tip["apple"])
+    if product is None:
+        product = client.call("POST", "/v2/inAppPurchases", {"data": {
+            "type": "inAppPurchases",
+            "attributes": {"productId": tip["apple"], "inAppPurchaseType": "CONSUMABLE", "familySharable": False, **attributes},
+            "relationships": {"app": {"data": {"type": "apps", "id": app}}}}})["data"]
+        print(f"{tip['apple']}: created, consumable")
+        return product
+    different = {key: value for key, value in attributes.items() if product["attributes"].get(key) != value}
+    if different and product["attributes"].get("state") not in IAP_IN_REVIEW:
+        client.call("PATCH", f"/v2/inAppPurchases/{product['id']}",
+                    {"data": {"type": "inAppPurchases", "id": product["id"], "attributes": different}})
+        print(f"{tip['apple']}: {', '.join(sorted(different))} set")
+    else:
+        print(f"{tip['apple']}: present, {product['attributes'].get('state')}")
+    return product
+
+
+def ensure_localizations(client, product: dict, wanted: dict):
+    version = editable_iap_version(client, product)
+    if version is None:
+        print("  localizations: no editable version (with App Review or approved), left as they are")
+        return
+    existing = client.all(f"/v1/inAppPurchaseVersions/{version['id']}/localizations", query={"limit": "200"})
+    changes = localization_changes(wanted, existing)
+    for change in changes:
+        if change[0] == "create":
+            _, locale, texts = change
+            client.call("POST", "/v2/inAppPurchaseLocalizations", {"data": {
+                "type": "inAppPurchaseLocalizations", "attributes": {"locale": locale, **texts},
+                "relationships": {"version": {"data": {"type": "inAppPurchaseVersions", "id": version["id"]}}}}})
+            print(f"  localization {locale}: created")
+        else:
+            _, ident, locale, texts = change
+            client.call("PATCH", f"/v2/inAppPurchaseLocalizations/{ident}",
+                        {"data": {"type": "inAppPurchaseLocalizations", "id": ident, "attributes": texts}})
+            print(f"  localization {locale}: updated")
+    if not changes:
+        print(f"  localizations: the {len(wanted)} languages already set")
+
+
+def ensure_price(client, product: dict, wanted: str):
+    ident = product["id"]
+    schedule = optional(lambda: client.call("GET", f"/v2/inAppPurchases/{ident}/iapPriceSchedule"))
+    data = (schedule or {}).get("data")
+    if data:
+        base = ((optional(lambda: client.call("GET", f"/v1/inAppPurchasePriceSchedules/{data['id']}/baseTerritory")) or {})
+                .get("data") or {}).get("id")
+        prices = client.call("GET", f"/v1/inAppPurchasePriceSchedules/{data['id']}/manualPrices",
+                             query={"include": "inAppPurchasePricePoint", "filter[territory]": BASE_TERRITORY, "limit": "50"})
+        if schedule_is_right(base, prices, wanted):
+            print(f"  price: {BASE_TERRITORY} {wanted} EUR already")
+            return
+    points = client.all(f"/v2/inAppPurchases/{ident}/pricePoints",
+                        query={"filter[territory]": BASE_TERRITORY, "fields[inAppPurchasePricePoints]": "customerPrice",
+                               "limit": "8000"})
+    point = exact_price_point(points, wanted)
+    client.call("POST", "/v1/inAppPurchasePriceSchedules", price_schedule_body(ident, point))
+    print(f"  price: {BASE_TERRITORY} {wanted} EUR set, the other territories by Apple's equalization")
+
+
+def ensure_availability(client, product: dict, territories: list):
+    ident = product["id"]
+    availability = (optional(lambda: client.call("GET", f"/v2/inAppPurchases/{ident}/inAppPurchaseAvailability")) or {}).get("data")
+    available = client.all(f"/v1/inAppPurchaseAvailabilities/{availability['id']}/availableTerritories",
+                           query={"limit": "200"}) if availability else []
+    if availability_is_right(availability, available, territories):
+        print(f"  availability: all {len(territories)} territories and the new ones already")
+        return
+    client.call("POST", "/v1/inAppPurchaseAvailabilities", {"data": {
+        "type": "inAppPurchaseAvailabilities", "attributes": {"availableInNewTerritories": True},
+        "relationships": {"inAppPurchase": {"data": {"type": "inAppPurchases", "id": ident}},
+                          "availableTerritories": {"data": [{"type": "territories", "id": code} for code in territories]}}}})
+    print(f"  availability: all {len(territories)} territories and the new ones set")
+
+
+def ensure_review_screenshot(client, product: dict, path: Path = REVIEW_SCREENSHOT, wait=time.sleep):
+    if not path.is_file():
+        print(f"  review screenshot: {path.name} missing, not uploaded (App Review needs one before the tips can be "
+              "submitted: a tag's release uploads the one its screenshots run captures)")
+        return
+    content = path.read_bytes()
+    checksum = hashlib.md5(content).hexdigest()
+    current = ((optional(lambda: client.call("GET", f"/v2/inAppPurchases/{product['id']}/appStoreReviewScreenshot")) or {})
+               .get("data"))
+    if current:
+        attributes = current.get("attributes", {})
+        if attributes.get("sourceFileChecksum") == checksum:
+            print(f"  review screenshot: already there ({(attributes.get('assetDeliveryState') or {}).get('state', '?')})")
+        else:
+            print("  review screenshot: another one is there, left as it is (delete it in App Store Connect to replace it)")
+        return
+    reserved = client.call("POST", "/v1/inAppPurchaseAppStoreReviewScreenshots", {"data": {
+        "type": "inAppPurchaseAppStoreReviewScreenshots", "attributes": {"fileName": path.name, "fileSize": len(content)},
+        "relationships": {"inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": product["id"]}}}}})["data"]
+    send_parts(reserved["attributes"].get("uploadOperations") or [], content)
+    client.call("PATCH", f"/v1/inAppPurchaseAppStoreReviewScreenshots/{reserved['id']}", {"data": {
+        "type": "inAppPurchaseAppStoreReviewScreenshots", "id": reserved["id"],
+        "attributes": {"uploaded": True, "sourceFileChecksum": checksum}}})
+    # Processed within a minute or two; until then the tip is not READY_TO_SUBMIT.
+    state = "?"
+    for _ in range(40):
+        shot = client.call("GET", f"/v1/inAppPurchaseAppStoreReviewScreenshots/{reserved['id']}")["data"]
+        state = (shot.get("attributes", {}).get("assetDeliveryState") or {}).get("state", "?")
+        if state in ("COMPLETE", "FAILED"):
+            break
+        wait(5)
+    print(f"  review screenshot: uploaded, {state}")
+    if state == "FAILED":
+        raise SystemExit(f"{product['attributes'].get('productId')}: App Store Connect refused the review screenshot {path.name}")
+
+
+def tip_products(client, app: str) -> dict:
+    return {item["attributes"].get("productId"): item
+            for item in client.all(f"/v1/apps/{app}/inAppPurchasesV2", query={"limit": "200"})}
+
+
+def iap_screenshot(client, screenshot: str, wait=time.sleep):
+    """The review screenshot of each tip already on App Store Connect, from a file (the release's
+    iap-review-screenshot artifact, or a downloaded copy); one already there is left as it is."""
+    path = Path(screenshot).resolve()
+    if not path.is_file():
+        raise SystemExit(f"No file {path.name}: no review screenshot uploaded")
+    products = tip_products(client, app_id(client))
+    for product_id in TIP_PRODUCTS:
+        product = products.get(product_id)
+        if not product:
+            print(f"{product_id}: not on App Store Connect (run iap_create), no screenshot")
+            continue
+        print(f"{product_id}: {product['attributes'].get('state')}")
+        if product["attributes"].get("state") in IAP_IN_REVIEW:
+            print("  with App Review: nothing changed")
+            continue
+        ensure_review_screenshot(client, product, path, wait)
+
+
+def iap_create(client, screenshot=REVIEW_SCREENSHOT):
+    screenshot = Path(screenshot).resolve()
+    catalog = tips_catalog()
+    wanted = {size: apple_localizations(catalog, size) for size in catalog["tips"]}  # every limit checked first
+    app = app_id(client)
+    products = tip_products(client, app)
+    territories = [item["id"] for item in client.all("/v1/territories", query={"limit": "200"})]
+    for size, tip in catalog["tips"].items():
+        product = ensure_product(client, app, products, tip)
+        if product["attributes"].get("state") in IAP_IN_REVIEW:
+            print("  with App Review: nothing changed")
+            continue
+        ensure_localizations(client, product, wanted[size])
+        ensure_price(client, product, tip["eur"])
+        ensure_availability(client, product, territories)
+        ensure_review_screenshot(client, product, screenshot)
+        state = client.call("GET", f"/v2/inAppPurchases/{product['id']}")["data"]["attributes"].get("state")
+        print(f"  state: {state}" + (" (submitted with the next version: a version tag)" if state == "READY_TO_SUBMIT" else ""))
+
+
+def load_check_app_store():
+    spec = importlib.util.spec_from_file_location("check_app_store", Path(__file__).resolve().parent / "check_app_store.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def app_store_edition_sells_tips() -> bool:
+    """The same answer as the App Store check (check_app_store.py): StoreKit in the App Store edition's build."""
+    return load_check_app_store().app_store_edition_sells_tips()
+
+
+def pending_tips(client, app: str) -> list:
+    """The tips ready to go to App Review with a version: READY_TO_SUBMIT, with an editable version (or none yet).
+    Approved ones, and ones App Review already holds, are left out."""
+    pending = []
+    products = tip_products(client, app)
+    for product_id in TIP_PRODUCTS:
+        product = products.get(product_id)
+        state = product["attributes"].get("state") if product else "missing"
+        if state != "READY_TO_SUBMIT":
+            print(f"{product_id}: {state}, not submitted" + (" (run iap_create: it is not ready)" if state in
+                  ("missing", "MISSING_METADATA", "WAITING_FOR_UPLOAD", "PROCESSING_CONTENT") else ""))
+            continue
+        versions = client.all(f"/v2/inAppPurchases/{product['id']}/versions")
+        if any(item["attributes"].get("state") in ("WAITING_FOR_REVIEW", "IN_REVIEW") for item in versions):
+            print(f"{product_id}: its version is with App Review already, not submitted again")
+            continue
+        print(f"{product_id}: READY_TO_SUBMIT")
+        pending.append(product)
+    return pending
+
+
+def iap_pending(client, platform: str, sells=None):
+    if platform not in PLATFORMS:
+        raise SystemExit(f"Platform: {' or '.join(PLATFORMS)}")
+    sells = app_store_edition_sells_tips() if sells is None else sells
+    if not sells:
+        print("The App Store edition has no tips (no StoreKit in its build): no In-App Purchase goes with this version.")
+        print("tips to submit: 0")
+        return []
+    pending = pending_tips(client, app_id(client))
+    print(f"tips to submit: {len(pending)}")
+    return pending
+
+
+def iap_submit(client, platform: str, version_string: str, build_number: str, sells=None, wait=time.sleep):
+    """deliver's submission (fastlane deliver/submit_for_review.rb) with the pending tips added to the same review
+    submission: Apple reviews a first In-App Purchase together with an app version."""
+    if platform not in PLATFORMS or not version_string or not build_number.isdigit():
+        raise SystemExit("Usage: asset_library.py iap_submit IOS|MAC_OS VERSION BUILD_NUMBER")
+    pending = iap_pending(client, platform, sells)
+    app = app_id(client)
+    versions = client.all(f"/v1/apps/{app}/appStoreVersions", query={
+        "filter[platform]": platform, "filter[versionString]": version_string, "fields[appStoreVersions]": "versionString,appStoreState,appVersionState"})
+    editable = [item for item in versions if item["attributes"].get("appStoreState") in EDITABLE]
+    if not editable:
+        raise SystemExit(f"{platform} {version_string}: no editable App Store version, nothing submitted")
+    version = editable[0]
+    builds = client.all("/v1/builds", query={"filter[app]": app, "filter[version]": build_number,
+                                             "filter[preReleaseVersion.version]": version_string,
+                                             "filter[preReleaseVersion.platform]": platform, "limit": "1"})
+    if not builds:
+        raise SystemExit(f"{platform} build {build_number} of {version_string} not found, nothing submitted")
+    build = builds[0]
+    if build["attributes"].get("usesNonExemptEncryption") is None:
+        raise SystemExit(f"Build {build_number}: export compliance not answered (ITSAppUsesNonExemptEncryption), nothing submitted")
+    client.call("PATCH", f"/v1/appStoreVersions/{version['id']}/relationships/build", {"data": {"type": "builds", "id": build["id"]}})
+    print(f"{platform} {version_string}: build {build_number} selected")
+    submissions = client.all("/v1/reviewSubmissions", query={"filter[app]": app, "filter[platform]": platform,
+                                                            "fields[reviewSubmissions]": "state,platform", "limit": "20"})
+    if any(item["attributes"].get("state") in SUBMISSION_IN_REVIEW for item in submissions):
+        raise SystemExit(f"A {platform} review submission is already in progress: nothing submitted")
+    drafts = [item for item in submissions if item["attributes"].get("state") == "READY_FOR_REVIEW"]
+    for draft in drafts:
+        if client.all(f"/v1/reviewSubmissions/{draft['id']}/items"):
+            raise SystemExit(f"A {platform} review submission draft already holds items: remove them in App Store Connect first")
+    submission = drafts[0] if drafts else client.call("POST", "/v1/reviewSubmissions", {"data": {
+        "type": "reviewSubmissions", "attributes": {"platform": platform},
+        "relationships": {"app": {"data": {"type": "apps", "id": app}}}}})["data"]
+
+    def item(relationship: str, kind: str, ident: str):
+        client.call("POST", "/v1/reviewSubmissionItems", {"data": {"type": "reviewSubmissionItems", "relationships": {
+            "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
+            relationship: {"data": {"type": kind, "id": ident}}}}})
+
+    item("appStoreVersion", "appStoreVersions", version["id"])
+    print(f"{platform} {version_string}: added to the review submission")
+    for product in pending:
+        iap_version = editable_iap_version(client, product)
+        if iap_version is None:
+            raise SystemExit(f"{product['attributes'].get('productId')}: no version to submit")
+        item("inAppPurchaseVersion", "inAppPurchaseVersions", iap_version["id"])
+        print(f"{product['attributes'].get('productId')}: added to the review submission")
+    # As deliver does: the version must be READY_FOR_REVIEW before the submission is sent.
+    for _ in range(10):
+        state = client.call("GET", f"/v1/appStoreVersions/{version['id']}",
+                            query={"fields[appStoreVersions]": "appVersionState"})["data"]["attributes"].get("appVersionState")
+        if state == "READY_FOR_REVIEW":
+            break
+        print(f"Waiting for the version to be READY_FOR_REVIEW ({state})")
+        wait(15)
+    sent = client.call("PATCH", f"/v1/reviewSubmissions/{submission['id']}",
+                       {"data": {"type": "reviewSubmissions", "id": submission["id"], "attributes": {"submitted": True}}})["data"]
+    print(f"Review submission: {sent['attributes'].get('state')}, with {len(pending)} tip(s)")
+
+
 def main() -> None:
-    commands = {"status": status, "upload": upload, "place": place, "submit": submit, "publish": publish, "iap": iap}
-    if len(sys.argv) != 2 or sys.argv[1] not in commands:
-        raise SystemExit(f"Usage: asset_library.py {'|'.join(commands)}")
+    # Each command and how many arguments follow it.
+    commands = {"status": (status, 0), "upload": (upload, 0), "place": (place, 0), "submit": (submit, 0),
+                "publish": (publish, 0), "iap": (iap, 0), "iap_create": (iap_create, 0, 1), "iap_screenshot": (iap_screenshot, 1),
+                "iap_pending": (iap_pending, 1), "iap_submit": (iap_submit, 3)}
+    if len(sys.argv) < 2 or sys.argv[1] not in commands or not (
+            commands[sys.argv[1]][1] <= len(sys.argv) - 2 <= commands[sys.argv[1]][-1]):
+        raise SystemExit(f"Usage: asset_library.py {'|'.join(commands)} (iap_create [PNG], iap_screenshot PNG, "
+                         "iap_pending PLATFORM, iap_submit PLATFORM VERSION BUILD)")
+    command = commands[sys.argv[1]][0]
     client = Client(os.environ["ASC_KEY_ID"], os.environ["ASC_ISSUER_ID"], key_pem(os.environ["ASC_KEY_P8"]))
     try:
-        commands[sys.argv[1]](client)
+        command(client, *sys.argv[2:])
     finally:
         client.close()
 

@@ -235,7 +235,7 @@ class DeliverTests(WorkflowScriptTestCase):
         # They share the release-android group with Release Android: a new run there would cancel them.
         self.commit("first", "android/app/src/main/Main.kt")
         self.commit("change", "android/core/src/main/Core.kt")
-        for workflow in ("release-android.yml", "promote-android.yml", "play-status.yml", "play-images.yml"):
+        for workflow in ("release-android.yml", "promote-android.yml", "play-status.yml", "play-images.yml", "play-tips.yml"):
             with self.subTest(waiting=workflow):
                 runs = {"android.yml": [green(self.commits["change"]), green(self.commits["first"])],
                         "release-android.yml": [run_in("in_progress")]}
@@ -260,7 +260,7 @@ class PlayCatchUpQueueTests(WorkflowScriptTestCase):
         self.assertEqual(self.queue({"release-android.yml": [run_in("in_progress")]}), "free=true\n")
 
     def test_a_waiting_run_is_never_replaced(self):
-        for workflow in ("release-android.yml", "promote-android.yml", "play-status.yml", "play-images.yml"):
+        for workflow in ("release-android.yml", "promote-android.yml", "play-status.yml", "play-images.yml", "play-tips.yml"):
             with self.subTest(waiting=workflow):
                 self.assertEqual(self.queue({workflow: [run_in("pending")]}), "free=false\n")
 

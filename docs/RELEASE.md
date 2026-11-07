@@ -317,6 +317,31 @@ user-selected files).
    number of territories it is available in, the review screenshot and its delivery state, and its versions; then the
    tips App Store Connect lacks, and every App Store version of each platform with its state. A read the API key may
    not make (HTTP 403) is reported and the rest goes on.
+
+   **Creating the tips**: `iap_create` creates the three tips, or completes them, from `fastlane/tips.json` (the
+   apps' own names in the seven languages and a description per language, within Apple's 30 and 45 characters):
+   consumable, Family Sharing off, reference names `Tip small` / `Tip medium` / `Tip large`, an English review note
+   naming the product, saying it unlocks nothing and where to find it (Settings → Leave a tip), a name and
+   description in every listing language (the localizations of the tip's version, API 4.4.1 and later), the price
+   with France as base territory (the price point whose customer price is exactly 1.99, 4.99 or 9.99 EUR; none is
+   an error, never a nearby price; the other territories follow Apple's equalization), all territories and the new
+   ones, and the review screenshot `fastlane/creative/iap-review.png` when it exists (or the file given:
+   `asset_library.py iap_create path/to.png`). It is idempotent: what is already right is left alone, nothing is
+   deleted (a different review screenshot already there is kept: delete it in App Store Connect to replace it),
+   nothing is submitted. A tip App Review holds is not touched.
+
+   **Submitting the tips**: Apple reviews a first In-App Purchase together with an app version. A tag's release
+   uploads the review screenshot its screenshots job captured (artifact `iap-review-screenshot`, `en-US` file) to
+   each tip that has none, then, for iOS and then macOS, asks `asset_library.py iap_pending` which tips are
+   `READY_TO_SUBMIT`. When some are, and only when the App Store edition sells the tips (StoreKit in its build, the
+   test of `check_app_store.py`), deliver uploads the listing without submitting and `asset_library.py iap_submit`
+   selects the build, puts the version and each tip's version in one review submission and submits it. Otherwise
+   (tips approved, with App Review, or an App Store edition without them) deliver submits as before. The tips go
+   with the iOS version; the macOS version takes those still waiting. precheck still leaves In-App Purchases out:
+   it cannot read them with an App Store Connect API key. The `submit` target does the same.
+
+   **What only you can do** (no API shows it): accept the **Paid Applications** agreement and fill in the banking
+   and tax forms in App Store Connect (*Business*); without them App Store Connect does not sell In-App Purchases.
 5. A tag submits by itself (step 2). By hand, in each version (iOS and macOS, e.g. 1.1.0): choose the build of the
    **app-store** edition → **Add for Review** → **Submit for Review**. Or *Run workflow* with target `metadata` (the listing;
    `metadata-ios` or `metadata-mac` for one platform, since a version in review cannot be edited), then target

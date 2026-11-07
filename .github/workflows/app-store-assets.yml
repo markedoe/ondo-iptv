@@ -9,6 +9,10 @@ name: App Store header and search results
 #           with the user's go (CLAUDE.md)
 #   publish the approved assets onto the live iOS version, without a new version
 #   iap     where the tips' In-App Purchases stand, and every App Store version's state (read only: GET requests only)
+#   iap_create  creates or completes the three tips (fastlane/tips.json): names and descriptions in every listing
+#           language, price in euros (France as base territory), every territory, review screenshot when
+#           fastlane/creative/iap-review.png exists. Idempotent, deletes nothing, submits nothing: a version tag
+#           submits them with the app version once the App Store edition sells them
 # See docs/RELEASE.md.
 on:
   workflow_dispatch:
@@ -17,7 +21,7 @@ on:
         description: What to do
         type: choice
         default: status
-        options: [status, upload, place, submit, publish, iap]
+        options: [status, upload, place, submit, publish, iap, iap_create]
 
 permissions:
   contents: read

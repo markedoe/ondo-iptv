@@ -298,6 +298,31 @@ jobs:
           # A version in review cannot be edited: metadata-ios and metadata-mac update one platform only.
           if [ "$TARGET" != metadata-mac ]; then bundle exec fastlane ios metadata; fi
           if [ "$TARGET" != metadata-ios ]; then bundle exec fastlane mac metadata; fi
+      # The tips' review screenshot (Settings → Leave a tip), captured by this run's screenshots job as its own
+      # artifact, kept outside the checkout so it never joins the listing's screenshots. Uploaded to each tip that has
+      # none, before the submission: a tip without it is not READY_TO_SUBMIT and would stay out of it.
+      - name: Tips' review screenshot (download)
+        id: iap_screenshot
+        if: env.TARGET == 'release'
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: iap-review-screenshot
+          path: ${{ runner.temp }}/iap-review
+      - name: Tips' review screenshot
+        if: env.TARGET == 'release' && env.SUBMIT == 'true'
+        continue-on-error: true
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          SHOT: ${{ runner.temp }}/iap-review/en-US/iap-review-tips-iphone-max.png
+        run: |
+          if [ -f "$SHOT" ]; then
+            python3 -I .github/scripts/asset_library.py iap_screenshot "$SHOT"
+          else
+            echo "::warning::No iap-review-screenshot artifact in this run: the tips' review screenshot is not uploaded."
+          fi
       # A version tag: the listing, the build this run uploaded and the submission, one platform after the other (the
       # Mac also after a failed iOS release: the two versions are independent).
       - name: iOS → App Review

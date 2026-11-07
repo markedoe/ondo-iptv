@@ -431,6 +431,28 @@ def distribute_to_external_testers(platform)
   UI.user_error!("#{problems.size} language(s) refused by App Store Connect (see the errors above)") unless problems.empty?
 end
 
+# The tips' In-App Purchases (App/Model/Tips.swift): Apple reviews a first In-App Purchase together with an app
+# version, in the same review submission. deliver cannot add them (it refuses a submission holding other items), so
+# when tips are waiting (READY_TO_SUBMIT, and StoreKit in the App Store edition's build) deliver uploads without
+# submitting and asset_library.py iap_submit sends the version and the tips together. None waiting (approved, with
+# App Review, or an App Store edition without the tips): deliver submits as before.
+ASSET_LIBRARY = File.expand_path("../.github/scripts/asset_library.py", __dir__)
+API_PLATFORMS = { "ios" => "IOS", "osx" => "MAC_OS" }.freeze
+
+def tips_to_submit?(platform)
+  output = sh("python3", "-I", ASSET_LIBRARY, "iap_pending", API_PLATFORMS.fetch(platform))
+  output[/^tips to submit: (\d+)$/, 1].to_i.positive?
+end
+
+# precheck as deliver runs it before a submission. In-App Purchases stay out of it: precheck refuses to read them
+# with an App Store Connect API key (precheck/runner.rb), the only login CI has.
+def submit_with_tips(platform, build)
+  passed = precheck(api_key: api_key, app_identifier: APP_ID, platform: platform, default_rule_level: :warn,
+                    include_in_app_purchases: false)
+  UI.user_error!("precheck found a problem: nothing submitted") if passed == false
+  sh("python3", "-I", ASSET_LIBRARY, "iap_submit", API_PLATFORMS.fetch(platform), app_version, build)
+end
+
 # Submits for App Review the App Store edition build BUILD_NUMBER of this version, with the listing as it is on App
 # Store Connect (the metadata lanes upload it), released as soon as Apple approves it. The number comes from the log of
 # the release run that built the App Store edition: never "the latest build", which may be a TestFlight edition one.
@@ -438,6 +460,7 @@ end
 def submit_for_review(platform)
   build = ENV.fetch("BUILD_NUMBER", "").strip
   UI.user_error!("BUILD_NUMBER must be the App Store edition's build number (from its release run's log)") unless build.match?(/\A\d+\z/)
+  tips = tips_to_submit?(platform)
   deliver(
     api_key: api_key,
     app_identifier: APP_ID,
@@ -448,12 +471,13 @@ def submit_for_review(platform)
     skip_metadata: true,
     skip_screenshots: true,
     force: true,
-    submit_for_review: true,
+    submit_for_review: !tips,
     automatic_release: true,
-    run_precheck_before_submit: true,
+    run_precheck_before_submit: !tips,
     precheck_include_in_app_purchases: false,
     submission_information: { add_id_info_uses_idfa: false }
   )
+  submit_with_tips(platform, build) if tips
 end
 
 # A version tag's release (the user's go: CLAUDE.md, App Store): the listing and its screenshots, the App Store edition
@@ -465,6 +489,8 @@ def release_for_review(platform, screenshots)
   UI.user_error!("BUILD_NUMBER must be the App Store edition build uploaded by this run") unless build.match?(/\A\d+\z/)
   submit = ENV["SUBMIT"] == "true"
   withdraw_from_review(platform) if submit
+  # After the withdrawal: tips it took back out of App Review are waiting again.
+  tips = submit && tips_to_submit?(platform)
   deliver(
     api_key: api_key,
     app_identifier: APP_ID,
@@ -480,12 +506,13 @@ def release_for_review(platform, screenshots)
     force: true,
     # Already withdrawn above: deliver would rename a waiting version to the tag's before withdrawing it.
     reject_if_possible: false,
-    submit_for_review: submit,
+    submit_for_review: submit && !tips,
     automatic_release: true,
-    run_precheck_before_submit: submit,
+    run_precheck_before_submit: submit && !tips,
     precheck_include_in_app_purchases: false,
     submission_information: { add_id_info_uses_idfa: false }
   )
+  submit_with_tips(platform, build) if tips
 end
 
 # Removes this platform's submission from App Review (waiting, in review, or with unresolved issues) and waits until

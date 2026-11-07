@@ -186,6 +186,7 @@ class FakeReadOnlyConnect:
             "/v2/inAppPurchases/medium/iapPriceSchedule": {"data": None},
             "/v2/inAppPurchases/medium/inAppPurchaseAvailability": {"data": None},
             "/v2/inAppPurchases/medium/appStoreReviewScreenshot": {"data": None},
+            "/v1/inAppPurchaseVersions/v1/image": {"data": None},
         }
         if path not in answers:
             raise AssertionError(path)
@@ -207,7 +208,9 @@ class FakeReadOnlyConnect:
         if path == "/v1/inAppPurchaseAvailabilities/availability/availableTerritories":
             return [{"id": "FRA"}, {"id": "USA"}, {"id": "BRA"}]
         if path.endswith("/versions"):
-            return [{"attributes": {"version": "1", "state": "PREPARE_FOR_SUBMISSION"}}] if "small" in path else []
+            return [{"id": "v1", "attributes": {"version": "1", "state": "PREPARE_FOR_SUBMISSION"}}] if "small" in path else []
+        if path == "/v1/inAppPurchaseVersions/v1/localizations":
+            return [{"attributes": {"locale": "fr-FR"}}, {"attributes": {"locale": "en-US"}}]
         raise AssertionError(path)
 
 
@@ -246,7 +249,7 @@ class InAppPurchaseReportTest(unittest.TestCase):
         self.assertNotIn("1.42", text)  # proceeds stay out of the log
         self.assertIn("availability: 3 territories, new territories yes", text)
         self.assertIn("review screenshot: present, COMPLETE", text)
-        self.assertIn("version 1: PREPARE_FOR_SUBMISSION", text)
+        self.assertIn("version 1: PREPARE_FOR_SUBMISSION, 2 localization(s) en-US, fr-FR, image no", text)
         self.assertIn("review note no", text)
         self.assertIn("no localization", text)
         self.assertIn("price schedule: NOT SET", text)

@@ -125,9 +125,11 @@ def assertion(account: dict, scopes, now: int, sign) -> str:
 class ApiError(Exception):
     """An API error by its code and reasons: Google's messages may name the Cloud project or the account."""
 
-    def __init__(self, code: int, status: str = "", reasons=()):
+    def __init__(self, code: int, status: str = "", reasons=(), message: str = ""):
         super().__init__(code, status, reasons)
         self.code, self.status, self.reasons = code, status, tuple(reasons)
+        # Google's own words, kept to recognise a known refusal (play_tips.py), never printed.
+        self.message = message
 
     def __str__(self) -> str:
         parts = [f"HTTP {self.code}", self.status, *self.reasons]
@@ -143,7 +145,8 @@ class ApiError(Exception):
             return cls(code, error["error"])
         error = error.get("error") or {}
         reasons = [item.get("reason", "") for item in error.get("errors", []) + error.get("details", [])]
-        return cls(code, error.get("status", ""), [reason for reason in dict.fromkeys(reasons) if reason])
+        return cls(code, error.get("status", ""), [reason for reason in dict.fromkeys(reasons) if reason],
+                   str(error.get("message") or ""))
 
 
 def send(request: urllib.request.Request) -> dict:

@@ -1,0 +1,40 @@
+name: Google Play tips
+
+# The tips' one-time products on Google Play (tip_small, tip_medium, tip_large), from fastlane/tips.json:
+#   status  what Play holds and what each tip still lacks (read only)
+#   create  creates or completes them: one purchase option "buy", a listing in every Play listing language, the price
+#           in euros (1.99, 4.99, 9.99) in the euro regions and Play's conversion elsewhere, then activates it.
+#           Idempotent, deletes nothing. Needs the developer account's payments profile (Play Console).
+# See docs/RELEASE-ANDROID.md.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        default: status
+        options: [status, create]
+
+permissions:
+  contents: read
+
+# Never during an upload or a status read: the same app's Play data.
+concurrency:
+  group: release-android
+  cancel-in-progress: false
+
+jobs:
+  tips:
+    name: Google Play tips
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: ${{ github.event.inputs.action }}
+        # The service account only for this step; the script prints no secret, address or Google error message.
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          ACTION: ${{ github.event.inputs.action }}
+        run: python3 -I .github/scripts/play_tips.py "$ACTION"

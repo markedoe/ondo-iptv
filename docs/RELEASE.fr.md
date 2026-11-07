@@ -327,6 +327,34 @@ réseau, fichiers choisis par l'utilisateur).
    livraison, et ses versions ; puis les pourboires absents d'App Store Connect, et chaque version App Store de chaque
    plateforme avec son état. Une lecture que la clé d'API ne peut pas faire (HTTP 403) est signalée et le reste
    continue.
+
+   **Créer les pourboires** : `iap_create` crée les trois pourboires, ou les complète, d'après `fastlane/tips.json`
+   (les noms des apps dans les sept langues et une description par langue, dans les 30 et 45 caractères d'Apple) :
+   consommables, partage familial désactivé, noms de référence `Tip small` / `Tip medium` / `Tip large`, une note
+   pour la review en anglais qui nomme le produit, dit qu'il ne débloque rien et où le trouver (Réglages → Laisser un
+   pourboire), un nom et une description dans chaque langue de la fiche (les localisations de la version du
+   pourboire, API 4.4.1 et suivantes), le prix avec la France comme territoire de base (le palier dont le prix client
+   vaut exactement 1,99, 4,99 ou 9,99 € ; s'il n'existe pas, c'est une erreur, jamais un prix voisin ; les autres
+   territoires suivent l'égalisation d'Apple), tous les territoires et les nouveaux, et la capture pour la review
+   `fastlane/creative/iap-review.png` quand elle existe (ou le fichier donné : `asset_library.py iap_create
+   chemin/vers.png`). Il est idempotent : ce qui est déjà juste n'est pas touché, rien n'est supprimé (une autre
+   capture déjà présente est gardée : supprimez-la dans App Store Connect pour la remplacer), rien n'est soumis. Un
+   pourboire en cours de review n'est pas modifié.
+
+   **Soumettre les pourboires** : Apple examine un premier achat intégré avec une version de l'app. La publication
+   d'un tag envoie la capture que son job de captures a prise (artefact `iap-review-screenshot`, fichier `en-US`) à
+   chaque pourboire qui n'en a pas, puis, pour iOS puis macOS, demande à `asset_library.py iap_pending` quels
+   pourboires sont `READY_TO_SUBMIT`. S'il y en a, et seulement si l'édition App Store vend les pourboires (StoreKit
+   dans son build, le test de `check_app_store.py`), deliver envoie la fiche sans soumettre et `asset_library.py
+   iap_submit` choisit le build, met la version et la version de chaque pourboire dans une même soumission et la
+   soumet. Sinon (pourboires approuvés, en review, ou édition App Store sans eux) deliver soumet comme avant. Les
+   pourboires partent avec la version iOS ; la version macOS prend ceux qui attendent encore. precheck laisse
+   toujours les achats intégrés de côté : il ne peut pas les lire avec une clé d'API App Store Connect. La cible
+   `submit` fait de même.
+
+   **Ce que vous seul pouvez faire** (aucune API ne le montre) : accepter le contrat **Paid Applications** et remplir
+   les informations bancaires et fiscales dans App Store Connect (*Business*) ; sans eux, App Store Connect ne vend
+   pas d'achats intégrés.
 5. Un tag soumet tout seul (étape 2). À la main, dans chaque version (iOS et macOS, par exemple 1.1.0) : choisissez
    le build de l'édition **app-store** →
    **Add for Review** → **Submit for Review**. Ou *Run workflow* avec la cible `metadata` (la fiche ;

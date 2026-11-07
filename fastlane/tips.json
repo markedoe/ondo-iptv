@@ -1,0 +1,40 @@
+{
+  "comment": "The three optional tips the apps sell, as both stores list them. Names: the apps' own strings (App/Resources/Localizable.xcstrings, android res/values-*/strings.xml, kept equal by a test). Prices: what the buyer pays in euros. Read by .github/scripts/asset_library.py (iap_create) and play_tips.py.",
+  "tips": {
+    "small": {"apple": "com.markedoe.ondo.tip.small", "play": "tip_small", "reference": "Tip small", "eur": "1.99"},
+    "medium": {"apple": "com.markedoe.ondo.tip.medium", "play": "tip_medium", "reference": "Tip medium", "eur": "4.99"},
+    "large": {"apple": "com.markedoe.ondo.tip.large", "play": "tip_large", "reference": "Tip large", "eur": "9.99"}
+  },
+  "languages": {
+    "en": {
+      "names": {"small": "Small tip", "medium": "Medium tip", "large": "Large tip"},
+      "description": "A tip for the developer. It unlocks nothing."
+    },
+    "fr": {
+      "names": {"small": "Petit pourboire", "medium": "Pourboire moyen", "large": "Grand pourboire"},
+      "description": "Pourboire au développeur. Ne débloque rien."
+    },
+    "es": {
+      "names": {"small": "Propina pequeña", "medium": "Propina mediana", "large": "Propina grande"},
+      "description": "Propina al desarrollador. No desbloquea nada."
+    },
+    "pt": {
+      "names": {"small": "Gorjeta pequena", "medium": "Gorjeta média", "large": "Gorjeta grande"},
+      "description": "Gorjeta ao desenvolvedor. Não libera nada."
+    },
+    "zh-Hans": {
+      "names": {"small": "小额打赏", "medium": "中额打赏", "large": "大额打赏"},
+      "description": "给开发者的打赏，不会解锁任何内容。"
+    },
+    "ar": {
+      "names": {"small": "إكرامية صغيرة", "medium": "إكرامية متوسطة", "large": "إكرامية كبيرة"},
+      "description": "إكرامية للمطوّر، لا تفتح أي شيء."
+    },
+    "hi": {
+      "names": {"small": "छोटी टिप", "medium": "मध्यम टिप", "large": "बड़ी टिप"},
+      "description": "डेवलपर के लिए टिप। इससे कुछ अनलॉक नहीं होता।"
+    }
+  },
+  "apple_locales": {"en-US": "en", "fr-FR": "fr", "es-ES": "es", "es-MX": "es", "pt-BR": "pt", "zh-Hans": "zh-Hans", "ar-SA": "ar", "hi": "hi"},
+  "play_languages": {"en-US": "en", "fr-FR": "fr", "es-ES": "es", "es-419": "es", "pt-BR": "pt", "zh-CN": "zh-Hans", "ar": "ar", "hi-IN": "hi"}
+}
