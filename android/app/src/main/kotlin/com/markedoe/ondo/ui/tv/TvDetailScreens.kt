@@ -108,6 +108,9 @@ import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.CollectionChoice
 import com.markedoe.ondo.ui.screens.CollectionNameDialog
 import com.markedoe.ondo.ui.screens.DetailActions
+import com.markedoe.ondo.ui.screens.canMarkSeason
+import com.markedoe.ondo.ui.screens.canMarkSeries
+import com.markedoe.ondo.ui.screens.isSeasonWatched
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailUiState
 import com.markedoe.ondo.ui.screens.VersionChip
@@ -218,8 +221,8 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                         ButtonLabel(Icons.Rounded.PlayArrow, stringResource(if (resumable) R.string.resume_episode else R.string.play_episode, next.code))
                     }
                 }
-                // Its episodes known: all of them watched, or all unwatched.
-                if (state.seasons.any { it.episodes.isNotEmpty() }) WatchedButton(state.watched) { actions.onSetWatched(!state.watched) }
+                // Its episodes known: all of them watched, or all unwatched; a long series season by season.
+                if (state.canMarkSeries()) WatchedButton(state.watched) { actions.onSetWatched(!state.watched) }
                 MyListButton(state.inMyList, actions.onToggleMyList)
                 CollectionButton(state.collections, collectionButton) { picking = true }
                 state.trailer?.let { TrailerButton(it, actions) }
@@ -245,6 +248,18 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                                 onClick = { actions.onSeason(item.number) },
                                 modifier = Modifier.focusMemory("season:${item.number}").testTag("season-${item.number}"),
                             )
+                        }
+                        // The season shown, as a whole: at the end of the seasons, Right reaches it.
+                        season?.takeIf { state.canMarkSeason(it) }?.let { current ->
+                            item(key = "seasonWatched") {
+                                val watched = state.isSeasonWatched(current)
+                                TvChip(
+                                    text = stringResource(if (watched) R.string.mark_season_unwatched else R.string.mark_season_watched),
+                                    onClick = { actions.onSetSeasonWatched(current.number, !watched) },
+                                    icon = if (watched) Icons.Rounded.CheckCircle else Icons.Rounded.CheckCircleOutline,
+                                    modifier = Modifier.focusMemory("seasonWatched").testTag("seasonWatched"),
+                                )
+                            }
                         }
                     }
                 }

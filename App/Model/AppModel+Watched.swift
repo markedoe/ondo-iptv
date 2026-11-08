@@ -70,27 +70,37 @@ extension AppModel {
         syncSoon()
     }
 
-    /// Marks episodes of `series` watched or unwatched, in their order: the last one is the latest watched, so Continue
-    /// Watching goes on after it as after playback.
+    /// Marks episodes of `series` watched or unwatched, in their order (`UserLibrary.markEpisodes`): watched, the last one
+    /// is the latest, so Continue Watching goes on after it as after playback; unwatched, Play starts again at the first;
+    /// never behind a later episode the viewer is watching. At most `UserLibrary.bulkMarkLimit` at once.
     func setWatched(_ watched: Bool, episodes: [Episode], in series: Series) {
-        guard let playlist = activePlaylist, !episodes.isEmpty else { return }
-        let entries = episodes.map { episode in
+        guard let playlist = activePlaylist, !episodes.isEmpty, episodes.count <= UserLibrary.bulkMarkLimit else { return }
+        var seen = Set<String>()
+        let entries = episodes.filter { seen.insert($0.id).inserted }.map { episode in
             HistoryEntry(
                 reference: MediaReference(playlistID: playlist.id, type: .series, itemID: series.id, episodeID: episode.id),
                 title: series.name, subtitle: "\(episode.code) · \(episode.title)", imageURL: episode.posterURL ?? series.coverURL,
                 duration: Double(episode.durationSeconds ?? 0)
             )
         }
-        let times = entries.map { _ in syncStamp() }
-        updateLibrary { library in
-            for (entry, time) in zip(entries, times) {
-                if watched { library.markWatched(entry, now: time) } else { library.markUnwatched(entry.reference, now: time) }
-            }
-        }
+        let order = episodeOrder(of: series)
+        let stamps = entries.map { _ in syncStamp() }
+        updateLibrary { $0.markEpisodes(entries, watched: watched, order: order, stamps: stamps) }
         syncSoon()
     }
 
-    /// The whole series: every episode of its seasons as known.
+    /// Every episode of `series` in season order: its seasons as known, else the playlist's own list.
+    func episodeOrder(of series: Series) -> [String] {
+        if let details = seriesDetailsCache[series.id] { return details.seasons.flatMap(\.episodes).map(\.id) }
+        return series.episodes.sorted { ($0.season, $0.number) < ($1.season, $1.number) }.map(\.id)
+    }
+
+    /// Whether a page offers to mark `count` episodes at once (a series, a season): not past `UserLibrary.bulkMarkLimit`.
+    static func canMarkAtOnce(_ count: Int) -> Bool {
+        count > 0 && count <= UserLibrary.bulkMarkLimit
+    }
+
+    /// The whole series: every episode of its seasons as known, when there are no more than `UserLibrary.bulkMarkLimit`.
     func setWatched(_ watched: Bool, series: Series, details: SeriesDetails) {
         var seen = Set<String>()
         let episodes = details.seasons.flatMap(\.episodes).filter { seen.insert($0.id).inserted }

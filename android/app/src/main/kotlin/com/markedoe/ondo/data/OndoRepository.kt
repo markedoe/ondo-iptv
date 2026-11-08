@@ -1571,23 +1571,25 @@ class OndoRepository(
     }
 
     /**
-     * Marks [episodes] of [series] watched or unwatched, in their order: the last one is the latest watched, so Continue
-     * watching goes on after it as after playback.
+     * Marks [episodes] of [series] watched or unwatched, in their order ([LibraryState.markingEpisodes]): watched, the
+     * last one is the latest, so Continue watching goes on after it as after playback; unwatched, Play starts again at
+     * the first; never behind a later episode the viewer is watching. At most [LibraryState.BULK_MARK_LIMIT] at once.
      */
     fun setEpisodesWatched(watched: Boolean, series: Series, episodes: List<Episode>) {
         val playlistId = _state.value.activePlaylistId ?: return
-        if (episodes.isEmpty()) return
-        val entries = episodes.distinctBy { it.id }.map { episode ->
+        val distinct = episodes.distinctBy { it.id }
+        if (!LibraryState.canMarkAtOnce(distinct.size)) return
+        val entries = distinct.map { episode ->
             WatchEntry(
                 playlistId, ItemKind.SERIES, series.id, episode.id, series.name, "${episode.code} · ${episode.title}",
                 episode.posterUrl ?: series.coverUrl, duration = (episode.durationSeconds ?: 0).toDouble(), lastWatchedAt = 0,
-            ) to stamp()
+            )
         }
-        updateLibrary { library ->
-            entries.fold(library) { changed, (entry, time) ->
-                if (watched) changed.markingWatched(entry.copy(lastWatchedAt = time), time) else changed.markingUnwatched(entry.key, time)
-            }
-        }
+        // Every episode in season order: its seasons as known, else the playlist's own list.
+        val order = _state.value.seriesDetails[series.id]?.seasons?.flatMap { season -> season.episodes.map { it.id } }
+            ?: series.episodes.sortedWith(compareBy({ it.season }, { it.number })).map { it.id }
+        val stamps = entries.map { stamp() }
+        updateLibrary { it.markingEpisodes(entries, watched, order, stamps) }
     }
 
     // MARK: Reminders

@@ -151,6 +151,11 @@ time: `watchedAt`.
 Mark as Watched on a page sends the same record as the end of playback: `position` equal to `duration` (the known
 length, else 1 second); Mark as Unwatched sends `position` 0, later than the record it replaces. No new field: a device
 on an older version reads both as it reads any progress.
+A page marks at most 200 episodes at once (a longer series season by season, a longer season episode by episode), so a
+mark never pushes the rest of the history (500 entries) out on every device. Episodes marked together are dated in
+their order, the last one newest when watched and the first one newest when unwatched; when the series' latest entry is a
+later episode (halfway through season 3, season 1 marked), they are dated just before it, so Continue Watching and Play
+stay where the viewer is.
 
 **List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],
 "people": [<person>], "updatedAt", "renamedAt"?, "orderedAt"?, "order"?, "placedAt"?}`. Key: `list:<id>`; time: `updatedAt` (set when the

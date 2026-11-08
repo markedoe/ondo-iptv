@@ -424,9 +424,17 @@ class OndoViewModel(
     /** "Mark as watched" / "Mark as unwatched" on a film's page: [version] marked, or every version unmarked. */
     fun setFilmWatched(movie: Movie, version: Movie, watched: Boolean) {
         val current = state.value
-        // The versions grouped in the background already (never grouped here, on the main thread).
-        val versions = UiMappers.filmsIfReady(current).versions(movie)
-        repository.setFilmWatched(watched, version, versions, current.movieDetails[version.id]?.durationSeconds ?: current.movieDetails[movie.id]?.durationSeconds)
+        viewModelScope.launch {
+            // Every version, as the badge counts them ([UiMappers.watchedKeys]): grouped off the main thread if not yet.
+            val versions = withContext(computation) { UiMappers.films(current).versions(movie) }
+            repository.setFilmWatched(watched, version, versions, current.movieDetails[version.id]?.durationSeconds ?: current.movieDetails[movie.id]?.durationSeconds)
+        }
+    }
+
+    /** A season of the series ([number]) marked watched or unwatched. */
+    fun setSeasonWatched(seriesId: String, number: Int, watched: Boolean) {
+        val season = state.value.seriesDetails[seriesId]?.seasons?.firstOrNull { it.number == number } ?: return
+        setEpisodesWatched(seriesId, season.episodes, watched)
     }
 
     /** One episode, or a season, marked watched or unwatched. */

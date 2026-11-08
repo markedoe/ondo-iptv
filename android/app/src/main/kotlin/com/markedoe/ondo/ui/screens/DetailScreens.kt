@@ -97,6 +97,7 @@ import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.ui.AwardRow
+import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.components.Artwork
@@ -210,7 +211,22 @@ class DetailActions(
     val onSetWatched: (Boolean) -> Unit = {},
     /** The same for one episode. */
     val onSetEpisodeWatched: (Episode, Boolean) -> Unit = { _, _ -> },
+    /** The same for a season (its number). */
+    val onSetSeasonWatched: (Int, Boolean) -> Unit = { _, _ -> },
 )
+
+/**
+ * Whether a series' page offers to mark the whole series at once: its episodes known, no more than
+ * [LibraryState.BULK_MARK_LIMIT] (a longer one is marked season by season).
+ */
+fun SeriesDetailUiState.canMarkSeries(): Boolean = LibraryState.canMarkAtOnce(seasons.sumOf { it.episodes.size })
+
+/** Whether [season] is offered as a whole on its page: several seasons, and no more than the limit in it. */
+fun SeriesDetailUiState.canMarkSeason(season: Season): Boolean = seasons.size > 1 && LibraryState.canMarkAtOnce(season.episodes.size)
+
+/** Whether every episode of [season] is watched. */
+fun SeriesDetailUiState.isSeasonWatched(season: Season): Boolean =
+    season.episodes.isNotEmpty() && season.episodes.all { episodeProgress[it.id]?.finished == true }
 
 @Composable
 fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
@@ -346,8 +362,8 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
-                // Its episodes known: all of them watched, or all unwatched.
-                if (state.seasons.any { it.episodes.isNotEmpty() }) WatchedAction(state.watched) { actions.onSetWatched(!state.watched) }
+                // Its episodes known: all of them watched, or all unwatched; a long series season by season.
+                if (state.canMarkSeries()) WatchedAction(state.watched) { actions.onSetWatched(!state.watched) }
                 state.trailer?.let { id -> CircleAction(trailerLabel(), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
             }
         },
@@ -367,6 +383,19 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                 }
             } else if (season != null) {
                 item { Text(stringResource(R.string.episodes), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = metrics.gutter)) }
+            }
+            season?.takeIf { state.canMarkSeason(it) }?.let { current ->
+                item(key = "seasonWatched") {
+                    val watched = state.isSeasonWatched(current)
+                    TextButton(
+                        onClick = { actions.onSetSeasonWatched(current.number, !watched) },
+                        modifier = Modifier.padding(horizontal = metrics.gutter).focusMemory("seasonWatched").testTag("seasonWatched"),
+                    ) {
+                        Icon(if (watched) Icons.Rounded.CheckCircle else Icons.Rounded.CheckCircleOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(if (watched) R.string.mark_season_unwatched else R.string.mark_season_watched))
+                    }
+                }
             }
             season?.let { current ->
                 items(current.episodes, key = { it.id }) { episode ->

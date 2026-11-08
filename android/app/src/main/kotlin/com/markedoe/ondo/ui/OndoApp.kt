@@ -727,6 +727,7 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onTrailer = { context.openTrailer(it) },
             onSetWatched = { viewModel.setSeriesWatched(id, it) },
             onSetEpisodeWatched = { episode, watched -> viewModel.setEpisodesWatched(id, listOf(episode), watched) },
+            onSetSeasonWatched = { number, watched -> viewModel.setSeasonWatched(id, number, watched) },
         )
     if (isTelevision()) TvSeriesDetailScreen(ui, actions) else SeriesDetailScreen(ui, actions)
 }

@@ -124,8 +124,9 @@ struct SeriesDetailView: View {
                 HStack(alignment: .top, spacing: 14) {
                     MyListAction(item: .series(series))
                     CollectionAction(item: .series(series))
-                    // Its episodes known: all of them watched, or all unwatched.
-                    if let details, !details.seasons.flatMap(\.episodes).isEmpty {
+                    // Its episodes known: all of them watched, or all unwatched; a long series season by season (the menu of
+                    // an episode), a long season episode by episode (`UserLibrary.bulkMarkLimit`).
+                    if let details, AppModel.canMarkAtOnce(Set(details.seasons.flatMap(\.episodes).map(\.id)).count) {
                         WatchedAction(watched: watched) {
                             model.setWatched(!watched, series: series, details: details)
                         }
@@ -230,7 +231,8 @@ struct SeriesDetailView: View {
                             downloadItem: model.downloadItem(for: episode, in: series),
                             playFromStart: { model.play(episode, in: series, season: season.episodes, fromStart: true) },
                             toggleWatched: { watched in model.setWatched(watched, episodes: [episode], in: series) },
-                            markSeasonWatched: { watched in model.setWatched(watched, episodes: season.episodes, in: series) }
+                            markSeasonWatched: AppModel.canMarkAtOnce(season.episodes.count)
+                                ? { (watched: Bool) in model.setWatched(watched, episodes: season.episodes, in: series) } : nil
                         ) {
                             model.play(episode, in: series, season: season.episodes)
                         }

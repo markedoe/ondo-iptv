@@ -321,6 +321,42 @@ data class LibraryState(
         if (history.none { it.key == key && it.isFinished }) this
         else copy(history = history.map { if (it.key == key && it.isFinished) it.copy(position = 0.0, lastWatchedAt = now) else it })
 
+    /**
+     * Marks episodes of one series watched or unwatched (as on Apple, `UserLibrary.markEpisodes`): [entries] in their
+     * season order, [order] every episode id of the series in that order, [stamps] one time per entry, increasing, each
+     * later than anything the library holds. Watched, the last one is the newest (the series goes on after it);
+     * unwatched, the first one is (Play starts there). When the series' latest entry is a later episode than all of these
+     * (halfway through season 3, season 1 marked), they are dated just before it, so Continue watching and Play stay.
+     */
+    fun markingEpisodes(entries: List<WatchEntry>, watched: Boolean, order: List<String>, stamps: List<Long>): LibraryState {
+        if (entries.isEmpty() || entries.size != stamps.size) return this
+        val first = entries.first()
+        val count = entries.size
+        val times = (if (watched) stamps else stamps.reversed()).toMutableList()
+        val marked = entries.mapNotNullTo(HashSet()) { it.episodeId }
+        val position = HashMap<String, Int>().also { map -> order.forEachIndexed { index, id -> map.putIfAbsent(id, index) } }
+        val series = history.filter { it.playlistId == first.playlistId && it.kind == first.kind && it.itemId == first.itemId && it.episodeId != null }
+        val latestOther = series.filter { it.episodeId !in marked }.maxByOrNull { it.lastWatchedAt }
+        val latestMarked = series.filter { it.episodeId in marked }.maxOfOrNull { it.lastWatchedAt } ?: Long.MIN_VALUE
+        val lastMarkedPosition = marked.mapNotNull { position[it] }.maxOrNull() ?: -1
+        val otherPosition = latestOther?.episodeId?.let { position[it] }
+        if (latestOther != null && otherPosition != null && otherPosition > lastMarkedPosition && latestOther.lastWatchedAt >= latestMarked) {
+            val before = latestOther.lastWatchedAt
+            val own = series.associate { it.episodeId to it.lastWatchedAt }
+            entries.forEachIndexed { index, entry ->
+                val rank = if (watched) index else count - 1 - index
+                var time = before - (count - rank)
+                // Still later than its own time when there is room, never as late as the latest entry.
+                val previous = own[entry.episodeId]
+                if (previous != null && time <= previous) time = minOf(previous + 1, before - 1)
+                times[index] = time
+            }
+        }
+        return entries.zip(times).fold(this) { library, (entry, time) ->
+            if (watched) library.markingWatched(entry.copy(lastWatchedAt = time), time) else library.markingUnwatched(entry.key, time)
+        }
+    }
+
     /** What [playlistId]'s viewer has watched, gathered once for every thumbnail ([WatchedTitles]). */
     fun watchedTitles(playlistId: String): WatchedTitles {
         val movies = HashSet<String>()
@@ -451,6 +487,15 @@ data class LibraryState(
 
     companion object {
         const val MAX_HISTORY = 500
+
+        /**
+         * The most episodes a page marks at once (a series or a season): a longer series is marked season by season, a
+         * longer season episode by episode, so that one press never pushes the rest of the history out ([MAX_HISTORY]).
+         */
+        const val BULK_MARK_LIMIT = 200
+
+        /** Whether a page offers to mark [count] episodes at once. */
+        fun canMarkAtOnce(count: Int): Boolean = count in 1..BULK_MARK_LIMIT
     }
 }
 

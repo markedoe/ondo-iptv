@@ -167,6 +167,12 @@ Media3 lit, aucun pour le MKV). Un appareil qui n’a jamais lu le fichier en ju
 Marquer comme vu, sur une fiche, envoie le même enregistrement que la fin de la lecture : `position` égale à `duration`
 (la durée connue, sinon 1 seconde) ; Marquer comme non vu envoie `position` 0, plus récent que l’enregistrement qu’il
 remplace. Aucun champ nouveau : un appareil d’une version plus ancienne lit les deux comme toute progression.
+Une fiche marque au plus 200 épisodes d’un coup (une série plus longue saison par saison, une saison plus longue épisode
+par épisode), pour qu’une marque ne pousse jamais le reste de l’historique (500 entrées) hors de chaque appareil. Les
+épisodes marqués ensemble sont datés dans leur ordre, le dernier le plus récent quand ils sont vus et le premier quand ils
+ne le sont plus ; quand l’entrée la plus récente de la série est un épisode plus loin (à mi-chemin de la saison 3, la
+saison 1 marquée), ils sont datés juste avant elle, pour que Continuer à regarder et Lire restent où en est le
+spectateur.
 
 **Liste** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],
 "people": [<personne>], "updatedAt", "renamedAt"?, "orderedAt"?, "order"?, "placedAt"?}`. Clé : `list:<id>` ; instant : `updatedAt` (fixé

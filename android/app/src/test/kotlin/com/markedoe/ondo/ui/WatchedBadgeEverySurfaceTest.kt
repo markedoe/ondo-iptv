@@ -184,6 +184,27 @@ class WatchedBadgeEverySurfaceTest {
         assertEquals(listOf(first to true), episodes)
     }
 
+    /** A season as a whole on a phone; a series past the limit is marked season by season, a season past it episode by episode. */
+    @Test
+    fun aSeasonIsMarkedAsAWholeWithinTheLimit() {
+        val seasons = mutableListOf<Pair<Int, Boolean>>()
+        var state by mutableStateOf(UiMappers.seriesDetail(Fixtures.state(), Fixtures.harborLights, null, null))
+        compose.setContent { OndoTheme { SeriesDetailScreen(state, DetailActions(onSetSeasonWatched = { number, watched -> seasons += number to watched })) } }
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasTestTag("seasonWatched"))
+        compose.onNodeWithTag("seasonWatched").assert(hasText("Mark season as watched")).performClick()
+        assertEquals(listOf(state.seasons.first().number to true), seasons)
+        // Past the limit: no button for the series, the seasons keep theirs.
+        val season = state.seasons.first()
+        val many = (1..LibraryState.BULK_MARK_LIMIT).map { season.episodes.first().copy(id = "many-$it", number = it) }
+        state = state.copy(seasons = state.seasons + season.copy(number = 9, episodes = many))
+        compose.onAllNodesWithTag("detailWatched").assertCountEquals(0)
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasTestTag("seasonWatched"))
+        compose.onAllNodesWithTag("seasonWatched").assertCountEquals(1)
+        // A season past it: episode by episode only.
+        state = state.copy(seasons = listOf(season.copy(episodes = many + many.first().copy(id = "one-more")), season.copy(number = 2)), selectedSeason = season.number)
+        compose.onAllNodesWithTag("seasonWatched").assertCountEquals(0)
+    }
+
     companion object {
         /**
          * Every source file that shows movie or series thumbnails, and how many poster cards it draws: each is a
@@ -265,6 +286,21 @@ class TvWatchedTest {
         compose.waitForIdle()
         compose.onNodeWithTag("detailWatched").assertIsFocused().assert(hasStateDescription("Not watched")).performClick()
         assertEquals(listOf(true), changes)
+    }
+
+    /** The season shown as a whole: a chip at the end of the seasons, Right from the last season reaches it. */
+    @Test
+    fun theSeasonChipIsRightOfTheSeasons() {
+        val seasons = mutableListOf<Pair<Int, Boolean>>()
+        val state = UiMappers.seriesDetail(Fixtures.state(), Fixtures.harborLights, null, null)
+        compose.setContent { OndoTheme { TelevisionFrame { TvSeriesDetailScreen(state, DetailActions(onSetSeasonWatched = { number, watched -> seasons += number to watched })) } } }
+        compose.waitForIdle()
+        val last = state.seasons.last().number
+        compose.onNodeWithTag("season-$last").requestFocus()
+        compose.onNodeWithTag("season-$last").assertIsFocused().performKeyInput { pressKey(Key.DirectionRight) }
+        compose.waitForIdle()
+        compose.onNodeWithTag("seasonWatched").assertIsFocused().assert(hasText("Mark season as watched")).performClick()
+        assertEquals(listOf(state.selectedSeason!! to true), seasons)
     }
 
     @Test

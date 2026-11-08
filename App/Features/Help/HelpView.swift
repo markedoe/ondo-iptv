@@ -179,7 +179,8 @@ extension HelpTopic {
             On a movie’s or a series’ page, Mark as Watched does the same without playing it and takes the title out \
             of Continue Watching; Mark as Unwatched takes the mark away, and the title plays from the start. On a \
             series’ page, the check mark beside each episode marks that episode, and an episode’s menu (long-press, \
-            or Control-click on a Mac) marks its whole season.
+            or Control-click on a Mac) marks its whole season. Up to 200 episodes are marked at once: a longer \
+            series is marked season by season, and a longer season episode by episode.
 
             What you have watched belongs to the profile open and follows on your other devices with Sync. Hide \
             watched movies, in Settings, leaves watched movies out where you browse movies.

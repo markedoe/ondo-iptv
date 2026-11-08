@@ -251,6 +251,45 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         history[index].lastWatchedAt = now
     }
 
+    /// The most episodes a page marks at once (a series or a season): a longer series is marked season by season, a
+    /// longer season episode by episode, so that one tap never pushes the rest of the history out (`maxHistory`).
+    public static let bulkMarkLimit = 200
+
+    /// Marks episodes of one series watched or unwatched: `entries` in their season order, `order` every episode of the
+    /// series in that order, `stamps` one time per entry, increasing, each later than anything the library holds.
+    /// Watched, the last one is the newest (the series goes on after it); unwatched, the first one is (Play starts there).
+    /// When the series' latest entry is a later episode than all of these (watched halfway through season 3, season 1
+    /// marked), they are dated just before it instead, so Continue Watching and Play stay where the viewer is.
+    public mutating func markEpisodes(_ entries: [HistoryEntry], watched: Bool, order: [String], stamps: [Date]) {
+        guard !entries.isEmpty, entries.count == stamps.count, let first = entries.first else { return }
+        let count = entries.count
+        // Watched: in order; unwatched: the first one newest.
+        var times = watched ? stamps : Array(stamps.reversed())
+        let marked = Set(entries.compactMap(\.reference.episodeID))
+        let position = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        let series = history.filter { $0.reference.isSameItem(as: first.reference) && $0.reference.episodeID != nil }
+        let latestOther = series.filter { !marked.contains($0.reference.episodeID!) }.max { $0.lastWatchedAt < $1.lastWatchedAt }
+        let latestMarked = series.filter { marked.contains($0.reference.episodeID!) }.map(\.lastWatchedAt).max()
+        let lastMarkedPosition = marked.compactMap { position[$0] }.max() ?? -1
+        if let latestOther, let otherPosition = position[latestOther.reference.episodeID!], otherPosition > lastMarkedPosition,
+           latestOther.lastWatchedAt >= (latestMarked ?? .distantPast) {
+            let before = latestOther.lastWatchedAt
+            let own = Dictionary(series.map { ($0.reference.episodeID!, $0.lastWatchedAt) }, uniquingKeysWith: { first, _ in first })
+            for (index, entry) in entries.enumerated() {
+                let rank = watched ? index : count - 1 - index
+                var time = before.addingTimeInterval(-Double(count - rank) / 1000)
+                // Still later than its own time when there is room, never as late as the latest entry.
+                if let previous = entry.reference.episodeID.flatMap({ own[$0] }), time <= previous {
+                    time = min(previous.addingTimeInterval(0.001), before.addingTimeInterval(-0.001))
+                }
+                times[index] = time
+            }
+        }
+        for (entry, time) in zip(entries, times) {
+            if watched { markWatched(entry, now: time) } else { markUnwatched(entry.reference, now: time) }
+        }
+    }
+
     /// Whether `reference` was watched to the end (or marked so).
     public func isWatched(_ reference: MediaReference) -> Bool {
         progress(for: reference)?.isFinished == true

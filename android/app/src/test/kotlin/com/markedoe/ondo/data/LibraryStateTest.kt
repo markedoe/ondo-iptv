@@ -394,4 +394,46 @@ class LibraryStateTest {
         val half = library.recordStart(entry("m1", at = 3)).updateProgress(entry("m1").key, 100.0, 6_000.0, now = 4)
         assertFalse("m1" in half.watchedTitles("p1").movies)
     }
+
+    private val order = listOf("1-1", "1-2", "1-3", "2-1", "2-2", "3-1", "3-2", "3-3", "3-4", "3-5")
+
+    private fun episodes(ids: List<String>) = ids.map { entry("s1", ItemKind.SERIES, it) }
+
+    private fun LibraryState.latest() = history.filter { it.itemId == "s1" }.maxByOrNull { it.lastWatchedAt }?.episodeId
+
+    /** A whole series unmarked: the first episode is the newest, so Play starts again at the beginning (as on Apple). */
+    @Test
+    fun unmarkingASeriesStartsItAgainAtItsFirstEpisode() {
+        var library = LibraryState().markingEpisodes(episodes(order), watched = true, order, order.indices.map { 100L + it })
+        assertEquals("watched: the series goes on after its last episode", "3-5", library.latest())
+        library = library.markingEpisodes(episodes(order), watched = false, order, order.indices.map { 200L + it })
+        assertEquals("1-1", library.latest())
+        assertTrue(library.history.none { it.isFinished })
+    }
+
+    /** Halfway through S03E05, season 1 marked watched or unwatched: the series stays at S03E05. */
+    @Test
+    fun markingAnEarlierSeasonDoesNotMoveTheSeriesBack() {
+        val playing = entry("s1", ItemKind.SERIES, "3-5", at = 50)
+        var library = LibraryState().recordStart(playing).updateProgress(playing.key, 900.0, 2_700.0, now = 50)
+        val season = listOf("1-1", "1-2", "1-3")
+        library = library.markingEpisodes(episodes(season), watched = true, order, listOf(100L, 101L, 102L))
+        assertEquals("3-5", library.latest())
+        assertTrue(season.all { library.progress(entry("s1", ItemKind.SERIES, it).key)!!.isFinished })
+        val times = season.map { library.progress(entry("s1", ItemKind.SERIES, it).key)!!.lastWatchedAt }
+        assertEquals("in their order, just before the episode being watched", times.sorted(), times)
+        assertTrue(times.all { it < 50 })
+        library = library.markingEpisodes(episodes(season), watched = false, order, listOf(200L, 201L, 202L))
+        assertEquals("3-5", library.latest())
+        assertTrue(season.none { library.progress(entry("s1", ItemKind.SERIES, it).key)!!.isFinished })
+    }
+
+    @Test
+    fun aBulkMarkHasALimit() {
+        assertEquals(200, LibraryState.BULK_MARK_LIMIT)
+        assertTrue(LibraryState.BULK_MARK_LIMIT < LibraryState.MAX_HISTORY)
+        assertTrue(LibraryState.canMarkAtOnce(200))
+        assertFalse(LibraryState.canMarkAtOnce(201))
+        assertFalse(LibraryState.canMarkAtOnce(0))
+    }
 }

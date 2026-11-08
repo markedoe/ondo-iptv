@@ -21,6 +21,14 @@ final class WatchedBadgeEverySurfaceTests: XCTestCase {
     http://127.0.0.1:9/h101.mp4
     #EXTINF:2700 group-title="Series | Drama",Harbor S01E02
     http://127.0.0.1:9/h102.mp4
+    #EXTINF:2700 group-title="Series | Mystery",Archive S01E01
+    http://127.0.0.1:9/a101.mp4
+    #EXTINF:2700 group-title="Series | Mystery",Archive S01E02
+    http://127.0.0.1:9/a102.mp4
+    #EXTINF:2700 group-title="Series | Mystery",Archive S02E01
+    http://127.0.0.1:9/a201.mp4
+    #EXTINF:2700 group-title="Series | Mystery",Archive S02E02
+    http://127.0.0.1:9/a202.mp4
     """
 
     override func setUp() async throws {
@@ -43,10 +51,10 @@ final class WatchedBadgeEverySurfaceTests: XCTestCase {
 
     func testMarkingWatchedOnAPageAndBack() async throws {
         let model = try await model()
-        let glass = model.content.movies.filter { $0.name == "Glass City" }
+        let glass = model.content.movies.filter { $0.name.hasPrefix("Glass City") }
         XCTAssertEqual(glass.count, 2)
         let quiet = try XCTUnwrap(model.content.movies.first { $0.name == "Quiet Water" })
-        let series = try XCTUnwrap(model.content.series.first)
+        let series = try XCTUnwrap(model.content.series.first { $0.name == "Harbor" })
         let details = try await model.details(for: series)
         XCTAssertEqual(details.seasons.flatMap(\.episodes).count, 2)
 
@@ -84,7 +92,7 @@ final class WatchedBadgeEverySurfaceTests: XCTestCase {
     /// A film whose watched version is in a hidden category: its other version's page unmarks it all the same.
     func testUnmarkingReachesAVersionInAHiddenCategory() async throws {
         let model = try await model()
-        let glass = model.content.movies.filter { $0.name == "Glass City" }
+        let glass = model.content.movies.filter { $0.name.hasPrefix("Glass City") }
         let uhd = try XCTUnwrap(glass.first { $0.streamURL.pathExtension == "mkv" })
         let hd = try XCTUnwrap(glass.first { $0.streamURL.pathExtension == "mp4" })
         model.setWatched(true, movie: uhd, version: uhd)
@@ -94,6 +102,40 @@ final class WatchedBadgeEverySurfaceTests: XCTestCase {
         model.setWatched(false, movie: hd)
         XCTAssertFalse(model.isWatched(.movie(hd)))
         XCTAssertFalse(model.isWatched(.movie(uhd)))
+    }
+
+    /// Halfway through a later episode, an earlier season marked: Continue Watching and Play stay on that episode. A whole
+    /// series unmarked: Play starts again at its first episode. Never more than the limit at once.
+    func testMarkingSeasonsKeepsWhereTheViewerIs() async throws {
+        let model = try await model()
+        let series = try XCTUnwrap(model.content.series.first { $0.name == "Archive" })
+        let details = try await model.details(for: series)
+        XCTAssertEqual(details.seasons.count, 2)
+        let later = details.seasons[1].episodes[1]
+        let item = try XCTUnwrap(model.downloadItem(for: later, in: series))
+        model.recordStart(item)
+        model.recordProgress(item, position: 900, duration: 2_700)
+        XCTAssertEqual(model.continueWatching(.series).first?.reference.episodeID, later.id)
+
+        model.setWatched(true, episodes: details.seasons[0].episodes, in: series)
+        XCTAssertTrue(details.seasons[0].episodes.allSatisfy { model.isWatched(episode: $0, in: series) })
+        XCTAssertEqual(model.continueWatching(.series).first?.reference.episodeID, later.id, "Continue Watching stays")
+        XCTAssertEqual(model.nextEpisode(in: series, details: details)?.episode.id, later.id, "Play stays")
+
+        model.setWatched(true, series: series, details: details)
+        XCTAssertTrue(model.isWatched(.series(series)))
+        model.setWatched(false, series: series, details: details)
+        XCTAssertFalse(model.isWatched(.series(series)))
+        XCTAssertEqual(model.nextEpisode(in: series, details: details)?.episode.id, details.seasons[0].episodes[0].id, "from the start")
+
+        XCTAssertTrue(AppModel.canMarkAtOnce(UserLibrary.bulkMarkLimit))
+        XCTAssertFalse(AppModel.canMarkAtOnce(UserLibrary.bulkMarkLimit + 1))
+        let many = (1...UserLibrary.bulkMarkLimit + 1).map { number in
+            Episode(id: "many-\(number)", title: "Episode \(number)", season: 9, number: number, streamURL: URL(string: "http://127.0.0.1:9/m\(number).mp4")!)
+        }
+        let before = model.library.history
+        model.setWatched(true, episodes: many, in: series)
+        XCTAssertEqual(model.library.history, before, "past the limit: nothing marked at once")
     }
 
     /// The set is made once per change of the history, not per card: asking it again gives the same set at once.

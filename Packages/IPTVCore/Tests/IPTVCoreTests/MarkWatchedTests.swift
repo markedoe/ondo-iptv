@@ -86,4 +86,56 @@ final class MarkWatchedTests: XCTestCase {
         XCTAssertTrue(phone.merged(with: tablet).isWatched(ref(.movie, "m")))
         XCTAssertTrue(tablet.merged(with: phone).isWatched(ref(.movie, "m")))
     }
+
+    private func episodes(_ ids: [String]) -> [HistoryEntry] {
+        ids.map { HistoryEntry(reference: ref(.series, "s", episode: $0), title: "S") }
+    }
+
+    private func stamps(_ count: Int, from start: Double) -> [Date] {
+        (0..<count).map { t0.addingTimeInterval(start + Double($0)) }
+    }
+
+    /// The series' most recent entry decides where Continue Watching and Play go on.
+    private func latest(_ library: UserLibrary) -> HistoryEntry? {
+        library.history.filter { $0.reference.itemID == "s" }.max { $0.lastWatchedAt < $1.lastWatchedAt }
+    }
+
+    private let order = ["1-1", "1-2", "1-3", "2-1", "2-2", "3-1", "3-2", "3-3", "3-4", "3-5"]
+
+    /// A whole series unmarked: the first episode is the newest, so Play starts again at the beginning, not at the last one.
+    func testUnmarkingASeriesStartsItAgainAtItsFirstEpisode() {
+        var library = UserLibrary()
+        library.markEpisodes(episodes(order), watched: true, order: order, stamps: stamps(order.count, from: 0))
+        XCTAssertEqual(latest(library)?.reference.episodeID, "3-5", "watched: the series goes on after its last episode")
+        library.markEpisodes(episodes(order), watched: false, order: order, stamps: stamps(order.count, from: 100))
+        XCTAssertEqual(latest(library)?.reference.episodeID, "1-1")
+        XCTAssertFalse(library.history.contains { $0.isFinished })
+    }
+
+    /// Halfway through S03E05, season 1 marked watched (or unwatched): the series stays at S03E05.
+    func testMarkingAnEarlierSeasonDoesNotMoveTheSeriesBack() {
+        var library = UserLibrary()
+        let playing = ref(.series, "s", episode: "3-5")
+        library.recordPlayback(HistoryEntry(reference: playing, title: "S", lastWatchedAt: t0.addingTimeInterval(50)))
+        library.updateProgress(playing, position: 900, duration: 2_700, now: t0.addingTimeInterval(50))
+        let season = ["1-1", "1-2", "1-3"]
+        library.markEpisodes(episodes(season), watched: true, order: order, stamps: stamps(3, from: 100))
+        XCTAssertEqual(latest(library)?.reference.episodeID, "3-5")
+        XCTAssertTrue(season.allSatisfy { library.isWatched(ref(.series, "s", episode: $0)) })
+        let times = season.compactMap { id in library.progress(for: ref(.series, "s", episode: id))?.lastWatchedAt }
+        XCTAssertEqual(times, times.sorted(), "in their order, just before the episode being watched")
+        XCTAssertTrue(times.allSatisfy { $0 < t0.addingTimeInterval(50) })
+        library.markEpisodes(episodes(season), watched: false, order: order, stamps: stamps(3, from: 200))
+        XCTAssertEqual(latest(library)?.reference.episodeID, "3-5")
+        XCTAssertFalse(season.contains { library.isWatched(ref(.series, "s", episode: $0)) })
+        // A later season marked: that is where the series goes on.
+        library.markEpisodes(episodes(["3-5"]), watched: true, order: order, stamps: stamps(1, from: 300))
+        XCTAssertEqual(latest(library)?.reference.episodeID, "3-5")
+        XCTAssertTrue(library.isWatched(playing))
+    }
+
+    func testABulkMarkHasALimit() {
+        XCTAssertEqual(UserLibrary.bulkMarkLimit, 200)
+        XCTAssertLessThan(UserLibrary.bulkMarkLimit, UserLibrary.maxHistory)
+    }
 }
