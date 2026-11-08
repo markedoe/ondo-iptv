@@ -56,6 +56,7 @@ val helpTopics = listOf(
     HelpTopic("rows", R.string.help_rows_title, R.string.help_rows_body),
     HelpTopic("selections", R.string.help_selections_title, R.string.help_selections_body),
     HelpTopic("my-list", R.string.help_mylist_title, R.string.help_mylist_body),
+    HelpTopic("watched", R.string.help_watched_title, R.string.help_watched_body),
     HelpTopic("player", R.string.help_player_title, R.string.help_player_body, touch = true),
     HelpTopic("guide", R.string.help_guide_title, R.string.help_guide_body),
     HelpTopic("playback", R.string.help_playback_title, R.string.help_playback_body),

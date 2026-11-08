@@ -20,7 +20,7 @@ struct MetadataView: View {
                 Section("Movies (\(results.movies.count))") {
                     ForEach(results.movies) { movie in
                         NavigationLink(value: movie) {
-                            SearchResultRow(title: movie.name, subtitle: subtitle(of: movie), imageURL: movie.posterURL, icon: "film")
+                            SearchResultRow(title: movie.name, subtitle: subtitle(of: movie), imageURL: movie.posterURL, icon: "film", watched: model.isWatched(.movie(movie)))
                         }
                     }
                 }
@@ -30,7 +30,7 @@ struct MetadataView: View {
                     ForEach(results.series) { series in
                         NavigationLink(value: series) {
                             SearchResultRow(title: series.name, subtitle: subtitle(of: series), imageURL: series.coverURL,
-                                            icon: "play.rectangle.on.rectangle")
+                                            icon: "play.rectangle.on.rectangle", watched: model.isWatched(.series(series)))
                         }
                     }
                 }

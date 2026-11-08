@@ -125,13 +125,15 @@ struct ShowcasePoster: View {
         }
     }
 
+    private var watched: Bool { model.isWatched(item) }
+
     private var card: some View {
         let progress: Double? = {
             if case .movie(let movie) = item { return model.progress(movie: movie)?.progress }
             return nil
         }()
         return VStack(alignment: .leading, spacing: 6) {
-            PosterArtwork(url: item.posterURL, title: item.title, progress: progress)
+            PosterArtwork(url: item.posterURL, title: item.title, progress: progress, watched: watched)
             if showsTitle {
                 Text(item.title)
                     .font(.caption.weight(.medium))
@@ -140,16 +142,19 @@ struct ShowcasePoster: View {
         }
         .frame(width: width)
         .accessibilityLabel(Text(item.title))
+        .accessibilityValue(watched ? Text("Watched") : Text(verbatim: ""))
         // What TMDb knows of it is fetched in the background as its row appears (with a TMDb token).
         .onAppear { model.prefetchMetadata([item]) }
     }
 }
 
-/// 2:3 artwork with soft corners, a hairline border and an optional progress bar.
+/// 2:3 artwork with soft corners, a hairline border, an optional progress bar and the watched badge.
 struct PosterArtwork: View {
     let url: URL?
     let title: String
     var progress: Double?
+    /// Watched (`AppModel.isWatched`): a check mark in the top leading corner, its full bar left out.
+    var watched = false
 
     var body: some View {
         OndoColor.surface
@@ -158,9 +163,12 @@ struct PosterArtwork: View {
                 RemoteImage(url: url, placeholderText: title, contentMode: .fill, maxPixelSize: 480)
             }
             .overlay(alignment: .bottom) {
-                if let progress, progress > 0 {
+                if let progress, progress > 0, !watched {
                     ProgressBar(value: progress).padding(8)
                 }
+            }
+            .overlay(alignment: .topLeading) {
+                if watched { WatchedBadge().padding(6) }
             }
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
@@ -169,6 +177,24 @@ struct PosterArtwork: View {
             }
             .cardLift()
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+/// The check mark of a watched title on its thumbnail: white on a dark disc, legible on any poster, in the leading
+/// corner (the trailing one has the rating), never over the title below. VoiceOver says "Watched".
+struct WatchedBadge: View {
+    var size: CGFloat = 22
+
+    var body: some View {
+        Image(systemName: "checkmark")
+            .font(.system(size: size * 0.5, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(.black.opacity(0.6), in: Circle())
+            .overlay { Circle().strokeBorder(.white.opacity(0.85), lineWidth: 1.2) }
+            .accessibilityElement()
+            .accessibilityLabel(Text("Watched"))
+            .accessibilityIdentifier("watchedBadge")
     }
 }
 

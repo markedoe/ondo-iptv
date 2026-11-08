@@ -96,6 +96,8 @@ import com.markedoe.ondo.ui.components.PlayIcon
 import com.markedoe.ondo.ui.components.ResumeCardMenu
 import com.markedoe.ondo.ui.components.posterLongClick
 import com.markedoe.ondo.ui.components.posterSemantics
+import com.markedoe.ondo.ui.components.WatchedBadge
+import com.markedoe.ondo.ui.components.isWatched
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.timeLeftText
@@ -400,6 +402,7 @@ fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = M
         Box(Modifier.fillMaxSize()) {
             Artwork(url = item.posterUrl, title = item.title, modifier = Modifier.fillMaxSize())
             CardSheen(focused)
+            if (isWatched(item)) WatchedBadge(Modifier.align(Alignment.TopStart))
             if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
         }
     }

@@ -170,6 +170,22 @@ extension HelpTopic {
             """
         ),
         HelpTopic(
+            id: "watched", title: "Watched Movies and Series", systemImage: "checkmark.circle",
+            body: """
+            A movie or a series you have watched shows a check mark on its poster, everywhere in the app. A movie is \
+            watched once you watch it to the end (or to its end credits), in any of its versions; a series once \
+            every one of its episodes is.
+
+            On a movie’s or a series’ page, Mark as Watched does the same without playing it and takes the title out \
+            of Continue Watching; Mark as Unwatched takes the mark away, and the title plays from the start. On a \
+            series’ page, the check mark beside each episode marks that episode, and an episode’s menu (long-press, \
+            or Control-click on a Mac) marks its whole season.
+
+            What you have watched belongs to the profile open and follows on your other devices with Sync. Hide \
+            watched movies, in Settings, leaves watched movies out where you browse movies.
+            """
+        ),
+        HelpTopic(
             id: "guide", title: "TV Guide, Replay and Reminders", systemImage: "calendar.day.timeline.left",
             body: """
             The guide comes from your provider or from the XMLTV addresses added to the playlist. If a channel \

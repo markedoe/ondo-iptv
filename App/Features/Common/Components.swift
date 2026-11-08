@@ -63,10 +63,12 @@ struct PosterCard: View {
     var subtitle: String?
     var rating: Double?
     var progress: Double?
+    /// Watched (`AppModel.isWatched`): the check mark on the artwork.
+    var watched = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            PosterArtwork(url: imageURL, title: title, progress: progress)
+            PosterArtwork(url: imageURL, title: title, progress: progress, watched: watched)
                 .overlay(alignment: .topTrailing) {
                     if let rating, rating > 0 {
                         Label(Formatting.rating(rating), systemImage: "star.fill")

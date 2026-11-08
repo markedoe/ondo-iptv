@@ -47,7 +47,8 @@ chaque changement de l'interface.
   dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom. Des pages noires, du blanc pour
   ce qui est choisi ; les cartes se soulèvent sous le pointeur, le focus du clavier ou le doigt.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
-  ou note (celle de TMDb d'abord avec un jeton, voir TMDb plus bas), films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), **versions d'un film
+  ou note (celle de TMDb d'abord avec un jeton, voir TMDb plus bas), une coche sur l'affiche de chaque titre déjà vu (une série
+  une fois tous ses épisodes vus), **Marquer comme vu / Marquer comme non vu** sur sa fiche (chaque épisode aussi), films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), **versions d'un film
   regroupées** (4K, Dolby Vision, HD, VOSTFR… : le film une fois, ses versions en badges sur sa fiche ;
   [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
@@ -175,7 +176,8 @@ chaque changement de l'interface.
   (Aventure, Abenteuer et Adventure), affiché dans la vôtre. Elles se déplacent et se masquent comme les autres rangées,
   sont propres à chaque profil, et se synchronisent.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
-  sortie comprise), films déjà vus masqués si vous le souhaitez, versions d'un film regroupées (badges sur sa fiche,
+  sortie comprise), une coche sur l'affiche de chaque titre déjà vu et Marquer comme vu / non vu sur sa fiche (chaque
+  épisode aussi ; OK maintenu sur un épisode sur une TV), films déjà vus masqués si vous le souhaitez, versions d'un film regroupées (badges sur sa fiche,
   pastilles sur une TV ; [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, la bande-annonce du fournisseur sur YouTube, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
   films et séries (les séries toujours, les films parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le

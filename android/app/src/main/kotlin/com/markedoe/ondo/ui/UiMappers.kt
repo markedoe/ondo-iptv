@@ -904,6 +904,29 @@ object UiMappers {
         return ChannelRow(channel, current?.title, current?.progress(now)?.toFloat(), next?.title)
     }
 
+    /**
+     * The keys ([ShowcaseItem.key]) of the titles watched in the current playlist: the movies (every version of a film
+     * once one is) and the series whose episodes, as known (the provider's seasons, else the playlist's own list), are all
+     * watched. Made once per change of the history, the catalogue or the seasons known, off the main thread ([films]):
+     * each thumbnail's badge is a lookup in it ([LocalWatchedTitles]).
+     */
+    fun watchedKeys(state: OndoState): Set<String> {
+        val watched = state.library.watchedTitles(state.activePlaylistId.orEmpty())
+        if (watched.movies.isEmpty() && watched.episodes.isEmpty()) return emptySet()
+        val keys = HashSet<String>()
+        watched.movies.forEach { keys.add("m-$it") }
+        if (watched.movies.isNotEmpty()) films(state).expand(watched.movies).forEach { keys.add("m-$it") }
+        val missing = watched.episodes.keys.filterTo(HashSet()) { it !in state.seriesDetails }
+        val listed = if (missing.isEmpty()) emptyMap() else state.content.series.asSequence()
+            .filter { it.id in missing && it.episodes.isNotEmpty() }
+            .associate { series -> series.id to series.episodes.map { it.id } }
+        for (seriesId in watched.episodes.keys) {
+            val known = state.seriesDetails[seriesId]?.seasons?.flatMap { season -> season.episodes.map { it.id } } ?: listed[seriesId] ?: continue
+            if (watched.isSeriesWatched(seriesId, known)) keys.add("s-$seriesId")
+        }
+        return keys
+    }
+
     /** The keys ([ShowcaseItem.key]) of the movies and series in My List, for the current playlist. */
     /** A film is in My List when one of its versions is: every version's key then. Main thread ([filmsIfReady]). */
     fun myListKeys(state: OndoState): Set<String> {
@@ -967,6 +990,8 @@ object UiMappers {
             faces = state.tmdbFaces[item.key].orEmpty(),
             votes = tmdbRating(state, item),
             progress = progress(showcase.progress(version)),
+            // A film is watched once one of its versions is.
+            watched = films(state).versions(movie).any { showcase.progress(it)?.isFinished == true },
             inMyList = isFavorite(state, item),
             versions = versionChips(state, versions),
             version = version,
@@ -1002,6 +1027,10 @@ object UiMappers {
             next = next?.first,
             nextProgress = next?.first?.let { episodeProgress[it.id] },
             episodeProgress = episodeProgress,
+            // Watched once every episode of its seasons is (as the provider lists them, each once).
+            watched = state.seriesDetails[series.id]?.let { raw ->
+                state.library.watchedTitles(state.activePlaylistId.orEmpty()).isSeriesWatched(series.id, raw.seasons.flatMap { season -> season.episodes.map { it.id } })
+            } == true,
             inMyList = isFavorite(state, item),
             similar = showcase.similarSeries(series, related = state.tmdbRelated[item.key].orEmpty().mapNotNull { (it as? TrendingMatch.SeriesMatch)?.series }) { state.seriesDetails[it]?.info }
                 .map { ShowcaseItem.SeriesItem(it) },

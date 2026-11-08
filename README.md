@@ -48,7 +48,8 @@ interface changes.
   or a finger.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating (TMDb's
   first with a token, see TMDb below),
-  watched movies hidden if you like (Search and My List keep them), **a film's versions grouped** (4K, Dolby Vision,
+  a check mark on the poster of every title watched (a series once all its episodes are), **Mark as Watched / Mark as
+  Unwatched** on its page (each episode too), watched movies hidden if you like (Search and My List keep them), **a film's versions grouped** (4K, Dolby Vision,
   HD, VOSTFR…: the film once, its versions as badges on its page; [docs/VERSIONS.md](docs/VERSIONS.md)),
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
@@ -159,7 +160,8 @@ interface changes.
   language your provider names it in (Aventure, Abenteuer and Adventure), shown in yours. They move and hide like the
   other rows, belong to each profile, and sync.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
-  included), watched movies hidden if you like, a film's versions grouped (badges on its page, chips on a TV;
+  included), a check mark on the poster of every title watched and Mark as watched / unwatched on its page (each
+  episode too; OK held on an episode on a TV), watched movies hidden if you like, a film's versions grouped (badges on its page, chips on a TV;
   [docs/VERSIONS.md](docs/VERSIONS.md)), detail pages (Resume, From Start, next
   episode, seasons, the provider's trailer on YouTube, More Like This); a director's or an actor's name opens their other movies and series
   (series always, movies among the pages already opened), and a genre, the year or an award the titles that share it.

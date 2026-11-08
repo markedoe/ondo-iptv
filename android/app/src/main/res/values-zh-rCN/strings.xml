@@ -547,4 +547,11 @@
     <string name="tv_field_press_ok">按 OK 键输入</string>
     <string name="tv_field_show">显示字符</string>
     <string name="tv_field_hide">隐藏字符</string>
+    <string name="mark_watched">标记为已观看</string>
+    <string name="mark_unwatched">标记为未观看</string>
+    <string name="not_watched">未观看</string>
+    <string name="marked_watched">已标记为已观看</string>
+    <string name="marked_unwatched">已标记为未观看</string>
+    <string name="help_watched_title">已观看的电影和剧集</string>
+    <string name="help_watched_body">你看过的电影或剧集会在海报上显示一个对勾，在应用中处处可见。电影的任一版本看到结尾（或片尾字幕）即为已观看；剧集则需全部剧集都已观看。\n\n在电影或剧集的页面上，“标记为已观看”无需播放即可达到同样效果，并将该作品从“继续观看”中移除；“标记为未观看”会取消标记，作品将从头播放。在剧集页面上，每一集旁的对勾可标记该集；在电视上，在某一集上长按 OK 键。\n\n已观看记录属于当前打开的个人资料，并通过同步出现在你的其他设备上。设置中的“隐藏已看过的电影”会在浏览电影时隐藏已观看的电影。</string>
 </resources>

@@ -42,11 +42,14 @@ struct SeriesGridView: View {
 
     var body: some View {
         let list = series
+        // One set for the whole grid: each poster's watched badge is a lookup.
+        let watched = model.watchedKeys
         ScrollView {
             LazyVGrid(columns: posterColumns, spacing: 18) {
                 ForEach(list) { item in
                     NavigationLink(value: item) {
-                        PosterCard(title: item.name, imageURL: item.coverURL, subtitle: item.year.map(String.init), rating: item.rating)
+                        PosterCard(title: item.name, imageURL: item.coverURL, subtitle: item.year.map(String.init), rating: item.rating,
+                                   watched: watched.contains(ShowcaseItem.series(item).id))
                     }
                     .cardButtonStyle()
                     .contextMenu { SeriesContextMenu(series: item) }
@@ -94,12 +97,15 @@ struct SeriesDetailView: View {
     var body: some View {
         let next = shownDetails.flatMap { model.nextEpisode(in: series, details: $0) }
         let nextProgress = next.flatMap { model.progress(episode: $0.episode, in: series) }
+        // Watched once every episode of its seasons is.
+        let watched = details.map { model.isWatched(series: series, details: $0) } ?? false
         DetailScaffold(
             title: ShowcaseItem.series(series).displayTitle,
             posterURL: details?.info.posterURL ?? series.coverURL,
             backdropURL: model.backdropURL(for: .series(series)),
             facts: facts,
             badges: badges,
+            watched: watched,
             onBackdropFailure: { model.backdropFailed($0, for: .series(series), permanently: $1) }
         ) { metrics in
             metrics.actionsLayout {
@@ -118,6 +124,12 @@ struct SeriesDetailView: View {
                 HStack(alignment: .top, spacing: 14) {
                     MyListAction(item: .series(series))
                     CollectionAction(item: .series(series))
+                    // Its episodes known: all of them watched, or all unwatched.
+                    if let details, !details.seasons.flatMap(\.episodes).isEmpty {
+                        WatchedAction(watched: watched) {
+                            model.setWatched(!watched, series: series, details: details)
+                        }
+                    }
                     TrailerAction(youTubeID: model.trailerYouTubeID(for: .series(series), provider: details?.info.trailerYouTubeID))
                 }
             }
@@ -216,7 +228,9 @@ struct SeriesDetailView: View {
                             progress: model.progress(episode: episode, in: series),
                             compact: metrics.compact,
                             downloadItem: model.downloadItem(for: episode, in: series),
-                            playFromStart: { model.play(episode, in: series, season: season.episodes, fromStart: true) }
+                            playFromStart: { model.play(episode, in: series, season: season.episodes, fromStart: true) },
+                            toggleWatched: { watched in model.setWatched(watched, episodes: [episode], in: series) },
+                            markSeasonWatched: { watched in model.setWatched(watched, episodes: season.episodes, in: series) }
                         ) {
                             model.play(episode, in: series, season: season.episodes)
                         }
@@ -253,6 +267,10 @@ struct EpisodeRow: View {
     var compact = true
     var downloadItem: PlaybackItem?
     var playFromStart: (() -> Void)?
+    /// "Mark as Watched" (true) or "Mark as Unwatched" (false) for this episode.
+    var toggleWatched: ((Bool) -> Void)?
+    /// The same for every episode of its season.
+    var markSeasonWatched: ((Bool) -> Void)?
     let play: () -> Void
 
     var body: some View {
@@ -293,6 +311,33 @@ struct EpisodeRow: View {
                 if progress?.isResumable == true, let playFromStart {
                     Button("From Start", systemImage: "backward.end", action: playFromStart)
                 }
+                if let toggleWatched {
+                    let watched = progress?.isFinished == true
+                    Button(watched ? LocalizedStringKey("Mark as Unwatched") : LocalizedStringKey("Mark as Watched"), systemImage: watched ? "checkmark.circle.fill" : "checkmark.circle") {
+                        toggleWatched(!watched)
+                    }
+                }
+                if let markSeasonWatched {
+                    Button("Mark Season as Watched", systemImage: "checkmark.circle") { markSeasonWatched(true) }
+                    Button("Mark Season as Unwatched", systemImage: "circle") { markSeasonWatched(false) }
+                }
+            }
+            .accessibilityValue(progress?.isFinished == true ? Text("Watched") : Text(verbatim: ""))
+            if let toggleWatched {
+                // In sight on every row: the check mark marks the episode watched, or unwatched again.
+                let watched = progress?.isFinished == true
+                Button {
+                    toggleWatched(!watched)
+                } label: {
+                    Image(systemName: watched ? "checkmark.circle.fill" : "checkmark.circle")
+                        .font(.title3)
+                        .foregroundStyle(watched ? OndoColor.selected : Color.secondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(watched ? Text("Mark as Unwatched") : Text("Mark as Watched"))
+                .accessibilityIdentifier("episodeWatched-\(episode.id)")
             }
             #if TESTFLIGHT_DOWNLOADS || DEBUG
             if let downloadItem {

@@ -180,15 +180,51 @@ internal fun Modifier.posterClick(item: ShowcaseItem, interaction: MutableIntera
     )
 }
 
-/** TalkBack's words for a poster: its title, and that it is in My List where its check mark shows it. */
+/** TalkBack's words for a poster: its title, that it is watched, and that it is in My List where its check mark shows it. */
 @Composable
 internal fun Modifier.posterSemantics(item: ShowcaseItem, kept: Boolean): Modifier {
-    val state = if (kept) stringResource(R.string.in_my_list) else null
+    val states = listOfNotNull(
+        if (isWatched(item)) stringResource(R.string.watched) else null,
+        if (kept) stringResource(R.string.in_my_list) else null,
+    )
+    val state = states.takeIf { it.isNotEmpty() }?.joinToString(", ")
     return semantics {
         contentDescription = item.title
         if (state != null) stateDescription = state
     }
 }
+
+/**
+ * The keys ([ShowcaseItem.key]) of the titles watched in the current playlist (`UiMappers.watchedKeys`), on every device:
+ * each thumbnail shows its watched badge with one lookup.
+ */
+val LocalWatchedTitles = compositionLocalOf<Set<String>> { emptySet() }
+
+/** Whether the title is watched, as [LocalWatchedTitles] says. */
+@Composable
+fun isWatched(item: ShowcaseItem): Boolean = item.key in LocalWatchedTitles.current
+
+/**
+ * The check mark of a watched title on its thumbnail: white on a dark disc with a white ring, legible on any poster, in
+ * the start corner (the end one has My List's), never over the title below. TalkBack says it through the card.
+ */
+@Composable
+fun WatchedBadge(modifier: Modifier = Modifier, size: Dp = 22.dp) {
+    Box(
+        modifier
+            .padding(6.dp)
+            .size(size)
+            .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+            .border(1.2.dp, Color.White.copy(alpha = 0.85f), CircleShape)
+            .testTag(WATCHED_BADGE_TAG),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.7f))
+    }
+}
+
+/** The tag of [WatchedBadge], for the tests. */
+const val WATCHED_BADGE_TAG = "watchedBadge"
 
 /** Whether the poster is in My List, where [LocalPosterMyList] says so. */
 @Composable
@@ -233,6 +269,7 @@ fun PosterCard(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val kept = inMyList(item)
+    val watched = isWatched(item)
     if (!showsTitle) {
         Column(
             modifier = modifier
@@ -246,7 +283,8 @@ fun PosterCard(
                 .posterSemantics(item, kept),
         ) {
             Box {
-                Poster(url = item.posterUrl, title = item.title, progress = progress)
+                Poster(url = item.posterUrl, title = item.title, progress = progress.takeUnless { watched })
+                if (watched) WatchedBadge(Modifier.align(Alignment.TopStart))
                 if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
             }
         }
@@ -273,9 +311,10 @@ fun PosterCard(
             Poster(
                 url = item.posterUrl,
                 title = item.title,
-                progress = progress,
+                progress = progress.takeUnless { watched },
                 modifier = Modifier.border(3.dp, if (focused) MaterialTheme.colorScheme.onBackground else Color.Transparent, PosterShape),
             )
+            if (watched) WatchedBadge(Modifier.align(Alignment.TopStart))
             if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
         }
         Text(

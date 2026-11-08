@@ -90,7 +90,7 @@ struct SearchView: View {
                 Section("Movies (\(results.movies.count))") {
                     ForEach(results.movies.prefix(scope == .all ? 30 : 150)) { movie in
                         NavigationLink(value: movie) {
-                            SearchResultRow(title: movie.name, subtitle: movie.year.map(String.init), imageURL: movie.posterURL, icon: "film")
+                            SearchResultRow(title: movie.name, subtitle: movie.year.map(String.init), imageURL: movie.posterURL, icon: "film", watched: model.isWatched(.movie(movie)))
                         }
                     }
                 }
@@ -99,7 +99,7 @@ struct SearchView: View {
                 Section("Series (\(results.series.count))") {
                     ForEach(results.series.prefix(scope == .all ? 30 : 150)) { series in
                         NavigationLink(value: series) {
-                            SearchResultRow(title: series.name, subtitle: series.year.map(String.init), imageURL: series.coverURL, icon: "play.rectangle.on.rectangle")
+                            SearchResultRow(title: series.name, subtitle: series.year.map(String.init), imageURL: series.coverURL, icon: "play.rectangle.on.rectangle", watched: model.isWatched(.series(series)))
                         }
                     }
                 }
@@ -290,6 +290,8 @@ struct SearchResultRow: View {
     let subtitle: String?
     let imageURL: URL?
     let icon: String
+    /// Watched (`AppModel.isWatched`): the check mark on the thumbnail.
+    var watched = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -297,6 +299,9 @@ struct SearchResultRow: View {
                 .frame(width: 40, height: 60)
                 .overlay { RemoteImage(url: imageURL, placeholderText: title, contentMode: .fill, maxPixelSize: 120) }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(alignment: .topLeading) {
+                    if watched { WatchedBadge(size: 16).padding(2) }
+                }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).lineLimit(2)
                 if let subtitle {

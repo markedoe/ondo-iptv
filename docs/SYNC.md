@@ -148,6 +148,9 @@ duration, never. Where the credits start is not synced: each device keeps what i
 (Apple: MP4 and MOV chapters, MKV chapters, VLC; Android: MP4 chapters, which Media3 reads, and none for MKV). A device
 that never played the file judges by the rule by time. Key: `progress:<playlist>|<kind>|<item>|<episode or empty>`;
 time: `watchedAt`.
+Mark as Watched on a page sends the same record as the end of playback: `position` equal to `duration` (the known
+length, else 1 second); Mark as Unwatched sends `position` 0, later than the record it replaces. No new field: a device
+on an older version reads both as it reads any progress.
 
 **List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],
 "people": [<person>], "updatedAt", "renamedAt"?, "orderedAt"?, "order"?, "placedAt"?}`. Key: `list:<id>`; time: `updatedAt` (set when the

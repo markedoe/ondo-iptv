@@ -91,13 +91,13 @@ struct FavoritesView: View {
         case .movie:
             if let movie = model.index.moviesByID[entry.reference.itemID] {
                 NavigationLink(value: movie) {
-                    SearchResultRow(title: movie.name, subtitle: movie.year.map(String.init), imageURL: movie.posterURL, icon: "film")
+                    SearchResultRow(title: movie.name, subtitle: movie.year.map(String.init), imageURL: movie.posterURL, icon: "film", watched: model.isWatched(.movie(movie)))
                 }
             }
         case .series:
             if let series = model.index.seriesByID[entry.reference.itemID] {
                 NavigationLink(value: series) {
-                    SearchResultRow(title: series.name, subtitle: series.year.map(String.init), imageURL: series.coverURL, icon: "play.rectangle.on.rectangle")
+                    SearchResultRow(title: series.name, subtitle: series.year.map(String.init), imageURL: series.coverURL, icon: "play.rectangle.on.rectangle", watched: model.isWatched(.series(series)))
                 }
             }
         }

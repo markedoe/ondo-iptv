@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.LibraryAddCheck
@@ -60,6 +62,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -148,6 +151,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                 plot = details?.plot ?: movie.plot,
                 director = details?.director,
                 progress = state.progress.takeIf { resumable },
+                watched = state.watched,
             ) {
                 TvActionButton(onClick = actions.onPlay, prominent = true, modifier = Modifier.focusMemory("detail-play", initial = true).testTag("detailPlay")) {
                     ButtonLabel(Icons.Rounded.PlayArrow, playLabel(resumable))
@@ -157,6 +161,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                         ButtonLabel(Icons.Rounded.Replay, stringResource(R.string.from_start))
                     }
                 }
+                WatchedButton(state.watched) { actions.onSetWatched(!state.watched) }
                 MyListButton(state.inMyList, actions.onToggleMyList)
                 CollectionButton(state.collections, collectionButton) { picking = true }
                 state.trailer?.let { TrailerButton(it, actions) }
@@ -206,12 +211,15 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                 plot = details?.plot ?: series.plot,
                 director = details?.director ?: series.director,
                 progress = state.nextProgress.takeIf { resumable },
+                watched = state.watched,
             ) {
                 state.next?.let { next ->
                     TvActionButton(onClick = actions.onPlay, prominent = true, modifier = Modifier.focusMemory("detail-play", initial = true).testTag("detailPlay")) {
                         ButtonLabel(Icons.Rounded.PlayArrow, stringResource(if (resumable) R.string.resume_episode else R.string.play_episode, next.code))
                     }
                 }
+                // Its episodes known: all of them watched, or all unwatched.
+                if (state.seasons.any { it.episodes.isNotEmpty() }) WatchedButton(state.watched) { actions.onSetWatched(!state.watched) }
                 MyListButton(state.inMyList, actions.onToggleMyList)
                 CollectionButton(state.collections, collectionButton) { picking = true }
                 state.trailer?.let { TrailerButton(it, actions) }
@@ -245,7 +253,13 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         season?.takeIf { it.episodes.isNotEmpty() }?.let { current ->
             tvShelf(episodesTitle, "episodes", start = PageStart) {
                 items(current.episodes, key = { it.id }) { episode ->
-                    TvEpisodeCard(episode, state.episodeProgress[episode.id], onClick = { actions.onPlayEpisode(episode) }, modifier = Modifier.focusMemory("episode:${episode.id}"))
+                    TvEpisodeCard(
+                        episode,
+                        state.episodeProgress[episode.id],
+                        onClick = { actions.onPlayEpisode(episode) },
+                        onWatched = { actions.onSetEpisodeWatched(episode, it) },
+                        modifier = Modifier.focusMemory("episode:${episode.id}"),
+                    )
                 }
             }
         }
@@ -286,6 +300,7 @@ private fun TvDetailHeader(
     plot: String?,
     director: String?,
     progress: WatchProgress?,
+    watched: Boolean,
     buttons: @Composable FlowRowScope.() -> Unit,
 ) {
     val ink = TvTokens.Ink
@@ -310,6 +325,13 @@ private fun TvDetailHeader(
                 logoTag = "detailLogo",
             )
             TvFacts(facts, badges)
+            if (watched) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("detailWatchedState")) {
+                    Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = TvTokens.Accent, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.watched), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = Color.White)
+                }
+            }
             plot?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.78f), maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 560.dp))
             }
@@ -415,6 +437,18 @@ private fun RowScope.ButtonLabel(icon: ImageVector, text: String) {
     Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
     Spacer(Modifier.width(8.dp))
     Text(text, maxLines = 1)
+}
+
+/**
+ * "Mark as watched" / "Mark as unwatched": the same state as watching it to the end (out of Continue watching), or
+ * played from its start again. After Play on the remote's path; its focus is remembered whichever its label.
+ */
+@Composable
+private fun WatchedButton(watched: Boolean, onClick: () -> Unit) {
+    val state = stringResource(if (watched) R.string.watched else R.string.not_watched)
+    TvActionButton(onClick = onClick, modifier = Modifier.focusMemory("detail-watched").semantics { stateDescription = state }.testTag("detailWatched")) {
+        ButtonLabel(if (watched) Icons.Rounded.CheckCircle else Icons.Rounded.CheckCircleOutline, stringResource(if (watched) R.string.mark_unwatched else R.string.mark_watched))
+    }
 }
 
 /** The provider's trailer, in the YouTube app. */
@@ -561,15 +595,23 @@ fun TvChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, sel
 
 /** An episode: its picture (16:9) with the progress, then its number, title, length and plot. */
 @Composable
-private fun TvEpisodeCard(episode: Episode, progress: WatchProgress?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun TvEpisodeCard(episode: Episode, progress: WatchProgress?, onClick: () -> Unit, onWatched: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     val watched = stringResource(R.string.watched)
+    val isWatched = progress?.finished == true
+    val context = LocalContext.current
     Column(modifier.width(TvTokens.EpisodeCardWidth), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Card(
             onClick = onClick,
+            // OK held marks the episode watched, or unwatched again, as OK held on a poster keeps it in My List.
+            onLongClick = {
+                onWatched(!isWatched)
+                Toast.makeText(context, if (isWatched) R.string.marked_unwatched else R.string.marked_watched, Toast.LENGTH_SHORT).show()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .semantics { contentDescription = "${episode.code} ${episode.title}" + if (progress?.finished == true) ", $watched" else "" },
+                .semantics { contentDescription = "${episode.code} ${episode.title}" + if (isWatched) ", $watched" else "" }
+                .testTag("episodeCard-${episode.id}"),
             shape = CardDefaults.shape(TvTokens.CardShape),
             scale = CardDefaults.scale(focusedScale = 1.08f),
             border = CardDefaults.border(focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(3.dp, Color.White), shape = TvTokens.CardShape)),

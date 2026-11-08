@@ -10,6 +10,8 @@ struct DetailScaffold<Actions: View, Content: View>: View {
     let facts: [String]
     /// Outlined after the facts: the format of the stream (MKV, MP4…).
     var badges: [String] = []
+    /// Watched (`AppModel.isWatched`): the check mark on the poster and "Watched" under the facts.
+    var watched = false
     /// The backdrop did not load.
     var onBackdropFailure: ((_ url: URL, _ permanently: Bool) -> Void)?
     @ViewBuilder var actions: (ShelfMetrics) -> Actions
@@ -83,7 +85,7 @@ struct DetailScaffold<Actions: View, Content: View>: View {
                     headerUnderBar = visible
                 }
             HStack(alignment: .bottom, spacing: compact ? 14 : 24) {
-                PosterArtwork(url: posterURL, title: title)
+                PosterArtwork(url: posterURL, title: title, watched: watched)
                     .frame(width: posterWidth)
                     .shadow(color: .black.opacity(0.45), radius: 16, y: 8)
                 VStack(alignment: .leading, spacing: 6) {
@@ -95,6 +97,12 @@ struct DetailScaffold<Actions: View, Content: View>: View {
                     if !facts.isEmpty || !badges.isEmpty {
                         FactsLine(facts: facts, badges: badges, lineLimit: 2)
                             .font(.subheadline)
+                    }
+                    if watched {
+                        Label("Watched", systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(OndoColor.selected)
+                            .accessibilityIdentifier("detailWatchedState")
                     }
                 }
                 .padding(.bottom, 4)
@@ -215,6 +223,23 @@ struct MyListAction: View {
         }
         .buttonStyle(.plain)
         .accessibilityValue(inList ? Text("In My List") : Text(""))
+    }
+}
+
+/// "Mark as Watched" / "Mark as Unwatched" on a movie's or a series' page: the same state as watching it to the end
+/// (out of Continue Watching), or played from its start again. Synced and per profile like any progress.
+struct WatchedAction: View {
+    let watched: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            CircleAction(watched ? "Mark as Unwatched" : "Mark as Watched", systemImage: watched ? "checkmark.circle.fill" : "checkmark.circle")
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(watched ? Text("Watched") : Text(verbatim: ""))
+        .accessibilityIdentifier("detailWatched")
     }
 }
 

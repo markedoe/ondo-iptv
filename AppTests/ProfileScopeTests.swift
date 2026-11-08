@@ -165,6 +165,9 @@ final class ProfileScopeTests: XCTestCase {
                            model.recordProgress(item, position: 1_200, duration: 5_400)
                        },
                        read: { model in Self.found(model.library.history.first { $0.reference.type == .movie }?.reference.itemID) }),
+            PerProfile(name: "watched (Mark as Watched on a page)",
+                       set: { model in model.setWatched(true, movie: try XCTUnwrap(model.content.movies.first)) },
+                       read: { model in Self.found(model.library.history.first { $0.reference.type == .movie && $0.isFinished }?.reference.itemID) }),
             PerProfile(name: "lists",
                        set: { _ = $0.createList(named: "Weekend") },
                        read: { model in Self.found(model.library.customLists.first { $0.name == "Weekend" }?.id) }),

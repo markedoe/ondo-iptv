@@ -421,6 +421,26 @@ class OndoViewModel(
     /** A version picked on a film's page: remembered on this device, the film's card and page start from it. */
     fun chooseVersion(movieId: String) = repository.rememberVersion(movieId)
 
+    /** "Mark as watched" / "Mark as unwatched" on a film's page: [version] marked, or every version unmarked. */
+    fun setFilmWatched(movie: Movie, version: Movie, watched: Boolean) {
+        val current = state.value
+        // The versions grouped in the background already (never grouped here, on the main thread).
+        val versions = UiMappers.filmsIfReady(current).versions(movie)
+        repository.setFilmWatched(watched, version, versions, current.movieDetails[version.id]?.durationSeconds ?: current.movieDetails[movie.id]?.durationSeconds)
+    }
+
+    /** One episode, or a season, marked watched or unwatched. */
+    fun setEpisodesWatched(seriesId: String, episodes: List<Episode>, watched: Boolean) {
+        val series = state.value.content.series.firstOrNull { it.id == seriesId } ?: return
+        repository.setEpisodesWatched(watched, series, episodes)
+    }
+
+    /** The whole series: every episode of its seasons as known. */
+    fun setSeriesWatched(seriesId: String, watched: Boolean) {
+        val details = state.value.seriesDetails[seriesId] ?: return
+        setEpisodesWatched(seriesId, details.seasons.flatMap { it.episodes }, watched)
+    }
+
     // Reminders
 
     fun toggleReminder(channel: com.markedoe.ondo.core.model.Channel, program: EpgProgram) = repository.toggleReminder(channel, program)

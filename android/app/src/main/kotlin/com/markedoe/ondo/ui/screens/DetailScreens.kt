@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.LibraryAddCheck
@@ -106,6 +107,7 @@ import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.ProgressBar
 import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.ShelfMetrics
+import com.markedoe.ondo.ui.components.WatchedBadge
 import com.markedoe.ondo.ui.components.pressScale
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -133,6 +135,8 @@ data class MovieDetailUiState(
     val votes: TmdbRating? = null,
     /** The progress of [version]. */
     val progress: WatchProgress? = null,
+    /** Watched: one of the film's versions was watched to the end, or marked so ("Mark as watched"). */
+    val watched: Boolean = false,
     val inMyList: Boolean = false,
     /** The film's versions as badges (4K DV, HD, VOSTFR…), when it has several (`FilmVersions`); empty otherwise. */
     val versions: List<VersionChip> = emptyList(),
@@ -163,6 +167,8 @@ data class SeriesDetailUiState(
     val next: Episode? = null,
     val nextProgress: WatchProgress? = null,
     val episodeProgress: Map<String, WatchProgress> = emptyMap(),
+    /** Watched: every episode of its seasons is. */
+    val watched: Boolean = false,
     val inMyList: Boolean = false,
     val similar: List<ShowcaseItem> = emptyList(),
     val error: String? = null,
@@ -200,6 +206,10 @@ class DetailActions(
     val onTrailer: (String) -> Unit = {},
     /** A version of the film picked on its page (its stream's id). */
     val onVersion: (String) -> Unit = {},
+    /** "Mark as watched" (true) or "Mark as unwatched" (false): the movie, or every episode of the series. */
+    val onSetWatched: (Boolean) -> Unit = {},
+    /** The same for one episode. */
+    val onSetEpisodeWatched: (Episode, Boolean) -> Unit = { _, _ -> },
 )
 
 @Composable
@@ -221,6 +231,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         backdropUrl = state.backdropUrl,
         facts = facts,
         badges = badges,
+        watched = state.watched,
         onBack = actions.onBack,
         onBackdropFailed = actions.onBackdropFailed,
         actions = { metrics ->
@@ -228,6 +239,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
+                WatchedAction(state.watched) { actions.onSetWatched(!state.watched) }
                 if (resumable) CircleAction(stringResource(R.string.from_start), Icons.Rounded.Replay, actions.onPlayFromStart)
                 state.trailer?.let { id -> CircleAction(trailerLabel(), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
             }
@@ -319,6 +331,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         backdropUrl = state.backdropUrl,
         facts = facts,
         badges = badges,
+        watched = state.watched,
         onBack = actions.onBack,
         onBackdropFailed = actions.onBackdropFailed,
         actions = {
@@ -333,6 +346,8 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
+                // Its episodes known: all of them watched, or all unwatched.
+                if (state.seasons.any { it.episodes.isNotEmpty() }) WatchedAction(state.watched) { actions.onSetWatched(!state.watched) }
                 state.trailer?.let { id -> CircleAction(trailerLabel(), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
             }
         },
@@ -355,7 +370,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             }
             season?.let { current ->
                 items(current.episodes, key = { it.id }) { episode ->
-                    EpisodeRow(episode, state.episodeProgress[episode.id], metrics) { actions.onPlayEpisode(episode) }
+                    EpisodeRow(episode, state.episodeProgress[episode.id], metrics, onWatched = { actions.onSetEpisodeWatched(episode, it) }) { actions.onPlayEpisode(episode) }
                 }
             }
             // After the episodes, which the page is for; an award opens the other series of the playlist that have it.
@@ -476,6 +491,7 @@ private fun DetailScaffold(
     backdropUrl: String?,
     facts: List<String>,
     badges: List<String>,
+    watched: Boolean,
     onBack: () -> Unit,
     onBackdropFailed: (String) -> Unit,
     actions: @Composable (ShelfMetrics) -> Unit,
@@ -489,7 +505,7 @@ private fun DetailScaffold(
     Box(Modifier.fillMaxSize().testTag("detail")) {
         LazyColumn(contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             if (wide) {
-                item { WideHeader(title, posterUrl, backdropUrl, facts, badges, metrics, onBackdropFailed) { actions(metrics) } }
+                item { WideHeader(title, posterUrl, backdropUrl, facts, badges, watched, metrics, onBackdropFailed) { actions(metrics) } }
                 content(metrics)
                 return@LazyColumn
             }
@@ -515,11 +531,15 @@ private fun DetailScaffold(
                             .padding(horizontal = metrics.gutter),
                         verticalAlignment = Alignment.Bottom,
                     ) {
-                        Poster(url = posterUrl, title = title, modifier = Modifier.width(if (metrics.compact) 112.dp else 168.dp))
+                        Box(Modifier.width(if (metrics.compact) 112.dp else 168.dp)) {
+                            Poster(url = posterUrl, title = title, modifier = Modifier.fillMaxWidth())
+                            if (watched) WatchedBadge(Modifier.align(Alignment.TopStart))
+                        }
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.padding(bottom = 4.dp)) {
                             Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                             Facts(facts, badges, Modifier.padding(top = 6.dp))
+                            if (watched) WatchedLine(Modifier.padding(top = 6.dp))
                         }
                     }
                 }
@@ -549,6 +569,7 @@ private fun WideHeader(
     backdropUrl: String?,
     facts: List<String>,
     badges: List<String>,
+    watched: Boolean,
     metrics: ShelfMetrics,
     onBackdropFailed: (String) -> Unit,
     actions: @Composable () -> Unit,
@@ -566,11 +587,15 @@ private fun WideHeader(
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(start = metrics.gutter, end = metrics.gutter, top = 56.dp, bottom = 16.dp),
         ) {
-            Poster(url = posterUrl, title = title, modifier = Modifier.width(150.dp))
+            Box(Modifier.width(150.dp)) {
+                Poster(url = posterUrl, title = title, modifier = Modifier.fillMaxWidth())
+                if (watched) WatchedBadge(Modifier.align(Alignment.TopStart))
+            }
             Spacer(Modifier.width(24.dp))
             Column {
                 Text(title, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Facts(facts, badges, Modifier.padding(top = 6.dp), color = Color.White.copy(alpha = 0.75f))
+                if (watched) WatchedLine(Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(16.dp))
                 actions()
             }
@@ -613,13 +638,38 @@ private fun CollectionAction(collections: List<CollectionChoice>, onClick: () ->
 @Composable
 internal fun myListState(inMyList: Boolean): String = stringResource(if (inMyList) R.string.in_my_list else R.string.not_in_my_list)
 
+/**
+ * "Mark as watched" / "Mark as unwatched": the same state as watching it to the end (out of Continue watching), or
+ * played from its start again. Its focus is remembered under one key whichever its label.
+ */
 @Composable
-private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit, state: String? = null) {
+private fun WatchedAction(watched: Boolean, onClick: () -> Unit) {
+    CircleAction(
+        stringResource(if (watched) R.string.mark_unwatched else R.string.mark_watched),
+        if (watched) Icons.Rounded.CheckCircle else Icons.Rounded.CheckCircleOutline,
+        onClick,
+        state = stringResource(if (watched) R.string.watched else R.string.not_watched),
+        memoryKey = "action:watched",
+        modifier = Modifier.testTag("detailWatched"),
+    )
+}
+
+/** "Watched" with its check mark, under the facts of a watched title's page. */
+@Composable
+private fun WatchedLine(modifier: Modifier = Modifier) {
+    Row(modifier.testTag("detailWatchedState"), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+        Text(stringResource(R.string.watched), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+    }
+}
+
+@Composable
+private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit, state: String? = null, memoryKey: String = "action:$title", modifier: Modifier = Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
+        modifier = modifier
             .focusFrame(RoundedCornerShape(12.dp))
-            .focusMemory("action:$title")
+            .focusMemory(memoryKey)
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) { if (state != null) stateDescription = state }
@@ -683,7 +733,7 @@ private fun Credit(label: String, value: String, links: List<Pair<String, () -> 
 }
 
 @Composable
-private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: ShelfMetrics, onClick: () -> Unit) {
+private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: ShelfMetrics, onWatched: (Boolean) -> Unit, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -714,6 +764,18 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
                 }
             }
             episode.plot?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = if (metrics.compact) 2 else 3, overflow = TextOverflow.Ellipsis) }
+        }
+        // In sight on every row: the check mark marks the episode watched, or unwatched again (a D-pad reaches it).
+        val watched = progress?.finished == true
+        IconButton(
+            onClick = { onWatched(!watched) },
+            modifier = Modifier.focusMemory("episodeWatched:${episode.id}").testTag("episodeWatched-${episode.id}"),
+        ) {
+            Icon(
+                if (watched) Icons.Rounded.CheckCircle else Icons.Rounded.CheckCircleOutline,
+                contentDescription = stringResource(if (watched) R.string.mark_unwatched else R.string.mark_watched),
+                tint = if (watched) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

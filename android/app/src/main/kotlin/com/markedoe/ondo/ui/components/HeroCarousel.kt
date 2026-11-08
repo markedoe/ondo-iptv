@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -292,14 +293,17 @@ private fun BoxScope.Words(page: HeroPage, titleStyle: androidx.compose.ui.text.
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(
-            text = page.meta,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.8f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp),
-        )
+        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Watched: its check mark before the facts, as on its poster.
+            if (isWatched(page.item)) WatchedBadge(Modifier.offset(x = (-6).dp), size = 20.dp)
+            Text(
+                text = page.meta,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Spacer(Modifier.height(14.dp))
         buttons()
     }

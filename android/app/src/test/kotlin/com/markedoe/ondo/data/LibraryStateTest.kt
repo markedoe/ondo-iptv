@@ -340,4 +340,58 @@ class LibraryStateTest {
         val merged = SyncMerge.merge(elsewhere, SyncSnapshot(device = "a", deleted = shown.syncDeleted))
         assertEquals(listOf(SyncHidden.category(playlist, "movie-999", 15)), merged.hiddenCategories)
     }
+
+    /** "Mark as watched" / "Mark as unwatched" on a page: the same state as the end of playback, and back (as on Apple, `MarkWatchedTests`). */
+    @Test
+    fun aMovieMarkedWatchedThenUnwatched() {
+        var library = LibraryState().markingWatched(entry("m1"), now = 5)
+        assertTrue(library.progress(entry("m1").key)!!.isFinished)
+        assertEquals(5L, library.history.single().lastWatchedAt)
+        assertTrue(library.continueWatching("p1").isEmpty())
+        library = library.markingUnwatched(entry("m1").key, now = 6)
+        val unwatched = library.progress(entry("m1").key)!!
+        assertFalse(unwatched.isFinished)
+        assertEquals(0.0, unwatched.position, 0.0)
+        assertTrue(library.continueWatching("p1").isEmpty())
+        assertTrue("no deletion: a series keeps its card", library.syncDeleted.isEmpty())
+        // Never played: nothing to unmark.
+        assertTrue(LibraryState().markingUnwatched(entry("m2").key, now = 7).history.isEmpty())
+    }
+
+    @Test
+    fun aMovieInProgressMarkedWatchedLeavesContinueWatchingAndKeepsItsLength() {
+        var library = LibraryState().recordStart(entry("m1", at = 1)).updateProgress(entry("m1").key, position = 1_200.0, duration = 6_000.0, now = 2)
+        assertEquals(1, library.continueWatching("p1").size)
+        library = library.markingWatched(entry("m1"), now = 3)
+        assertEquals(6_000.0, library.progress(entry("m1").key)!!.duration, 0.0)
+        assertTrue(library.continueWatching("p1").isEmpty())
+        assertEquals(1, library.history.size)
+    }
+
+    /** The guard that keeps a watched episode watched during playback does not stop the viewer's own choice. */
+    @Test
+    fun aWatchedEpisodeCanBeMarkedUnwatchedAndAgain() {
+        val episode = entry("s1", ItemKind.SERIES, "e1")
+        var library = LibraryState().recordStart(episode.copy(lastWatchedAt = 1)).updateProgress(episode.key, 2_700.0, 2_700.0, now = 2)
+        assertTrue(library.progress(episode.key)!!.staysWatched)
+        library = library.markingUnwatched(episode.key, now = 3)
+        assertFalse(library.progress(episode.key)!!.isFinished)
+        library = library.markingWatched(episode, now = 4)
+        assertTrue(library.progress(episode.key)!!.isFinished)
+    }
+
+    @Test
+    fun aSeriesIsWatchedOnceEveryEpisodeIs() {
+        var library = LibraryState().markingWatched(entry("s1", ItemKind.SERIES, "e1"), now = 1)
+        assertFalse(library.watchedTitles("p1").isSeriesWatched("s1", listOf("e1", "e2")))
+        library = library.markingWatched(entry("s1", ItemKind.SERIES, "e2"), now = 2)
+        val watched = library.watchedTitles("p1")
+        assertTrue(watched.isSeriesWatched("s1", listOf("e1", "e2")))
+        assertFalse("no episode known: not watched", watched.isSeriesWatched("s1", emptyList()))
+        assertFalse(watched.isSeriesWatched("s2", listOf("e1")))
+        assertTrue(library.watchedTitles("p2").episodes.isEmpty())
+        // A movie half seen is not watched.
+        val half = library.recordStart(entry("m1", at = 3)).updateProgress(entry("m1").key, 100.0, 6_000.0, now = 4)
+        assertFalse("m1" in half.watchedTitles("p1").movies)
+    }
 }

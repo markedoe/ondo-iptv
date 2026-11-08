@@ -1553,6 +1553,43 @@ class OndoRepository(
         updateLibrary { it.removingFromContinueWatching(entry, stamp()) }
     }
 
+    /**
+     * "Mark as watched" on a film's page: [version] (the one its page shows), the same state as watching it to the end;
+     * unwatched, every one of [versions] (a film is watched once one of its versions is). The open profile's library:
+     * sync carries it like any position.
+     */
+    fun setFilmWatched(watched: Boolean, version: Movie, versions: List<Movie>, durationSeconds: Int? = null) {
+        val playlistId = _state.value.activePlaylistId ?: return
+        val time = stamp()
+        if (watched) {
+            val entry = WatchEntry(playlistId, ItemKind.MOVIE, version.id, null, version.name, imageUrl = version.posterUrl, duration = (durationSeconds ?: 0).toDouble(), lastWatchedAt = time)
+            updateLibrary { it.markingWatched(entry, time) }
+        } else {
+            val keys = (versions + version).map { WatchEntry(playlistId, ItemKind.MOVIE, it.id, null, title = "", lastWatchedAt = 0).key }.distinct()
+            updateLibrary { library -> keys.fold(library) { changed, key -> changed.markingUnwatched(key, time) } }
+        }
+    }
+
+    /**
+     * Marks [episodes] of [series] watched or unwatched, in their order: the last one is the latest watched, so Continue
+     * watching goes on after it as after playback.
+     */
+    fun setEpisodesWatched(watched: Boolean, series: Series, episodes: List<Episode>) {
+        val playlistId = _state.value.activePlaylistId ?: return
+        if (episodes.isEmpty()) return
+        val entries = episodes.distinctBy { it.id }.map { episode ->
+            WatchEntry(
+                playlistId, ItemKind.SERIES, series.id, episode.id, series.name, "${episode.code} · ${episode.title}",
+                episode.posterUrl ?: series.coverUrl, duration = (episode.durationSeconds ?: 0).toDouble(), lastWatchedAt = 0,
+            ) to stamp()
+        }
+        updateLibrary { library ->
+            entries.fold(library) { changed, (entry, time) ->
+                if (watched) changed.markingWatched(entry.copy(lastWatchedAt = time), time) else changed.markingUnwatched(entry.key, time)
+            }
+        }
+    }
+
     // MARK: Reminders
 
     /** Sets a reminder for a programme of the current playlist, or takes it away. */

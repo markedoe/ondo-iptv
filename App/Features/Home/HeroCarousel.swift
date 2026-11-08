@@ -171,8 +171,11 @@ private struct HeroPage: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
             }
-            FactsLine(facts: facts(details: details), badges: badges, color: .white.opacity(0.75))
-                .font(.subheadline)
+            HStack(spacing: 8) {
+                if model.isWatched(item) { WatchedBadge(size: 20) }
+                FactsLine(facts: facts(details: details), badges: badges, color: .white.opacity(0.75))
+                    .font(.subheadline)
+            }
             if !compact, let plot = details?.plot ?? item.plot, !plot.isEmpty {
                 Text(plot)
                     .font(.callout)

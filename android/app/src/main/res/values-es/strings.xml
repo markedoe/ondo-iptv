@@ -575,4 +575,11 @@
     <string name="tv_field_press_ok">Pulsa OK para escribir</string>
     <string name="tv_field_show">Mostrar caracteres</string>
     <string name="tv_field_hide">Ocultar caracteres</string>
+    <string name="mark_watched">Marcar como visto</string>
+    <string name="mark_unwatched">Marcar como no visto</string>
+    <string name="not_watched">No visto</string>
+    <string name="marked_watched">Marcado como visto</string>
+    <string name="marked_unwatched">Marcado como no visto</string>
+    <string name="help_watched_title">Películas y series vistas</string>
+    <string name="help_watched_body">Una película o una serie que has visto muestra una marca de verificación en su póster, en toda la app. Una película está vista cuando la ves hasta el final (o hasta sus créditos finales), en cualquiera de sus versiones; una serie, cuando lo están todos sus episodios.\n\nEn la ficha de una película o una serie, Marcar como visto hace lo mismo sin reproducirla y saca el título de Seguir viendo; Marcar como no visto quita la marca, y el título se reproduce desde el principio. En la ficha de una serie, la marca junto a cada episodio marca ese episodio; en un televisor, mantén pulsado OK sobre un episodio.\n\nLo que has visto pertenece al perfil abierto y te sigue en tus otros dispositivos con la sincronización. Ocultar películas vistas, en Ajustes, deja fuera las películas vistas donde exploras películas.</string>
 </resources>

@@ -226,6 +226,36 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         history[index].lastWatchedAt = now
     }
 
+    /// "Mark as Watched" on a page: the same state as watching it to the end (its position at its end), first in the
+    /// history at `now`, out of Continue Watching. `entry` names it when it was never played (title, artwork, and its
+    /// length when known: else one second, which is its end). An episode already watched is marked again, at `now`.
+    public mutating func markWatched(_ entry: HistoryEntry, now: Date = Date()) {
+        var watched = history.first { $0.reference.isSamePlayback(as: entry.reference) } ?? entry
+        let duration = [watched.duration, entry.duration].first { $0.isFinite && $0 > 0 } ?? 1
+        watched.duration = duration
+        watched.position = duration
+        watched.lastWatchedAt = now
+        history.removeAll { $0.reference.isSamePlayback(as: entry.reference) }
+        history.insert(watched, at: 0)
+        if history.count > Self.maxHistory {
+            history.removeLast(history.count - Self.maxHistory)
+        }
+    }
+
+    /// "Mark as Unwatched": no longer watched, played from its start next time, at `now` (sync carries it as a newer
+    /// position). The entry stays (no deletion), so a series' card is not taken away; nothing for a title never played or
+    /// not watched (one left halfway keeps its resume point).
+    public mutating func markUnwatched(_ reference: MediaReference, now: Date = Date()) {
+        guard let index = history.firstIndex(where: { $0.reference.isSamePlayback(as: reference) }), history[index].isFinished else { return }
+        history[index].position = 0
+        history[index].lastWatchedAt = now
+    }
+
+    /// Whether `reference` was watched to the end (or marked so).
+    public func isWatched(_ reference: MediaReference) -> Bool {
+        progress(for: reference)?.isFinished == true
+    }
+
     public func progress(for reference: MediaReference) -> HistoryEntry? {
         history.first { $0.reference.isSamePlayback(as: reference) }
     }
@@ -584,5 +614,44 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         reminders.removeAll { $0.playlistID == playlistID }
         hiddenChannels = hiddenChannels.filter { !$0.key.hasPrefix(prefix) }
         unhiddenChannels = unhiddenChannels.filter { !$0.key.hasPrefix(prefix) }
+    }
+}
+
+/// What a playlist's viewer has watched, gathered once from the history: the badge on every thumbnail and the pages read
+/// it with a set lookup, never a scan of the history per card.
+public struct WatchedTitles: Equatable, Sendable {
+    /// The movies (streams) watched to the end.
+    public var movies: Set<String>
+    /// The episodes watched to the end, by series.
+    public var episodes: [String: Set<String>]
+
+    public init(movies: Set<String> = [], episodes: [String: Set<String>] = [:]) {
+        self.movies = movies
+        self.episodes = episodes
+    }
+
+    public init(history: [HistoryEntry], playlistID: UUID?) {
+        var movies = Set<String>()
+        var episodes: [String: Set<String>] = [:]
+        for entry in history where entry.reference.playlistID == playlistID && entry.isFinished {
+            switch entry.reference.type {
+            case .movie: movies.insert(entry.reference.itemID)
+            case .series:
+                if let episode = entry.reference.episodeID { episodes[entry.reference.itemID, default: []].insert(episode) }
+            case .live: break
+            }
+        }
+        self.init(movies: movies, episodes: episodes)
+    }
+
+    /// A series is watched once every one of its episodes is (`episodeIDs`, its seasons as known); never with none.
+    public func isSeriesWatched(_ seriesID: String, episodeIDs: some Sequence<String>) -> Bool {
+        guard let watched = episodes[seriesID], !watched.isEmpty else { return false }
+        var any = false
+        for id in episodeIDs {
+            guard watched.contains(id) else { return false }
+            any = true
+        }
+        return any
     }
 }

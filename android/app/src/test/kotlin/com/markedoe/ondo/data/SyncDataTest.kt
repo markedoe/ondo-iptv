@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.sync.SentSnapshot
 import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
@@ -926,5 +927,43 @@ class SyncDataTest {
         assertTrue(state.library.favorites.isEmpty())
         assertTrue(state.library.history.isEmpty())
         assertTrue(state.library.collections.single().items.isEmpty())
+    }
+
+    private fun OndoState.watched(itemId: String, playlistId: String) = library.progress(WatchEntry(playlistId, ItemKind.MOVIE, itemId, null, title = "", lastWatchedAt = 0).key)?.isFinished == true
+
+    /**
+     * "Mark as watched" and "Mark as unwatched" on a page reach the other box like a position, the later winning, and
+     * stay in the profile they were made in.
+     */
+    @Test
+    fun aTitleMarkedWatchedOrUnwatchedFollowsOnTheOtherBoxInItsProfile() = runTest {
+        val living = device("living").ready()
+        val bedroom = device("bedroom").ready()
+        living.addPlaylist("Home", list)
+        val movie = living.state.value.content.movies.single()
+        val playlist = requireNotNull(living.state.value.activePlaylistId)
+        session(bedroom, living)
+        bedroom.state.first { it.content.movies.isNotEmpty() }
+        time += 1_000
+        living.setFilmWatched(true, movie, listOf(movie))
+        assertTrue(living.state.value.watched(movie.id, playlist))
+        session(bedroom, living)
+        assertTrue(bedroom.state.value.watched(movie.id, playlist))
+
+        time += 1_000
+        bedroom.setFilmWatched(false, movie, listOf(movie))
+        assertFalse(bedroom.state.value.watched(movie.id, playlist))
+        session(bedroom, living)
+        assertFalse(living.state.value.watched(movie.id, playlist))
+        assertEquals(0.0, living.state.value.library.history.single { it.itemId == movie.id }.position, 0.0)
+
+        // Another profile's: the main profile's stays as it is.
+        val guest = requireNotNull(living.addProfile("Guest", 1, "star", isKids = false, pin = null))
+        living.switchProfile(guest.id)
+        time += 1_000
+        living.setFilmWatched(true, movie, listOf(movie))
+        assertTrue(living.state.value.watched(movie.id, playlist))
+        living.switchProfile(Profile.DEFAULT_ID)
+        assertFalse(living.state.value.watched(movie.id, playlist))
     }
 }

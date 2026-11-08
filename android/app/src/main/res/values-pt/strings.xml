@@ -575,4 +575,11 @@
     <string name="tv_field_press_ok">Pressione OK para digitar</string>
     <string name="tv_field_show">Mostrar caracteres</string>
     <string name="tv_field_hide">Ocultar caracteres</string>
+    <string name="mark_watched">Marcar como assistido</string>
+    <string name="mark_unwatched">Marcar como não assistido</string>
+    <string name="not_watched">Não assistido</string>
+    <string name="marked_watched">Marcado como assistido</string>
+    <string name="marked_unwatched">Marcado como não assistido</string>
+    <string name="help_watched_title">Filmes e séries assistidos</string>
+    <string name="help_watched_body">Um filme ou uma série que você assistiu mostra uma marca de seleção no pôster, em todo o app. Um filme é assistido quando você o vê até o fim (ou até os créditos finais), em qualquer uma de suas versões; uma série, quando todos os episódios forem assistidos.\n\nNa página de um filme ou de uma série, Marcar como assistido faz o mesmo sem reproduzi-lo e tira o título de Continuar assistindo; Marcar como não assistido tira a marca, e o título começa do início. Na página de uma série, a marca ao lado de cada episódio marca esse episódio; em uma TV, mantenha OK pressionado em um episódio.\n\nO que você assistiu pertence ao perfil aberto e acompanha você nos outros dispositivos com a sincronização. Ocultar filmes assistidos, em Configurações, deixa os filmes assistidos de fora onde você navega pelos filmes.</string>
 </resources>

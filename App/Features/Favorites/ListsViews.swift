@@ -328,11 +328,11 @@ struct CustomListDetailView: View {
             .buttonStyle(.plain)
         case .movie(let movie):
             NavigationLink(value: movie) {
-                SearchResultRow(title: movie.name, subtitle: movie.year.map(String.init), imageURL: movie.posterURL, icon: "film")
+                SearchResultRow(title: movie.name, subtitle: movie.year.map(String.init), imageURL: movie.posterURL, icon: "film", watched: model.isWatched(.movie(movie)))
             }
         case .series(let series):
             NavigationLink(value: series) {
-                SearchResultRow(title: series.name, subtitle: series.year.map(String.init), imageURL: series.coverURL, icon: "play.rectangle.on.rectangle")
+                SearchResultRow(title: series.name, subtitle: series.year.map(String.init), imageURL: series.coverURL, icon: "play.rectangle.on.rectangle", watched: model.isWatched(.series(series)))
             }
         }
     }

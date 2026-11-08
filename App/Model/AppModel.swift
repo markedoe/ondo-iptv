@@ -205,6 +205,8 @@ final class AppModel {
     /// What each title is tagged with for the selections, worked out once per catalogue and what is known of it
     /// (AppModel+Selections).
     @ObservationIgnored var selectionTagsCache: SelectionTags?
+    /// The watched titles' keys and what they were made from (`AppModel.watchedKeys`).
+    @ObservationIgnored var watchedKeysCache: WatchedKeysCache?
     /// The selections' rows of titles worked out, by what they depend on (AppModel+Selections).
     @ObservationIgnored var selectionTitlesCache: [String: [ShowcaseItem]] = [:]
     /// The day the selections' rows are picked for: set again when the date changes (`RootView`), so they are drawn anew.

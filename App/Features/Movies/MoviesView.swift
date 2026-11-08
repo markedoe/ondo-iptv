@@ -79,6 +79,8 @@ struct MovieGridView: View {
 
     var body: some View {
         let list = movies
+        // One set for the whole grid: each poster's watched badge is a lookup.
+        let watched = model.watchedKeys
         ScrollView {
             LazyVGrid(columns: posterColumns, spacing: 18) {
                 ForEach(list) { movie in
@@ -88,7 +90,8 @@ struct MovieGridView: View {
                             imageURL: movie.posterURL,
                             subtitle: movie.year.map(String.init),
                             rating: movie.rating,
-                            progress: model.progress(movie: movie)?.progress
+                            progress: model.progress(movie: movie)?.progress,
+                            watched: watched.contains(ShowcaseItem.movie(movie).id)
                         )
                     }
                     .cardButtonStyle()
@@ -134,6 +137,8 @@ struct MovieDetailView: View {
         let version = picked.flatMap { id in versions.first { $0.id == id } } ?? model.defaultVersion(of: movie, among: versions)
         let progress = model.progress(movie: version)
         let resumable = progress?.isResumable == true
+        // Watched once one of the film's versions is (`AppModel.watchedKeys`).
+        let watched = model.isWatched(.movie(movie))
         DetailScaffold(
             title: ShowcaseItem.movie(movie).displayTitle,
             posterURL: details?.posterURL ?? movie.posterURL,
@@ -141,6 +146,7 @@ struct MovieDetailView: View {
             facts: facts,
             // MKV, MP4…: the format the provider sends (MKV plays differently on each device), of the version Play plays.
             badges: MediaFormat.label(for: version.streamURL).map { [$0] } ?? [],
+            watched: watched,
             onBackdropFailure: { model.backdropFailed($0, for: .movie(movie), permanently: $1) }
         ) { metrics in
             metrics.actionsLayout {
@@ -154,6 +160,9 @@ struct MovieDetailView: View {
                 HStack(alignment: .top, spacing: 14) {
                     MyListAction(item: .movie(movie), version: version)
                     CollectionAction(item: .movie(movie))
+                    WatchedAction(watched: watched) {
+                        model.setWatched(!watched, movie: movie, version: version, duration: details?.durationSeconds)
+                    }
                     if resumable {
                         Button {
                             model.play(version, fromStart: true)

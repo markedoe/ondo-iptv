@@ -164,6 +164,9 @@ quarts vus ; sans durée connue, jamais. Le début du générique ne se synchron
 propre lecteur a lu dans le fichier (Apple : chapitres MP4 et MOV, chapitres MKV, VLC ; Android : chapitres MP4, que
 Media3 lit, aucun pour le MKV). Un appareil qui n’a jamais lu le fichier en juge par la règle du temps. Clé :
 `progress:<playlist>|<kind>|<item>|<épisode ou vide>` ; instant : `watchedAt`.
+Marquer comme vu, sur une fiche, envoie le même enregistrement que la fin de la lecture : `position` égale à `duration`
+(la durée connue, sinon 1 seconde) ; Marquer comme non vu envoie `position` 0, plus récent que l’enregistrement qu’il
+remplace. Aucun champ nouveau : un appareil d’une version plus ancienne lit les deux comme toute progression.
 
 **Liste** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],
 "people": [<personne>], "updatedAt", "renamedAt"?, "orderedAt"?, "order"?, "placedAt"?}`. Clé : `list:<id>` ; instant : `updatedAt` (fixé

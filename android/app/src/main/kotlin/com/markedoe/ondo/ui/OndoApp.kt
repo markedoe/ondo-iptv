@@ -84,6 +84,7 @@ import com.markedoe.ondo.data.TipsState
 import com.markedoe.ondo.player.PlayerActivity
 import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.LocalShowsMyList
+import com.markedoe.ondo.ui.components.LocalWatchedTitles
 import com.markedoe.ondo.ui.components.PosterMyList
 import com.markedoe.ondo.ui.components.TMDB_API_PAGE
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -161,6 +162,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -295,8 +297,10 @@ private fun MainTabs(viewModel: OndoViewModel, launch: Long) {
     val myList = if (isTelevision()) rememberPosterMyList(viewModel) else null
     // On a TV, the header above the posters of Home, the Movies and Series tabs and a category's titles.
     val headers = if (isTelevision()) rememberTitleHeaders(viewModel) else null
+    // On every device: the watched titles, whose thumbnails show a check mark.
+    val watched = rememberWatchedTitles(viewModel)
     frame {
-        CompositionLocalProvider(LocalPosterMyList provides myList, LocalTitleHeaders provides headers) {
+        CompositionLocalProvider(LocalPosterMyList provides myList, LocalTitleHeaders provides headers, LocalWatchedTitles provides watched) {
             Box(Modifier.fillMaxSize()) {
                 // A short fade between pages (the default crossfade lasts 700 ms).
                 NavHost(
@@ -360,6 +364,26 @@ private fun MainTabs(viewModel: OndoViewModel, launch: Long) {
             }
         }
     }
+}
+
+/**
+ * The watched titles' keys (`UiMappers.watchedKeys`): made off the main thread, and again only when the history, the
+ * catalogue, the seasons known or the playlist change, so that scrolling a row or a grid never computes them.
+ */
+@Composable
+private fun rememberWatchedTitles(viewModel: OndoViewModel): Set<String> {
+    val keys = remember(viewModel) {
+        viewModel.state
+            .distinctUntilChanged { old, new ->
+                old.library.history === new.library.history && old.content === new.content && old.seriesDetails === new.seriesDetails &&
+                    old.activePlaylistId == new.activePlaylistId && old.settings.groupVersions == new.settings.groupVersions
+            }
+            .map(UiMappers::watchedKeys)
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+    }
+    val watched by keys.collectAsStateWithLifecycle(emptySet())
+    return watched
 }
 
 /** My List on the posters: the titles kept, and OK held adding one or taking it away, said in a short message. */
@@ -661,6 +685,7 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
             onNewCollection = { viewModel.newCollection(it, ShowcaseItem.MovieItem(movie)) },
             onBackdropFailed = { viewModel.backdropFailed(ShowcaseItem.MovieItem(movie), it) },
             onTrailer = { context.openTrailer(it) },
+            onSetWatched = { viewModel.setFilmWatched(movie, version, it) },
         )
     if (isTelevision()) TvMovieDetailScreen(ui, actions) else MovieDetailScreen(ui, actions)
 }
@@ -700,6 +725,8 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onNewCollection = { viewModel.newCollection(it, ui.item) },
             onBackdropFailed = { viewModel.backdropFailed(ui.item, it) },
             onTrailer = { context.openTrailer(it) },
+            onSetWatched = { viewModel.setSeriesWatched(id, it) },
+            onSetEpisodeWatched = { episode, watched -> viewModel.setEpisodesWatched(id, listOf(episode), watched) },
         )
     if (isTelevision()) TvSeriesDetailScreen(ui, actions) else SeriesDetailScreen(ui, actions)
 }

@@ -287,6 +287,16 @@ final class OndoUITests: XCTestCase {
 
         openCreditLinks(of: "Northern Lights")
 
+        // Mark as Watched: "Watched" shows on the page; Mark as Unwatched takes it away again.
+        let watched = app.buttons["detailWatched"]
+        for _ in 0..<4 where !(watched.exists && watched.isHittable) { app.swipeDown(velocity: .slow) }
+        XCTAssertTrue(watched.waitForExistence(timeout: 5), "Mark as Watched")
+        watched.tap()
+        let state = app.descendants(matching: .any)["detailWatchedState"]
+        XCTAssertTrue(state.waitForExistence(timeout: 5), "watched on the page")
+        watched.tap()
+        XCTAssertTrue(state.waitForNonExistence(timeout: 5), "unwatched again")
+
         app.tabBars.buttons["Series"].tap()
         let allSeries = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'All'")).firstMatch
         XCTAssertTrue(allSeries.waitForExistence(timeout: 10), "all series")

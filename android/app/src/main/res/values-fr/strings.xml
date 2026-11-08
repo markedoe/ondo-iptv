@@ -575,4 +575,11 @@
     <string name="tv_field_press_ok">Appuyez sur OK pour écrire</string>
     <string name="tv_field_show">Afficher les caractères</string>
     <string name="tv_field_hide">Masquer les caractères</string>
+    <string name="mark_watched">Marquer comme vu</string>
+    <string name="mark_unwatched">Marquer comme non vu</string>
+    <string name="not_watched">Non vu</string>
+    <string name="marked_watched">Marqué comme vu</string>
+    <string name="marked_unwatched">Marqué comme non vu</string>
+    <string name="help_watched_title">Films et séries déjà vus</string>
+    <string name="help_watched_body">Un film ou une série que vous avez vu affiche une coche sur son affiche, partout dans l’app. Un film est vu une fois regardé jusqu’au bout (ou jusqu’à son générique de fin), dans l’une de ses versions ; une série, une fois tous ses épisodes vus.\n\nSur la fiche d’un film ou d’une série, Marquer comme vu fait de même sans le lire et retire le titre de Continuer à regarder ; Marquer comme non vu retire la marque, et le titre repart du début. Sur la fiche d’une série, la coche à côté de chaque épisode marque cet épisode ; sur un téléviseur, maintenez OK sur un épisode.\n\nCe que vous avez vu appartient au profil ouvert et suit sur vos autres appareils avec la synchronisation. Masquer les films déjà vus, dans Réglages, écarte les films vus là où vous parcourez les films.</string>
 </resources>

@@ -299,6 +299,43 @@ data class LibraryState(
 
     fun progress(key: String): WatchEntry? = history.firstOrNull { it.key == key }
 
+    /**
+     * "Mark as watched" on a page: the same state as watching [entry] to the end (its position at its end), first in
+     * the history at [now], out of Continue watching. [entry] names it when it was never played (title, artwork, and its
+     * length when known: else one second, which is its end). The guard that keeps a watched episode watched during
+     * playback ([WatchEntry.staysWatched]) does not apply to the viewer's own choice.
+     */
+    fun markingWatched(entry: WatchEntry, now: Long): LibraryState {
+        val existing = history.firstOrNull { it.key == entry.key } ?: entry
+        val duration = listOf(existing.duration, entry.duration).firstOrNull { it.isFinite() && it > 0 } ?: 1.0
+        val watched = existing.copy(position = duration, duration = duration, lastWatchedAt = now)
+        return copy(history = listOf(watched) + history.filterNot { it.key == entry.key }).trimmed()
+    }
+
+    /**
+     * "Mark as unwatched": no longer watched, played from its start next time, at [now] (sync carries it as a newer
+     * position). The entry stays (no deletion), so a series' card is not taken away; nothing for a title never played or
+     * not watched (one left halfway keeps its resume point).
+     */
+    fun markingUnwatched(key: String, now: Long): LibraryState =
+        if (history.none { it.key == key && it.isFinished }) this
+        else copy(history = history.map { if (it.key == key && it.isFinished) it.copy(position = 0.0, lastWatchedAt = now) else it })
+
+    /** What [playlistId]'s viewer has watched, gathered once for every thumbnail ([WatchedTitles]). */
+    fun watchedTitles(playlistId: String): WatchedTitles {
+        val movies = HashSet<String>()
+        val episodes = HashMap<String, MutableSet<String>>()
+        for (entry in history) {
+            if (entry.playlistId != playlistId || !entry.isFinished) continue
+            when (entry.kind) {
+                ItemKind.MOVIE -> movies.add(entry.itemId)
+                ItemKind.SERIES -> entry.episodeId?.let { episodes.getOrPut(entry.itemId) { HashSet() }.add(it) }
+                else -> Unit
+            }
+        }
+        return WatchedTitles(movies, episodes)
+    }
+
     /** The movies of [playlistId] watched to the end. */
     fun finishedMovies(playlistId: String): Set<String> =
         history.filter { it.playlistId == playlistId && it.kind == ItemKind.MOVIE && it.isFinished }.mapTo(HashSet()) { it.itemId }
@@ -443,4 +480,21 @@ object SharedCollections {
     }
 
     private fun sorted(lists: List<UserCollection>) = lists.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
+}
+
+/**
+ * What a playlist's viewer has watched: the movies (streams) and, by series, the episodes watched to the end. The badge
+ * on every thumbnail reads it with a set lookup, never a scan of the history per card (as on Apple).
+ */
+data class WatchedTitles(val movies: Set<String> = emptySet(), val episodes: Map<String, Set<String>> = emptyMap()) {
+    /** A series is watched once every one of its episodes is ([episodeIds], its seasons as known); never with none. */
+    fun isSeriesWatched(seriesId: String, episodeIds: Iterable<String>): Boolean {
+        val watched = episodes[seriesId]?.takeIf { it.isNotEmpty() } ?: return false
+        var any = false
+        for (id in episodeIds) {
+            if (id !in watched) return false
+            any = true
+        }
+        return any
+    }
 }
