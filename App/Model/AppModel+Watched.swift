@@ -97,7 +97,7 @@ extension AppModel {
 
     /// Whether a page offers to mark `count` episodes at once (a series, a season): not past `UserLibrary.bulkMarkLimit`.
     static func canMarkAtOnce(_ count: Int) -> Bool {
-        count > 0 && count <= UserLibrary.bulkMarkLimit
+        (1...UserLibrary.bulkMarkLimit).contains(count)
     }
 
     /// The whole series: every episode of its seasons as known, when there are no more than `UserLibrary.bulkMarkLimit`.

@@ -16,7 +16,9 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -247,7 +249,10 @@ class WatchedBadgeEverySurfaceTest {
     }
 }
 
-/** On a TV: the posters' badge, and the button of a title's page after Play on the remote's path, Play keeping the focus. */
+/**
+ * On a TV: the posters' badge, and the button of a title's page after Play on the remote's path, Play keeping the focus.
+ * A TV's buttons take OK, not a touch: they are pressed through their click action, as the other TV tests do.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h2400dp-television-xhdpi")
 class TvWatchedTest {
@@ -284,7 +289,7 @@ class TvWatchedTest {
         compose.onNodeWithTag("detailPlay").requestFocus()
         compose.onNodeWithTag("detailPlay").assertIsFocused().performKeyInput { pressKey(Key.DirectionRight) }
         compose.waitForIdle()
-        compose.onNodeWithTag("detailWatched").assertIsFocused().assert(hasStateDescription("Not watched")).performClick()
+        compose.onNodeWithTag("detailWatched").assertIsFocused().assert(hasStateDescription("Not watched")).performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf(true), changes)
     }
 
@@ -299,7 +304,7 @@ class TvWatchedTest {
         compose.onNodeWithTag("season-$last").requestFocus()
         compose.onNodeWithTag("season-$last").assertIsFocused().performKeyInput { pressKey(Key.DirectionRight) }
         compose.waitForIdle()
-        compose.onNodeWithTag("seasonWatched").assertIsFocused().assert(hasText("Mark season as watched")).performClick()
+        compose.onNodeWithTag("seasonWatched").assertIsFocused().assert(hasText("Mark season as watched")).performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf(state.selectedSeason!! to true), seasons)
     }
 
@@ -315,7 +320,7 @@ class TvWatchedTest {
         compose.setContent { OndoTheme { TelevisionFrame { TvSeriesDetailScreen(state, DetailActions(onSetWatched = { changes += it })) } } }
         compose.waitForIdle()
         compose.onAllNodesWithTag("detailWatchedState", useUnmergedTree = true).assertCountEquals(1)
-        compose.onNodeWithTag("detailWatched").assert(hasStateDescription("Watched")).performClick()
+        compose.onNodeWithTag("detailWatched").assert(hasStateDescription("Watched")).performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf(false), changes)
     }
 }
