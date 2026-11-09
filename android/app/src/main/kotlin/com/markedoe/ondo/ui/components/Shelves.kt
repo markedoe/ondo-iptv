@@ -238,7 +238,7 @@ fun inMyList(item: ShowcaseItem): Boolean = LocalPosterMyList.current?.keys?.con
 
 /**
  * A filled bookmark ribbon hanging from a poster's top edge in its end corner (the start one has the watched check
- * mark): the title is in My List, the same bookmark as the My List tab and buttons. No disc, a different shape from
+ * mark): the title is in My List, the same bookmark as the My List buttons. No disc, a different shape from
  * [WatchedBadge] as well as a different glyph; white with a dark edge, legible on a bright poster. TalkBack says it
  * through the card. [size] is the glyph's: 24 dp at least on a TV.
  */
