@@ -4,6 +4,11 @@ import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
@@ -181,8 +186,11 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
                             Margins.TAB -> Modifier.tvSafeArea(tab = true)
                             Margins.SAFE_AREA -> Modifier.tvSafeArea()
                         }
-                        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory(), LocalTitleHeaders provides Headers) {
-                            FocusEntry(modifier) { content() }
+                        // Home shown anew ([showHome]): its focus memory too.
+                        key(round) {
+                            CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory(), LocalTitleHeaders provides Headers) {
+                                FocusEntry(modifier) { content() }
+                            }
                         }
                     }
                 }
@@ -196,6 +204,22 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
         advance(1_000)
+    }
+
+    private var homeState by mutableStateOf<HomeUiState?>(null)
+    private var round by mutableIntStateOf(0)
+    private var homeShown = false
+
+    /** Home anew with [state] (its focus memory and its list too): one composition for the whole test. */
+    private fun showHome(state: HomeUiState) {
+        homeState = state
+        if (homeShown) {
+            round++
+            advance(1_000)
+            return
+        }
+        homeShown = true
+        show { homeState?.let { TvHomeScreen(it, HomeActions(), autoAdvance = false) } }
     }
 
     private fun advance(ms: Long) {
@@ -283,7 +307,7 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
     @Test
     fun homeFromTheFeaturedTitlesDownEveryRow() {
         for ((key, shelf) in kinds) {
-            show { TvHomeScreen(home(key), HomeActions(), autoAdvance = false) }
+            showHome(home(key))
             compose.onNodeWithTag("heroPlay").requestFocus()
             advance(1_000)
             press(Key.DirectionDown)
