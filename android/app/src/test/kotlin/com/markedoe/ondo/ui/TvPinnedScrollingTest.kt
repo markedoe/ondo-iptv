@@ -33,6 +33,25 @@ class TvPinnedScrollingTest {
 
     @Test
     fun aCardTallerThanTheRoomBelowTheLeadEndsAtTheBottom() {
-        assertEquals(300f - 46f, spec.calculateScrollDistance(offset = 300f, size = 600f, containerSize = 646f), 0f)
+        // Its frame grown by the focus (4 % past either end, 24 px) still inside: its end at 646 - 24.
+        assertEquals(300f - 22f, spec.calculateScrollDistance(offset = 300f, size = 600f, containerSize = 646f), 0.01f)
+    }
+
+    @Test
+    fun aCardWhoseGrownFrameWouldPassTheBottomComesUpToTheLead() {
+        // In its place it ends at 640 of 646, but grown by its focus (13.44 px below) it would be cut.
+        assertEquals(304f - 104f, spec.calculateScrollDistance(offset = 304f, size = 336f, containerSize = 646f), 0.01f)
+    }
+
+    @Test
+    fun aListToTheScreensBottomKeepsItsEdgeBelowTheFocusedCard() {
+        // Home at 960 × 540 dp, xhdpi: rows 308 dp tall, a 222 dp poster, the 27 dp a TV may crop kept below it.
+        val home = TvPinnedScrolling(lead = 100f, edge = 54f)
+        // The first row under the frame: its poster would end 20 dp above the screen's bottom, then grow 9 dp: up to the lead.
+        assertEquals(132f - 100f, home.calculateScrollDistance(offset = 132f, size = 444f, containerSize = 616f), 0.01f)
+        // At the lead, it ends 36 dp up: its growth and the edge below it, it stays.
+        assertEquals(0f, home.calculateScrollDistance(offset = 100f, size = 444f, containerSize = 616f), 0f)
+        // No room for both: the card keeps clear of the edge, its top no higher than the list's top.
+        assertEquals(100f - 42f, home.calculateScrollDistance(offset = 100f, size = 500f, containerSize = 616f), 0.01f)
     }
 }
