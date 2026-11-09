@@ -292,7 +292,7 @@ fun FocusOnOpen(requester: FocusRequester) {
  */
 @Composable
 private fun cardFocus() = Triple(
-    CardDefaults.scale(focusedScale = 1.08f),
+    CardDefaults.scale(focusedScale = CARD_FOCUS_SCALE),
     CardDefaults.border(),
     CardDefaults.glow(focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.9f), elevation = 18.dp)),
 )

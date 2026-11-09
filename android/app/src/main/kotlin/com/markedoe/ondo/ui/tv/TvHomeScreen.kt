@@ -97,10 +97,15 @@ import kotlinx.coroutines.delay
 private const val HERO_SHARE = 0.52f
 
 /**
- * Its height while the remote is in the rows below, showing the poster with the focus: a whole row of posters shows
- * below it on a 960 × 540 dp TV, with the header's title, facts and two lines of synopsis inside it.
+ * Its height while the remote is in the rows below, showing the poster with the focus: the header's title, facts and
+ * two lines of synopsis inside it (126 dp, at least [COMPACT_PADDING] above and below), and on a 960 × 540 dp TV a whole row of
+ * posters below it, its name at [HOME_ROW_LEAD] and the focused poster, grown, still clear of the 5 % at the screen's
+ * bottom a TV may crop: 84 (top bar) + 146 + 50 + 222 (poster) + 9 (its growth) + 27 = 538 dp.
  */
-private val HERO_COMPACT = 156.dp
+private val HERO_COMPACT = 146.dp
+
+/** The room above and below the header's words in the smaller frame. */
+private val COMPACT_PADDING = 8.dp
 
 /** Where the focused card of a row lands below the frame: under its row's name. */
 private val HOME_ROW_LEAD = 50.dp
@@ -322,8 +327,9 @@ fun TvHomeScreen(
                 }
             }
             CompositionLocalProvider(LocalFocusedTitle provides focus) {
-                // Under the frame, the focused card lands at the same place at every press.
-                if (hasHero) TvPinnedHeaderList(lead = HOME_ROW_LEAD, content = rows) else rows()
+                // Under the frame, the focused card lands at the same place at every press, never down to the screen's
+                // bottom: the rows run to it, the 5 % a TV may crop kept below the focused card.
+                if (hasHero) TvPinnedHeaderList(lead = HOME_ROW_LEAD, edge = TvTokens.EdgeTop, content = rows) else rows()
             }
         }
     }
@@ -423,7 +429,7 @@ private fun TvHero(
                 Modifier
                     .fillMaxHeight()
                     // Smaller, the frame keeps less room around the header's words.
-                    .padding(start = 28.dp, top = if (compact) 14.dp else 24.dp, bottom = if (compact) 14.dp else 22.dp, end = if (pages.size > 1) 120.dp else 28.dp),
+                    .padding(start = 28.dp, top = if (compact) COMPACT_PADDING else 24.dp, bottom = if (compact) COMPACT_PADDING else 22.dp, end = if (pages.size > 1) 120.dp else 28.dp),
                 verticalArrangement = Arrangement.Bottom,
             ) {
                 if (header != null) {

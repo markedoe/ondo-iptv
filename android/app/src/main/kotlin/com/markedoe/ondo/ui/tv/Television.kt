@@ -130,14 +130,18 @@ fun TvRow(content: @Composable () -> Unit) {
 /**
  * How a page's rows scroll under a header pinned above them ([TvFocusHeader]): the focused card [lead] pixels below the
  * list's top (room for its row's name above it), rather than a third of the way. A card already wholly in view, at
- * least [lead] below the top, stays where it is: moving along a row on screen moves only the focus, the rows never
- * jump under it (the first row, right below the header, as any other).
+ * least [lead] below the top and its grown frame ([CARD_FOCUS_SCALE]) at least [edge] pixels above the list's bottom,
+ * stays where it is: moving along a row on screen moves only the focus, the rows never jump under it (the first row,
+ * right below the header, as any other). A list that runs to the screen's bottom keeps the 5 % a TV may crop as its
+ * [edge]: a focused card never touches the screen's bottom.
  */
 @ExperimentalFoundationApi
-class TvPinnedScrolling(private val lead: Float) : BringIntoViewSpec {
+class TvPinnedScrolling(private val lead: Float, private val edge: Float = 0f) : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-        if (offset >= lead && offset + size <= containerSize) return 0f
-        return offset - lead.coerceAtMost((containerSize - size).coerceAtLeast(0f))
+        // Where the card's own end may come at most: its frame drawn grown around its middle stays above the edge.
+        val end = containerSize - edge - size * CARD_FOCUS_SPILL
+        if (offset >= lead && offset + size <= end) return 0f
+        return offset - lead.coerceAtMost((end - size).coerceAtLeast(0f))
     }
 }
 
@@ -153,18 +157,21 @@ class TvRowPivotScrolling(private val lead: Float) : BringIntoViewSpec {
 }
 
 /**
- * [content]'s list scrolls as [TvPinnedScrolling] says on a TV, the focused card [lead] below its top, or with
- * [byRows] as [TvRowPivotScrolling] says, the focused row's start at [lead]; elsewhere, as it is.
+ * [content]'s list scrolls as [TvPinnedScrolling] says on a TV, the focused card [lead] below its top and clear of
+ * [edge] at its bottom, or with [byRows] as [TvRowPivotScrolling] says, the focused row's start at [lead]; elsewhere,
+ * as it is.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TvPinnedHeaderList(lead: Dp, byRows: Boolean = false, content: @Composable () -> Unit) {
+fun TvPinnedHeaderList(lead: Dp, byRows: Boolean = false, edge: Dp = 0.dp, content: @Composable () -> Unit) {
     if (LocalBringIntoViewSpec.current !== TvScrolling) {
         content()
         return
     }
-    val pixels = with(LocalDensity.current) { lead.toPx() }
-    val spec = remember(pixels, byRows) { if (byRows) TvRowPivotScrolling(pixels) else TvPinnedScrolling(pixels) }
+    val density = LocalDensity.current
+    val pixels = with(density) { lead.toPx() }
+    val edgePixels = with(density) { edge.toPx() }
+    val spec = remember(pixels, edgePixels, byRows) { if (byRows) TvRowPivotScrolling(pixels) else TvPinnedScrolling(pixels, edgePixels) }
     CompositionLocalProvider(LocalBringIntoViewSpec provides spec, content = content)
 }
 
@@ -184,6 +191,12 @@ fun KeptForTheRemote() {
 
 /** How much a focused poster or row grows ([focusFrame]): its frame drawn larger than its place. */
 const val FOCUS_GROW = 1.06f
+
+/** How much a focused card grows (Compose for TV's card scale), around its middle: its frame drawn larger than its place. */
+const val CARD_FOCUS_SCALE = 1.08f
+
+/** How far a focused card's grown frame reaches past either end of its place, as a share of its length. */
+const val CARD_FOCUS_SPILL = (CARD_FOCUS_SCALE - 1f) / 2f
 
 /** The margins Google asks TV layouts to keep clear (5 % of a 960 × 540 dp screen). */
 val TvSafeArea = PaddingValues(horizontal = 48.dp, vertical = 27.dp)
