@@ -380,7 +380,7 @@ struct PlayerView: View {
             Button {
                 model.toggleFavorite(channel)
             } label: {
-                Image(systemName: model.isFavorite(.live, id: channel.id) ? "checkmark" : "plus")
+                Image(systemName: MyListSymbol.name(inList: model.isFavorite(.live, id: channel.id)))
             }
             .help("My List")
             .accessibilityLabel("My List")

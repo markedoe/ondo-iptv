@@ -1,5 +1,7 @@
 package com.markedoe.ondo.ui.screens
 
+import com.markedoe.ondo.ui.components.drawnIcon
+import com.markedoe.ondo.ui.components.myListIcon
 import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.LocalIndication
@@ -36,8 +38,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.EmojiEvents
@@ -253,7 +253,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         actions = { metrics ->
             PlayButton(if (resumable) stringResource(R.string.resume) else stringResource(R.string.play), state.progress.takeIf { resumable }, actions.onPlay)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
-                CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
+                CircleAction(stringResource(R.string.my_list), myListIcon(state.inMyList), actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
                 WatchedAction(state.watched) { actions.onSetWatched(!state.watched) }
                 if (resumable) CircleAction(stringResource(R.string.from_start), Icons.Rounded.Replay, actions.onPlayFromStart)
@@ -360,7 +360,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
-                CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
+                CircleAction(stringResource(R.string.my_list), myListIcon(state.inMyList), actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
                 // Its episodes known: all of them watched, or all unwatched; a long series season by season.
                 if (state.canMarkSeries()) WatchedAction(state.watched) { actions.onSetWatched(!state.watched) }
@@ -705,7 +705,7 @@ private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit, 
             .padding(4.dp),
     ) {
         Box(Modifier.size(50.dp).clip(CircleShape).background(OndoColors.SurfaceHigh), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = Color.White)
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.drawnIcon(icon))
         }
         Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
     }

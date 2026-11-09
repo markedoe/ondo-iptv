@@ -1,5 +1,7 @@
 package com.markedoe.ondo.ui.tv
 
+import com.markedoe.ondo.ui.components.drawnIcon
+import com.markedoe.ondo.ui.components.myListIcon
 import android.icu.text.ListFormatter
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.graphicsLayer
@@ -28,8 +30,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -466,7 +466,7 @@ private fun TvHero(
                         modifier = Modifier.semantics { stateDescription = listState }.focusMemory("hero-mylist").testTag("heroMyList"),
                     ) {
                         HeroButtonLabel(stringResource(R.string.my_list)) {
-                            Icon(if (page.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Icon(myListIcon(page.inMyList), contentDescription = null, modifier = Modifier.size(20.dp).drawnIcon(myListIcon(page.inMyList)))
                         }
                     }
                     TvActionButton(

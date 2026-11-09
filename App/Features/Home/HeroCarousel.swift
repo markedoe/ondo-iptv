@@ -230,7 +230,7 @@ private struct HeroPage: View {
             case .series(let series): model.toggleFavorite(series)
             }
         } label: {
-            Label("My List", systemImage: inList ? "checkmark" : "plus")
+            Label("My List", systemImage: MyListSymbol.name(inList: inList))
                 .modifier(HeroSecondaryButton())
                 .contentTransition(.symbolEffect(.replace))
         }

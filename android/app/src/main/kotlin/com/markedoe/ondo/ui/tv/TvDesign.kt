@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
+import com.markedoe.ondo.ui.components.drawnIcon
 import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -403,7 +404,7 @@ fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = M
             Artwork(url = item.posterUrl, title = item.title, modifier = Modifier.fillMaxSize())
             CardSheen(focused)
             if (isWatched(item)) WatchedBadge(Modifier.align(Alignment.TopStart))
-            if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
+            if (kept) MyListBadge(Modifier.align(Alignment.TopEnd), size = 28.dp)
         }
     }
 }
@@ -607,7 +608,7 @@ fun TvCircleAction(icon: ImageVector, label: String, onClick: () -> Unit, modifi
             ),
             contentPadding = PaddingValues(12.dp),
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
+            Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp).drawnIcon(icon))
         }
         Text(
             label,

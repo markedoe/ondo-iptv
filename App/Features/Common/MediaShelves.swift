@@ -321,9 +321,9 @@ struct MyListLabel: View {
 
     var body: some View {
         if inList {
-            Label("Remove from My List", systemImage: "checkmark")
+            Label("Remove from My List", systemImage: MyListSymbol.name(inList: true))
         } else {
-            Label("Add to My List", systemImage: "plus")
+            Label("Add to My List", systemImage: MyListSymbol.name(inList: false))
         }
     }
 }

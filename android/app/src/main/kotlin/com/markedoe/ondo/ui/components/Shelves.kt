@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.StarHalf
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Info
@@ -62,9 +65,11 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -180,7 +185,7 @@ internal fun Modifier.posterClick(item: ShowcaseItem, interaction: MutableIntera
     )
 }
 
-/** TalkBack's words for a poster: its title, that it is watched, and that it is in My List where its check mark shows it. */
+/** TalkBack's words for a poster: its title, that it is watched, and that it is in My List where its bookmark shows it. */
 @Composable
 internal fun Modifier.posterSemantics(item: ShowcaseItem, kept: Boolean): Modifier {
     val states = listOfNotNull(
@@ -206,7 +211,7 @@ fun isWatched(item: ShowcaseItem): Boolean = item.key in LocalWatchedTitles.curr
 
 /**
  * The check mark of a watched title on its thumbnail: white on a dark disc with a white ring, legible on any poster, in
- * the start corner (the end one has My List's), never over the title below. TalkBack says it through the card.
+ * the start corner (the end one has My List's bookmark), never over the title below. TalkBack says it through the card.
  */
 @Composable
 fun WatchedBadge(modifier: Modifier = Modifier, size: Dp = 22.dp) {
@@ -216,7 +221,8 @@ fun WatchedBadge(modifier: Modifier = Modifier, size: Dp = 22.dp) {
             .size(size)
             .background(Color.Black.copy(alpha = 0.6f), CircleShape)
             .border(1.2.dp, Color.White.copy(alpha = 0.85f), CircleShape)
-            .testTag(WATCHED_BADGE_TAG),
+            .testTag(WATCHED_BADGE_TAG)
+            .drawnIcon(Icons.Rounded.Check),
         contentAlignment = Alignment.Center,
     ) {
         Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.7f))
@@ -230,20 +236,42 @@ const val WATCHED_BADGE_TAG = "watchedBadge"
 @Composable
 fun inMyList(item: ShowcaseItem): Boolean = LocalPosterMyList.current?.keys?.contains(item.key) == true
 
-/** A small white check in a poster's corner: the title is in My List. */
+/**
+ * A filled bookmark ribbon hanging from a poster's top edge in its end corner (the start one has the watched check
+ * mark): the title is in My List, the same bookmark as the My List tab and buttons. No disc, a different shape from
+ * [WatchedBadge] as well as a different glyph; white with a dark edge, legible on a bright poster. TalkBack says it
+ * through the card. [size] is the glyph's: 24 dp at least on a TV.
+ */
 @Composable
-fun MyListBadge(modifier: Modifier = Modifier) {
+fun MyListBadge(modifier: Modifier = Modifier, size: Dp = 24.dp) {
+    // The glyph's ribbon starts 3/24 below its box, the box 1.5 dp inside the dark edge's: lifted by as much, it hangs
+    // from the poster's top edge (the card clips the rest).
+    val lift = size * (3f / 24f) + 1.5.dp
     Box(
         modifier
-            .padding(6.dp)
-            .size(22.dp)
-            .background(Color.White, CircleShape)
-            .testTag("inMyList"),
+            .padding(end = 4.dp)
+            .offset(y = -lift)
+            .testTag(MY_LIST_BADGE_TAG)
+            .drawnIcon(Icons.Filled.Bookmark),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+        // The edge: the same ribbon a little larger and dark beneath, lowered a hair for a soft shadow.
+        Icon(Icons.Filled.Bookmark, contentDescription = null, tint = Color.Black.copy(alpha = 0.55f), modifier = Modifier.offset(y = 1.dp).size(size + 3.dp))
+        Icon(Icons.Filled.Bookmark, contentDescription = null, tint = Color.White, modifier = Modifier.size(size))
     }
 }
+
+/** The tag of [MyListBadge], for the tests. */
+const val MY_LIST_BADGE_TAG = "inMyList"
+
+/** The My List button's icon on every page: an outlined bookmark, filled once the title is in My List. */
+fun myListIcon(inMyList: Boolean): ImageVector = if (inMyList) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder
+
+/** The name of the icon a badge or a button draws ([ImageVector.name], e.g. "Filled.Bookmark"), for the tests. */
+val DrawnIcon = SemanticsPropertyKey<String>("DrawnIcon")
+
+/** Says which icon is drawn here ([DrawnIcon]): nothing TalkBack reads. */
+fun Modifier.drawnIcon(icon: ImageVector): Modifier = semantics { this[DrawnIcon] = icon.name }
 
 /**
  * Poster opening the detail page. [focusKey] tells it apart from the same title elsewhere on the page (another

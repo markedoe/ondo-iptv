@@ -45,7 +45,7 @@ struct ChannelRow: View {
             }
             Spacer(minLength: 0)
             if model.isFavorite(.live, id: channel.id) {
-                Image(systemName: "checkmark.circle.fill")
+                Image(systemName: MyListSymbol.name(inList: true))
                     .font(.caption)
                     .foregroundStyle(OndoColor.selected)
                     .accessibilityLabel("In My List")
@@ -54,6 +54,12 @@ struct ChannelRow: View {
         .padding(.vertical, 2)
         .contentShape(Rectangle())
     }
+}
+
+/// My List's symbol on its buttons, menus and marks: an outlined bookmark, filled once the title or the channel is in My List.
+/// Never a check mark, which is Watched's (`WatchedBadge`) and Downloaded's.
+enum MyListSymbol {
+    static func name(inList: Bool) -> String { inList ? "bookmark.fill" : "bookmark" }
 }
 
 /// Poster tile used by movie and series grids.

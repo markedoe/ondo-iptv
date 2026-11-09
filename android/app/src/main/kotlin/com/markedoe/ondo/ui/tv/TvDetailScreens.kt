@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
+import com.markedoe.ondo.ui.components.myListIcon
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +30,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -476,7 +476,7 @@ private fun TrailerButton(youTubeId: String, actions: DetailActions) {
 private fun MyListButton(inMyList: Boolean, onClick: () -> Unit) {
     val state = myListState(inMyList)
     TvCircleAction(
-        if (inMyList) Icons.Rounded.Check else Icons.Rounded.Add,
+        myListIcon(inMyList),
         stringResource(R.string.my_list),
         onClick = onClick,
         modifier = Modifier.focusMemory("detail-myList").semantics { stateDescription = state }.testTag("detailMyList"),

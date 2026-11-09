@@ -1,5 +1,7 @@
 package com.markedoe.ondo.ui.screens
 
+import com.markedoe.ondo.ui.components.drawnIcon
+import com.markedoe.ondo.ui.components.myListIcon
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,8 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.LibraryAddCheck
 import androidx.compose.material3.FilledTonalButton
@@ -156,19 +156,19 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
 @Composable
 private fun PersonHeader(state: PersonUiState, television: Boolean, actions: PersonActions, onCollections: () -> Unit) {
     val held = state.collections.any { it.contains }
-    val myListIcon = if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add
+    val listIcon = myListIcon(state.inMyList)
     val collectionIcon = if (held) Icons.Rounded.LibraryAddCheck else Icons.Rounded.LibraryAdd
     val myListState = myListState(state.inMyList)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(bottom = 8.dp)) {
         PersonPhoto(state.name, state.photoUrl, if (television) 96.dp else 72.dp, Modifier.testTag("personHeaderPhoto"))
         if (television) {
-            TvCircleAction(myListIcon, stringResource(R.string.my_list), onClick = actions.onToggleMyList, modifier = Modifier.focusMemory("person-myList").semantics { stateDescription = myListState }.testTag("personMyList"))
+            TvCircleAction(listIcon, stringResource(R.string.my_list), onClick = actions.onToggleMyList, modifier = Modifier.focusMemory("person-myList").semantics { stateDescription = myListState }.testTag("personMyList"))
             TvCircleAction(collectionIcon, stringResource(R.string.collection), onClick = onCollections, modifier = Modifier.focusMemory("person-collection").testTag("personCollection"))
         } else {
             // Beside the photo; on a narrow phone, Collection goes under My List rather than being squeezed.
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(onClick = actions.onToggleMyList, modifier = Modifier.semantics { stateDescription = myListState }.testTag("personMyList")) {
-                    Icon(myListIcon, contentDescription = null)
+                    Icon(listIcon, contentDescription = null, modifier = Modifier.drawnIcon(listIcon))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.my_list), maxLines = 1)
                 }

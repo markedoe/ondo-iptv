@@ -30,8 +30,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -213,7 +211,7 @@ fun HeroCarousel(
                                 colors = heroButtonColors(television && listFocused),
                                 contentPadding = PaddingValues(start = 16.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
                             ) {
-                                Icon(if (page.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(22.dp))
+                                Icon(myListIcon(page.inMyList), contentDescription = null, modifier = Modifier.size(22.dp).drawnIcon(myListIcon(page.inMyList)))
                                 Spacer(Modifier.width(6.dp))
                                 Text(stringResource(R.string.my_list), fontWeight = FontWeight.SemiBold)
                             }

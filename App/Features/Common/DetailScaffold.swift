@@ -218,7 +218,7 @@ struct MyListAction: View {
             case .series(let series): model.toggleFavorite(series)
             }
         } label: {
-            CircleAction("My List", systemImage: inList ? "checkmark" : "plus")
+            CircleAction("My List", systemImage: MyListSymbol.name(inList: inList))
                 .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
