@@ -224,6 +224,12 @@ fun TvHomeScreen(
         if (viewerMoved || bar?.browsing == true) return@LaunchedEffect
         toTop()
     }
+    // Back on the frame's buttons (Up from the first row), the rows at their top again: under the smaller frame the
+    // first row came up to keep its focused card clear of the screen's bottom, and would stay so under the full one.
+    var heroHasFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(heroHasFocus) {
+        if (heroHasFocus && (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0)) listState.animateScrollToItem(0)
+    }
     var handledLaunch by rememberSaveable { mutableLongStateOf(launch) }
     LaunchedEffect(launch) {
         if (launch == 0L || launch == handledLaunch) return@LaunchedEffect
@@ -250,7 +256,7 @@ fun TvHomeScreen(
             TvPageBackdrop(hero.art.item, hero.art.backdropUrl, Modifier.matchParentSize()) { item, url -> actions.onBackdropFailed(item, url) }
         }
         Column(Modifier.fillMaxSize()) {
-            if (hero != null) TvHero(state.hero, hero, heroIndex, { heroIndex = it }, actions, autoAdvance, preparingKey, rowsHaveFocus, heroHeight)
+            if (hero != null) TvHero(state.hero, hero, heroIndex, { heroIndex = it }, actions, autoAdvance, preparingKey, rowsHaveFocus, heroHeight) { heroHasFocus = it }
             // The rows' list is as tall as it is under the smaller frame, the frame full size or not: its part below the
             // screen shows as the frame shrinks. The focus going down from the frame then scrolls the rows as their
             // place will be, not as it is for the moment the frame shrinks: the first row comes in whole, its name too,
@@ -383,6 +389,7 @@ private fun TvHero(
     preparingKey: String?,
     rowsHaveFocus: Boolean,
     heroHeight: () -> Dp,
+    onFocus: (Boolean) -> Unit,
 ) {
     val current = index.coerceIn(0, pages.lastIndex)
     val page = shown.page
@@ -410,7 +417,10 @@ private fun TvHero(
         Modifier
             .fillMaxWidth()
             .bringIntoViewAsAWhole()
-            .onFocusChanged { hasFocus = it.hasFocus }
+            .onFocusChanged {
+                hasFocus = it.hasFocus
+                onFocus(it.hasFocus)
+            }
             .testTag("hero")
             .padding(start = TvTokens.ContentStart, top = tvTopBarSpace(), end = TvTokens.EdgeEnd),
     ) {
