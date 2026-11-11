@@ -314,7 +314,9 @@ final class OndoUITests: XCTestCase {
         let searchButton = app.buttons["searchButton"]
         XCTAssertTrue(searchButton.waitForExistence(timeout: 5), "search button")
         for tab in ["Movies", "Series", "Live TV", "My List", "Home"] {
+            // Earlier steps left Movies and Series on a pushed page: a second tap on the tab goes back to its first screen.
             app.tabBars.buttons[tab].tap()
+            if !app.buttons["downloadsButton"].waitForExistence(timeout: 3) { app.tabBars.buttons[tab].tap() }
             XCTAssertTrue(app.buttons["downloadsButton"].waitForExistence(timeout: 5), "Downloads at the top of \(tab)")
         }
         app.buttons["downloadsButton"].tap()
