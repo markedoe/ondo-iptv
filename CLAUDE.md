@@ -30,9 +30,15 @@ screenshots.
     switch, no setting, date or launch argument that turns something on, no constant `false` feature left in.
   - The TestFlight edition (downloads) goes to internal testers only and is never submitted, not even for Beta App
     Review; a tag or
-    `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go: pushing a
-    version tag `vX.Y.Z` is that go (it submits iOS and macOS for App Review and sends Android, with its listing, to
-    closed testing for review); a push to `main` reaches TestFlight (never submitted for App Review: the TestFlight
+    `edition: app-store` builds the App Store edition. The user has given a standing go for production: the Ship
+    workflow (`ship.yml`, after the night) tags the night-tested commit `vX.Y.Z` and starts what a tag push starts (iOS
+    and macOS to App Review, Android with its listing to closed testing for review) only when its gates hold: the
+    night's CI and Android long tests passed on that same commit, the apps' equal version above the last `v*` tag,
+    release notes rewritten in every App Store and Google Play language, something the apps ship changed, the release
+    queues idle, nothing in review, pending or rejected on App Store Connect for Apple, closed testing not behind
+    internal testing for Google Play. So when landing work meant for the stores, bump the version and rewrite the
+    release notes in every language in the same change; the workflow never does. A human tag push stays possible;
+    nothing reaches Google Play production automatically yet; a push to `main` reaches TestFlight (never submitted for App Review: the TestFlight
     edition for internal testers and, built before it, the App Store edition for the external groups, submitted for
     Beta App Review only, every push), Google Play
     internal testing and Google Play closed testing, where Google reviews the release: closed testing receives the
