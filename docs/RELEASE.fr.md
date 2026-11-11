@@ -199,24 +199,38 @@ réseau, fichiers choisis par l'utilisateur).
      - pour Apple seulement : App Store Connect, en lecture seule, ne montre aucune version iOS ou macOS en attente
        de review ou en review, approuvée mais pas encore publiée, refusée ou dans un état qu'on ne sait pas réglé,
        aucune soumission en cours, et aucune version égale ou supérieure déjà au-delà de la préparation. Une erreur
-       de lecture bloque Apple. Apple bloqué, Google Play part quand même si ses propres conditions sont réunies.
+       de lecture bloque Apple ;
+     - pour Google Play seulement : aucun examen ne semble en cours. Aucune API ne montre un examen ; *Ship* lit les
+       pistes comme *Play catch-up* (dans une modification supprimée, jamais validée), et un test fermé en retard sur
+       le test interne (une promotion qui attend la fin d'un examen) ou une réponse illisible retient Android.
 
-     **Rattrapage Apple.** Quand la version du commit de la nuit est celle du plus haut tag (Google Play l'a reçue
-     pendant qu'Apple était bloqué), *Ship* lance *Release* (cible `release`, `submit`) sur **ce tag existant**, sans
-     nouveau tag, une fois que : le tag est dans l'historique de la nuit et porte cette version, il a passé les
-     conditions de notes et de changement embarqué par rapport au tag d'avant (un tag de base ne les passe jamais,
-     donc *Ship* ne le soumet jamais), les tests longs de *CI* ont réussi sur son commit, les files sont libres, les
-     conditions d'Apple sont réunies, et App Store Connect n'a, ni sur iOS ni sur macOS, aucune version de ce numéro
-     au-delà de la préparation. Cette version en attente, en review, approuvée, en vente, refusée ou retirée reste
-     l'affaire d'un humain (à la main : `gh workflow run release.yml --ref vX.Y.Z -f target=release -f submit=true`).
+     Une plateforme bloquée, l'autre part quand même si ses conditions sont réunies, et le tag est créé pour elle.
+
+     **Rattrapage sur le tag existant.** Quand la version du commit de la nuit est exactement celle du plus haut tag
+     (la même chaîne, comme la compare *Release*) et qu'une plateforme ne l'a pas reçue, *Ship* lance la publication
+     de cette plateforme sur **ce tag**, sans nouveau tag, si le tag est dans l'historique de la nuit et porte cette
+     version, s'il a passé les conditions de notes et de changement embarqué par rapport au tag d'avant (un tag de
+     base ne les passe jamais, donc *Ship* ne le publie jamais), si les tests longs de la plateforme ont réussi sur
+     son commit et si les files sont libres :
+     - Apple : seulement si **aucun run de *Release* n'a jamais tourné sur le tag** (un en cours : *Ship* attend ; un
+       réussi : rien à faire ; un en échec : un humain regarde, le run de *Ship* passe au rouge et *Ship* ne le relance
+       jamais), si les conditions d'Apple sont réunies et si App Store Connect n'a, ni sur iOS ni sur macOS, aucune
+       version de ce numéro au-delà de la préparation (en attente, en review, approuvée, en vente, refusée ou retirée :
+       un humain). À la main : `gh workflow run release.yml --ref vX.Y.Z -f target=release -f submit=true` ;
+     - Google Play : quand Google Play ne détient aucun bundle du version code construit par un run de *Release
+       Android* sur le tag (1000 + son numéro de run), qu'aucun examen ne semble en cours et qu'aucun run sur le tag
+       n'a échoué (rouge, un humain) ni ne tourne. Un run vert qui n'a rien livré (Google Play a refusé l'envoi
+       interne pendant un examen, ce que `KEEP_PLAY_REVIEW` change en avertissement) est suivi d'un seul autre au
+       plus ; après deux, le run de *Ship* passe au rouge et un humain regarde.
 
      Quand il publie, il crée le tag sur ce commit (API GitHub) puis lance depuis le tag *Release* (cible `release`,
      `submit`) et *Release Android*. Android passe par le test interne avec la fiche (`internal`, `completed`, fiche
      `upload`), comme la livraison d'un push : chaque changement Google Play attend alors la fin d'un examen en cours
      au lieu de l'annuler et de le relancer (RELEASE-ANDROID.fr.md), et le build arrive en test fermé pour examen
      juste après, ou par *Play catch-up* une fois l'examen terminé. Un tag créé par un workflow ne déclenche aucun
-     push, donc ils partent une seule fois, depuis *Ship* ; un tag que vous poussez vous-même les lance par son push,
-     et *Ship* trouve alors le tag et ne fait rien. Si un lancement échoue une fois le tag créé, le run passe au rouge
+     push, donc c'est *Ship* qui les lance ; un tag que vous poussez vous-même les lance par son push, et *Ship* ne
+     rattrape alors qu'une plateforme dont la publication n'a jamais tourné sur ce tag (ou, pour Google Play, a fini
+     au vert sans rien livrer). Si un lancement échoue une fois le tag créé, le run passe au rouge
      et donne la commande à lancer à la main. *Ship* ne monte jamais de version, ne fait jamais de commit et ne
      touche jamais à la production Google Play. **Quand vous intégrez du travail, écrivez ses notes de version dans
      toutes les langues et montez la version** (plus bas) : sans cela, *Ship* n'envoie rien. Un lancement à la main

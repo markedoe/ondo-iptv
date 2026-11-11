@@ -157,8 +157,11 @@ Au moindre doute (une nuit encore en cours, une réponse illisible), rien ne par
 Son horaire laisse quelques heures après 01 h 47, car GitHub lance souvent les runs de la nuit en retard. Un
 lancement à la main est une simulation tant que `dry_run` reste coché, et seul `main` publie. Détails et reprise :
 [RELEASE.fr.md](RELEASE.fr.md#d-publier), étape 2. Android passe par le test interne avec la fiche et
-`KEEP_PLAY_REVIEW`, donc un examen Google Play en cours n'est jamais annulé. Quand Apple était bloqué et que la
-version a déjà son tag, un lancement suivant lance *Release* sur ce tag (rattrapage Apple, sans nouveau tag). À la
+`KEEP_PLAY_REVIEW`, donc un examen Google Play en cours n'est jamais annulé, et attend tant que le test fermé est
+en retard sur le test interne. Quand une plateforme n'a pas reçu une version déjà taguée, un lancement suivant lance
+sa publication sur ce tag (rattrapage, sans nouveau tag) : Apple seulement si aucun *Release* n'a tourné sur le tag,
+Google Play quand il ne détient aucun bundle du run du tag, une fois de plus au maximum ; une publication en échec
+sur le tag fait passer *Ship* au rouge pour un humain. À la
 main, `baseline_tag` et `baseline_sha` créent seulement le premier tag de version. *Ship* ne monte jamais la version
 et n'écrit jamais les notes :
 le propriétaire fait les deux en intégrant le travail.

@@ -33,6 +33,11 @@ def version(platform: str, string: str, store: str, app_version: str = None) -> 
                            "appVersionState": app_version or store}}
 
 
+def tag_run(branch: str, number: int, conclusion: str = "success", status: str = "completed") -> dict:
+    return {"head_branch": branch, "run_number": number, "status": status,
+            "conclusion": conclusion if status == "completed" else None}
+
+
 SETTLED = [version("IOS", "2.0.0", "READY_FOR_SALE", "READY_FOR_DISTRIBUTION"),
            version("MAC_OS", "2.0.0", "READY_FOR_SALE", "READY_FOR_DISTRIBUTION")]
 
@@ -249,8 +254,73 @@ class CatchupTests(unittest.TestCase):
         commands = ship.plan("catchup", "a" * 40, "v2.0.1", ["apple"], "o/r", "false", "refs/heads/main")
         self.assertEqual([" ".join(command) for command in commands],
                          ["gh workflow run release.yml --repo o/r --ref v2.0.1 -f target=release -f submit=true"])
-        self.assertEqual(ship.plan("catchup", "a" * 40, "v2.0.1", ["android"], "o/r", "false", "refs/heads/main"), [])
+        android = ship.plan("catchup", "a" * 40, "v2.0.1", ["android"], "o/r", "false", "refs/heads/main")
+        self.assertEqual([" ".join(command) for command in android], [
+            "gh workflow run release-android.yml --repo o/r --ref v2.0.1 -f track=internal -f status=completed -f listing=upload"])
         self.assertEqual(ship.plan("catchup", "a" * 40, "v2.0.1", ["apple"], "o/r", "true", "refs/heads/main"), [])
+
+
+class CatchupRulesTests(unittest.TestCase):
+    def test_runs_on_a_tag(self):
+        self.assertEqual(ship.tag_runs([], "v2.0.1"), ("none", []))
+        self.assertEqual(ship.tag_runs([tag_run("main", 1, "failure")], "v2.0.1"), ("none", []))
+        self.assertEqual(ship.tag_runs([tag_run("v2.0.1", 4), tag_run("v2.0.1", 2)], "v2.0.1"), ("passed", [2, 4]))
+        self.assertEqual(ship.tag_runs([tag_run("v2.0.1", 4), tag_run("v2.0.1", 5, "cancelled")], "v2.0.1")[0], "failed")
+        self.assertEqual(ship.tag_runs([tag_run("v2.0.1", 4, "failure"), tag_run("v2.0.1", 5, status="queued")],
+                                       "v2.0.1")[0], "running")
+
+    def test_apple_catchup_rules(self):
+        self.assertEqual(ship.apple_catchup("none", [], "v2.0.1")[0::2], (True, False))
+        self.assertEqual(ship.apple_catchup("none", ["IOS 2.0.1: IN_REVIEW"], "v2.0.1")[0::2], (False, False))
+        self.assertEqual(ship.apple_catchup("running", [], "v2.0.1")[0::2], (False, False))
+        self.assertEqual(ship.apple_catchup("failed", [], "v2.0.1")[0::2], (False, True))
+        self.assertEqual(ship.apple_catchup("passed", [], "v2.0.1")[0::2], (False, False))
+
+    def test_android_catchup_rules(self):
+        self.assertEqual(ship.android_catchup("none", [], [], [], "v2.0.1")[0::2], (True, False))
+        self.assertEqual(ship.android_catchup("passed", [7], [1007], [], "v2.0.1")[0::2], (False, False))
+        self.assertEqual(ship.android_catchup("passed", [7], [1006], [], "v2.0.1")[0::2], (True, False))
+        self.assertEqual(ship.android_catchup("passed", [7, 8], [], [], "v2.0.1")[0::2], (False, True))
+        self.assertEqual(ship.android_catchup("failed", [], [], [], "v2.0.1")[0::2], (False, True))
+        self.assertEqual(ship.android_catchup("running", [], [], [], "v2.0.1")[0::2], (False, False))
+        self.assertEqual(ship.android_catchup("none", [], None, None, "v2.0.1")[0::2], (False, False))
+
+    def test_a_closed_testing_promotion_waiting_is_a_review_in_progress(self):
+        self.assertEqual(ship.play_blockers([]), [])
+        same = [{"track": "internal", "releases": [{"status": "completed", "versionCodes": ["1009"]}]},
+                {"track": "alpha", "releases": [{"status": "completed", "versionCodes": ["1009"]}]}]
+        self.assertEqual(ship.play_blockers(same), [])
+        behind = [same[0] | {"releases": [{"status": "completed", "versionCodes": ["1010"]}]}, same[1]]
+        self.assertTrue(ship.play_blockers(behind))
+        self.assertTrue(ship.play_blockers(None))
+
+    def test_the_version_code_is_release_androids(self):
+        android = (WORKFLOWS / "release-android.yml").read_text(encoding="utf-8")
+        self.assertIn(f"ANDROID_VERSION_CODE=$(({ship.VERSION_CODE_BASE} + GITHUB_RUN_NUMBER))", android)
+        ship_yml = (WORKFLOWS / "ship.yml").read_text(encoding="utf-8")
+        self.assertIn("PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}", ship_yml)
+
+    def test_the_google_play_read_never_commits(self):
+        calls = []
+
+        class Recording:
+            def __init__(self, token):
+                pass
+
+            def call(self, method, url, params=None, body=None):
+                calls.append((method, url.rsplit("/", 1)[-1]))
+                if method == "POST":
+                    return {"id": "e1"}
+                return {"tracks": []} if url.endswith("/tracks") else {"bundles": [{"versionCode": 1007}]}
+
+        with mock.patch.dict(os.environ, {"PLAY_SERVICE_ACCOUNT_JSON": "{}"}), \
+                mock.patch.object(ship.play_status, "Client", Recording), \
+                mock.patch.object(ship.play_status, "access_token", lambda account: "token"):
+            self.assertEqual(ship.read_play(), ([], [1007]))
+        self.assertEqual([method for method, _ in calls], ["POST", "GET", "GET", "DELETE"])
+        self.assertFalse(any(":commit" in name for _, name in calls))
+        with mock.patch.dict(os.environ, {"PLAY_SERVICE_ACCOUNT_JSON": ""}), mock.patch("builtins.print"):
+            self.assertEqual(ship.read_play(), (None, None))
 
 
 class BaselineTests(unittest.TestCase):
@@ -258,7 +328,7 @@ class BaselineTests(unittest.TestCase):
         self.assertEqual(ship.baseline_problems("v2.0.0", "2.0.0", True, False), [])
 
     def test_a_wrong_baseline_is_refused(self):
-        for args, reason in ((("v2.0.0", "2.0.1", True, False), "not 2.0.0"), (("v2.0.0", "2.0.0", False, False), "not on main"),
+        for args, reason in ((("v2.0", "2.0.0", True, False), "not 2.0"), (("v2.0.0", "2.0.1", True, False), "not 2.0.0"), (("v2.0.0", "2.0.0", False, False), "not on main"),
                              (("v2.0.0", "2.0.0", True, True), "already exists"), (("2.0.0", "2.0.0", True, False), "not vX.Y"),
                              (("vnext", "2.0.0", True, False), "not vX.Y"), (("v2.0.0", None, True, False), "could not be read")):
             with self.subTest(args):
@@ -415,6 +485,9 @@ class EvaluateTests(unittest.TestCase):
         self.runs = {"ci.yml": [night(self.tested)], "android.yml": [night(self.tested)]}
         self.production = {"ci": 0, "android": 0}
         self.queue = {}
+        # Google Play: (tracks, version codes of the bundles); runs of the release workflows on a tag's commit.
+        self.play = lambda: ([], [])
+        self.tag_runs = {"release.yml": [], "release-android.yml": []}
 
     def git(self, *args: str) -> str:
         return subprocess.run(["git", *args], cwd=self.root, env=self.environment, check=True, capture_output=True,
@@ -444,6 +517,9 @@ class EvaluateTests(unittest.TestCase):
         return self.git("rev-parse", "HEAD").strip()
 
     def api(self, path: str) -> dict:
+        for workflow, runs in self.tag_runs.items():
+            if f"/workflows/{workflow}/runs?head_sha=" in path:
+                return {"workflow_runs": runs, "total_count": len(runs)}
         for workflow, runs in self.runs.items():
             if f"/workflows/{workflow}/runs?event=schedule" in path:
                 return {"workflow_runs": runs}
@@ -455,7 +531,7 @@ class EvaluateTests(unittest.TestCase):
         raise AssertionError(f"unexpected API call {path}")
 
     def evaluate(self) -> dict:
-        return ship.evaluate("o/r", run_git=self.git, api=self.api, apple=lambda: self.apple(),
+        return ship.evaluate("o/r", run_git=self.git, api=self.api, apple=lambda: self.apple(), play=lambda: self.play(),
                              production=lambda workflow, sha: self.production[workflow] if sha == self.tested else 1)
 
     def assert_no_ship(self, decision: dict, reason: str):
@@ -522,7 +598,7 @@ class EvaluateTests(unittest.TestCase):
             if args[:3] == ("tag", "--list", "v2.0.1"):
                 return "v2.0.1\n"
             return self.git(*args)
-        decision = ship.evaluate("o/r", run_git=run_git, api=self.api, apple=self.apple, production=lambda *_: 0)
+        decision = ship.evaluate("o/r", run_git=run_git, api=self.api, apple=self.apple, play=lambda: self.play(), production=lambda *_: 0)
         self.assert_no_ship(decision, "tag v2.0.1 already exists")
 
     def test_notes_missing_in_one_language_ship_nothing(self):
@@ -574,10 +650,13 @@ class EvaluateTests(unittest.TestCase):
         self.night = self.commit("later")
         self.runs = {"ci.yml": [night(self.night)], "android.yml": [night(self.night)]}
         self.production = {"ci": 0, "android": 0}
+        # Release Android ran on the tag (run 7: version code 1007) and Google Play holds that bundle.
+        self.tag_runs["release-android.yml"] = [tag_run("v2.0.1", 7)]
+        self.play = lambda: ([], [1007])
 
     def evaluate_catchup(self) -> dict:
         tagged = self.tested
-        return ship.evaluate("o/r", run_git=self.git, api=self.api, apple=lambda: self.apple(),
+        return ship.evaluate("o/r", run_git=self.git, api=self.api, apple=lambda: self.apple(), play=lambda: self.play(),
                              production=lambda workflow, sha: 0 if sha in (tagged, self.night) else 1)
 
     def test_apple_catches_up_on_the_existing_tag(self):
@@ -603,13 +682,76 @@ class EvaluateTests(unittest.TestCase):
         # The only tag is the baseline: Ship never submits it.
         self.git("tag", "-d", "v2.0.0")
         self.android_only_shipped()
-        self.assert_no_ship(self.evaluate_catchup(), "a baseline tag is never submitted")
+        self.assert_no_ship(self.evaluate_catchup(), "a baseline tag is never released")
 
     def test_no_catchup_without_the_long_tests_on_the_tag(self):
         self.android_only_shipped()
-        decision = ship.evaluate("o/r", run_git=self.git, api=self.api, apple=self.apple,
+        decision = ship.evaluate("o/r", run_git=self.git, api=self.api, apple=self.apple, play=lambda: self.play(),
                                  production=lambda workflow, sha: 0 if sha == self.night else 1)
-        self.assert_no_ship(decision, "production ci refused")
+        self.assert_no_ship(decision, "the long tests did not pass")
+
+    def test_a_review_waiting_on_google_play_holds_android_back_apple_goes(self):
+        behind = [{"track": "internal", "releases": [{"status": "completed", "versionCodes": ["1010"]}]},
+                  {"track": "alpha", "releases": [{"status": "completed", "versionCodes": ["1009"]}]}]
+        for play, reason in (((behind, []), "closed testing is behind"), ((None, None), "could not be read")):
+            with self.subTest(reason):
+                self.play = lambda: play
+                decision = self.evaluate()
+                self.assertEqual(decision["platforms"], ["apple"], decision["lines"])
+                self.assertTrue(any(line.startswith("Android blocked") and reason in line for line in decision["lines"]),
+                                decision["lines"])
+
+    def test_only_the_same_version_string_is_a_catchup(self):
+        # 2.1.0 and v2.1 are the same number, not the same version for release.yml: no catch-up, no new ship.
+        self.write_version("2.1.0", "2.1.0")
+        self.write_notes("fourth")
+        self.write("App/OndoApp.swift", "fourth")
+        self.tested = self.commit("2.1.0")
+        self.git("tag", "v2.1", self.tested)
+        self.runs = {"ci.yml": [night(self.tested)], "android.yml": [night(self.tested)]}
+        decision = self.evaluate()
+        self.assertEqual(decision["mode"], "ship")
+        self.assert_no_ship(decision, "not above v2.1")
+
+    def test_apple_catchup_only_when_no_release_ran_on_the_tag(self):
+        self.android_only_shipped()
+        for run, human in ((tag_run("v2.0.1", 3, status="in_progress"), False), (tag_run("v2.0.1", 3, "failure"), True),
+                           (tag_run("v2.0.1", 3), False)):
+            with self.subTest(run=run):
+                self.tag_runs["release.yml"] = [run, tag_run("main", 2, "failure")]
+                decision = self.evaluate_catchup()
+                self.assertEqual(decision["platforms"], [], decision["lines"])
+                self.assertEqual(decision["human"], human)
+
+    def test_android_catches_up_when_google_play_holds_no_bundle_of_the_tag(self):
+        self.android_only_shipped()
+        self.apple = lambda: (SETTLED + [version("IOS", "2.0.1", "WAITING_FOR_REVIEW"),
+                                         version("MAC_OS", "2.0.1", "WAITING_FOR_REVIEW")], [])
+        self.tag_runs["release.yml"] = [tag_run("v2.0.1", 5)]
+        self.play = lambda: ([], [1006])
+        decision = self.evaluate_catchup()
+        self.assertEqual(decision["platforms"], ["android"], decision["lines"])
+        commands = ship.plan(decision["mode"], decision["sha"], decision["tag"], decision["platforms"], "o/r", "false",
+                             "refs/heads/main")
+        self.assertEqual([" ".join(command) for command in commands], [
+            "gh workflow run release-android.yml --repo o/r --ref v2.0.1 -f track=internal -f status=completed -f listing=upload"])
+
+    def test_android_catchup_is_capped(self):
+        self.android_only_shipped()
+        self.tag_runs["release.yml"] = [tag_run("v2.0.1", 5)]
+        behind = [{"track": "internal", "releases": [{"status": "completed", "versionCodes": ["1010"]}]},
+                  {"track": "alpha", "releases": [{"status": "completed", "versionCodes": ["1009"]}]}]
+        for runs, play, human in (([tag_run("v2.0.1", 7), tag_run("v2.0.1", 8)], ([], []), True),
+                                  ([tag_run("v2.0.1", 7, "failure")], ([], []), True),
+                                  ([tag_run("v2.0.1", 7, status="queued")], ([], []), False),
+                                  ([tag_run("v2.0.1", 7)], (behind, []), False),
+                                  ([tag_run("v2.0.1", 7)], (None, None), False)):
+            with self.subTest(runs=runs, play=play):
+                self.tag_runs["release-android.yml"] = runs
+                self.play = lambda: play
+                decision = self.evaluate_catchup()
+                self.assertEqual(decision["platforms"], [], decision["lines"])
+                self.assertEqual(decision["human"], human, decision["lines"])
 
     def test_a_baseline_on_main_with_its_version(self):
         decision = ship.evaluate_baseline("v2.0.1", self.tested, run_git=self.git)
@@ -630,7 +772,7 @@ class EvaluateTests(unittest.TestCase):
     def test_unreadable_night_runs_ship_nothing(self):
         def failing(path):
             raise RuntimeError("HTTP 502")
-        decision = ship.evaluate("o/r", run_git=self.git, api=failing, apple=self.apple, production=lambda *_: 0)
+        decision = ship.evaluate("o/r", run_git=self.git, api=failing, apple=self.apple, play=lambda: self.play(), production=lambda *_: 0)
         self.assert_no_ship(decision, "could not be read")
 
 
@@ -675,6 +817,15 @@ class MainTests(unittest.TestCase):
                         mock.patch("builtins.print"):
                     self.assertEqual(ship.main(), 1)
                 run.assert_not_called()
+
+    def test_a_catchup_that_needs_a_human_turns_the_run_red(self):
+        decision = {"mode": "catchup", "sha": "a" * 40, "version": "2.0.1", "tag": "v2.0.1", "platforms": [],
+                    "lines": ["Apple catch-up: a Release run on v2.0.1 failed"], "human": True}
+        environment = {"GITHUB_REPOSITORY": "o/r", "DRY_RUN": "false", "GITHUB_REF": "refs/heads/main", "GITHUB_STEP_SUMMARY": ""}
+        with mock.patch.dict(os.environ, environment), mock.patch.object(ship, "evaluate", lambda repository: decision), \
+                mock.patch.object(ship.subprocess, "run") as run, mock.patch("builtins.print"):
+            self.assertEqual(ship.main(), 1)
+        run.assert_not_called()
 
     def test_a_dry_run_starts_nothing(self):
         code, calls, output = self.run_main(["apple", "android"], "true")

@@ -28,15 +28,23 @@ The commit S shipped is the one the night tested, never main's newer commits. It
      to or above this one already past preparation. Any read error blocks Apple. Apple blocked, Android still goes when
      its gates hold.
 
-Apple catch-up: when the version at S equals the highest tag (Google Play got it, Apple was blocked), the tag is on S's
-history, the version at the tag is that version, the tag passed gates c and d against the tag before it (a baseline tag
-with none before it never does), ci.yml's long tests passed on the tag's commit, the queues are idle, Apple's gates
-hold and App Store Connect has no version of that number past preparation on either platform (one in review, approved,
-live, rejected or withdrawn is left to a human), Release is started on that existing tag. No new tag.
-
 Google Play: Release Android runs on internal testing with the listing, as a push's delivery does with KEEP_PLAY_REVIEW
 (Fastfile): every commit asks ERROR_IF_IN_REVIEW, so a review in progress is never cancelled or restarted; its Closed
-testing step then sends the build to closed testing for review, or Play catch-up does once the review is over.
+testing step then sends the build to closed testing for review, or Play catch-up does once the review is over. No API
+shows a review in progress (play_status.py): the sign Ship reads, as play_catchup.py does, is closed testing behind
+internal testing (a promotion waiting for a review to end); then, or when Google Play cannot be read, Android waits.
+
+Catch-up, when the version at S is exactly the highest tag (tagged, but a platform did not get it): the tag is on S's
+history and its commit carries that version, the tag passed gates c and d against the tag before it (a baseline tag,
+with none before it, never does), the platform's long tests passed on the tag's commit and the queues are idle. Then,
+on that existing tag, no new tag:
+  - Apple: Release, only when no Release run ever ran on the tag (one running: wait; one failed: a human, the Ship run
+    turns red; one passed: nothing), Apple's gates hold and App Store Connect has no version of that number past
+    preparation (in review, approved, live, rejected or withdrawn: a human);
+  - Android: Release Android (internal, listing), when Google Play holds no bundle of the version code a run on the tag
+    built (1000 + its run number, release-android.yml), once more at most after a green run that delivered nothing
+    (KEEP_PLAY_REVIEW swallows a refusal during a review), never after a failed run (a human, red), and only when
+    Google Play shows no review waiting (above).
 
 Never bumps a version, never commits, never touches Google Play production. Prints no secret.
 """
@@ -61,6 +69,8 @@ def _load(name: str):
 
 ci_scope = _load("ci_scope")
 asset_library = _load("asset_library")
+play_catchup = _load("play_catchup")
+play_status = play_catchup.play_status
 
 # What the apps ship, as deliver.yml's step "Send the push's builds" gives it to git diff (tests left out). Copied byte
 # for byte from deliver.yml: test_ship.py checks it, so the two never drift apart.
@@ -106,6 +116,11 @@ SUBMISSION_UNDER_WAY = asset_library.SUBMISSION_IN_REVIEW
 # it: unlike a tag push's direct closed testing upload, it never cancels or restarts a Google Play review.
 RELEASE_APPLE = ["-f", "target=release", "-f", "submit=true"]
 RELEASE_ANDROID = ["-f", "track=internal", "-f", "status=completed", "-f", "listing=upload"]
+# release-android.yml: ANDROID_VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER)) (test_ship.py checks it).
+VERSION_CODE_BASE = 1000
+# Runs of Release Android on one tag that ended green without Google Play holding their bundle: after this many, a human.
+ANDROID_ATTEMPTS = 2
+RELEASE_WORKFLOWS = {"apple": "release.yml", "android": "release-android.yml"}
 
 
 # --- Pure decisions -------------------------------------------------------------------------------------------------
@@ -254,11 +269,68 @@ def baseline_problems(tag: str, version, on_main: bool, exists: bool) -> list:
         problems.append("the commit is not on main")
     if version is None:
         problems.append("the apps' version could not be read there")
-    elif tag.startswith("v") and parse_version(tag[1:]) is not None and parse_version(version) != parse_version(tag[1:]):
+    elif tag.startswith("v") and parse_version(tag[1:]) is not None and version != tag[1:]:
         problems.append(f"the apps' version there is {version}, not {tag[1:]}")
     if exists:
         problems.append(f"tag {tag} already exists")
     return problems
+
+
+def play_blockers(tracks) -> list:
+    """Why Google Play should not get a new release now ([tracks]: the tracks, None when unread). No API shows a
+    review; closed testing behind internal testing is the sign one is going on (play_catchup.py waits for it)."""
+    if tracks is None:
+        return ["Google Play could not be read"]
+    waiting = play_catchup.decide(tracks)
+    if waiting is not None:
+        return [f"closed testing is behind internal testing (version code {waiting} waits): a Google Play review is "
+                "most likely in progress, and Play catch-up follows it"]
+    return []
+
+
+def tag_runs(runs, tag: str):
+    """(state, run numbers of the passed runs) of a release workflow's runs on [tag]: none, running, failed, passed."""
+    mine = [run for run in runs or [] if run.get("head_branch") == tag]
+    if any(run.get("status") != "completed" for run in mine):
+        return "running", []
+    if any(run.get("conclusion") != "success" for run in mine):
+        return "failed", []
+    return ("passed" if mine else "none"), sorted(run.get("run_number") for run in mine)
+
+
+def apple_catchup(state: str, blockers: list, tag: str) -> tuple:
+    """(go, lines, needs a human) for Release on the existing [tag]."""
+    if state == "running":
+        return False, [f"Apple catch-up: a Release run on {tag} is under way"], False
+    if state == "failed":
+        return False, [f"Apple catch-up: a Release run on {tag} failed: a human looks, Ship does not start it again"], True
+    if state == "passed":
+        return False, [f"Apple catch-up: Release already ran on {tag}: nothing to catch up"], False
+    if blockers:
+        return False, [f"Apple catch-up blocked: {reason}" for reason in blockers], False
+    return True, [f"Apple catch-up: Release starts on {tag}"], False
+
+
+def android_catchup(state: str, numbers: list, bundles, tracks, tag: str) -> tuple:
+    """(go, lines, needs a human) for Release Android on the existing [tag] ([bundles]: the version codes Google Play
+    holds, None when unread)."""
+    if bundles is None or tracks is None:
+        return False, ["Android catch-up: Google Play could not be read"], False
+    if state == "running":
+        return False, [f"Android catch-up: a Release Android run on {tag} is under way"], False
+    if state == "failed":
+        return False, [f"Android catch-up: a Release Android run on {tag} failed: a human looks, Ship does not start it "
+                       "again"], True
+    codes = {VERSION_CODE_BASE + number for number in numbers if isinstance(number, int)}
+    if codes & set(bundles):
+        return False, [f"Android catch-up: Google Play holds {tag}'s bundle ({', '.join(map(str, sorted(codes & set(bundles))))})"], False
+    if len(numbers) >= ANDROID_ATTEMPTS:
+        return False, [f"Android catch-up: {len(numbers)} green Release Android runs on {tag} delivered nothing to Google "
+                       "Play: a human looks"], True
+    blockers = play_blockers(tracks)
+    if blockers:
+        return False, [f"Android catch-up waits: {reason}" for reason in blockers], False
+    return True, [f"Android catch-up: Release Android starts on {tag} (internal testing, listing)"], False
 
 
 def busy_queues(runs_by_workflow: dict) -> list:
@@ -299,9 +371,13 @@ def plan(mode: str, sha: str, tag: str, platforms: list, repository: str, dry_ru
     if mode == "baseline":
         return [create]
     if mode == "catchup":
-        if platforms != ["apple"]:
-            return []
-        return [["gh", "workflow", "run", "release.yml", "--repo", repository, "--ref", tag, *RELEASE_APPLE]]
+        commands = []
+        if "apple" in platforms:
+            commands.append(["gh", "workflow", "run", "release.yml", "--repo", repository, "--ref", tag, *RELEASE_APPLE])
+        if "android" in platforms:
+            commands.append(["gh", "workflow", "run", "release-android.yml", "--repo", repository, "--ref", tag,
+                             *RELEASE_ANDROID])
+        return commands
     if mode != "ship" or not platforms:
         return []
     commands = [create]
@@ -386,6 +462,37 @@ def read_apple():
             client.close()
 
 
+def read_play():
+    """(tracks, version codes of the bundles) from Google Play, inside an edit that is always deleted, never committed
+    (as play_catchup.py reads); (None, None) on any failure."""
+    raw = os.environ.get("PLAY_SERVICE_ACCOUNT_JSON", "")
+    if not raw.strip():
+        print("Google Play: the service account secret is not set")
+        return None, None
+    try:
+        client = play_status.Client(play_status.access_token(json.loads(raw)))
+        base = f"{play_status.PUBLISHER}{play_status.PACKAGE}/edits"
+        edit = client.call("POST", base, body={})
+        try:
+            tracks = client.call("GET", f"{base}/{edit['id']}/tracks").get("tracks", [])
+            bundles = client.call("GET", f"{base}/{edit['id']}/bundles").get("bundles", [])
+        finally:
+            client.call("DELETE", f"{base}/{edit['id']}")
+        return tracks, [int(bundle["versionCode"]) for bundle in bundles if str(bundle.get("versionCode", "")).isdigit()]
+    except (Exception, SystemExit) as error:  # noqa: BLE001 - any doubt holds Android back
+        print(play_status.safe(f"Google Play could not be read ({type(error).__name__})"))
+        return None, None
+
+
+def runs_on(api, repository: str, workflow: str, sha: str) -> list:
+    """Every run of [workflow] on the commit [sha] (a tag's runs among them), or an exception."""
+    answer = api(f"repos/{repository}/actions/workflows/{workflow}/runs?head_sha={sha}&per_page=100")
+    runs = answer.get("workflow_runs", [])
+    if answer.get("total_count", len(runs)) > len(runs):
+        raise RuntimeError(f"more than {len(runs)} {workflow} runs on {sha}")
+    return runs
+
+
 def content_gates(run_git, base: str, commit: str, lines: list):
     """Gates c and d between the tag [base] and [commit]: None when they hold, else why not."""
     changed = run_git("diff", "--no-renames", "--name-only", base, commit).split()
@@ -407,11 +514,11 @@ def content_gates(run_git, base: str, commit: str, lines: list):
     return None
 
 
-def catchup(decision, stop, repository, run_git, api, apple, production, tags, tag, sha, version) -> dict:
-    """Apple catch-up on the existing [tag], when S carries its version: Release on that tag, no new tag."""
+def catchup(decision, stop, repository, run_git, api, apple, play, production, tags, tag, sha, version) -> dict:
+    """Catch-up on the existing [tag], when S carries exactly its version: each platform that did not get it."""
     lines = decision["lines"]
     decision["mode"], decision["tag"] = "catchup", tag
-    lines.append(f"Version {version} is already tagged {tag}: Apple catch-up only, no new tag.")
+    lines.append(f"Version {version} is already tagged {tag}: catch-up only, no new tag.")
     try:
         tag_sha = run_git("rev-parse", f"{tag}^{{commit}}").strip()
         run_git("merge-base", "--is-ancestor", tag_sha, sha)
@@ -419,26 +526,39 @@ def catchup(decision, stop, repository, run_git, api, apple, production, tags, t
         return stop(f"{tag} is not on the history of {sha}")
     decision["sha"] = tag_sha
     tagged, why = apps_version(show(run_git, tag_sha, PROJECT_YML), show(run_git, tag_sha, GRADLE))
-    if why or parse_version(tagged) != parse_version(version):
+    if why or tagged != version:
         return stop(f"the apps' version at {tag} is not {version} ({why or tagged})")
     previous, why = latest_tag([name for name in tags if name != tag])
     if why:
-        return stop(f"no version tag before {tag}: a baseline tag is never submitted by Ship")
+        return stop(f"no version tag before {tag}: a baseline tag is never released by Ship")
     why = content_gates(run_git, previous, tag_sha, lines)
     if why:
         return stop(f"{tag} would not have passed Ship's gates: {why}")
-    if production("ci", tag_sha) != 0:
-        return stop(f"ci_scope.py production ci refused {tag_sha}")
     busy = busy_queues(queue_runs(api, repository))
     if busy:
         return stop(f"a release queue is busy ({', '.join(busy)}): nothing waiting is pushed out; the next Ship tries again")
-    versions, submissions = apple()
-    blockers = apple_catchup_blockers(versions, submissions, version)
-    if blockers:
-        lines.extend(f"Apple catch-up blocked: {reason}" for reason in blockers)
-        decision["platforms"] = []
-        return decision
-    decision["platforms"] = ["apple"]
+
+    platforms = []
+    for platform, workflow in RELEASE_WORKFLOWS.items():
+        try:
+            state, numbers = tag_runs(runs_on(api, repository, workflow, tag_sha), tag)
+        except Exception as error:  # noqa: BLE001 - unreadable: no catch-up
+            lines.append(f"{platform.capitalize()} catch-up: the {workflow} runs on {tag} could not be read ({error})")
+            continue
+        if production("ci" if platform == "apple" else "android", tag_sha) != 0:
+            lines.append(f"{platform.capitalize()} catch-up: the long tests did not pass on {tag_sha}")
+            continue
+        if platform == "apple":
+            versions, submissions = apple() if state == "none" else (None, None)
+            go, more, human = apple_catchup(state, apple_catchup_blockers(versions, submissions, version), tag)
+        else:
+            tracks, bundles = play()
+            go, more, human = android_catchup(state, numbers, bundles, tracks, tag)
+        lines.extend(more)
+        decision["human"] = decision.get("human", False) or human
+        if go:
+            platforms.append(platform)
+    decision["platforms"] = platforms
     return decision
 
 
@@ -467,10 +587,11 @@ def evaluate_baseline(tag: str, sha: str, run_git=git, head: str = "HEAD") -> di
     return decision
 
 
-def evaluate(repository: str, run_git=git, api=gh_api, apple=read_apple, production=None, head: str = "HEAD") -> dict:
+def evaluate(repository: str, run_git=git, api=gh_api, apple=read_apple, production=None, head: str = "HEAD",
+             play=read_play) -> dict:
     """Every gate, in order; the first shared one that fails stops the reading. Returns the decision."""
     production = production or (lambda workflow, sha: ci_scope.production(workflow, sha, repository, api))
-    decision = {"mode": "ship", "sha": None, "version": None, "tag": None, "platforms": [], "lines": []}
+    decision = {"mode": "ship", "sha": None, "version": None, "tag": None, "platforms": [], "lines": [], "human": False}
     lines = decision["lines"]
 
     def stop(reason: str) -> dict:
@@ -506,8 +627,9 @@ def evaluate(repository: str, run_git=git, api=gh_api, apple=read_apple, product
         return stop(why)
     decision["version"], decision["tag"] = version, f"v{version}"
     lines.append(f"Version {version} at {sha}; last tag {tag}.")
-    if parse_version(version) == parse_version(tag[1:]):
-        return catchup(decision, stop, repository, run_git, api, apple, production, tags, tag, sha, version)
+    # The tag names this very version (the same string, as release.yml and release-android.yml compare it).
+    if tag == f"v{version}":
+        return catchup(decision, stop, repository, run_git, api, apple, play, production, tags, tag, sha, version)
     if not newer(version, tag):
         return stop(f"version {version} is not above {tag}: the owner bumps it with the work (the workflow never does)")
     if run_git("tag", "--list", decision["tag"]).strip():
@@ -522,7 +644,8 @@ def evaluate(repository: str, run_git=git, api=gh_api, apple=read_apple, product
         return stop(f"a release queue is busy ({', '.join(busy)}): nothing waiting is pushed out; the next Ship tries again")
 
     versions, submissions = apple()
-    platforms, more = platforms_to_ship([], apple_blockers(versions, submissions, version), [])
+    tracks, _ = play()
+    platforms, more = platforms_to_ship([], apple_blockers(versions, submissions, version), play_blockers(tracks))
     decision["platforms"] = platforms
     lines.extend(more)
     return decision
@@ -549,7 +672,7 @@ def main() -> int:
     if mode == "baseline":
         summary = f"Baseline {tag} on {decision['sha']}" if platforms else "No baseline"
     elif mode == "catchup":
-        summary = f"Apple catch-up of {tag} ({decision['sha']})" if platforms else "No ship today"
+        summary = f"Catch-up of {tag} ({decision['sha']}): {', '.join(platforms)}" if platforms else "No ship today"
     else:
         summary = f"Ship {tag} ({decision['sha']}): {', '.join(platforms)}" if platforms else "No ship today"
     commands = plan(mode, decision["sha"], tag, platforms, repository, dry_run, ref)
@@ -572,9 +695,14 @@ def main() -> int:
                       f"what is left by hand: {recovery(tag, repository, platforms)}")
             return 1
         print(" ".join(command[:4]) + f" {tag}: done")
-    if commands and mode == "ship" and "apple" not in platforms:
-        print(f"::warning::{tag} went to Google Play only. Once App Store Connect is clear, Ship's Apple catch-up submits "
-              f"it after a green night; by hand: {recovery(tag, repository, ['apple'])}")
+    if commands and mode == "ship":
+        for platform in ("apple", "android"):
+            if platform not in platforms:
+                print(f"::warning::{tag} did not go to {'Apple' if platform == 'apple' else 'Google Play'}: Ship catches up "
+                      f"after a later green night; by hand: {recovery(tag, repository, [platform])}")
+    if decision.get("human"):
+        print(f"::warning::{tag} needs a human (see above): Ship does not start that release again.")
+        return 1
     return 0
 
 

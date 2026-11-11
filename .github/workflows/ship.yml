@@ -5,9 +5,11 @@ name: Ship
 # creates the tag vX.Y.Z on the commit the night tested and starts, from that tag, Release (target release, submit:
 # iOS and macOS to App Review) and Release Android (internal testing with the listing, then closed testing for review,
 # with KEEP_PLAY_REVIEW: a Google Play review in progress is never cancelled; Play catch-up follows up). A tag created
-# with GITHUB_TOKEN fires no push event, so those runs are started here, once; a tag a human pushes starts them through
-# its push and Ship then finds the tag and does nothing. When the version was tagged but Apple was blocked, a later run
-# starts Release on that same tag once App Store Connect is clear (Apple catch-up). By hand, baseline_tag and
+# with GITHUB_TOKEN fires no push event, so those runs are started here; a tag a human pushes starts them through its
+# push. Android waits while closed testing is behind internal testing (the sign of a review). When a platform did not
+# get a tagged version, a later run starts its release on that same tag (catch-up): Apple only if no Release ran on the
+# tag, Google Play when it holds no bundle of the tag's run, once more at most; a failed release on the tag turns this
+# run red for a human. By hand, baseline_tag and
 # baseline_sha create the first version tag only, checked, and start nothing. Never bumps a version, never commits,
 # never Google Play production.
 on:
@@ -67,6 +69,8 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          # Read only, inside an edit that is deleted, never committed: the tracks and the bundles Google Play holds.
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           # A run by hand only: the first version tag, checked and created alone (dry_run off, on main).
           BASELINE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.baseline_tag || '' }}
           BASELINE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.baseline_sha || '' }}

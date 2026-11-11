@@ -201,10 +201,15 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
      partent comme dans la livraison d'un push, avec `KEEP_PLAY_REVIEW` (chaque validation demande
      `ERROR_IF_IN_REVIEW`), donc **un examen en cours n'est jamais annulé ni relancé** ; l'étape *Closed testing*
      envoie ensuite le build en test fermé pour examen, ou *Play catch-up* le fait une fois l'examen terminé. Si
-     Google Play refuse même l'envoi interne pendant un examen, le lancement le dit et le build de ce tag reste
-     dehors ; la livraison du push suivant en envoie un de la même version. (Un tag créé par un workflow ne déclenche
-     aucun push, c'est donc *Ship* qui lance le run ; un tag que vous poussez le lance par son push, sur `alpha`, et
-     *Ship* ne fait alors rien.) Il ne publie que si les tests longs de *CI* et d'*Android* ont
+     Google Play refuse même l'envoi interne pendant un examen, le lancement finit au vert avec un avertissement et
+     le build de ce tag reste dehors : un lancement suivant de *Ship* voit que Google Play ne détient aucun bundle du
+     version code du run (1000 + numéro de run) et relance ce workflow sur le tag, une fois au plus, seulement quand
+     le test fermé n'est pas en retard sur le test interne (le signe d'un examen en cours) ; un second run vert sans
+     livraison, ou un run en échec, fait passer *Ship* au rouge pour un humain. *Ship* retient aussi Android quand le
+     test fermé est en retard sur le test interne ou que Google Play ne peut pas être lu. (Un tag créé par un
+     workflow ne déclenche aucun push, c'est donc *Ship* qui lance le run ; un tag que vous poussez le lance par son
+     push, sur `alpha`, et *Ship* ne rattrape alors que si ce run n'a rien livré.) Il ne publie que si les tests longs
+     de *CI* et d'*Android* ont
      réussi sur ce commit précis, que la version (la même dans les deux apps) dépasse le dernier tag, que les notes
      de version ont changé dans chaque langue de l'App Store et de Google Play (ici `changelogs/default.txt`), que
      quelque chose de ce que les apps embarquent a changé et qu'aucune file de publication n'est occupée ; un blocage

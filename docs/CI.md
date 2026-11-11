@@ -151,8 +151,10 @@ night still running, an unreadable answer) ships nothing at that time; the secon
 some hours after 01:47, since GitHub often starts the night's runs late. A run by hand is a dry run unless
 `dry_run` is turned off, and only `main` ships. Details and recovery: [RELEASE.md](RELEASE.md#d-publish), step 2.
 Android goes through internal testing with the listing and `KEEP_PLAY_REVIEW`, so a Google Play review in progress
-is never cancelled. When Apple was blocked and the version is already tagged, a later run starts *Release* on that
-tag (Apple catch-up, no new tag). By hand, `baseline_tag` and `baseline_sha` create the first version tag only.
+is never cancelled, and waits while closed testing is behind internal testing. When a platform did not get a tagged
+version, a later run starts its release on that tag (catch-up, no new tag): Apple only if no *Release* ran on the tag,
+Google Play when it holds no bundle of the tag's run, once more at most; a failed release on the tag turns Ship red
+for a human. By hand, `baseline_tag` and `baseline_sha` create the first version tag only.
 Ship never raises the version or writes the notes: the owner does both when landing the work.
 
 ## App Store screenshots

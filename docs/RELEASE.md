@@ -195,24 +195,36 @@ user-selected files).
        catch-up*, the Google Play status, images and tips workflows): nothing waiting is ever pushed out;
      - Apple only: App Store Connect, read only, shows no iOS or macOS version waiting for or in review, approved but
        not released, rejected or in any state not known to be settled, no review submission under way, and no
-       version at or above this one already past preparation. A read error blocks Apple. Apple blocked, Google Play
-       still goes when its gates hold.
+       version at or above this one already past preparation. A read error blocks Apple;
+     - Google Play only: no review seems to be going on. No API shows a review; Ship reads the tracks as *Play
+       catch-up* does (inside an edit that is deleted, never committed), and closed testing behind internal testing
+       (a promotion waiting for a review to end) or an unreadable answer holds Android back.
 
-     **Apple catch-up.** When the version of the night's commit equals the highest tag (Google Play got it while Apple
-     was blocked), Ship starts *Release* (target `release`, `submit`) on **that existing tag**, with no new tag, once:
-     the tag is on the night's history and carries that version, it passed the notes and shipped-change gates against
-     the tag before it (a baseline tag never does, so Ship never submits it), *CI*'s long tests passed on its commit,
-     the queues are idle, Apple's gates hold, and App Store Connect has no version of that number past preparation on
-     iOS or macOS. That version waiting, in review, approved, live, rejected or withdrawn is left to a human (by hand:
-     `gh workflow run release.yml --ref vX.Y.Z -f target=release -f submit=true`).
+     One platform blocked, the other still goes when its gates hold, and the tag is created for it.
+
+     **Catch-up on the existing tag.** When the version of the night's commit is exactly the highest tag (the same
+     string, as *Release* compares it) and a platform did not get it, Ship starts that platform's release on **that
+     tag**, with no new tag, when the tag is on the night's history and carries that version, it passed the notes and
+     shipped-change gates against the tag before it (a baseline tag never does, so Ship never releases it), the
+     platform's long tests passed on its commit and the queues are idle:
+     - Apple: only if **no *Release* run ever ran on the tag** (one running: Ship waits; one passed: nothing to do; one
+       failed: a human looks, the Ship run turns red and Ship never starts it again), Apple's gates hold and App Store
+       Connect has no version of that number past preparation on iOS or macOS (waiting, in review, approved, live,
+       rejected or withdrawn: a human). By hand: `gh workflow run release.yml --ref vX.Y.Z -f target=release -f submit=true`;
+     - Google Play: when Google Play holds no bundle of the version code a *Release Android* run on the tag built
+       (1000 + its run number), no review seems to be going on, and no run on the tag failed (red, a human) or is
+       running. A green run that delivered nothing (Google Play refused the internal upload during a review, which
+       `KEEP_PLAY_REVIEW` turns into a warning) is followed by one more at most; after two, the Ship run turns red and
+       a human looks.
 
      When it ships, it creates the tag on that commit (GitHub API) and starts *Release* (target `release`, `submit`)
      and *Release Android* from the tag. Android goes through internal testing with the listing (`internal`,
      `completed`, listing `upload`), as a push's delivery does: every Google Play change then waits for a review in
      progress instead of cancelling and restarting it (RELEASE-ANDROID.md), and the build reaches closed testing for
      review right after, or through *Play catch-up* once the review is over. A tag made by a workflow fires no push, so
-     they start once, from Ship; a tag you push yourself starts them through its push, and Ship then finds the tag
-     and does nothing. If a start fails once the tag exists, the run turns red and gives the command to run by hand.
+     Ship starts them itself; a tag you push yourself starts them through its push, and Ship then only catches up a
+     platform whose release never ran on that tag (or, for Google Play, ran green without delivering). If a start
+     fails once the tag exists, the run turns red and gives the command to run by hand.
      Ship never bumps a version, never commits and never touches Google Play production. **When you land work, write
      its release notes in every language and raise the version** (below): Ship ships nothing otherwise. A run by hand
      is a dry run by default (*Run workflow*, `dry_run` on): it says what would ship and creates nothing; only `main`

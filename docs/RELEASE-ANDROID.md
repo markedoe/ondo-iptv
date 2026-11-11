@@ -191,9 +191,13 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
      delivery sends them, with `KEEP_PLAY_REVIEW` (every commit asks `ERROR_IF_IN_REVIEW`), so **a review in progress
      is never cancelled or restarted**; the *Closed testing* step then sends the build to closed testing for review,
      or *Play catch-up* does once the review is over. If Google Play refuses even the internal upload during a review,
-     the run says so and that tag's build stays out; the next push's delivery sends one of the same version. (A tag
-     made by a workflow fires no push, so Ship starts the run; a tag you push starts it through its push, on `alpha`,
-     and Ship then does nothing.) It ships only
+     the run ends green with a warning and that tag's build stays out: a later Ship run sees that Google Play holds
+     no bundle of the run's version code (1000 + run number) and starts this workflow on the tag again, once at most,
+     only while closed testing is not behind internal testing (the sign of a review going on); a second green run
+     without delivery, or a failed run, turns Ship red for a human. Ship also holds Android back when closed testing is
+     behind internal testing or Google Play cannot be read. (A tag made by a workflow fires no push, so Ship starts
+     the run; a tag you push starts it through its push, on `alpha`, and Ship then only catches up if that run
+     delivered nothing.) It ships only
      when the long *CI* and *Android* tests passed on that very commit, the version (equal in both apps) is above the
      last tag, the release notes changed in every App Store and Google Play language (`changelogs/default.txt` here),
      something the apps ship changed, and no release queue is busy; App Store Connect blocking Apple does not hold
