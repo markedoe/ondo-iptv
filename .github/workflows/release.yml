@@ -1,6 +1,7 @@
 name: Release
 
-# A version tag (v1.2.0: the user's go, CLAUDE.md) releases iOS and macOS: App Store edition builds, the listing, and
+# A version tag (v1.2.0, pushed by a human or created by Ship, ship.yml, which then starts this workflow from the tag
+# with target release and submit: the user's go, CLAUDE.md) releases iOS and macOS: App Store edition builds, the listing, and
 # the submission for App Review, a submission of the same version still waiting being withdrawn first; then the
 # TestFlight edition is built again. A push to main reaches TestFlight only (deliver.yml, target builds, external): the
 # TestFlight edition for internal testers and the App Store edition for external testers, through Beta App Review.
@@ -464,9 +465,10 @@ jobs:
   testflight:
     name: TestFlight edition again
     needs: deliver
-    # The tag's own run only: the run it starts builds on the tag too and must not start another. Explicit result of
+    # The tag's own run only (its push, or Ship's target release with submit from the tag: a tag Ship creates fires no
+    # push): the run it starts (target builds) builds on the tag too and must not start another. Explicit result of
     # deliver: an implicit success() would also look at the screenshots job, which deliver needs.
-    if: ${{ !cancelled() && needs.deliver.result == 'success' && github.event_name == 'push' && github.ref_type == 'tag' }}
+    if: ${{ !cancelled() && needs.deliver.result == 'success' && github.ref_type == 'tag' && (github.event_name == 'push' || (github.event.inputs.target == 'release' && github.event.inputs.submit == 'true')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

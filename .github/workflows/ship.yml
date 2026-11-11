@@ -1,0 +1,57 @@
+name: Ship
+
+# The owner's standing go for production (CLAUDE.md): after a green night, the next version goes to review by itself,
+# as a version tag would send it. .github/scripts/ship.py decides (every gate, docs/RELEASE.md) and, when they all hold,
+# creates the tag vX.Y.Z on the commit the night tested and starts, from that tag, Release (target release, submit:
+# iOS and macOS to App Review) and Release Android (closed testing with the listing, sent for review). A tag created
+# with GITHUB_TOKEN fires no push event, so those runs are started here, once; a tag a human pushes starts them through
+# its push and Ship then finds the tag and does nothing. Never bumps a version, never commits, never Google Play
+# production.
+on:
+  # Some hours after the night's runs (ci.yml, android.yml at 01:47, which GitHub often starts hours late): a night
+  # still running means no ship that day, never a guess.
+  schedule:
+    - cron: "17 13 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only say what would ship: no tag, no release started (off: a real ship, from main only)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# One decision at a time, in a queue of its own: inside release-apple or release-android, this run would push out a
+# waiting release or be pushed out by one (GitHub keeps one waiting run per group). ship.py ships only when nothing
+# waits or runs in those queues.
+concurrency:
+  group: ship
+  cancel-in-progress: false
+
+jobs:
+  ship:
+    name: Next version to review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # contents: write creates the tag; actions: write starts the release workflows (and reads the runs).
+    permissions:
+      actions: write
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Every commit and tag: the night's commit, the last version tag and the differences between them.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Decide and ship
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # A scheduled run on main is real; a run by hand is a dry run unless dry_run is off, and only main ships.
+          # ship.py ships only on the literal "false".
+          DRY_RUN: ${{ (github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run))) && 'false' || 'true' }}
+          # Read only (GET): which App Store versions and review submissions are under way.
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: python3 -I .github/scripts/ship.py
