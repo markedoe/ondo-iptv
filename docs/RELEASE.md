@@ -147,7 +147,7 @@ user-selected files).
    go up with the listing and follow its rules: `check_app_store.py` fails if one is missing, empty or longer
    than 4000 characters, has test or placeholder words, names another platform, promises a feature to come
    or speaks of downloads.
-2. **The pipeline.** Two events deliver, nothing else is needed:
+2. **The pipeline.** Two events deliver, and *Ship* tags the next version by itself after a green night:
    - **A push to `main`.** Once *CI*'s short checks are green (Linux, a few minutes; the long macOS tests run at
      night, [CI.md](CI.md#short-checks-on-every-push-long-tests-at-night)), the *Deliver* workflow starts *Release* with target `builds` and
      the `testflight` edition and `external` on: for iOS and macOS, first the **App Store edition** (checked as for a
@@ -177,6 +177,34 @@ user-selected files).
      released even when iOS fails (two independent versions). Then the TestFlight edition of the tag is built again
      for the testers, unless another *Release* run is already waiting (a newer tag's, a push's builds): it is not
      replaced. The same tag sends Android to closed testing (RELEASE-ANDROID.md).
+   - **Ship, after each green night: the standing go** (CLAUDE.md). The *Ship* workflow (`ship.yml`, every day at
+     13:17 UTC, some hours after the night's runs; `.github/scripts/ship.py`) does what a tag push does, by itself,
+     when every gate holds, and otherwise ships nothing and says why in its log and summary:
+     - the latest scheduled runs of *CI* and *Android* on `main` both passed **on the same commit**, that commit is on
+       `main`, and `ci_scope.py production ci|android` accept it (the long tests passed on exactly it). That commit
+       is the one shipped, never a newer `main`;
+     - `MARKETING_VERSION` and `versionName` at that commit are equal and above the highest `vX.Y.Z` tag (as numbers:
+       2.0.10 comes after 2.0.9), and that tag does not exist yet. With no version tag at all, Ship does nothing:
+       the first tag is pushed by hand, on the commit last released;
+     - every App Store language's `release_notes.txt` and every Google Play language's `changelogs/default.txt`
+       were rewritten since that tag (the log lists the missing ones);
+     - something the apps ship changed since that tag (*Deliver*'s own paths; a version bump alone does not count);
+     - nothing waits or runs in the release queues (*Release*, *Release Android*, *Promote Android*, *Play
+       catch-up*, the Google Play status, images and tips workflows): nothing waiting is ever pushed out;
+     - Apple only: App Store Connect, read only, shows no iOS or macOS version waiting for or in review, approved but
+       not released, rejected or in any state not known to be settled, no review submission under way, and no
+       version at or above this one already past preparation. A read error blocks Apple. Apple blocked, Google Play
+       still goes when its gates hold; the tag then exists, so a human submits Apple once it is clear (the log gives
+       the command: `gh workflow run release.yml --ref vX.Y.Z -f target=release -f submit=true`).
+
+     When it ships, it creates the tag on that commit (GitHub API) and starts *Release* (target `release`, `submit`)
+     and *Release Android* (`alpha`, `completed`, listing) from the tag: a tag made by a workflow fires no push, so
+     they start once, from Ship; a tag you push yourself starts them through its push, and Ship then finds the tag
+     and does nothing. If a start fails once the tag exists, the run turns red and gives the command to run by hand.
+     Ship never bumps a version, never commits and never touches Google Play production. **When you land work, write
+     its release notes in every language and raise the version** (below): Ship ships nothing otherwise. A run by hand
+     is a dry run by default (*Run workflow*, `dry_run` on): it says what would ship and creates nothing; only `main`
+     ships.
    - **Withdraw from review** (the user's decision): *Actions → Release → Run workflow*, target `withdraw-ios` or
      `withdraw-mac`: removes that platform's submission from App Review and changes nothing else.
    - **Rehearsal**: *Actions → Release → Run workflow*, target `release`, `submit` off (the default): the App

@@ -185,6 +185,15 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
      the build **with the listing** goes to **closed testing**, status `completed`, so Google Play sends it for
      review at once. This needs **managed publishing off** (*Publishing overview → Managed publishing*); with it
      on, Google refuses the automatic sending and the run fails, saying so.
+   - **Ship**, after each green night (the owner's standing go, CLAUDE.md): the *Ship* workflow (`ship.yml`) creates
+     the next version tag itself on the commit the night tested, then starts this workflow from that tag with the
+     `alpha` track, status `completed` and the listing, exactly what a tag push does (a tag made by a workflow fires no
+     push, so Ship starts it; a tag you push starts it through its push, and Ship then does nothing). It ships only
+     when the long *CI* and *Android* tests passed on that very commit, the version (equal in both apps) is above the
+     last tag, the release notes changed in every App Store and Google Play language (`changelogs/default.txt` here),
+     something the apps ship changed, and no release queue is busy; App Store Connect blocking Apple does not hold
+     Google Play back. Never production. Gates, dry run and recovery: [RELEASE.md](RELEASE.md#d-publish), step 2.
+     Ship never writes the release notes nor raises the version: you do, with the work.
    - or *Run workflow* with the desired track.
 
    The `versionCode` increases on every run (1000 + run number). The `versionName` comes from the tag; a run

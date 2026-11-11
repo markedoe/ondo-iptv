@@ -58,6 +58,7 @@ skipped by *What to run*; but a push or a pull request that *CI*'s path filter l
 | *Android* (`android.yml`) | push to `main` and pull requests through its path filter (short jobs); every night on `main` and by hand, *record_screenshots* (long job too) | *What to run*, *Core (Kotlin) tests*, *App — lint, debug APK, release bundle*, *Google Play listing limits*, *App — unit, Compose and screenshot tests* (long), publishing jobs (all Linux) | Kotlin core tests, lint, debug APK and release bundle, listing lengths; (long) Robolectric and Compose tests, Roborazzi screenshots compared with the references |
 | *Security* (`security.yml`) | every push to `main`, every pull request, by hand | two Linux jobs | leak guard and gitleaks on every commit of every branch; neutrality, App Store edition and review playlist checks |
 | *Deliver* (`deliver.yml`) | after a green *CI* or *Android* run of a push to `main` (short jobs) | Linux | starts *Release* (TestFlight: the TestFlight edition for internal testers, the App Store edition for external testers) or *Release Android* (internal testing) when what the app ships changed |
+| *Ship* (`ship.yml`) | every day at 13:17 UTC, after the night; by hand (dry run by default) | Linux, its own queue | when the gates hold (below), tags the commit the night tested with the next version and starts *Release* and *Release Android* from the tag, as a tag push would |
 | *Release* (`release.yml`) | `v*` tag; by hand | *Long tests passed on this commit* (Linux: a submission for App Review needs *CI*'s long jobs passed on the commit), *App Store screenshots* (called, macOS), *TestFlight / App Store Connect* (macOS), *TestFlight edition again* (Linux), *External testers* (Linux: starts *TestFlight external*) | see RELEASE.md |
 | *TestFlight external* (`testflight-external.yml`) | started by *Release* only, on `main` | Linux, its own queue | waits for App Store Connect's processing and sends the App Store edition builds to the external testers through Beta App Review |
 | *TestFlight status* (`testflight-status.yml`) | by hand | Linux | read only: TestFlight groups, tester counts and iOS builds on Apple silicon Macs (on or off), whether a macOS version is on the Mac App Store, Test Information per language, Beta App Review contact (set or missing), latest builds with their edition, states and What to Test |
@@ -136,6 +137,20 @@ The only change on a working branch, and what a run by hand starts (`test_ci_sco
 | `docs/RELEASE.md` only | skipped | skipped |
 | `.github/workflows/…` only | run | run |
 | `docs/SYNC.md` only | run | run |
+
+## Ship: the next version after a green night
+
+The night's long tests are what production waits for, so the night also decides what goes to review: *Ship*
+(`ship.yml`, `.github/scripts/ship.py`, tested by `test_ship.py`) takes the commit that the latest scheduled runs of
+*CI* and *Android* both passed on, never a newer `main`, and checks it with `ci_scope.py production` as *Release*
+does. It ships that commit as `vX.Y.Z` only when the apps' version there (equal in both) is above the last version
+tag and that tag does not exist yet, the release notes changed in every App Store and Google Play language,
+something the apps ship changed (*Deliver*'s paths), and no release queue is busy. Apple also needs App Store Connect
+clear (nothing in review, waiting, approved and unreleased or rejected); Google Play goes without it. Any doubt (a
+night still running, an unreadable answer) ships nothing that day; the next day tries again. Its schedule leaves
+some hours after 01:47, since GitHub often starts the night's runs late. A run by hand is a dry run unless
+`dry_run` is turned off, and only `main` ships. Details and recovery: [RELEASE.md](RELEASE.md#d-publish), step 2.
+Ship never raises the version or writes the notes: the owner does both when landing the work.
 
 ## App Store screenshots
 

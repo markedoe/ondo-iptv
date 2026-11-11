@@ -61,6 +61,7 @@ lance quand même `check_app_store.py`).
 | *Android* (`android.yml`) | push sur `main` et pull requests à travers son filtre de chemins (jobs courts) ; chaque nuit sur `main` et à la main, *record_screenshots* (job long aussi) | *What to run*, *Core (Kotlin) tests*, *App — lint, debug APK, release bundle*, *Google Play listing limits*, *App — unit, Compose and screenshot tests* (long), jobs de publication (tous Linux) | tests du cœur Kotlin, lint, APK debug et bundle release, longueurs de la fiche ; (long) tests Robolectric et Compose, captures Roborazzi comparées aux références |
 | *Security* (`security.yml`) | chaque push sur `main`, chaque pull request, à la main | deux jobs Linux | garde anti-fuite et gitleaks sur chaque commit de chaque branche ; contrôles de neutralité, de l'édition App Store et de la playlist de review |
 | *Deliver* (`deliver.yml`) | après un run *CI* ou *Android* vert d'un push sur `main` (jobs courts) | Linux | lance *Release* (TestFlight : l'édition TestFlight pour les testeurs internes, l'édition App Store pour les testeurs externes) ou *Release Android* (test interne) quand ce que l'app embarque a changé |
+| *Ship* (`ship.yml`) | chaque jour à 13 h 17 UTC, après la nuit ; à la main (simulation par défaut) | Linux, sa propre file | quand les conditions sont réunies (plus bas), pose le tag de la version suivante sur le commit testé la nuit et lance *Release* et *Release Android* depuis ce tag, comme le push d'un tag |
 | *Release* (`release.yml`) | tag `v*` ; à la main | *Long tests passed on this commit* (Linux : une soumission à App Review exige les jobs longs de *CI* réussis sur le commit), *App Store screenshots* (appelé, macOS), *TestFlight / App Store Connect* (macOS), *TestFlight edition again* (Linux), *External testers* (Linux : lance *TestFlight external*) | voir RELEASE.fr.md |
 | *TestFlight external* (`testflight-external.yml`) | lancé par *Release* seulement, sur `main` | Linux, sa propre file | attend le traitement d'App Store Connect et envoie les builds de l'édition App Store aux testeurs externes par la Beta App Review |
 | *TestFlight status* (`testflight-status.yml`) | à la main | Linux | lecture seule : groupes TestFlight, nombre de testeurs et builds iOS sur les Mac à puce Apple (actifs ou non), présence d'une version macOS sur le Mac App Store, Informations de test par langue, contact de la Beta App Review (rempli ou non), derniers builds avec leur édition, leurs états et leur « À tester » |
@@ -141,6 +142,22 @@ Le seul changement d'une branche de travail, et ce que lance un run à la main (
 | `docs/RELEASE.md` seulement | sautés | sautés |
 | `.github/workflows/…` seulement | lancés | lancés |
 | `docs/SYNC.md` seulement | lancés | lancés |
+
+## Ship : la version suivante après une nuit au vert
+
+Les tests longs de la nuit sont ce qu'attend la production, donc la nuit décide aussi de ce qui part en review :
+*Ship* (`ship.yml`, `.github/scripts/ship.py`, testé par `test_ship.py`) prend le commit sur lequel les derniers
+runs planifiés de *CI* et d'*Android* ont tous deux réussi, jamais un `main` plus récent, et le vérifie avec
+`ci_scope.py production` comme le fait *Release*. Il publie ce commit en `vX.Y.Z` seulement si la version des apps
+(la même dans les deux) y dépasse le dernier tag de version et que ce tag n'existe pas encore, si les notes de
+version ont changé dans chaque langue de l'App Store et de Google Play, si quelque chose de ce que les apps
+embarquent a changé (les chemins de *Deliver*) et si aucune file de publication n'est occupée. Apple exige en plus
+un App Store Connect libre (rien en review, en attente, approuvé non publié ou refusé) ; Google Play part sans cela.
+Au moindre doute (une nuit encore en cours, une réponse illisible), rien ne part ce jour-là ; le lendemain réessaie.
+Son horaire laisse quelques heures après 01 h 47, car GitHub lance souvent les runs de la nuit en retard. Un
+lancement à la main est une simulation tant que `dry_run` reste coché, et seul `main` publie. Détails et reprise :
+[RELEASE.fr.md](RELEASE.fr.md#d-publier), étape 2. *Ship* ne monte jamais la version et n'écrit jamais les notes :
+le propriétaire fait les deux en intégrant le travail.
 
 ## Captures App Store
 

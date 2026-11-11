@@ -145,7 +145,7 @@ réseau, fichiers choisis par l'utilisateur).
    le tag la contient). Elles partent avec la fiche et suivent ses règles : `check_app_store.py` échoue si
    l'une manque, est vide ou dépasse 4000 caractères, a un mot de test ou un texte provisoire, nomme une autre
    plateforme, promet une fonction à venir ou parle de téléchargements.
-2. **La chaîne de livraison.** Deux événements livrent, rien d'autre n'est nécessaire :
+2. **La chaîne de livraison.** Deux événements livrent, et *Ship* pose de lui-même le tag de la version suivante après une nuit au vert :
    - **Un push sur `main`.** Une fois les contrôles courts de *CI* au vert (Linux, quelques minutes ; les tests longs
      sur macOS tournent la nuit, [CI.fr.md](CI.fr.md#contrôles-courts-à-chaque-push-tests-longs-la-nuit)), le workflow *Deliver* lance *Release* avec la cible `builds`
      et l'édition `testflight`, `external` activé : pour iOS et macOS, d'abord **l'édition App Store** (vérifiée comme
@@ -177,6 +177,39 @@ réseau, fichiers choisis par l'utilisateur).
      si iOS échoue (deux versions indépendantes). Ensuite l'édition TestFlight du tag est reconstruite pour les
      testeurs, sauf si un autre lancement de *Release* attend déjà (celui d'un tag plus récent, les builds d'un
      push) : il n'est pas remplacé. Le même tag envoie Android en test fermé (RELEASE-ANDROID.fr.md).
+   - **Ship, après chaque nuit au vert : le go permanent** (CLAUDE.md). Le workflow *Ship* (`ship.yml`, chaque jour
+     à 13 h 17 UTC, quelques heures après les runs de la nuit ; `.github/scripts/ship.py`) fait de lui-même ce que
+     fait le push d'un tag quand toutes les conditions sont réunies ; sinon il n'envoie rien et dit pourquoi dans son
+     journal et son résumé :
+     - les derniers runs planifiés de *CI* et d'*Android* sur `main` ont réussi **sur le même commit**, ce commit est
+       sur `main`, et `ci_scope.py production ci|android` l'acceptent (les tests longs ont réussi sur ce commit
+       précis). C'est ce commit qui part, jamais un `main` plus récent ;
+     - `MARKETING_VERSION` et `versionName` sont égaux sur ce commit et au-dessus du plus haut tag `vX.Y.Z` (en
+       nombres : 2.0.10 vient après 2.0.9), et ce tag n'existe pas encore. Sans aucun tag de version, *Ship* ne fait
+       rien : le premier tag se pousse à la main, sur le dernier commit publié ;
+     - le `release_notes.txt` de chaque langue de l'App Store et le `changelogs/default.txt` de chaque langue de
+       Google Play ont été réécrits depuis ce tag (le journal liste ceux qui manquent) ;
+     - quelque chose de ce que les apps embarquent a changé depuis ce tag (les chemins de *Deliver* ; une simple
+       montée de version ne compte pas) ;
+     - rien n'attend ni ne tourne dans les files de publication (*Release*, *Release Android*, *Promote Android*,
+       *Play catch-up*, les workflows d'état, d'images et de pourboires Google Play) : rien de ce qui attend n'est
+       jamais évincé ;
+     - pour Apple seulement : App Store Connect, en lecture seule, ne montre aucune version iOS ou macOS en attente
+       de review ou en review, approuvée mais pas encore publiée, refusée ou dans un état qu'on ne sait pas réglé,
+       aucune soumission en cours, et aucune version égale ou supérieure déjà au-delà de la préparation. Une erreur
+       de lecture bloque Apple. Apple bloqué, Google Play part quand même si ses propres conditions sont réunies ; le
+       tag existe alors, et c'est à un humain de soumettre Apple une fois la voie libre (le journal donne la
+       commande : `gh workflow run release.yml --ref vX.Y.Z -f target=release -f submit=true`).
+
+     Quand il publie, il crée le tag sur ce commit (API GitHub) puis lance depuis le tag *Release* (cible `release`,
+     `submit`) et *Release Android* (`alpha`, `completed`, fiche) : un tag créé par un workflow ne déclenche aucun
+     push, donc ils partent une seule fois, depuis *Ship* ; un tag que vous poussez vous-même les lance par son push,
+     et *Ship* trouve alors le tag et ne fait rien. Si un lancement échoue une fois le tag créé, le run passe au rouge
+     et donne la commande à lancer à la main. *Ship* ne monte jamais de version, ne fait jamais de commit et ne
+     touche jamais à la production Google Play. **Quand vous intégrez du travail, écrivez ses notes de version dans
+     toutes les langues et montez la version** (plus bas) : sans cela, *Ship* n'envoie rien. Un lancement à la main
+     est une simulation par défaut (*Run workflow*, `dry_run` coché) : il dit ce qui partirait et ne crée rien ;
+     seul `main` publie.
    - **Retrait de l'examen** (décision de l'utilisateur) : *Actions → Release → Run workflow*, cible `withdraw-ios` ou
      `withdraw-mac` : retire la soumission de cette plateforme de l'App Review, sans rien changer d'autre.
    - **Répétition** : *Actions → Release → Run workflow*, cible `release`, `submit` décoché (par défaut) : les

@@ -195,6 +195,17 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
      s'arrête) : le build **avec la fiche** part en **test fermé**, statut `completed`, donc Google Play l'envoie
      aussitôt en examen. Il faut pour cela **la publication gérée désactivée** (*Vue d'ensemble de la publication →
      Publication gérée*) ; activée, Google refuse l'envoi automatique et le lancement échoue en le disant ;
+   - **Ship**, après chaque nuit au vert (le go permanent du propriétaire, CLAUDE.md) : le workflow *Ship*
+     (`ship.yml`) crée lui-même le tag de la version suivante sur le commit testé la nuit, puis lance ce workflow
+     depuis ce tag avec la piste `alpha`, le statut `completed` et la fiche, exactement comme le push d'un tag (un tag
+     créé par un workflow ne déclenche aucun push, c'est donc *Ship* qui le lance ; un tag que vous poussez le lance
+     par son push, et *Ship* ne fait alors rien). Il ne publie que si les tests longs de *CI* et d'*Android* ont
+     réussi sur ce commit précis, que la version (la même dans les deux apps) dépasse le dernier tag, que les notes
+     de version ont changé dans chaque langue de l'App Store et de Google Play (ici `changelogs/default.txt`), que
+     quelque chose de ce que les apps embarquent a changé et qu'aucune file de publication n'est occupée ; un blocage
+     d'Apple côté App Store Connect ne retient pas Google Play. Jamais la production. Conditions, simulation et
+     reprise : [RELEASE.fr.md](RELEASE.fr.md#d-publier), étape 2. *Ship* n'écrit jamais les notes de version et ne
+     monte jamais la version : c'est à vous de le faire, avec le travail ;
    - ou *Run workflow* avec la piste voulue.
 
    Le `versionCode` augmente à chaque exécution (1000 + numéro d'exécution). Le `versionName` vient du tag ; une
