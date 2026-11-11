@@ -308,10 +308,19 @@ final class OndoUITests: XCTestCase {
         sleep(1)
         snapshot("10-series-detail")
 
-        // Search is the magnifying glass at the top of each tab's first screen.
+        // Search is the magnifying glass at the top of each tab's first screen; Downloads (TestFlight edition and
+        // development builds) the arrow beside it, on every tab, not under Home's rows where nobody finds it.
         app.tabBars.buttons["Home"].tap()
         let searchButton = app.buttons["searchButton"]
         XCTAssertTrue(searchButton.waitForExistence(timeout: 5), "search button")
+        for tab in ["Movies", "Series", "Live TV", "My List", "Home"] {
+            app.tabBars.buttons[tab].tap()
+            XCTAssertTrue(app.buttons["downloadsButton"].waitForExistence(timeout: 5), "Downloads at the top of \(tab)")
+        }
+        app.buttons["downloadsButton"].tap()
+        XCTAssertTrue(app.navigationBars["Downloads"].waitForExistence(timeout: 5), "Downloads opens")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(searchButton.waitForExistence(timeout: 5), "back on Home")
         searchButton.tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 10), "search field")

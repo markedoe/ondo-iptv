@@ -109,9 +109,6 @@ struct HomeView: View {
             reminders
                 .padding(.horizontal, metrics.gutter)
 
-            #if TESTFLIGHT_DOWNLOADS || DEBUG
-            if compact, AppSection.showsDownloads { libraryLinks.padding(.horizontal, metrics.gutter) }
-            #endif
         }
         .padding(.top, hero.isEmpty ? 12 : 8)
         .padding(.bottom, 32)
@@ -280,34 +277,6 @@ struct HomeView: View {
         }
     }
 
-    #if TESTFLIGHT_DOWNLOADS || DEBUG
-    /// iPhone has no sidebar: downloads stay one tap away (My List has its own tab).
-    private var libraryLinks: some View {
-        VStack(spacing: 0) {
-            libraryLink(.downloads, title: "Downloads")
-        }
-        .background(OndoColor.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    private func libraryLink(_ section: AppSection, title: LocalizedStringKey) -> some View {
-        NavigationLink(value: section) {
-            HStack(spacing: 12) {
-                Image(systemName: section.systemImage)
-                    .foregroundStyle(OndoColor.selected)
-                    .frame(width: 20)
-                Text(title)
-                Spacer()
-                Image(systemName: "chevron.forward")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-    #endif
 
     /// Shown only when the provider account is expired, inactive or about to expire.
     @ViewBuilder

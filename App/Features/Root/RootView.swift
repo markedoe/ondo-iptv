@@ -225,7 +225,7 @@ struct MultiviewWindow: View {
 #endif
 
 /// iPhone: five tabs, movies and series first, My List last (Guide is in Live TV, Settings on Home); search is the
-/// magnifying glass at the top of every tab.
+/// magnifying glass at the top of every tab, and Downloads (TestFlight edition) the arrow beside it.
 struct TabRootView: View {
     @State private var selection: AppSection = .home
 
@@ -236,6 +236,16 @@ struct TabRootView: View {
                     SectionView(section: section)
                         #if os(iOS)
                         .toolbar {
+                            #if TESTFLIGHT_DOWNLOADS || DEBUG
+                            if AppSection.showsDownloads {
+                                ToolbarItem(placement: .topBarTrailing) {
+                                    NavigationLink(value: AppSection.downloads) {
+                                        Label("Downloads", systemImage: AppSection.downloads.systemImage)
+                                    }
+                                    .accessibilityIdentifier("downloadsButton")
+                                }
+                            }
+                            #endif
                             ToolbarItem(placement: .topBarTrailing) {
                                 NavigationLink(value: AppSection.search) {
                                     Label("Search", systemImage: "magnifyingglass")
