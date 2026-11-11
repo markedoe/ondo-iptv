@@ -156,7 +156,11 @@ un App Store Connect libre (rien en review, en attente, approuvé non publié ou
 Au moindre doute (une nuit encore en cours, une réponse illisible), rien ne part à ce moment-là ; le second lancement du jour, puis le lendemain, réessaient.
 Son horaire laisse quelques heures après 01 h 47, car GitHub lance souvent les runs de la nuit en retard. Un
 lancement à la main est une simulation tant que `dry_run` reste coché, et seul `main` publie. Détails et reprise :
-[RELEASE.fr.md](RELEASE.fr.md#d-publier), étape 2. *Ship* ne monte jamais la version et n'écrit jamais les notes :
+[RELEASE.fr.md](RELEASE.fr.md#d-publier), étape 2. Android passe par le test interne avec la fiche et
+`KEEP_PLAY_REVIEW`, donc un examen Google Play en cours n'est jamais annulé. Quand Apple était bloqué et que la
+version a déjà son tag, un lancement suivant lance *Release* sur ce tag (rattrapage Apple, sans nouveau tag). À la
+main, `baseline_tag` et `baseline_sha` créent seulement le premier tag de version. *Ship* ne monte jamais la version
+et n'écrit jamais les notes :
 le propriétaire fait les deux en intégrant le travail.
 
 ## Captures App Store

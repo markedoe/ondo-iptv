@@ -1,8 +1,9 @@
 name: Release Android
 
 # Tests, builds the signed release bundle and sends it to Google Play. A version tag (v1.2.0: the user's go, CLAUDE.md;
-# pushed by a human, or created by Ship, ship.yml, which then starts this workflow from the tag with track alpha, status
-# completed, listing upload) sends it with the listing to closed testing, for review at once (managed publishing off); a push to main sends the
+# pushed by a human) sends it with the listing to closed testing, for review at once (managed publishing off); Ship
+# (ship.yml) creates the tag itself and starts this workflow from it on internal testing with the listing, which then
+# goes to closed testing like a push's build, never cancelling a review in progress (KEEP_PLAY_REVIEW); a push to main sends the
 # build alone to internal testing (deliver.yml); a run by hand goes to the chosen track. Every build that reaches internal
 # testing then goes to closed testing too, with its release notes, sent for review (CLAUDE.md); while Google reviews
 # closed testing, Play catch-up (play-catchup.yml) sends it there once the review is over. Production gets only a commit

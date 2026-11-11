@@ -57,7 +57,7 @@ class VersionTests(unittest.TestCase):
     def test_no_tag_ships_nothing(self):
         tag, why = ship.latest_tag(["other"])
         self.assertIsNone(tag)
-        self.assertIn("first release is a human's", why)
+        self.assertIn("baseline_tag", why)
 
     def test_a_v_tag_that_is_not_a_version_ships_nothing(self):
         tag, why = ship.latest_tag(["v2.0.0", "vnext"])
@@ -222,6 +222,83 @@ class AppleTests(unittest.TestCase):
         self.assertEqual(set(calls), {"GET"})
 
 
+class CatchupTests(unittest.TestCase):
+    def test_tagged_but_never_submitted_goes(self):
+        self.assertEqual(ship.apple_catchup_blockers(SETTLED, [], "2.0.1"), [])
+        prepared = SETTLED + [version("IOS", "2.0.1", "PREPARE_FOR_SUBMISSION")]
+        self.assertEqual(ship.apple_catchup_blockers(prepared, [], "2.0.1"), [])
+
+    def test_that_version_submitted_approved_or_live_waits(self):
+        for state in ("WAITING_FOR_REVIEW", "IN_REVIEW", "PENDING_DEVELOPER_RELEASE", "READY_FOR_SALE"):
+            for platform in ("IOS", "MAC_OS"):
+                with self.subTest(state=state, platform=platform):
+                    self.assertTrue(ship.apple_catchup_blockers(SETTLED + [version(platform, "2.0.1", state)], [], "2.0.1"))
+
+    def test_that_version_rejected_or_withdrawn_is_left_to_a_human(self):
+        for state in ("REJECTED", "METADATA_REJECTED", "DEVELOPER_REJECTED"):
+            with self.subTest(state):
+                blockers = ship.apple_catchup_blockers(SETTLED + [version("IOS", "2.0.1", state)], [], "2.0.1")
+                self.assertTrue(blockers)
+        withdrawn = ship.apple_catchup_blockers(SETTLED + [version("IOS", "2.0.1", "DEVELOPER_REJECTED")], [], "2.0.1")
+        self.assertTrue(any("a human decides" in line for line in withdrawn), withdrawn)
+
+    def test_unreadable_app_store_connect_waits(self):
+        self.assertTrue(ship.apple_catchup_blockers(None, None, "2.0.1"))
+
+    def test_the_catchup_starts_release_on_the_existing_tag_and_creates_none(self):
+        commands = ship.plan("catchup", "a" * 40, "v2.0.1", ["apple"], "o/r", "false", "refs/heads/main")
+        self.assertEqual([" ".join(command) for command in commands],
+                         ["gh workflow run release.yml --repo o/r --ref v2.0.1 -f target=release -f submit=true"])
+        self.assertEqual(ship.plan("catchup", "a" * 40, "v2.0.1", ["android"], "o/r", "false", "refs/heads/main"), [])
+        self.assertEqual(ship.plan("catchup", "a" * 40, "v2.0.1", ["apple"], "o/r", "true", "refs/heads/main"), [])
+
+
+class BaselineTests(unittest.TestCase):
+    def test_a_good_baseline(self):
+        self.assertEqual(ship.baseline_problems("v2.0.0", "2.0.0", True, False), [])
+
+    def test_a_wrong_baseline_is_refused(self):
+        for args, reason in ((("v2.0.0", "2.0.1", True, False), "not 2.0.0"), (("v2.0.0", "2.0.0", False, False), "not on main"),
+                             (("v2.0.0", "2.0.0", True, True), "already exists"), (("2.0.0", "2.0.0", True, False), "not vX.Y"),
+                             (("vnext", "2.0.0", True, False), "not vX.Y"), (("v2.0.0", None, True, False), "could not be read")):
+            with self.subTest(args):
+                problems = ship.baseline_problems(*args)
+                self.assertTrue(any(reason in line for line in problems), problems)
+
+    def test_a_baseline_creates_the_tag_alone(self):
+        commands = ship.plan("baseline", "a" * 40, "v2.0.0", ["baseline"], "o/r", "false", "refs/heads/main")
+        self.assertEqual([" ".join(command) for command in commands],
+                         [f"gh api -X POST repos/o/r/git/refs -f ref=refs/tags/v2.0.0 -f sha={'a' * 40}"])
+        self.assertEqual(ship.plan("baseline", "a" * 40, "v2.0.0", ["baseline"], "o/r", "true", "refs/heads/main"), [])
+        self.assertEqual(ship.plan("baseline", "a" * 40, "v2.0.0", ["baseline"], "o/r", "false", "refs/heads/x"), [])
+
+
+class PlayReviewTests(unittest.TestCase):
+    """CLAUDE.md: a push never cancels or restarts a Google Play review; Ship's Android release neither."""
+
+    def test_ship_sends_android_through_internal_testing_never_straight_to_a_reviewed_track(self):
+        commands = ship.plan("ship", "a" * 40, "v2.0.1", ["apple", "android"], "o/r", "false", "refs/heads/main")
+        android = next(command for command in commands if "release-android.yml" in command)
+        self.assertIn("track=internal", android)
+        self.assertIn("listing=upload", android)
+        script = (SCRIPTS / "ship.py").read_text(encoding="utf-8")
+        for track in ("alpha", "beta", "production"):
+            self.assertNotIn(f"track={track}", script)
+
+    def test_internal_testing_keeps_the_review_and_then_goes_to_closed_testing(self):
+        android = (WORKFLOWS / "release-android.yml").read_text(encoding="utf-8")
+        # Every edit of an internal run commits with ERROR_IF_IN_REVIEW (Fastfile KeepPlayReview), its promotion too.
+        self.assertIn("KEEP_PLAY_REVIEW: ${{ (github.event.inputs.track || 'alpha') == 'internal' }}", android)
+        self.assertIn("if: env.TRACK == 'internal' && steps.upload.outputs.delivered == 'true'", android)
+        self.assertIn("TRACK=alpha RELEASE_STATUS=completed bundle exec fastlane android promote", android)
+        # The listing goes up with an internal run when asked (a push's delivery skips it).
+        self.assertIn("if: env.TRACK != 'internal' || env.LISTING != 'skip'", android)
+        fastfile = (SCRIPTS.parents[1] / "fastlane/Fastfile").read_text(encoding="utf-8")
+        self.assertIn('changes_in_review_behavior: "ERROR_IF_IN_REVIEW"', fastfile)
+        self.assertIn('keep_review = ENV["KEEP_PLAY_REVIEW"] == "true"', fastfile)
+        self.assertIn("skip_upload_changelogs: skip_listing", fastfile)
+
+
 class PlatformsTests(unittest.TestCase):
     def test_a_shared_gate_stops_both(self):
         self.assertEqual(ship.platforms_to_ship(["no tag"], [], [])[0], [])
@@ -251,23 +328,23 @@ class PlanTests(unittest.TestCase):
     def test_a_dry_run_does_nothing(self):
         for dry_run in ("true", "", "False", "no", "0"):
             with self.subTest(dry_run=dry_run):
-                self.assertEqual(ship.plan(self.SHA, "v2.0.1", ["apple", "android"], "o/r", dry_run, "refs/heads/main"), [])
+                self.assertEqual(ship.plan("ship", self.SHA, "v2.0.1", ["apple", "android"], "o/r", dry_run, "refs/heads/main"), [])
 
     def test_only_main_ships(self):
-        self.assertEqual(ship.plan(self.SHA, "v2.0.1", ["apple", "android"], "o/r", "false", "refs/heads/work"), [])
+        self.assertEqual(ship.plan("ship", self.SHA, "v2.0.1", ["apple", "android"], "o/r", "false", "refs/heads/work"), [])
 
     def test_the_tag_first_then_what_a_tag_push_starts(self):
-        commands = ship.plan(self.SHA, "v2.0.1", ["apple", "android"], "o/r", "false", "refs/heads/main")
+        commands = ship.plan("ship", self.SHA, "v2.0.1", ["apple", "android"], "o/r", "false", "refs/heads/main")
         self.assertEqual([" ".join(command) for command in commands], [
             f"gh api -X POST repos/o/r/git/refs -f ref=refs/tags/v2.0.1 -f sha={self.SHA}",
             "gh workflow run release.yml --repo o/r --ref v2.0.1 -f target=release -f submit=true",
-            "gh workflow run release-android.yml --repo o/r --ref v2.0.1 -f track=alpha -f status=completed -f listing=upload",
+            "gh workflow run release-android.yml --repo o/r --ref v2.0.1 -f track=internal -f status=completed -f listing=upload",
         ])
 
     def test_android_only(self):
-        commands = ship.plan(self.SHA, "v2.0.1", ["android"], "o/r", "false", "refs/heads/main")
+        commands = ship.plan("ship", self.SHA, "v2.0.1", ["android"], "o/r", "false", "refs/heads/main")
         self.assertEqual([command[3] for command in commands], ["POST", "release-android.yml"])
-        self.assertEqual(ship.plan(self.SHA, "v2.0.1", [], "o/r", "false", "refs/heads/main"), [])
+        self.assertEqual(ship.plan("ship", self.SHA, "v2.0.1", [], "o/r", "false", "refs/heads/main"), [])
 
 
 class WorkflowTests(unittest.TestCase):
@@ -397,7 +474,7 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(decision["sha"], self.tested)
         self.assertNotEqual(decision["sha"], head)
         self.assertEqual(decision["platforms"], ["apple", "android"])
-        commands = ship.plan(decision["sha"], decision["tag"], decision["platforms"], "o/r", "false", "refs/heads/main")
+        commands = ship.plan(decision["mode"], decision["sha"], decision["tag"], decision["platforms"], "o/r", "false", "refs/heads/main")
         self.assertIn(f"sha={self.tested}", commands[0])
 
     def test_nights_on_different_commits_ship_nothing(self):
@@ -490,6 +567,66 @@ class EvaluateTests(unittest.TestCase):
         self.apple = lambda: (None, None)
         self.assertEqual(self.evaluate()["platforms"], ["android"])
 
+    def android_only_shipped(self):
+        """v2.0.1 tagged on the tested commit (Google Play got it), then a newer night on the same version."""
+        self.git("tag", "v2.0.1", self.tested)
+        self.write("docs/RELEASE.md", "later")
+        self.night = self.commit("later")
+        self.runs = {"ci.yml": [night(self.night)], "android.yml": [night(self.night)]}
+        self.production = {"ci": 0, "android": 0}
+
+    def evaluate_catchup(self) -> dict:
+        tagged = self.tested
+        return ship.evaluate("o/r", run_git=self.git, api=self.api, apple=lambda: self.apple(),
+                             production=lambda workflow, sha: 0 if sha in (tagged, self.night) else 1)
+
+    def test_apple_catches_up_on_the_existing_tag(self):
+        self.android_only_shipped()
+        decision = self.evaluate_catchup()
+        self.assertEqual((decision["mode"], decision["tag"], decision["sha"], decision["platforms"]),
+                         ("catchup", "v2.0.1", self.tested, ["apple"]), decision["lines"])
+        commands = ship.plan(decision["mode"], decision["sha"], decision["tag"], decision["platforms"], "o/r", "false",
+                             "refs/heads/main")
+        self.assertEqual([command[3] for command in commands], ["release.yml"])
+        self.assertIn("v2.0.1", commands[0])
+
+    def test_no_catchup_once_apple_has_that_version(self):
+        self.android_only_shipped()
+        for state in ("WAITING_FOR_REVIEW", "IN_REVIEW", "READY_FOR_SALE", "REJECTED", "DEVELOPER_REJECTED"):
+            with self.subTest(state):
+                self.apple = lambda: (SETTLED + [version("IOS", "2.0.1", state)], [])
+                decision = self.evaluate_catchup()
+                self.assertEqual(decision["platforms"], [], decision["lines"])
+                self.assertTrue(any("Apple catch-up blocked" in line for line in decision["lines"]), decision["lines"])
+
+    def test_no_catchup_of_a_baseline_tag(self):
+        # The only tag is the baseline: Ship never submits it.
+        self.git("tag", "-d", "v2.0.0")
+        self.android_only_shipped()
+        self.assert_no_ship(self.evaluate_catchup(), "a baseline tag is never submitted")
+
+    def test_no_catchup_without_the_long_tests_on_the_tag(self):
+        self.android_only_shipped()
+        decision = ship.evaluate("o/r", run_git=self.git, api=self.api, apple=self.apple,
+                                 production=lambda workflow, sha: 0 if sha == self.night else 1)
+        self.assert_no_ship(decision, "production ci refused")
+
+    def test_a_baseline_on_main_with_its_version(self):
+        decision = ship.evaluate_baseline("v2.0.1", self.tested, run_git=self.git)
+        self.assertEqual((decision["platforms"], decision["sha"]), (["baseline"], self.tested), decision["lines"])
+        for tag, sha, reason in (("v2.0.1", self.released, "not 2.0.1"), ("v2.0.0", self.released, "already exists"),
+                                 ("v2.0.1", "0" * 40, "not a commit")):
+            with self.subTest(tag=tag, reason=reason):
+                decision = ship.evaluate_baseline(tag, sha, run_git=self.git)
+                self.assertEqual(decision["platforms"], [])
+                self.assertTrue(any(reason in line for line in decision["lines"]), decision["lines"])
+        self.git("checkout", "-q", "-b", "side")
+        self.write("App/OndoApp.swift", "side")
+        side = self.commit("side")
+        self.git("checkout", "-q", "main")
+        decision = ship.evaluate_baseline("v2.0.1", side, run_git=self.git)
+        self.assertTrue(any("not on main" in line for line in decision["lines"]), decision["lines"])
+
     def test_unreadable_night_runs_ship_nothing(self):
         def failing(path):
             raise RuntimeError("HTTP 502")
@@ -501,7 +638,7 @@ class MainTests(unittest.TestCase):
     """The I/O: a failure after the tag says how to finish by hand; a dry run starts nothing."""
 
     def decision(self, platforms):
-        return {"sha": "a" * 40, "version": "2.0.1", "tag": "v2.0.1", "platforms": platforms, "lines": []}
+        return {"mode": "ship", "sha": "a" * 40, "version": "2.0.1", "tag": "v2.0.1", "platforms": platforms, "lines": []}
 
     def run_main(self, platforms, dry_run, failing_index=None):
         calls = []
@@ -528,6 +665,17 @@ class MainTests(unittest.TestCase):
             self.assertEqual(ship.main(), 1)
         run.assert_not_called()
 
+    def test_a_baseline_only_by_hand_with_both_inputs(self):
+        for event, tag, sha in (("schedule", "v2.0.0", "a" * 40), ("workflow_dispatch", "v2.0.0", ""),
+                                ("workflow_dispatch", "", "a" * 40)):
+            with self.subTest(event=event, tag=tag, sha=sha):
+                environment = {"GITHUB_REPOSITORY": "o/r", "DRY_RUN": "false", "GITHUB_REF": "refs/heads/main",
+                               "GITHUB_EVENT_NAME": event, "BASELINE_TAG": tag, "BASELINE_SHA": sha}
+                with mock.patch.dict(os.environ, environment), mock.patch.object(ship.subprocess, "run") as run, \
+                        mock.patch("builtins.print"):
+                    self.assertEqual(ship.main(), 1)
+                run.assert_not_called()
+
     def test_a_dry_run_starts_nothing(self):
         code, calls, output = self.run_main(["apple", "android"], "true")
         self.assertEqual((code, calls), (0, []))
@@ -547,7 +695,7 @@ class MainTests(unittest.TestCase):
     def test_a_dispatch_that_fails_after_the_tag_says_how_to_finish(self):
         code, calls, output = self.run_main(["apple", "android"], "false", failing_index=1)
         self.assertEqual((code, len(calls)), (1, 2))
-        self.assertIn("gh workflow run release-android.yml --repo o/r --ref v2.0.1 -f track=alpha", output)
+        self.assertIn("gh workflow run release-android.yml --repo o/r --ref v2.0.1 -f track=internal", output)
 
     def test_android_only_says_who_submits_apple(self):
         code, calls, output = self.run_main(["android"], "false")

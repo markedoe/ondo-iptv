@@ -3,10 +3,13 @@ name: Ship
 # The owner's standing go for production (CLAUDE.md): after a green night, the next version goes to review by itself,
 # as a version tag would send it. .github/scripts/ship.py decides (every gate, docs/RELEASE.md) and, when they all hold,
 # creates the tag vX.Y.Z on the commit the night tested and starts, from that tag, Release (target release, submit:
-# iOS and macOS to App Review) and Release Android (closed testing with the listing, sent for review). A tag created
+# iOS and macOS to App Review) and Release Android (internal testing with the listing, then closed testing for review,
+# with KEEP_PLAY_REVIEW: a Google Play review in progress is never cancelled; Play catch-up follows up). A tag created
 # with GITHUB_TOKEN fires no push event, so those runs are started here, once; a tag a human pushes starts them through
-# its push and Ship then finds the tag and does nothing. Never bumps a version, never commits, never Google Play
-# production.
+# its push and Ship then finds the tag and does nothing. When the version was tagged but Apple was blocked, a later run
+# starts Release on that same tag once App Store Connect is clear (Apple catch-up). By hand, baseline_tag and
+# baseline_sha create the first version tag only, checked, and start nothing. Never bumps a version, never commits,
+# never Google Play production.
 on:
   # Some hours after the night's runs (ci.yml, android.yml at 01:47, which GitHub often starts hours late: 08:00 to
   # 08:51 UTC in November 2026). A night still running or a busy release queue means no ship at that time, never a
@@ -20,6 +23,14 @@ on:
         description: "Only say what would ship: no tag, no release started (off: a real ship, from main only)"
         type: boolean
         default: true
+      baseline_tag:
+        description: "Baseline only: the first version tag to create (e.g. v2.0.0), equal to the apps' version at baseline_sha; nothing is started"
+        type: string
+        default: ""
+      baseline_sha:
+        description: "Baseline only: the commit on main to tag (the last one released)"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -56,4 +67,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          # A run by hand only: the first version tag, checked and created alone (dry_run off, on main).
+          BASELINE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.baseline_tag || '' }}
+          BASELINE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.baseline_sha || '' }}
         run: python3 -I .github/scripts/ship.py

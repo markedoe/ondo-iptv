@@ -197,9 +197,14 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
      Publication gérée*) ; activée, Google refuse l'envoi automatique et le lancement échoue en le disant ;
    - **Ship**, après chaque nuit au vert (le go permanent du propriétaire, CLAUDE.md) : le workflow *Ship*
      (`ship.yml`) crée lui-même le tag de la version suivante sur le commit testé la nuit, puis lance ce workflow
-     depuis ce tag avec la piste `alpha`, le statut `completed` et la fiche, exactement comme le push d'un tag (un tag
-     créé par un workflow ne déclenche aucun push, c'est donc *Ship* qui le lance ; un tag que vous poussez le lance
-     par son push, et *Ship* ne fait alors rien). Il ne publie que si les tests longs de *CI* et d'*Android* ont
+     depuis ce tag avec la piste `internal`, le statut `completed` et la fiche (`upload`) : le build et la fiche
+     partent comme dans la livraison d'un push, avec `KEEP_PLAY_REVIEW` (chaque validation demande
+     `ERROR_IF_IN_REVIEW`), donc **un examen en cours n'est jamais annulé ni relancé** ; l'étape *Closed testing*
+     envoie ensuite le build en test fermé pour examen, ou *Play catch-up* le fait une fois l'examen terminé. Si
+     Google Play refuse même l'envoi interne pendant un examen, le lancement le dit et le build de ce tag reste
+     dehors ; la livraison du push suivant en envoie un de la même version. (Un tag créé par un workflow ne déclenche
+     aucun push, c'est donc *Ship* qui lance le run ; un tag que vous poussez le lance par son push, sur `alpha`, et
+     *Ship* ne fait alors rien.) Il ne publie que si les tests longs de *CI* et d'*Android* ont
      réussi sur ce commit précis, que la version (la même dans les deux apps) dépasse le dernier tag, que les notes
      de version ont changé dans chaque langue de l'App Store et de Google Play (ici `changelogs/default.txt`), que
      quelque chose de ce que les apps embarquent a changé et qu'aucune file de publication n'est occupée ; un blocage

@@ -185,7 +185,9 @@ user-selected files).
        is the one shipped, never a newer `main`;
      - `MARKETING_VERSION` and `versionName` at that commit are equal and above the highest `vX.Y.Z` tag (as numbers:
        2.0.10 comes after 2.0.9), and that tag does not exist yet. With no version tag at all, Ship does nothing:
-       the first tag is pushed by hand, on the commit last released;
+       create the first one on the commit last released, either with *Run workflow* on *Ship* with `baseline_tag`
+       (e.g. `v2.0.0`), `baseline_sha` and `dry_run` off (it checks that the commit is on `main` and carries that
+       version, creates the tag and starts nothing), or by pushing it yourself (which also releases it);
      - every App Store language's `release_notes.txt` and every Google Play language's `changelogs/default.txt`
        were rewritten since that tag (the log lists the missing ones);
      - something the apps ship changed since that tag (*Deliver*'s own paths; a version bump alone does not count);
@@ -194,11 +196,21 @@ user-selected files).
      - Apple only: App Store Connect, read only, shows no iOS or macOS version waiting for or in review, approved but
        not released, rejected or in any state not known to be settled, no review submission under way, and no
        version at or above this one already past preparation. A read error blocks Apple. Apple blocked, Google Play
-       still goes when its gates hold; the tag then exists, so a human submits Apple once it is clear (the log gives
-       the command: `gh workflow run release.yml --ref vX.Y.Z -f target=release -f submit=true`).
+       still goes when its gates hold.
+
+     **Apple catch-up.** When the version of the night's commit equals the highest tag (Google Play got it while Apple
+     was blocked), Ship starts *Release* (target `release`, `submit`) on **that existing tag**, with no new tag, once:
+     the tag is on the night's history and carries that version, it passed the notes and shipped-change gates against
+     the tag before it (a baseline tag never does, so Ship never submits it), *CI*'s long tests passed on its commit,
+     the queues are idle, Apple's gates hold, and App Store Connect has no version of that number past preparation on
+     iOS or macOS. That version waiting, in review, approved, live, rejected or withdrawn is left to a human (by hand:
+     `gh workflow run release.yml --ref vX.Y.Z -f target=release -f submit=true`).
 
      When it ships, it creates the tag on that commit (GitHub API) and starts *Release* (target `release`, `submit`)
-     and *Release Android* (`alpha`, `completed`, listing) from the tag: a tag made by a workflow fires no push, so
+     and *Release Android* from the tag. Android goes through internal testing with the listing (`internal`,
+     `completed`, listing `upload`), as a push's delivery does: every Google Play change then waits for a review in
+     progress instead of cancelling and restarting it (RELEASE-ANDROID.md), and the build reaches closed testing for
+     review right after, or through *Play catch-up* once the review is over. A tag made by a workflow fires no push, so
      they start once, from Ship; a tag you push yourself starts them through its push, and Ship then finds the tag
      and does nothing. If a start fails once the tag exists, the run turns red and gives the command to run by hand.
      Ship never bumps a version, never commits and never touches Google Play production. **When you land work, write

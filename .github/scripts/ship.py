@@ -2,8 +2,10 @@
 """Ship: the next version goes to review by itself after a green night (ship.yml, the owner's standing go, CLAUDE.md).
 
     ship.py     decides, prints why, and (DRY_RUN=false on main only) creates the tag vX.Y.Z on the night's commit and
-                starts what a tag push starts: Release (target release, submit) and Release Android (closed testing,
-                listing), each from the tag.
+                starts, from the tag, Release (target release, submit: App Review) and Release Android (internal testing
+                with the listing, then closed testing for review, never cancelling a review in progress: below).
+                With BASELINE_TAG and BASELINE_SHA (a run by hand): only creates that tag on that commit, the first
+                version tag Ship compares with, after checking it; starts nothing.
 
 The commit S shipped is the one the night tested, never main's newer commits. It ships only when every gate holds:
 
@@ -24,7 +26,17 @@ The commit S shipped is the one the night tested, never main's newer commits. It
   e. Apple only: App Store Connect (read only) shows no version of iOS or macOS in review, waiting, approved but not
      released, rejected or in any state not known to be settled, no review submission under way, and no version equal
      to or above this one already past preparation. Any read error blocks Apple. Apple blocked, Android still goes when
-     its gates hold; the tag then exists, so Apple's submission of this version is left to a human (printed).
+     its gates hold.
+
+Apple catch-up: when the version at S equals the highest tag (Google Play got it, Apple was blocked), the tag is on S's
+history, the version at the tag is that version, the tag passed gates c and d against the tag before it (a baseline tag
+with none before it never does), ci.yml's long tests passed on the tag's commit, the queues are idle, Apple's gates
+hold and App Store Connect has no version of that number past preparation on either platform (one in review, approved,
+live, rejected or withdrawn is left to a human), Release is started on that existing tag. No new tag.
+
+Google Play: Release Android runs on internal testing with the listing, as a push's delivery does with KEEP_PLAY_REVIEW
+(Fastfile): every commit asks ERROR_IF_IN_REVIEW, so a review in progress is never cancelled or restarted; its Closed
+testing step then sends the build to closed testing for review, or Play catch-up does once the review is over.
 
 Never bumps a version, never commits, never touches Google Play production. Prints no secret.
 """
@@ -89,9 +101,11 @@ APPLE_PLATFORMS = ("IOS", "MAC_OS")
 # Review submissions under way (UNRESOLVED_ISSUES: Apple rejected it, a human answers).
 SUBMISSION_UNDER_WAY = asset_library.SUBMISSION_IN_REVIEW
 
-# What a tag push starts, started from the tag (a tag made with GITHUB_TOKEN fires no push event).
+# What a tag push starts, started from the tag (a tag made with GITHUB_TOKEN fires no push event). Android goes through
+# internal testing as a push's delivery does (KEEP_PLAY_REVIEW, release-android.yml), with the listing as a tag sends
+# it: unlike a tag push's direct closed testing upload, it never cancels or restarts a Google Play review.
 RELEASE_APPLE = ["-f", "target=release", "-f", "submit=true"]
-RELEASE_ANDROID = ["-f", "track=alpha", "-f", "status=completed", "-f", "listing=upload"]
+RELEASE_ANDROID = ["-f", "track=internal", "-f", "status=completed", "-f", "listing=upload"]
 
 
 # --- Pure decisions -------------------------------------------------------------------------------------------------
@@ -109,8 +123,8 @@ def latest_tag(tags: list):
     """(the highest vX.Y.Z tag, None) or (None, why not)."""
     versions = [tag for tag in tags if tag.startswith("v")]
     if not versions:
-        return None, ("no vX.Y.Z tag yet: the first release is a human's (git tag vX.Y.Z on the released commit, "
-                      "docs/RELEASE.md); Ship compares with it from then on")
+        return None, ("no vX.Y.Z tag yet: create the first one on the last released commit (Ship by hand with "
+                      "baseline_tag and baseline_sha, or a tag pushed by hand, docs/RELEASE.md); Ship compares with it")
     wrong = [tag for tag in versions if parse_version(tag[1:]) is None]
     if wrong:
         return None, f"tag(s) {', '.join(sorted(wrong))} start with v but are not a version: a human sorts them out"
@@ -215,6 +229,38 @@ def apple_blockers(versions, submissions, version: str) -> list:
     return blockers
 
 
+def apple_catchup_blockers(versions, submissions, version: str) -> list:
+    """Why Apple cannot catch up with the tagged [version] now: Apple's gates, and any version of that very number on
+    App Store Connect past preparation (waiting, in review, approved, live, rejected, or withdrawn by a human)."""
+    blockers = apple_blockers(versions, submissions, version)
+    for item in versions or []:
+        attributes = item.get("attributes") or {}
+        if attributes.get("platform") not in APPLE_PLATFORMS:
+            continue
+        states = {state for state in (attributes.get("appStoreState"), attributes.get("appVersionState")) if state}
+        if parse_version(attributes.get("versionString") or "") == parse_version(version) and \
+                states - {"PREPARE_FOR_SUBMISSION"}:
+            blockers.append(f"{attributes.get('platform')} {version} was submitted already "
+                            f"({', '.join(sorted(states))}): a human decides")
+    return blockers
+
+
+def baseline_problems(tag: str, version, on_main: bool, exists: bool) -> list:
+    """Why the baseline tag [tag] cannot be created on a commit ([version]: the apps' version there, or why not)."""
+    problems = []
+    if not tag.startswith("v") or parse_version(tag[1:]) is None:
+        problems.append(f"{tag} is not vX.Y or vX.Y.Z")
+    if not on_main:
+        problems.append("the commit is not on main")
+    if version is None:
+        problems.append("the apps' version could not be read there")
+    elif tag.startswith("v") and parse_version(tag[1:]) is not None and parse_version(version) != parse_version(tag[1:]):
+        problems.append(f"the apps' version there is {version}, not {tag[1:]}")
+    if exists:
+        problems.append(f"tag {tag} already exists")
+    return problems
+
+
 def busy_queues(runs_by_workflow: dict) -> list:
     """The workflows of the release queues with a run waiting or running ([runs_by_workflow]: file → runs or None)."""
     busy = []
@@ -243,11 +289,22 @@ def platforms_to_ship(common: list, apple: list, android: list) -> tuple:
     return platforms, lines
 
 
-def plan(sha: str, tag: str, platforms: list, repository: str, dry_run: str, ref: str) -> list:
-    """The commands to run, in order: none unless DRY_RUN is the literal "false" on main and something ships."""
-    if dry_run != "false" or ref != "refs/heads/main" or not platforms or not sha or not tag:
+def plan(mode: str, sha: str, tag: str, platforms: list, repository: str, dry_run: str, ref: str) -> list:
+    """The commands to run, in order: none unless DRY_RUN is the literal "false" on main and something ships.
+    ship: the tag, then each platform's release; catchup: Apple's release on the existing tag, no tag; baseline: the
+    tag alone."""
+    if dry_run != "false" or ref != "refs/heads/main" or not sha or not tag:
         return []
-    commands = [["gh", "api", "-X", "POST", f"repos/{repository}/git/refs", "-f", f"ref=refs/tags/{tag}", "-f", f"sha={sha}"]]
+    create = ["gh", "api", "-X", "POST", f"repos/{repository}/git/refs", "-f", f"ref=refs/tags/{tag}", "-f", f"sha={sha}"]
+    if mode == "baseline":
+        return [create]
+    if mode == "catchup":
+        if platforms != ["apple"]:
+            return []
+        return [["gh", "workflow", "run", "release.yml", "--repo", repository, "--ref", tag, *RELEASE_APPLE]]
+    if mode != "ship" or not platforms:
+        return []
+    commands = [create]
     if "apple" in platforms:
         commands.append(["gh", "workflow", "run", "release.yml", "--repo", repository, "--ref", tag, *RELEASE_APPLE])
     if "android" in platforms:
@@ -329,10 +386,91 @@ def read_apple():
             client.close()
 
 
+def content_gates(run_git, base: str, commit: str, lines: list):
+    """Gates c and d between the tag [base] and [commit]: None when they hold, else why not."""
+    changed = run_git("diff", "--no-renames", "--name-only", base, commit).split()
+    apple_locales, play_locales = locales(run_git, commit, APPLE_METADATA), locales(run_git, commit, PLAY_METADATA)
+    texts = {path: show(run_git, commit, path) for path in
+             [APPLE_NOTES.format(locale=locale) for locale in apple_locales] +
+             [PLAY_NOTES.format(locale=locale) for locale in play_locales]}
+    missing = missing_notes(changed, apple_locales, play_locales, texts)
+    if missing:
+        return f"release notes not rewritten since {base}: {', '.join(missing)}"
+    shipped = []
+    for paths in DELIVER_PATHS.values():
+        shipped += run_git("diff", "--name-only", base, commit, "--", *paths.split()).split()
+    shipped = [path for path in shipped
+               if not (path in (PROJECT_YML, GRADLE) and version_only(run_git("diff", "-U0", base, commit, "--", path)))]
+    if not shipped:
+        return f"nothing the apps ship changed since {base} (a version bump alone does not count)"
+    lines.append(f"{len(shipped)} shipped file(s) changed since {base}, such as {shipped[0]}.")
+    return None
+
+
+def catchup(decision, stop, repository, run_git, api, apple, production, tags, tag, sha, version) -> dict:
+    """Apple catch-up on the existing [tag], when S carries its version: Release on that tag, no new tag."""
+    lines = decision["lines"]
+    decision["mode"], decision["tag"] = "catchup", tag
+    lines.append(f"Version {version} is already tagged {tag}: Apple catch-up only, no new tag.")
+    try:
+        tag_sha = run_git("rev-parse", f"{tag}^{{commit}}").strip()
+        run_git("merge-base", "--is-ancestor", tag_sha, sha)
+    except subprocess.CalledProcessError:
+        return stop(f"{tag} is not on the history of {sha}")
+    decision["sha"] = tag_sha
+    tagged, why = apps_version(show(run_git, tag_sha, PROJECT_YML), show(run_git, tag_sha, GRADLE))
+    if why or parse_version(tagged) != parse_version(version):
+        return stop(f"the apps' version at {tag} is not {version} ({why or tagged})")
+    previous, why = latest_tag([name for name in tags if name != tag])
+    if why:
+        return stop(f"no version tag before {tag}: a baseline tag is never submitted by Ship")
+    why = content_gates(run_git, previous, tag_sha, lines)
+    if why:
+        return stop(f"{tag} would not have passed Ship's gates: {why}")
+    if production("ci", tag_sha) != 0:
+        return stop(f"ci_scope.py production ci refused {tag_sha}")
+    busy = busy_queues(queue_runs(api, repository))
+    if busy:
+        return stop(f"a release queue is busy ({', '.join(busy)}): nothing waiting is pushed out; the next Ship tries again")
+    versions, submissions = apple()
+    blockers = apple_catchup_blockers(versions, submissions, version)
+    if blockers:
+        lines.extend(f"Apple catch-up blocked: {reason}" for reason in blockers)
+        decision["platforms"] = []
+        return decision
+    decision["platforms"] = ["apple"]
+    return decision
+
+
+def evaluate_baseline(tag: str, sha: str, run_git=git, head: str = "HEAD") -> dict:
+    """The first version tag, created by hand through Ship: checked, nothing else started."""
+    decision = {"mode": "baseline", "sha": None, "version": None, "tag": tag, "platforms": [], "lines": []}
+    try:
+        commit = run_git("rev-parse", "--verify", f"{sha}^{{commit}}").strip()
+    except subprocess.CalledProcessError:
+        decision["lines"].append(f"No baseline: {sha} is not a commit")
+        return decision
+    try:
+        run_git("merge-base", "--is-ancestor", commit, head)
+        on_main = True
+    except subprocess.CalledProcessError:
+        on_main = False
+    version, _ = apps_version(show(run_git, commit, PROJECT_YML), show(run_git, commit, GRADLE))
+    exists = bool(run_git("tag", "--list", tag).strip())
+    problems = baseline_problems(tag, version, on_main, exists)
+    decision["sha"], decision["version"] = commit, version
+    if problems:
+        decision["lines"] += [f"No baseline: {problem}" for problem in problems]
+        return decision
+    decision["platforms"] = ["baseline"]
+    decision["lines"].append(f"Baseline {tag} on {commit} (version {version}): the tag alone, nothing started.")
+    return decision
+
+
 def evaluate(repository: str, run_git=git, api=gh_api, apple=read_apple, production=None, head: str = "HEAD") -> dict:
     """Every gate, in order; the first shared one that fails stops the reading. Returns the decision."""
     production = production or (lambda workflow, sha: ci_scope.production(workflow, sha, repository, api))
-    decision = {"sha": None, "version": None, "tag": None, "platforms": [], "lines": []}
+    decision = {"mode": "ship", "sha": None, "version": None, "tag": None, "platforms": [], "lines": []}
     lines = decision["lines"]
 
     def stop(reason: str) -> dict:
@@ -359,7 +497,8 @@ def evaluate(repository: str, run_git=git, api=gh_api, apple=read_apple, product
         if production(workflow, sha) != 0:
             return stop(f"ci_scope.py production {workflow} refused {sha}")
 
-    tag, why = latest_tag(run_git("tag", "--list", "v*").split())
+    tags = run_git("tag", "--list", "v*").split()
+    tag, why = latest_tag(tags)
     if why:
         return stop(why)
     version, why = apps_version(show(run_git, sha, PROJECT_YML), show(run_git, sha, GRADLE))
@@ -367,27 +506,16 @@ def evaluate(repository: str, run_git=git, api=gh_api, apple=read_apple, product
         return stop(why)
     decision["version"], decision["tag"] = version, f"v{version}"
     lines.append(f"Version {version} at {sha}; last tag {tag}.")
+    if parse_version(version) == parse_version(tag[1:]):
+        return catchup(decision, stop, repository, run_git, api, apple, production, tags, tag, sha, version)
     if not newer(version, tag):
         return stop(f"version {version} is not above {tag}: the owner bumps it with the work (the workflow never does)")
     if run_git("tag", "--list", decision["tag"]).strip():
         return stop(f"tag {decision['tag']} already exists")
 
-    changed = run_git("diff", "--no-renames", "--name-only", tag, sha).split()
-    apple_locales, play_locales = locales(run_git, sha, APPLE_METADATA), locales(run_git, sha, PLAY_METADATA)
-    texts = {path: show(run_git, sha, path) for path in
-             [APPLE_NOTES.format(locale=locale) for locale in apple_locales] +
-             [PLAY_NOTES.format(locale=locale) for locale in play_locales]}
-    missing = missing_notes(changed, apple_locales, play_locales, texts)
-    if missing:
-        return stop(f"release notes not rewritten since {tag}: {', '.join(missing)}")
-    shipped = []
-    for paths in DELIVER_PATHS.values():
-        shipped += run_git("diff", "--name-only", tag, sha, "--", *paths.split()).split()
-    shipped = [path for path in shipped
-               if not (path in (PROJECT_YML, GRADLE) and version_only(run_git("diff", "-U0", tag, sha, "--", path)))]
-    if not shipped:
-        return stop(f"nothing the apps ship changed since {tag} (a version bump alone does not count)")
-    lines.append(f"{len(shipped)} shipped file(s) changed since {tag}, such as {shipped[0]}.")
+    why = content_gates(run_git, tag, sha, lines)
+    if why:
+        return stop(why)
 
     busy = busy_queues(queue_runs(api, repository))
     if busy:
@@ -404,27 +532,39 @@ def main() -> int:
     repository = os.environ.get("GITHUB_REPOSITORY", "")
     dry_run = os.environ.get("DRY_RUN", "true")
     ref = os.environ.get("GITHUB_REF", "")
+    baseline_tag, baseline_sha = os.environ.get("BASELINE_TAG", "").strip(), os.environ.get("BASELINE_SHA", "").strip()
+    if baseline_tag or baseline_sha:
+        if os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch" or not baseline_tag or not baseline_sha:
+            print("::error::A baseline needs baseline_tag and baseline_sha, in a run by hand: nothing created.")
+            return 1
     try:
-        decision = evaluate(repository)
+        decision = evaluate_baseline(baseline_tag, baseline_sha) if baseline_tag else evaluate(repository)
     except Exception as error:  # noqa: BLE001 - when unsure, nothing ships
         # Red: a gate that does not hold is a quiet day, a decision that cannot be made is a fault to look at.
         print(f"::error::No ship: the decision failed ({error})")
         return 1
     for line in decision["lines"]:
         print(line)
-    platforms, tag = decision["platforms"], decision["tag"]
-    summary = (f"Ship {tag} ({decision['sha']}): {', '.join(platforms)}" if platforms else "No ship today")
-    commands = plan(decision["sha"], tag, platforms, repository, dry_run, ref)
+    mode, platforms, tag = decision["mode"], decision["platforms"], decision["tag"]
+    if mode == "baseline":
+        summary = f"Baseline {tag} on {decision['sha']}" if platforms else "No baseline"
+    elif mode == "catchup":
+        summary = f"Apple catch-up of {tag} ({decision['sha']})" if platforms else "No ship today"
+    else:
+        summary = f"Ship {tag} ({decision['sha']}): {', '.join(platforms)}" if platforms else "No ship today"
+    commands = plan(mode, decision["sha"], tag, platforms, repository, dry_run, ref)
     if platforms and not commands:
         summary += f" (dry run: nothing created or started; DRY_RUN={dry_run}, {ref})"
     print(summary)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as output:
             output.write(f"### {summary}\n\n" + "".join(f"- {line}\n" for line in decision["lines"]))
+    if mode == "baseline" and not platforms:
+        return 1
     for index, command in enumerate(commands):
         result = subprocess.run(command, capture_output=True, text=True)
         if result.returncode != 0:
-            if index == 0:
+            if index == 0 and mode != "catchup":
                 # A human's tag of the same name, a ruleset, a missing permission: nothing was started.
                 print(f"::error::The tag {tag} could not be created ({result.stderr.strip()}): nothing was started.")
             else:
@@ -432,9 +572,9 @@ def main() -> int:
                       f"what is left by hand: {recovery(tag, repository, platforms)}")
             return 1
         print(" ".join(command[:4]) + f" {tag}: done")
-    if commands and "apple" not in platforms:
-        print(f"::warning::{tag} went to Google Play only. Once App Store Connect is clear, a human submits it: "
-              f"{recovery(tag, repository, ['apple'])}")
+    if commands and mode == "ship" and "apple" not in platforms:
+        print(f"::warning::{tag} went to Google Play only. Once App Store Connect is clear, Ship's Apple catch-up submits "
+              f"it after a green night; by hand: {recovery(tag, repository, ['apple'])}")
     return 0
 
 

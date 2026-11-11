@@ -187,8 +187,13 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
      on, Google refuses the automatic sending and the run fails, saying so.
    - **Ship**, after each green night (the owner's standing go, CLAUDE.md): the *Ship* workflow (`ship.yml`) creates
      the next version tag itself on the commit the night tested, then starts this workflow from that tag with the
-     `alpha` track, status `completed` and the listing, exactly what a tag push does (a tag made by a workflow fires no
-     push, so Ship starts it; a tag you push starts it through its push, and Ship then does nothing). It ships only
+     `internal` track, status `completed` and the listing (`upload`): the build and the listing go up as a push's
+     delivery sends them, with `KEEP_PLAY_REVIEW` (every commit asks `ERROR_IF_IN_REVIEW`), so **a review in progress
+     is never cancelled or restarted**; the *Closed testing* step then sends the build to closed testing for review,
+     or *Play catch-up* does once the review is over. If Google Play refuses even the internal upload during a review,
+     the run says so and that tag's build stays out; the next push's delivery sends one of the same version. (A tag
+     made by a workflow fires no push, so Ship starts the run; a tag you push starts it through its push, on `alpha`,
+     and Ship then does nothing.) It ships only
      when the long *CI* and *Android* tests passed on that very commit, the version (equal in both apps) is above the
      last tag, the release notes changed in every App Store and Google Play language (`changelogs/default.txt` here),
      something the apps ship changed, and no release queue is busy; App Store Connect blocking Apple does not hold
