@@ -187,6 +187,7 @@ class FakeReadOnlyConnect:
             "/v2/inAppPurchases/medium/inAppPurchaseAvailability": {"data": None},
             "/v2/inAppPurchases/medium/appStoreReviewScreenshot": {"data": None},
             "/v1/inAppPurchaseVersions/v1/image": {"data": None},
+            "/v1/apps/app/appAvailabilityV2": {"data": {"id": "appavail", "attributes": {"availableInNewTerritories": True}}},
         }
         if path not in answers:
             raise AssertionError(path)
@@ -205,6 +206,9 @@ class FakeReadOnlyConnect:
                     {"attributes": {"locale": "en-US", "name": "Small tip", "description": "", "state": "PREPARE_FOR_SUBMISSION"}}]
         if path == "/v2/inAppPurchases/medium/inAppPurchaseLocalizations":
             return []
+        if path == "/v2/appAvailabilities/appavail/territoryAvailabilities":
+            return [{"attributes": {"available": on}, "relationships": {"territory": {"data": {"type": "territories", "id": code}}}}
+                    for code, on in (("FRA", True), ("USA", True), ("CHN", False), ("RUS", False))]
         if path == "/v1/inAppPurchaseAvailabilities/availability/availableTerritories":
             return [{"id": "FRA"}, {"id": "USA"}, {"id": "BRA"}]
         if path.endswith("/versions"):
@@ -258,6 +262,8 @@ class InAppPurchaseReportTest(unittest.TestCase):
         self.assertIn("missing on App Store Connect: com.markedoe.ondo.tip.large", text)
         self.assertLess(text.index("IOS 2.0.0: appStoreState PREPARE_FOR_SUBMISSION, appVersionState PREPARE_FOR_SUBMISSION"),
                         text.index("MAC_OS 1.1.0: appStoreState READY_FOR_SALE"))
+        self.assertIn("app availability: 2 of 4 territories, new territories yes, CHN not available", text)
+        self.assertIn("not available in: CHN, RUS", text)
 
     def test_a_refused_read_is_reported_and_the_report_goes_on(self):
         fake = FakeReadOnlyConnect([product("small", "com.markedoe.ondo.tip.small")], refuse=("iapPriceSchedule",))
@@ -274,3 +280,10 @@ class InAppPurchaseReportTest(unittest.TestCase):
 
     def test_the_other_actions_still_end_the_run_on_a_refusal(self):
         self.assertTrue(issubclass(asset_library.ApiError, SystemExit))
+
+    def test_availability_names_mainland_china(self):
+        def territory(code, on):
+            return {"attributes": {"available": on}, "relationships": {"territory": {"data": {"id": code}}}}
+        self.assertEqual(["app availability: 2 of 2 territories, new territories no, CHN available", "not available in: none"],
+                         asset_library.describe_availability([territory("CHN", True), territory("FRA", True)], "no"))
+        self.assertIn("CHN not listed", asset_library.describe_availability([territory("FRA", True)], "yes")[0])

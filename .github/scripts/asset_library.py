@@ -433,6 +433,30 @@ def iap(client: Client):
     versions = reader.attempt("App Store versions", lambda: reader.all(f"/v1/apps/{app}/appStoreVersions", query={"limit": "200"}))
     for line in describe_versions(versions or []) if versions is not None else []:
         print(line)
+    print("== App availability")
+    availability = reader.attempt("app availability", lambda: reader.get(f"/v1/apps/{app}/appAvailabilityV2"))
+    data = (availability or {}).get("data")
+    if availability is not None and not data:
+        print("app availability: NOT SET")
+    elif data:
+        territories = reader.attempt("territory availabilities", lambda: reader.all(
+            f"/v2/appAvailabilities/{data['id']}/territoryAvailabilities", query={"include": "territory", "limit": "200"}))
+        new = "yes" if data.get("attributes", {}).get("availableInNewTerritories") else "no"
+        for line in describe_availability(territories or [], new) if territories is not None else []:
+            print(line)
+
+
+def describe_availability(territories: list, new: str) -> list:
+    """Where the app is on sale: how many territories, mainland China's state, the ones it is not in."""
+    state = {}
+    for item in territories:
+        code = ((item.get("relationships") or {}).get("territory") or {}).get("data", {}).get("id") or "?"
+        state[code] = bool((item.get("attributes") or {}).get("available"))
+    available = sorted(code for code, on in state.items() if on)
+    missing = sorted(code for code, on in state.items() if not on)
+    china = "available" if state.get("CHN") else ("not available" if "CHN" in state else "not listed")
+    return [f"app availability: {len(available)} of {len(state)} territories, new territories {new}, CHN {china}",
+            f"not available in: {', '.join(missing) if missing else 'none'}"]
 
 
 def send_parts(operations: list, content: bytes) -> None:

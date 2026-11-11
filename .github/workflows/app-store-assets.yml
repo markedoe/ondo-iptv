@@ -8,7 +8,8 @@ name: App Store header and search results
 #   submit  for review on their own, once an iOS version is approved; refused while one is in review. Run it only
 #           with the user's go (CLAUDE.md)
 #   publish the approved assets onto the live iOS version, without a new version
-#   iap     where the tips' In-App Purchases stand, and every App Store version's state (read only: GET requests only)
+#   iap     where the tips' In-App Purchases stand, every App Store version's state and the app's territories
+#           (read only: GET requests only)
 #   iap_create  creates or completes the three tips (fastlane/tips.json): names and descriptions in every listing
 #           language, price in euros (France as base territory), every territory, review screenshot when
 #           fastlane/creative/iap-review.png exists. Idempotent, deletes nothing, submits nothing: a version tag
