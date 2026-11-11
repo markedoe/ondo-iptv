@@ -178,7 +178,7 @@ réseau, fichiers choisis par l'utilisateur).
      testeurs, sauf si un autre lancement de *Release* attend déjà (celui d'un tag plus récent, les builds d'un
      push) : il n'est pas remplacé. Le même tag envoie Android en test fermé (RELEASE-ANDROID.fr.md).
    - **Ship, après chaque nuit au vert : le go permanent** (CLAUDE.md). Le workflow *Ship* (`ship.yml`, chaque jour
-     à 13 h 17 UTC, quelques heures après les runs de la nuit ; `.github/scripts/ship.py`) fait de lui-même ce que
+     à 13 h 17 et 19 h 17 UTC, quelques heures après les runs de la nuit ; `.github/scripts/ship.py`) fait de lui-même ce que
      fait le push d'un tag quand toutes les conditions sont réunies ; sinon il n'envoie rien et dit pourquoi dans son
      journal et son résumé :
      - les derniers runs planifiés de *CI* et d'*Android* sur `main` ont réussi **sur le même commit**, ce commit est

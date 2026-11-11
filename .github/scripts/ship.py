@@ -407,8 +407,9 @@ def main() -> int:
     try:
         decision = evaluate(repository)
     except Exception as error:  # noqa: BLE001 - when unsure, nothing ships
-        print(f"::warning::No ship: the decision failed ({error})")
-        return 0
+        # Red: a gate that does not hold is a quiet day, a decision that cannot be made is a fault to look at.
+        print(f"::error::No ship: the decision failed ({error})")
+        return 1
     for line in decision["lines"]:
         print(line)
     platforms, tag = decision["platforms"], decision["tag"]

@@ -178,7 +178,7 @@ user-selected files).
      for the testers, unless another *Release* run is already waiting (a newer tag's, a push's builds): it is not
      replaced. The same tag sends Android to closed testing (RELEASE-ANDROID.md).
    - **Ship, after each green night: the standing go** (CLAUDE.md). The *Ship* workflow (`ship.yml`, every day at
-     13:17 UTC, some hours after the night's runs; `.github/scripts/ship.py`) does what a tag push does, by itself,
+     13:17 and 19:17 UTC, some hours after the night's runs; `.github/scripts/ship.py`) does what a tag push does, by itself,
      when every gate holds, and otherwise ships nothing and says why in its log and summary:
      - the latest scheduled runs of *CI* and *Android* on `main` both passed **on the same commit**, that commit is on
        `main`, and `ci_scope.py production ci|android` accept it (the long tests passed on exactly it). That commit

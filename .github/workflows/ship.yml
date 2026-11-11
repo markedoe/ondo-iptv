@@ -8,10 +8,12 @@ name: Ship
 # its push and Ship then finds the tag and does nothing. Never bumps a version, never commits, never Google Play
 # production.
 on:
-  # Some hours after the night's runs (ci.yml, android.yml at 01:47, which GitHub often starts hours late): a night
-  # still running means no ship that day, never a guess.
+  # Some hours after the night's runs (ci.yml, android.yml at 01:47, which GitHub often starts hours late: 08:00 to
+  # 08:51 UTC in November 2026). A night still running or a busy release queue means no ship at that time, never a
+  # guess; the second time tries again, and finds the tag when the first one shipped.
   schedule:
     - cron: "17 13 * * *"
+    - cron: "17 19 * * *"
   workflow_dispatch:
     inputs:
       dry_run:

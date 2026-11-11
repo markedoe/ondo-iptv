@@ -437,6 +437,17 @@ class EvaluateTests(unittest.TestCase):
         self.git("tag", "v2.0.1", self.released)
         self.assert_no_ship(self.evaluate(), "v2.0.1")
 
+    def test_an_existing_tag_of_this_version_ships_nothing_on_its_own(self):
+        # Gate f alone: a tag list that hides the new tag from gate b (a tag not fetched) still finds it by name.
+        def run_git(*args):
+            if args[:3] == ("tag", "--list", "v*"):
+                return "v2.0.0\n"
+            if args[:3] == ("tag", "--list", "v2.0.1"):
+                return "v2.0.1\n"
+            return self.git(*args)
+        decision = ship.evaluate("o/r", run_git=run_git, api=self.api, apple=self.apple, production=lambda *_: 0)
+        self.assert_no_ship(decision, "tag v2.0.1 already exists")
+
     def test_notes_missing_in_one_language_ship_nothing(self):
         for skip, path in (("fr-FR", ship.APPLE_NOTES.format(locale="fr-FR")),
                            ("play-en-US", ship.PLAY_NOTES.format(locale="en-US"))):
@@ -507,6 +518,15 @@ class MainTests(unittest.TestCase):
                 mock.patch("builtins.print") as printed:
             code = ship.main()
         return code, calls, "\n".join(" ".join(str(arg) for arg in call.args) for call in printed.call_args_list)
+
+    def test_a_decision_that_fails_turns_the_run_red_and_starts_nothing(self):
+        def failing(repository):
+            raise RuntimeError("git missing")
+        with mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": "o/r", "DRY_RUN": "false", "GITHUB_REF": "refs/heads/main"}), \
+                mock.patch.object(ship, "evaluate", failing), mock.patch.object(ship.subprocess, "run") as run, \
+                mock.patch("builtins.print"):
+            self.assertEqual(ship.main(), 1)
+        run.assert_not_called()
 
     def test_a_dry_run_starts_nothing(self):
         code, calls, output = self.run_main(["apple", "android"], "true")
