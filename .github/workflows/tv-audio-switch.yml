@@ -29,7 +29,7 @@ on:
         description: Android TV system image (API level; 31 or later runs the frame-rate code)
         default: "30"
       arch:
-        description: System image architecture (the Android TV images are x86: there is no android-tv x86_64 image for API 34)
+        description: "System image architecture (the Android TV images are x86; there is no android-tv x86_64 image for API 34)"
         default: "x86"
 
 concurrency:
