@@ -163,6 +163,10 @@ fun TvHomeScreen(
         actions.onRemoveResume(item)
     }
     val hasHero = state.hero.isNotEmpty()
+    // The featured titles not read yet (the saved catalogue still being read at a cold start, or the first download):
+    // the frame's place is kept, with a wheel, so the rows don't move down when the carousel comes in.
+    val heroPending = !hasHero && (state.isRestoring || (state.isLoading && state.updatedAt == null))
+    val heroRoom = hasHero || heroPending
     // The poster with the focus in the rows, which the frame above shows while the rows have the focus.
     val focus = remember { FocusedTitle() }
     var rowsHaveFocus by remember { mutableStateOf(false) }
@@ -257,6 +261,7 @@ fun TvHomeScreen(
         }
         Column(Modifier.fillMaxSize()) {
             if (hero != null) TvHero(state.hero, hero, heroIndex, { heroIndex = it }, actions, autoAdvance, preparingKey, rowsHaveFocus, heroHeight) { heroHasFocus = it }
+            else if (heroPending) TvHeroPlaceholder(fullHeight)
             // The rows' list is as tall as it is under the smaller frame, the frame full size or not: its part below the
             // screen shows as the frame shrinks. The focus going down from the frame then scrolls the rows as their
             // place will be, not as it is for the moment the frame shrinks: the first row comes in whole, its name too,
@@ -265,20 +270,20 @@ fun TvHomeScreen(
                 .weight(1f)
                 .fillMaxWidth()
                 .onFocusChanged { rowsHaveFocus = it.hasFocus }
-                .tallerBy { if (hasHero) heroHeight() - compactHeight else 0.dp }
+                .tallerBy { if (heroRoom) heroHeight() - compactHeight else 0.dp }
                 .testTag("homeRows")
             val rows: @Composable () -> Unit = {
                 LazyColumn(
                     state = listState,
                     modifier = rowsModifier,
-                    contentPadding = PaddingValues(top = if (hasHero) 18.dp else 0.dp, bottom = 40.dp),
+                    contentPadding = PaddingValues(top = if (heroRoom) 18.dp else 0.dp, bottom = 40.dp),
                     verticalArrangement = Arrangement.spacedBy(22.dp),
                 ) {
-                    if (!hasHero) item(key = "hero") { TvHomeHeader(state) }
+                    if (!heroRoom) item(key = "hero") { TvHomeHeader(state) }
                     state.tagSuggestion?.let { suggestion ->
                         item(key = "suggestion") {
                             // Above the first row under the frame: kept for the remote's Up.
-                            if (hasHero) KeptForTheRemote()
+                            if (heroRoom) KeptForTheRemote()
                             TvTagSuggestion(suggestion, actions)
                         }
                     }
@@ -335,7 +340,7 @@ fun TvHomeScreen(
             CompositionLocalProvider(LocalFocusedTitle provides focus) {
                 // Under the frame, the focused card lands at the same place at every press, never down to the screen's
                 // bottom: the rows run to it, the 5 % a TV may crop kept below the focused card.
-                if (hasHero) TvPinnedHeaderList(lead = HOME_ROW_LEAD, edge = TvTokens.EdgeTop, content = rows) else rows()
+                if (heroRoom) TvPinnedHeaderList(lead = HOME_ROW_LEAD, edge = TvTokens.EdgeTop, content = rows) else rows()
             }
         }
     }
@@ -504,6 +509,31 @@ private class FirstItem(var key: String?)
 
 /** Play's place in Home's focus memory: where Home starts. */
 private const val HERO_PLAY = "hero-play"
+
+/**
+ * The carousel's place while its titles are read: the full frame's size and corners (not smaller while the first card
+ * has the focus meanwhile), a wheel in it, nothing to focus.
+ */
+@Composable
+private fun TvHeroPlaceholder(height: Dp) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = TvTokens.ContentStart, top = tvTopBarSpace(), end = TvTokens.EdgeEnd)
+            .testTag("heroPlaceholder"),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(height)
+                .clip(HeroShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.material3.CircularProgressIndicator(Modifier.size(36.dp), color = MaterialTheme.colorScheme.onSurface, strokeWidth = 3.dp)
+        }
+    }
+}
 
 /**
  * Measures the content [extra] taller than the room it is given, its top where it is: the part beyond hangs below

@@ -137,6 +137,26 @@ class TvHomeOpensAtTheTopTest {
         assertTrue("the rows from their first: $firstShelf at ${shelf.top}, the frame ending at $heroBottom", shelf.top >= heroBottom && shelf.top <= heroBottom + 24.dp)
     }
 
+    /**
+     * At a cold start the saved catalogue is still being read: the rows to continue watching show first, the carousel's
+     * titles after. The carousel's place is kept meanwhile (a wheel in the frame), so the rows don't jump down when it
+     * comes in: the first row at the same place before and after.
+     */
+    @Test
+    fun theCarouselsPlaceIsKeptWhileTheCatalogueIsRead() {
+        val reading = HomeUiState(playlistName = "Example Playlist", continueWatching = resume, isRestoring = true)
+        show(reading)
+        assertTrue("the frame's place kept while the catalogue is read", compose.onAllNodesWithTag("heroPlaceholder", useUnmergedTree = true).fetchSemanticsNodes().size == 1)
+        val before = compose.onNodeWithTag("shelfResumeMovies", useUnmergedTree = true).getUnclippedBoundsInRoot().top
+        val placeholder = compose.onNodeWithTag("heroPlaceholder", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("the place is the full frame's: ${placeholder.height}", placeholder.height >= 260.dp)
+        homeState = reading.copy(isRestoring = false, hero = hero, newMovies = movies, hasVod = true)
+        advance(1_500)
+        assertTrue("the wheel gone once the carousel is there", compose.onAllNodesWithTag("heroPlaceholder", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        val after = compose.onNodeWithTag("shelfResumeMovies", useUnmergedTree = true).getUnclippedBoundsInRoot().top
+        assertTrue("the first row did not move: $before then $after", (after - before).value in -1f..1f)
+    }
+
     @Test
     fun continueWatchingFirstThenTheFeaturedTitles() = assertOpensAtTheTop(
         HomeUiState(playlistName = "Example Playlist", continueWatching = resume, newMovies = movies, newSeries = shows, hasVod = true),
