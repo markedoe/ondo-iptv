@@ -123,4 +123,35 @@ class TrackChoicesTest {
         assertEquals(listOf("Catalan", "Français (1)", "Français (2)", "Français"), choices.map { it.name })
         assertEquals(listOf(null, null, null, "Forcés"), choices.map { it.detail })
     }
+
+    /**
+     * Another audio track of a film (5.1 AC-3 to 5.1 AC-3, sent as it is to the TV) goes back to where the film is:
+     * without that seek, the pictures fell behind the new track's sound and dropped until the film was opened again.
+     * The track already playing, a subtitle, or a live channel: no seek.
+     */
+    @Test
+    fun anotherAudioTrackOfAFilmSeeksToWhereItIs() {
+        fun player(live: Boolean = false) = FakeTracksPlayer(
+            listOf(
+                FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AC3, channels = 6),
+                FakeTracksPlayer.audio("fr", MimeTypes.AUDIO_AC3, channels = 6),
+            ),
+            initiallySelected = setOf(0),
+            positionMs = 178_000,
+            live = live,
+        )
+        val film = player()
+        val choices = TrackChoices.of((film as Player).currentTracks, C.TRACK_TYPE_AUDIO, french, Locale.FRENCH)
+        TrackChoices.choose(film, C.TRACK_TYPE_AUDIO, choices[1])
+        assertEquals("the French track plays", listOf(false, true), TrackChoices.of((film as Player).currentTracks, C.TRACK_TYPE_AUDIO, french, Locale.FRENCH).map { it.selected })
+        assertEquals("the film goes back to where it is", listOf(178_000L), film.seeks)
+
+        val same = player()
+        TrackChoices.choose(same, C.TRACK_TYPE_AUDIO, TrackChoices.of((same as Player).currentTracks, C.TRACK_TYPE_AUDIO, french, Locale.FRENCH)[0])
+        assertEquals("the track already playing: no seek", emptyList<Long>(), same.seeks)
+
+        val channel = player(live = true)
+        TrackChoices.choose(channel, C.TRACK_TYPE_AUDIO, TrackChoices.of((channel as Player).currentTracks, C.TRACK_TYPE_AUDIO, french, Locale.FRENCH)[1])
+        assertEquals("a live channel keeps its place", emptyList<Long>(), channel.seeks)
+    }
 }

@@ -31,6 +31,8 @@ class FakeTracksPlayer(
     private val unsupported: Set<Int> = emptySet(),
     /** False until the stream's tracks are known ([tracksArrive]), as ExoPlayer before its first `onTracksChanged`. */
     private var tracksKnown: Boolean = true,
+    /** A live channel (a live configuration), not a film. */
+    private val live: Boolean = false,
 ) : SimpleBasePlayer(Looper.getMainLooper()) {
     private val groups = formats.mapIndexed { index, (_, format) -> TrackGroup("group-$index", format) }
     private var parameters = TrackSelectionParameters.DEFAULT
@@ -71,6 +73,7 @@ class FakeTracksPlayer(
                     .setTracks(tracks())
                     .setDurationUs(durationMs * 1_000)
                     .setIsSeekable(seekable)
+                    .setLiveConfiguration(if (live) MediaItem.LiveConfiguration.UNSET else null)
                     .build(),
             ),
         )

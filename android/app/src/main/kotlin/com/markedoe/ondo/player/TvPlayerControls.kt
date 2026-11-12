@@ -759,7 +759,7 @@ internal fun trackWords(): TrackWords {
 private fun LazyListScope.tracks(player: Player, controls: PlayerControls, type: Int, choices: List<TrackChoice>, first: FocusRequester, online: OnlineSubtitles? = null) {
     val off = choices.none { it.selected }
     val choose = { choice: TrackChoice? ->
-        player.trackSelectionParameters = TrackChoices.select(player.trackSelectionParameters, type, choice)
+        TrackChoices.choose(player, type, choice)
         controls.closePanel()
     }
     if (type == C.TRACK_TYPE_TEXT) {

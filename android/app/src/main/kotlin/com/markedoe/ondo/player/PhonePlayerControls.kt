@@ -741,7 +741,7 @@ private fun PanelContent(
 
 private fun LazyListScope.trackRows(player: Player, controls: PlayerControls, type: Int, choices: List<TrackChoice>, online: OnlineSubtitles? = null) {
     val choose = { choice: TrackChoice? ->
-        player.trackSelectionParameters = TrackChoices.select(player.trackSelectionParameters, type, choice)
+        TrackChoices.choose(player, type, choice)
         controls.closePanel()
     }
     if (type == C.TRACK_TYPE_TEXT) {

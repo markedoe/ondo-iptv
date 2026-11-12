@@ -5,6 +5,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
@@ -131,6 +132,20 @@ object TrackChoices {
             if (type == C.TRACK_TYPE_TEXT) builder.setIgnoredTextSelectionFlags(0)
         }
         return builder.build()
+    }
+
+    /**
+     * The viewer's [choice] for [type] applied to [player]. Another audio track of a film, an episode or a replay is
+     * followed by a seek to where it is: ExoPlayer otherwise keeps the clock of the track it left (a 5.1 track sent as it
+     * is to the TV in particular), the pictures fall behind the sound and drop until the video is opened again. Live
+     * channels keep their place: nothing to catch up.
+     */
+    fun choose(player: Player, type: Int, choice: TrackChoice?) {
+        val changed = choice == null || !choice.selected
+        player.trackSelectionParameters = select(player.trackSelectionParameters, type, choice)
+        if (type == C.TRACK_TYPE_AUDIO && changed && player.isCurrentMediaItemSeekable && !player.isCurrentMediaItemLive) {
+            player.seekTo(player.currentPosition)
+        }
     }
 
     /** "English" (or "Portuguese (Brazil)") in [locale]'s words; null for no language or one Java does not know. */
