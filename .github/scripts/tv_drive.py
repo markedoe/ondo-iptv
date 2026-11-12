@@ -1455,28 +1455,33 @@ def dropped_by_window(report, bounds):
 
 
 def audio_run(tv, args, case, choose):
-    """One film of [case] from its start: 15 s, Stream Statistics on, measured [args.window] s, the audio language
-    switched (or, for the control, the Audio panel only opened and closed), measured twice more, then played to its
-    end (how late it ends tells the speed)."""
+    """One film of [case] from its start: Stream Statistics on, a few seconds, measured [args.window] s, the audio
+    language switched (or, for the control, the Audio panel only opened and closed), measured twice more, the track
+    playing then read from the panel and the app's report kept, the player left. The film is long enough for the
+    remote's pace (each screen read takes seconds while the video plays): a player that closes meanwhile stops the run."""
     run = f"{case}-{'switch' if choose else 'control'}"
     tv.say(f"  audio: {run}")
     pressed = open_movie_one(tv)
     show_statistics(tv)
-    tv.stay(max(0.0, 15 - (time.monotonic() - pressed)), "the film's first seconds")
+    tv.stay(5, "the statistics on")
     frame_ms = 1000 / args.film_fps
     windows = []
     bounds = []
-    start = time.monotonic() - pressed
-    windows.append(measure(tv, f"{run}-before", args.window, frame_ms))
-    bounds.append(("before", start, time.monotonic() - pressed))
+
+    def window(name):
+        start = time.monotonic() - pressed
+        windows.append(measure(tv, f"{run}-{name}", args.window, frame_ms))
+        bounds.append((name, start, time.monotonic() - pressed))
+        if not tv.player_shown():
+            raise TimeoutError(f"{run}: the player closed while measuring {name}, {start:.0f} s into the {args.film_seconds:.0f} s film")
+
+    window("before")
     switched_at = time.monotonic() - pressed
     playing, chosen = switch_audio(tv, choose)
     tv.say(f"  audio: {run}: playing {playing!r}, chosen {chosen!r} at {switched_at:.0f} s")
     tv.stay(3, "after the audio switch")
-    for name in ("after", "later"):
-        start = time.monotonic() - pressed
-        windows.append(measure(tv, f"{run}-{name}", args.window, frame_ms))
-        bounds.append((name, start, time.monotonic() - pressed))
+    window("after")
+    window("later")
     tv.note_screen(f"{run}-measured")
     # The track playing now, as the panel says it (the remote opens it on that row).
     now_playing, _ = switch_audio(tv, False)
@@ -1484,26 +1489,19 @@ def audio_run(tv, args, case, choose):
     with open(os.path.join(tv.out, f"report-{run}.txt"), "w") as f:
         f.write(report)
     dropped = dropped_by_window(report, bounds)
-    for window, (name, _, _) in zip(windows, bounds):
-        window["media3_dropped"] = dropped.get(name)
-    deadline = pressed + args.film_seconds + 90
-    while tv.player_shown() and time.monotonic() < deadline:
-        time.sleep(1)
-        tv.check_alive(f"{run}: to the film's end")
-    closed = not tv.player_shown()
-    ended = time.monotonic() - pressed
-    if not closed:
-        tv.leave_player()
+    for measured, (name, _, _) in zip(windows, bounds):
+        measured["media3_dropped"] = dropped.get(name)
+    tv.say(f"  audio: {run}: done {time.monotonic() - pressed:.0f} s into the film")
+    tv.leave_player()
     return {
         "run": run, "case": case, "switched": chosen is not None, "playing_before": playing, "chosen": chosen,
-        "playing_after": now_playing, "switched_at_s": round(switched_at, 1),
-        "film_s": args.film_seconds, "ended_after_s": round(ended, 1) if closed else None,
-        "windows": windows,
+        "playing_after": now_playing, "switched_at_s": round(switched_at, 1), "windows": windows,
     }
 
 
 def compare(control, switch, args):
-    """What the switch run lost against its own time before the switch, and against the control run's end."""
+    """What the switch run lost after the switch against its own time before it (the control run is read beside it: the
+    panel opened and closed without a switch)."""
     problems = []
     before = switch["windows"][0]
     for window in switch["windows"][1:]:
@@ -1524,10 +1522,6 @@ def compare(control, switch, args):
         jank_b, jank_a = before["ui_janky"], window["ui_janky"]
         if jank_b is not None and jank_a is not None and jank_a - jank_b > max(10, 2 * jank_b):
             problems.append(f"{name}: {jank_a} janky UI frames against {jank_b} before")
-    if control and control["ended_after_s"] and switch["ended_after_s"]:
-        late = switch["ended_after_s"] - control["ended_after_s"]
-        if late > args.late_margin:
-            problems.append(f"the film ended {late:.0f} s later than without the switch (slower playback)")
     return problems
 
 
@@ -1548,7 +1542,7 @@ def audio_summary(results, problems):
     for run in results:
         lines.append(
             f"- {run['run']}: playing `{run['playing_before']}`, chosen `{run['chosen']}` at {run['switched_at_s']} s, then playing "
-            f"`{run['playing_after']}`; the {run['film_s']:.0f} s film closed after {run['ended_after_s']} s"
+            f"`{run['playing_after']}`"
         )
     lines.append("")
     lines.append("**Problems:** " + ("; ".join(problems) if problems else "none beyond the margins"))
@@ -1632,14 +1626,13 @@ def main():
     parser.add_argument("--audio-media", default="media", help="audioswitch: the folder of the cases' films (<case>.mkv) and the panel's clip.mkv")
     parser.add_argument("--audio-cases", default="aac-aac", help="audioswitch: the cases, comma-separated (their films <case>.mkv)")
     parser.add_argument("--audio-control", action="store_true", help="audioswitch: for each case, a run without the switch first")
-    parser.add_argument("--film-seconds", type=float, default=150, help="audioswitch: the films' length")
+    parser.add_argument("--film-seconds", type=float, default=600, help="audioswitch: the films' length")
     parser.add_argument("--film-fps", type=float, default=25, help="audioswitch: the films' frame rate")
     parser.add_argument("--window", type=float, default=20, help="audioswitch: seconds measured before the switch, and twice after")
     parser.add_argument("--lost-margin", type=int, default=10, help="audioswitch: more pictures lost after than before that fail")
     parser.add_argument("--gap-margin", type=int, default=5, help="audioswitch: more gaps in the video after than before that fail")
     parser.add_argument("--speed-margin", type=float, default=0.08, help="audioswitch: the share of video frames a second that may go")
     parser.add_argument("--cpu-margin", type=float, default=25, help="audioswitch: more %% of a core on the main thread after than before that fails")
-    parser.add_argument("--late-margin", type=float, default=5, help="audioswitch: seconds later than the control's the film may end")
     args = parser.parse_args()
     paths = [p for p in PATHS if p != "audioswitch"] if args.paths.strip() == "all" else [p.strip() for p in args.paths.split(",") if p.strip()]
     unknown = [p for p in paths if p not in PATHS]

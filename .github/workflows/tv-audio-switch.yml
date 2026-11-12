@@ -5,8 +5,8 @@ name: TV audio switch check
 # the panel. Films with two audio languages are made here with ffmpeg (test pattern and tones, nothing third-party) and
 # served by the made-up Xtream panel; the remote's keys drive the app (tv_drive.py, path audioswitch). Each window
 # measures the pictures the app counts lost (Stream Statistics), the video frames SurfaceFlinger presented, the app's UI
-# jank (gfxinfo), the CPU of each of the app's threads and the log's skipped frames; the run's end tells the speed.
-# Many more lost pictures, gaps, CPU or jank after the switch, or a film that ends later, fail the run. The numbers are
+# jank (gfxinfo), the CPU of each of the app's threads and the log's skipped frames; the presented frame rate tells the speed.
+# Many more lost pictures, gaps, CPU or jank after the switch, or fewer frames a second, fail the run. The numbers are
 # in the run's summary; screenshots, the app's problem reports, AudioFlinger and logcat in the artifact.
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ on:
         description: Android TV system image (API level; 31 or later runs the frame-rate code)
         default: "30"
       arch:
-        description: System image architecture (x86 for API 30, x86_64 for later ones where x86 is missing)
+        description: System image architecture (the Android TV images are x86: there is no android-tv x86_64 image for API 34)
         default: "x86"
 
 concurrency:
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
-      FILM_SECONDS: "150"
+      FILM_SECONDS: "600"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
