@@ -144,7 +144,7 @@ class TrackChoicesTest {
         val choices = TrackChoices.of((film as Player).currentTracks, C.TRACK_TYPE_AUDIO, french, Locale.FRENCH)
         TrackChoices.choose(film, C.TRACK_TYPE_AUDIO, choices[1])
         assertEquals("the French track plays", listOf(false, true), TrackChoices.of((film as Player).currentTracks, C.TRACK_TYPE_AUDIO, french, Locale.FRENCH).map { it.selected })
-        assertEquals("the film goes back to where it is", listOf(178_000L), film.seeks)
+        assertEquals("the film goes back to where it is, half a second before (never the very position, which Media3 skips)", listOf(177_500L), film.seeks)
 
         val same = player()
         TrackChoices.choose(same, C.TRACK_TYPE_AUDIO, TrackChoices.of((same as Player).currentTracks, C.TRACK_TYPE_AUDIO, french, Locale.FRENCH)[0])

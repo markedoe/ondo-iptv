@@ -140,11 +140,15 @@ object TrackChoices {
      * is to the TV in particular), the pictures fall behind the sound and drop until the video is opened again. Live
      * channels keep their place: nothing to catch up.
      */
+    private const val SEEK_BACK_MS = 500L
+
     fun choose(player: Player, type: Int, choice: TrackChoice?) {
         val changed = choice == null || !choice.selected
         player.trackSelectionParameters = select(player.trackSelectionParameters, type, choice)
         if (type == C.TRACK_TYPE_AUDIO && changed && player.isCurrentMediaItemSeekable && !player.isCurrentMediaItemLive) {
-            player.seekTo(player.currentPosition)
+            // Half a second back, never the very position: Media3 skips a seek to where it already is (a paused film
+            // above all), and the renderers would not start again.
+            player.seekTo((player.currentPosition - SEEK_BACK_MS).coerceAtLeast(0))
         }
     }
 
