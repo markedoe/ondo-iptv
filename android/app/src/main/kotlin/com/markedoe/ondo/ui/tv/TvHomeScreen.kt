@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -199,6 +200,9 @@ fun TvHomeScreen(
     val firstRow = state.shownRows.firstOrNull()
     val initialKey: String? = when {
         hasHero -> HERO_PLAY
+        // The carousel's place while its titles are read: the focus waits on it, not in the rows (a card with the focus
+        // would bring its row up, which would then move when the carousel comes in).
+        heroPending -> HERO_PENDING
         state.tagSuggestion != null -> "suggestion-keep"
         else -> when (firstRow) {
             null -> null
@@ -509,6 +513,7 @@ private class FirstItem(var key: String?)
 
 /** Play's place in Home's focus memory: where Home starts. */
 private const val HERO_PLAY = "hero-play"
+private const val HERO_PENDING = "hero-pending"
 
 /**
  * The carousel's place while its titles are read: the full frame's size and corners (not smaller while the first card
@@ -520,6 +525,8 @@ private fun TvHeroPlaceholder(height: Dp) {
         Modifier
             .fillMaxWidth()
             .padding(start = TvTokens.ContentStart, top = tvTopBarSpace(), end = TvTokens.EdgeEnd)
+            .focusMemory(HERO_PENDING, initial = true)
+            .focusable()
             .testTag("heroPlaceholder"),
     ) {
         Box(

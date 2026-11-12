@@ -147,6 +147,7 @@ class TvHomeOpensAtTheTopTest {
         val reading = HomeUiState(playlistName = "Example Playlist", continueWatching = resume, isRestoring = true)
         show(reading)
         assertTrue("the frame's place kept while the catalogue is read", compose.onAllNodesWithTag("heroPlaceholder", useUnmergedTree = true).fetchSemanticsNodes().size == 1)
+        assertFalse("the focus waits on the frame's place, not in the rows: ${focusedTag()}", focusedIn("homeRows"))
         val before = compose.onNodeWithTag("shelfResumeMovies", useUnmergedTree = true).getUnclippedBoundsInRoot().top
         val placeholder = compose.onNodeWithTag("heroPlaceholder", useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertTrue("the place is the full frame's: ${placeholder.height}", placeholder.height >= 260.dp)
