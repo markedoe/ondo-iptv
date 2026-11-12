@@ -1,0 +1,123 @@
+name: TV audio switch check
+
+# A film's audio language changed in the player's Audio panel, on an Android TV emulator, with the release build (R8,
+# as Google Play serves it): playback before the switch against after it, and against a run that only opens and closes
+# the panel. Films with two audio languages are made here with ffmpeg (test pattern and tones, nothing third-party) and
+# served by the made-up Xtream panel; the remote's keys drive the app (tv_drive.py, path audioswitch). Each window
+# measures the pictures the app counts lost (Stream Statistics), the video frames SurfaceFlinger presented, the app's UI
+# jank (gfxinfo), the CPU of each of the app's threads and the log's skipped frames; the run's end tells the speed.
+# Many more lost pictures, gaps, CPU or jank after the switch, or a film that ends later, fail the run. The numbers are
+# in the run's summary; screenshots, the app's problem reports, AudioFlinger and logcat in the artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit, branch or tag to build (empty — this workflow's commit)
+        required: false
+        default: ""
+      cases:
+        description: "Films, comma-separated: aac-ac3 (AAC stereo + AC-3 5.1), aac-aac, aac-aac51 (AAC stereo + AAC 5.1), aac-44k (48 kHz + 44.1 kHz)"
+        default: "aac-ac3,aac-aac,aac-aac51,aac-44k"
+      control:
+        description: For each film, a run that opens and closes the Audio panel without switching, first
+        type: boolean
+        default: true
+      video-size:
+        description: The films' picture (25 frames a second)
+        default: "1280x720"
+      api-level:
+        description: Android TV system image (API level; 31 or later runs the frame-rate code)
+        default: "30"
+      arch:
+        description: System image architecture (x86 for API 30, x86_64 for later ones where x86 is missing)
+        default: "x86"
+
+concurrency:
+  group: tv-audio-switch-${{ inputs.ref }}-${{ inputs.api-level }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tv:
+    name: Audio switch on an Android TV emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      FILM_SECONDS: "150"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Source to build
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.sha }}
+          path: build-src
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Release APK (R8, signed with the debug key)
+        working-directory: build-src/android
+        run: |
+          git log -1 --format='Building %h %s'
+          ./gradlew :app:assembleRelease --stacktrace
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Films with two audio languages (ffmpeg)
+        env:
+          CASES: ${{ inputs.cases }}
+          SIZE: ${{ inputs.video-size }}
+        run: |
+          command -v ffmpeg > /dev/null || { sudo apt-get update -q && sudo apt-get install -y -q ffmpeg; }
+          sh .github/scripts/audio_switch_films.sh media "$FILM_SECONDS" "$SIZE" "$CASES"
+      - name: Made-up Xtream panel serving them
+        run: |
+          mkdir -p out
+          nohup python3 -I .github/scripts/fake_xtream_panel.py --port 8080 --live 20 --movies 60 --series 15 --guide-channels 20 --guide-days 2 \
+            --log out/panel-requests.log --media media > out/panel.log 2>&1 &
+          for _ in $(seq 1 120); do grep -q "panel on" out/panel.log && break; sleep 1; done
+          cat out/panel.log
+      - name: Play, switch the audio language, measure
+        env:
+          CASES: ${{ inputs.cases }}
+          CONTROL: ${{ inputs.control && '--audio-control' || '' }}
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ inputs.api-level }}
+          target: android-tv
+          arch: ${{ inputs.arch }}
+          profile: tv_1080p
+          ram-size: 2048M
+          disk-size: 6000M
+          disable-animations: true
+          script: |
+            adb install -r build-src/android/app/build/outputs/apk/release/app-release.apk
+            adb reverse tcp:8080 tcp:8080
+            python3 -I .github/scripts/tv_drive.py out/tv --paths=audioswitch --audio-media media --audio-cases "$CASES" $CONTROL --film-seconds "$FILM_SECONDS"
+      - name: Summary
+        if: always()
+        env:
+          API_LEVEL: ${{ inputs.api-level }}
+        run: |
+          {
+            echo "## Audio switch on an Android TV emulator (API $API_LEVEL)"
+            cat out/tv/audio-switch.md 2>/dev/null || echo "No measurement: see the steps log."
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep -E "audio:|FAIL|PASS|path " out/tv/steps.log 2>/dev/null | tail -60 || true
+          cat out/tv/crash.txt 2>/dev/null | tail -40 || true
+          cp build-src/android/app/build/outputs/mapping/release/mapping.txt out/ 2>/dev/null || true
+      - name: Measurements, screenshots, reports, logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tv-audio-switch-api${{ inputs.api-level }}
+          path: out
+          if-no-files-found: ignore

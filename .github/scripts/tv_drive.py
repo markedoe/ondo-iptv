@@ -4,7 +4,8 @@ first launch, Add a Playlist, Xtream Codes (the made-up panel of fake_xtream_pan
 `adb reverse`), Add, then every tab. Watches the app's process the whole time: a crash, an ANR or Android ending the
 app fails the run. Screenshots, the screen's text, logcat, the exit reasons and memory use go to the output folder.
 With --paths, more of the app after that, each path from a fresh start of the app (the saved playlist read again):
-settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, bitrate, crash (see PATHS).
+settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, bitrate, crash (see PATHS);
+audioswitch only when named (tv-audio-switch.yml).
 
 Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240] [--paths settings,search,...]
 """
@@ -1212,6 +1213,393 @@ def path_rows(tv, args):
     tv.check_alive("along the rows")
 
 
+# The audio switch path (--paths=audioswitch, .github/workflows/tv-audio-switch.yml).
+
+# The words of the Audio panel's rows: a track's channels or codec.
+TRACK_ROW = re.compile(r"\b(AAC|AC-3|E-AC-3|MP3|Opus|Stereo|Mono|5\.1|7\.1)\b")
+
+
+def open_movie_one(tv):
+    """Movie 1 played from its start, found by its name (the Movies tab's rows move as earlier runs change the
+    library); returns the time OK was pressed (time.monotonic)."""
+    tv.bar("Search")
+    tv.focus_on_field(0)
+    tv.shell("input text 'Movie%s1'")
+    tv.stay(4, "Movie 1 searched")
+    tv.key("TAB")
+    time.sleep(1)
+    tv.focus_on("Movie 1", keys=("DOWN",), max_presses=4, editable=False)
+    tv.open("Movie 1", keys=("LEFT",), max_presses=20, exact=True, wait=3)
+    tv.wait_for("a movie page", lambda: (tv.visible("Play") or tv.visible("From Start")) and tv.visible("Collection"), 30)
+    # A movie watched by an earlier run plays from the start: From Start is right of Resume.
+    if tv.visible("From Start"):
+        tv.focus_on("From Start", keys=("RIGHT",), max_presses=3)
+    else:
+        tv.focus_on("Play", keys=("UP", "LEFT"), max_presses=4)
+    tv.key("DPAD_CENTER", pause=0)
+    pressed = time.monotonic()
+    time.sleep(4)
+    if not tv.player_shown():
+        raise TimeoutError("the player never opened from Movie 1")
+    return pressed
+
+
+def hide_player_controls(tv):
+    """The player's panel, dialog and controls gone, the video alone with the statistics: Back closes a panel or the
+    report, Info hides the controls. Never Back with the controls hidden: that leaves the player."""
+    for _ in range(5):
+        root = tv.screen()
+        words = " | ".join(tv.texts(root)) if root is not None else ""
+        if "Aspect ratio" in words or "Report a Problem" in words or "Copy" in words or re.search(r"\bAudio\b.*\b(AAC|AC-3)\b", words):
+            tv.key("BACK", pause=1.2)
+        elif "Subtitles" in words:
+            tv.key("INFO", pause=1.2)
+        else:
+            return
+
+
+def show_statistics(tv):
+    """More, Stream Statistics on: the app's own count of lost pictures and freezes stays over the video."""
+    player_panel(tv, "More", "audio-more", close=False)
+    tv.open("Stream Statistics", keys=("DOWN",), max_presses=6, wait=1.5)
+    hide_player_controls(tv)
+    if not tv.visible("Lost pictures"):
+        tv.say("  audio: Stream Statistics not on screen")
+
+
+def read_statistics(tv):
+    """Lost pictures and freezes as Stream Statistics shows them (since the film opened); None where not shown."""
+    root = tv.screen()
+    words = " | ".join(tv.texts(root)) if root is not None else ""
+    lost = re.search(r"Lost pictures\D{0,8}(\d+)", words)
+    freezes = re.search(r"Freezes\D{0,8}(\d+)", words)
+    smooth = re.search(r"Smoothness\W{0,8}(\d+)\s*%", words)
+    return {
+        "lost": int(lost.group(1)) if lost else None,
+        "freezes": int(freezes.group(1)) if freezes else None,
+        "smoothness": int(smooth.group(1)) if smooth else None,
+    }
+
+
+def video_layer(tv):
+    """The SurfaceFlinger layer of the player's video (its SurfaceView), or None."""
+    names = [line.strip() for line in tv.shell("dumpsys SurfaceFlinger --list").splitlines()]
+    found = [n for n in names if "SurfaceView" in n and "PlayerActivity" in n and "Background" not in n and "Bounds" not in n]
+    blast = [n for n in found if "BLAST" in n]
+    return (blast or found or [None])[-1]
+
+
+def presented_frames(tv, layer):
+    """The present times (ns, the device's monotonic clock) of the video layer's last 128 frames."""
+    if not layer:
+        return set()
+    out = tv.shell(f"dumpsys SurfaceFlinger --latency '{layer}'")
+    times = set()
+    for line in out.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) != 3 or not all(p.isdigit() for p in parts):
+            continue
+        desired, actual, _ = (int(p) for p in parts)
+        stamp = actual if 0 < actual < (1 << 62) else desired
+        if 0 < stamp < (1 << 62):
+            times.add(stamp)
+    return times
+
+
+def device_clock_ns(tv):
+    """The device's monotonic clock, near enough (/proc/uptime: the emulator does not sleep)."""
+    try:
+        return int(float(tv.shell("cat /proc/uptime").split()[0]) * 1e9)
+    except (ValueError, IndexError):
+        return None
+
+
+def thread_cpu(tv, pid):
+    """CPU ticks (1/100 s) used so far by each thread of the app: {tid: (name, ticks)}."""
+    found = {}
+    if not pid:
+        return found
+    for line in tv.shell(f"cat /proc/{pid}/task/*/stat 2>/dev/null").splitlines():
+        match = re.match(r"(\d+) \((.*)\) (.*)", line.strip())
+        if not match:
+            continue
+        rest = match.group(3).split()
+        if len(rest) > 12:
+            found[match.group(1)] = (match.group(2), int(rest[11]) + int(rest[12]))
+    return found
+
+
+def frame_numbers(times, start_ns, end_ns, interval_ms):
+    """Video frames presented within the window, their rate, and the gaps longer than 1.5 frames (stutter)."""
+    inside = sorted(t for t in times if start_ns is not None and end_ns is not None and start_ns <= t <= end_ns)
+    in_window = len(inside) >= 2
+    if not in_window:
+        # The clocks did not match: every frame collected during the window.
+        inside = sorted(times)
+    if len(inside) < 2:
+        return {"frames": len(inside), "fps": None, "gaps": None, "longest_gap_ms": None, "in_window": False}
+    steps = [(b - a) / 1e6 for a, b in zip(inside, inside[1:])]
+    span = (inside[-1] - inside[0]) / 1e9
+    return {
+        "frames": len(inside),
+        "fps": round((len(inside) - 1) / span, 2) if span > 0 else None,
+        "gaps": sum(1 for s in steps if s > interval_ms * 1.5),
+        "longest_gap_ms": round(max(steps)),
+        "in_window": in_window,
+    }
+
+
+def measure(tv, name, seconds, frame_ms):
+    """[seconds] of playback measured as it goes: pictures lost (the app's own count, Stream Statistics), video frames
+    presented on screen (SurfaceFlinger), the app's UI frames and their jank (gfxinfo), the CPU each thread of the app
+    used (/proc), and the frames the log says were skipped. AudioFlinger's state is kept for each window."""
+    pid = tv.current_pid()
+    since = tv.shell("date '+%m-%d %H:%M:%S.000'").strip()
+    before = read_statistics(tv)
+    layer = video_layer(tv)
+    cpu_start = thread_cpu(tv, pid)
+    tv.shell(f"dumpsys gfxinfo {PACKAGE} reset")
+    start_ns = device_clock_ns(tv)
+    started = time.monotonic()
+    times = set()
+    while time.monotonic() - started < seconds:
+        times |= presented_frames(tv, layer)
+        time.sleep(1.5)
+        tv.check_alive(f"measuring {name}")
+    times |= presented_frames(tv, layer)
+    end_ns = device_clock_ns(tv)
+    wall = time.monotonic() - started
+    gfx = tv.shell(f"dumpsys gfxinfo {PACKAGE}")
+    cpu_end = thread_cpu(tv, pid)
+    after = read_statistics(tv)
+    with open(os.path.join(tv.out, f"audioflinger-{name}.txt"), "w") as f:
+        f.write(tv.shell("dumpsys media.audio_flinger", timeout=60))
+    log = tv.adb("logcat", "-d", "-T", since, f"--pid={pid}", timeout=120) if pid else ""
+    threads = []
+    for tid, (thread, ticks) in cpu_end.items():
+        used = ticks - cpu_start.get(tid, (thread, 0))[1]
+        if used > 0:
+            threads.append((used, thread, tid))
+    threads.sort(reverse=True)
+    rendered = re.search(r"Total frames rendered:\s*(\d+)", gfx)
+    janky = re.search(r"Janky frames:\s*(\d+)", gfx)
+    slow_ui = re.search(r"Number Slow UI thread:\s*(\d+)", gfx)
+
+    def difference(key):
+        return after[key] - before[key] if after[key] is not None and before[key] is not None else None
+
+    result = {
+        "window": name,
+        "seconds": round(wall, 1),
+        "lost_pictures": difference("lost"),
+        "freezes": difference("freezes"),
+        "smoothness_pct_120s": after["smoothness"],
+        "video": frame_numbers(times, start_ns, end_ns, frame_ms),
+        "video_layer": layer,
+        "ui_frames": int(rendered.group(1)) if rendered else None,
+        "ui_janky": int(janky.group(1)) if janky else None,
+        "ui_slow_ui_thread": int(slow_ui.group(1)) if slow_ui else None,
+        # Ticks are hundredths of a second: ticks per second of wall clock is % of one core.
+        "cpu_total_pct": round(sum(t[0] for t in threads) / wall, 1),
+        "cpu_main_pct": round(sum(t[0] for t in threads if t[2] == pid) / wall, 1),
+        "cpu_top_threads": [f"{thread} {used / wall:.1f}%" for used, thread, _ in threads[:8]],
+        "skipped_frames_log": sum(int(n) for n in re.findall(r"Skipped (\d+) frames", log)),
+        "audio_track_log_lines": len(re.findall(r"AudioTrack", log)),
+        "codec_log_lines": len(re.findall(r"\b(CCodec|ACodec|MediaCodec)\b", log)),
+    }
+    tv.say(f"  audio: {name}: {json.dumps(result)}")
+    return result
+
+
+def switch_audio(tv, choose):
+    """The remote's audio key: the Audio panel, the remote on the track playing. With [choose], the other track (Down,
+    else Up) and OK; without, Back. Returns (the row playing, the row chosen or None: one track only, or not chosen)."""
+    tv.key("MEDIA_AUDIO_TRACK", pause=2)
+    if not TRACK_ROW.search(" | ".join(tv.focused()[1])):
+        player_panel(tv, "Audio", "audio-panel", close=False)
+    tv.note_screen("audio-panel")
+    _, texts = tv.focused()
+    playing = " | ".join(texts)
+    chosen = None
+    if choose:
+        for key in ("DOWN", "UP", "UP"):
+            tv.key(key, pause=0.8)
+            node, texts = tv.focused()
+            now = " | ".join(texts)
+            if node is not None and now != playing and TRACK_ROW.search(now):
+                chosen = now
+                break
+    if chosen is not None:
+        tv.key("DPAD_CENTER", pause=1.5)
+    else:
+        tv.key("BACK", pause=1.2)
+    hide_player_controls(tv)
+    return playing, chosen
+
+
+def report_text(tv):
+    """More, Report a Problem…: the app's own report of this playback (its events: frames Media3 dropped,
+    rebufferings), then closed. No address, login or title is in it."""
+    player_panel(tv, "More", "audio-more-report", close=False)
+    tv.open("Report a Problem…", keys=("DOWN",), max_presses=6, wait=2.5)
+    root = tv.screen()
+    text = "\n".join(tv.texts(root)) if root is not None else ""
+    hide_player_controls(tv)
+    return text
+
+
+def dropped_by_window(report, bounds):
+    """Frames Media3 reported dropped (the report's events, in seconds since opening), per window [(name, start, end)]."""
+    events = [(float(t), int(n)) for t, n in re.findall(r"^\s*([\d.]+) (\d+) video frames dropped in", report, re.M)]
+    return {name: sum(n for t, n in events if start <= t < end) for name, start, end in bounds}
+
+
+def audio_run(tv, args, case, choose):
+    """One film of [case] from its start: 15 s, Stream Statistics on, measured [args.window] s, the audio language
+    switched (or, for the control, the Audio panel only opened and closed), measured twice more, then played to its
+    end (how late it ends tells the speed)."""
+    run = f"{case}-{'switch' if choose else 'control'}"
+    tv.say(f"  audio: {run}")
+    pressed = open_movie_one(tv)
+    show_statistics(tv)
+    tv.stay(max(0.0, 15 - (time.monotonic() - pressed)), "the film's first seconds")
+    frame_ms = 1000 / args.film_fps
+    windows = []
+    bounds = []
+    start = time.monotonic() - pressed
+    windows.append(measure(tv, f"{run}-before", args.window, frame_ms))
+    bounds.append(("before", start, time.monotonic() - pressed))
+    switched_at = time.monotonic() - pressed
+    playing, chosen = switch_audio(tv, choose)
+    tv.say(f"  audio: {run}: playing {playing!r}, chosen {chosen!r} at {switched_at:.0f} s")
+    tv.stay(3, "after the audio switch")
+    for name in ("after", "later"):
+        start = time.monotonic() - pressed
+        windows.append(measure(tv, f"{run}-{name}", args.window, frame_ms))
+        bounds.append((name, start, time.monotonic() - pressed))
+    tv.note_screen(f"{run}-measured")
+    # The track playing now, as the panel says it (the remote opens it on that row).
+    now_playing, _ = switch_audio(tv, False)
+    report = report_text(tv)
+    with open(os.path.join(tv.out, f"report-{run}.txt"), "w") as f:
+        f.write(report)
+    dropped = dropped_by_window(report, bounds)
+    for window, (name, _, _) in zip(windows, bounds):
+        window["media3_dropped"] = dropped.get(name)
+    deadline = pressed + args.film_seconds + 90
+    while tv.player_shown() and time.monotonic() < deadline:
+        time.sleep(1)
+        tv.check_alive(f"{run}: to the film's end")
+    closed = not tv.player_shown()
+    ended = time.monotonic() - pressed
+    if not closed:
+        tv.leave_player()
+    return {
+        "run": run, "case": case, "switched": chosen is not None, "playing_before": playing, "chosen": chosen,
+        "playing_after": now_playing, "switched_at_s": round(switched_at, 1),
+        "film_s": args.film_seconds, "ended_after_s": round(ended, 1) if closed else None,
+        "windows": windows,
+    }
+
+
+def compare(control, switch, args):
+    """What the switch run lost against its own time before the switch, and against the control run's end."""
+    problems = []
+    before = switch["windows"][0]
+    for window in switch["windows"][1:]:
+        name = window["window"].rsplit("-", 1)[-1]
+        lost_b, lost_a = before["lost_pictures"], window["lost_pictures"]
+        if lost_b is not None and lost_a is not None and lost_a - lost_b > max(args.lost_margin, 2 * lost_b):
+            problems.append(f"{name}: {lost_a} pictures lost against {lost_b} before the switch")
+        fps_b, fps_a = before["video"]["fps"], window["video"]["fps"]
+        if fps_b and fps_a and fps_a < fps_b * (1 - args.speed_margin):
+            problems.append(f"{name}: {fps_a} video frames a second against {fps_b} before the switch")
+        gaps_b, gaps_a = before["video"]["gaps"], window["video"]["gaps"]
+        if gaps_b is not None and gaps_a is not None and gaps_a - gaps_b > max(args.gap_margin, 2 * gaps_b):
+            problems.append(f"{name}: {gaps_a} gaps in the video against {gaps_b} before the switch")
+        if window["cpu_main_pct"] - before["cpu_main_pct"] > args.cpu_margin:
+            problems.append(f"{name}: the main thread used {window['cpu_main_pct']}% of a core against {before['cpu_main_pct']}% before")
+        if window["cpu_total_pct"] - before["cpu_total_pct"] > 2 * args.cpu_margin:
+            problems.append(f"{name}: the app used {window['cpu_total_pct']}% of a core against {before['cpu_total_pct']}% before")
+        jank_b, jank_a = before["ui_janky"], window["ui_janky"]
+        if jank_b is not None and jank_a is not None and jank_a - jank_b > max(10, 2 * jank_b):
+            problems.append(f"{name}: {jank_a} janky UI frames against {jank_b} before")
+    if control and control["ended_after_s"] and switch["ended_after_s"]:
+        late = switch["ended_after_s"] - control["ended_after_s"]
+        if late > args.late_margin:
+            problems.append(f"the film ended {late:.0f} s later than without the switch (slower playback)")
+    return problems
+
+
+def audio_summary(results, problems):
+    """The runs as Markdown (the workflow's summary)."""
+    lines = [
+        "| Run | Window | Lost pictures (app) | Dropped (Media3) | Video fps | Gaps > 1.5 frames | Longest gap ms | UI janky / frames | Main thread % | App % | Skipped (log) |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for run in results:
+        for w in run["windows"]:
+            v = w["video"]
+            lines.append(
+                f"| {run['run']} | {w['window'].rsplit('-', 1)[-1]} | {w['lost_pictures']} | {w.get('media3_dropped')} | {v['fps']} | {v['gaps']} | "
+                f"{v['longest_gap_ms']} | {w['ui_janky']} / {w['ui_frames']} | {w['cpu_main_pct']} | {w['cpu_total_pct']} | {w['skipped_frames_log']} |"
+            )
+    lines.append("")
+    for run in results:
+        lines.append(
+            f"- {run['run']}: playing `{run['playing_before']}`, chosen `{run['chosen']}` at {run['switched_at_s']} s, then playing "
+            f"`{run['playing_after']}`; the {run['film_s']:.0f} s film closed after {run['ended_after_s']} s"
+        )
+    lines.append("")
+    lines.append("**Problems:** " + ("; ".join(problems) if problems else "none beyond the margins"))
+    return "\n".join(lines) + "\n"
+
+
+def path_audioswitch(tv, args):
+    """A film with two audio languages, one file per case in --audio-media (made by tv-audio-switch.yml): for each case,
+    a control run (the Audio panel opened and closed) and a run that switches the language, each measured before and
+    after. A switch after which playback loses many more pictures, stutters, runs slower or keeps the app busier is
+    wrong."""
+    results = []
+    problems = []
+
+    def save():
+        with open(os.path.join(tv.out, "audio-switch.json"), "w") as f:
+            json.dump(results, f, indent=2)
+        with open(os.path.join(tv.out, "audio-switch.md"), "w") as f:
+            f.write(audio_summary(results, problems))
+
+    for case in (c.strip() for c in args.audio_cases.split(",") if c.strip()):
+        source = os.path.join(args.audio_media, f"{case}.mkv")
+        if not os.path.isfile(source):
+            raise TimeoutError(f"no film for the case {case} ({source})")
+        # The panel serves clip.mkv for every movie: this case's film, swapped in whole.
+        target = os.path.join(args.audio_media, "clip.mkv")
+        with open(source, "rb") as src, open(target + ".new", "wb") as dst:
+            dst.write(src.read())
+        os.replace(target + ".new", target)
+        control = None
+        if args.audio_control:
+            if results:
+                tv.restart()
+            control = audio_run(tv, args, case, choose=False)
+            results.append(control)
+            save()
+        if results:
+            tv.restart()
+        switch = audio_run(tv, args, case, choose=True)
+        results.append(switch)
+        if not switch["switched"]:
+            tv.say(f"  audio: {case}: one audio track only on this device ({switch['playing_before']!r}): nothing switched")
+        else:
+            found = compare(control, switch, args)
+            problems.extend(f"{case}: {p}" for p in found)
+            tv.say(f"  audio: {case}: " + ("; ".join(found) if found else "no difference beyond the margins"))
+        save()
+    if problems:
+        raise Wrong("; ".join(problems))
+
+
 PATHS = {
     "rows": path_rows,
     "settings": path_settings,
@@ -1229,6 +1617,8 @@ PATHS = {
     "bitrate": path_bitrate,
     # Last: it crashes the app on purpose.
     "crash": path_crash,
+    # Only when named (tv-audio-switch.yml), never in "all": it needs the films of --audio-media.
+    "audioswitch": path_audioswitch,
 }
 
 
@@ -1239,8 +1629,19 @@ def main():
     parser.add_argument("--wait-load", type=int, default=240)
     parser.add_argument("--wrong-password-first", action="store_true")
     parser.add_argument("--paths", default="", help=f"more paths after the first walk, comma-separated: {','.join(PATHS)} (or all)")
+    parser.add_argument("--audio-media", default="media", help="audioswitch: the folder of the cases' films (<case>.mkv) and the panel's clip.mkv")
+    parser.add_argument("--audio-cases", default="aac-aac", help="audioswitch: the cases, comma-separated (their films <case>.mkv)")
+    parser.add_argument("--audio-control", action="store_true", help="audioswitch: for each case, a run without the switch first")
+    parser.add_argument("--film-seconds", type=float, default=150, help="audioswitch: the films' length")
+    parser.add_argument("--film-fps", type=float, default=25, help="audioswitch: the films' frame rate")
+    parser.add_argument("--window", type=float, default=20, help="audioswitch: seconds measured before the switch, and twice after")
+    parser.add_argument("--lost-margin", type=int, default=10, help="audioswitch: more pictures lost after than before that fail")
+    parser.add_argument("--gap-margin", type=int, default=5, help="audioswitch: more gaps in the video after than before that fail")
+    parser.add_argument("--speed-margin", type=float, default=0.08, help="audioswitch: the share of video frames a second that may go")
+    parser.add_argument("--cpu-margin", type=float, default=25, help="audioswitch: more %% of a core on the main thread after than before that fails")
+    parser.add_argument("--late-margin", type=float, default=5, help="audioswitch: seconds later than the control's the film may end")
     args = parser.parse_args()
-    paths = list(PATHS) if args.paths.strip() == "all" else [p.strip() for p in args.paths.split(",") if p.strip()]
+    paths = [p for p in PATHS if p != "audioswitch"] if args.paths.strip() == "all" else [p.strip() for p in args.paths.split(",") if p.strip()]
     unknown = [p for p in paths if p not in PATHS]
     if unknown:
         parser.error(f"unknown paths {unknown}: {', '.join(PATHS)}")
