@@ -534,8 +534,9 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
     private val alongTheRow = listOf(Key.DirectionRight, Key.DirectionRight, Key.DirectionLeft, Key.DirectionRight, Key.DirectionLeft, Key.DirectionLeft)
 
     /**
-     * Where the things of [page]'s list stand, by node: each poster's middle (the same grown by its focus or not) and
-     * each text's top (the rows' names, the cards' lines).
+     * Where what must stay still on [page] stands, by node: each card's middle (its place's, which its focus scale keeps),
+     * each text of the list outside the cards (the rows' names, the lines below a card; not a text drawn inside a card,
+     * which grows with it) by its top, and the header's foot.
      */
     private fun heights(page: HeaderPage): Map<Int, Pair<String, Float>> {
         fun drawn(node: SemanticsNode): Rect {
@@ -543,21 +544,29 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
             return coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
         }
         val posters = compose.onAllNodes(posters(page.list)).fetchSemanticsNodes().associate { node ->
-            node.id to ("poster " + node.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull().orEmpty() to drawn(node).center.y)
+            node.id to ("card " + node.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull().orEmpty() to drawn(node).center.y)
         }
-        val texts = compose.onAllNodes(within(page.list) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).fetchSemanticsNodes().associate { node ->
+        val outsideTheCards = within(page.list) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text) and !hasAnyAncestor(poster)
+        val texts = compose.onAllNodes(outsideTheCards, useUnmergedTree = true).fetchSemanticsNodes().associate { node ->
             node.id to ("text " + node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ").orEmpty() to drawn(node).top)
         }
-        return posters + texts
+        val header = compose.onAllNodes(hasTestTag("titleHeader") or hasTestTag("heroFrame"), useUnmergedTree = true).fetchSemanticsNodes().associate { node ->
+            node.id to ("the header's foot" to drawn(node).bottom)
+        }
+        return posters + texts + header
     }
 
     /**
-     * On [page], moving along the focused row (Right and Left, back and forth) moves nothing up or down: at every frame
-     * of every move, each poster, each row's name and each card's line stays at its height, within half a pixel.
+     * On [page], moves along the focused row (Right and Left, back and forth), each followed frame by frame; what moved
+     * up or down by more than half a pixel is added to [moved], each thing once with its largest move.
      */
-    private fun assertStillAlongTheRow(page: HeaderPage, step: String) {
+    private fun walkAlongTheRow(page: HeaderPage, step: String, moved: MutableList<String>) {
         val before = heights(page)
-        assertTrue("${page.name}, $step: the page's posters are measured", before.isNotEmpty())
+        if (before.isEmpty()) {
+            moved += "${page.name}, $step: nothing of the page measured"
+            return
+        }
+        val largest = mutableMapOf<Int, Pair<Float, String>>()
         alongTheRow.forEachIndexed { index, key ->
             compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(key) }
             repeat(30) { frame ->
@@ -565,31 +574,34 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
                 val now = heights(page)
                 for ((id, was) in before) {
                     val (name, y) = now[id] ?: continue
-                    assertTrue(
-                        "${page.name}, $step, move ${index + 1} ($key), frame ${frame + 1}: $name moved from ${was.second.inDp()} to ${y.inDp()}",
-                        abs(y - was.second) <= 0.5f,
-                    )
+                    val shift = abs(y - was.second)
+                    if (shift > 0.5f && shift > (largest[id]?.first ?: 0f)) {
+                        largest[id] = shift to "$name moved from ${was.second.inDp()} to ${y.inDp()} (move ${index + 1}, ${if (key == Key.DirectionRight) "Right" else "Left"}, frame ${frame + 1})"
+                    }
                 }
             }
             advance(500)
         }
-        assertTrue("${page.name}, $step: the focus still on a poster of the page", focusedIn(posters(page.list)))
+        largest.values.forEach { (_, what) -> moved += "${page.name}, $step: $what" }
+        if (!focusedIn(posters(page.list))) moved += "${page.name}, $step: the focus left the page's posters"
     }
 
     /**
      * Every page with rows of posters under a header pinned above them, on a 960 x 540 dp TV: moving along a row, in
-     * the first row and in one reached by Down, never moves the rows, their names or the header up or down; only Up
-     * and Down do.
+     * the first row and in one reached by Down, never moves the cards, the rows' names, the lines below the cards or
+     * the header up or down; only Up and Down do. Every page is walked, and all that moved is told at once.
      */
     @Test
     fun aMoveAlongARowNeverMovesTheRows() {
         val pages = headerPages()
         assertEquals("every page is listed", headerSurfaces.values.flatten().toSet(), pages.map { it.name }.toSet())
+        val moved = mutableListOf<String>()
         visitHeaderPages(pages) { page ->
-            assertStillAlongTheRow(page, "first row")
+            walkAlongTheRow(page, "first row", moved)
             press(Key.DirectionDown)
-            assertStillAlongTheRow(page, "a row reached by Down")
+            walkAlongTheRow(page, "a row reached by Down", moved)
         }
+        assertTrue("moving along a row moved:\n" + moved.joinToString("\n"), moved.isEmpty())
     }
 
     /**
