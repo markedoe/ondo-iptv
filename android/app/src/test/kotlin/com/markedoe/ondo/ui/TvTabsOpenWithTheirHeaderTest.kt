@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -161,22 +162,29 @@ class TvTabsOpenWithTheirHeaderTest {
 
     /**
      * The card with the focus is of a title made of the history (the catalogue being read); the catalogue is read: the
-     * header shows the catalogue's title, the focus stays on that card and nothing scrolls.
+     * header shows the catalogue's title, the focus stays on that card and nothing scrolls. The first card's title is
+     * also the page's own title for the header; the second card's reaches the header through its poster only.
      */
     @Test
-    fun aFocusedCardsTitleMadeOfTheHistoryGivesWayToTheCataloguesOne() {
-        val real = ShowcaseItem.MovieItem(Fixtures.northernLights)
-        val standIn = ShowcaseItem.MovieItem(Movie(id = real.movie.id, name = real.movie.name, categoryId = "", streamUrl = ""))
+    fun aFocusedCardsTitleMadeOfTheHistoryGivesWayToTheCataloguesOne() = focusedCardUpgraded(0)
+
+    @Test
+    fun aFocusedCardOtherThanTheFirstGivesWayToTheCataloguesTitleToo() = focusedCardUpgraded(1)
+
+    private fun focusedCardUpgraded(index: Int) {
+        val reals = listOf(Fixtures.northernLights, Fixtures.glassCity).map { ShowcaseItem.MovieItem(it) }
+        val standIns = reals.map { ShowcaseItem.MovieItem(Movie(id = it.movie.id, name = it.movie.name, categoryId = "", streamUrl = "")) }
         val others = listOf(Fixtures.summerInLisbon, Fixtures.longRoad).map { ShowcaseItem.MovieItem(it) }
-        fun tab(title: ShowcaseItem) = VodUiState(
+        fun tab(titles: List<ShowcaseItem.MovieItem>) = VodUiState(
             title = "Movies",
             categories = listOf(Fixtures.drama),
-            continueWatching = listOf(
-                ResumeItem("${Fixtures.PLAYLIST_ID}|MOVIE|${real.movie.id}|", real.title, subtitle = null, imageUrl = null, progress = 0.1f, minutesLeft = 90, hasPage = true, showcase = title),
-            ),
+            continueWatching = titles.map { title ->
+                ResumeItem("${Fixtures.PLAYLIST_ID}|MOVIE|${title.movie.id}|", title.title, subtitle = null, imageUrl = null, progress = 0.1f, minutesLeft = 90, hasPage = true, showcase = title)
+            },
             rows = listOf(CategoryRow(Fixtures.drama, others)),
         )
-        var state by mutableStateOf(tab(standIn))
+        val real = reals[index]
+        var state by mutableStateOf(tab(standIns))
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
@@ -186,21 +194,23 @@ class TvTabsOpenWithTheirHeaderTest {
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
         advance(500)
-        val card = hasClickAction() and hasAnyAncestor(hasTestTag("shelfResume"))
-        compose.onAllNodes(card).onFirst().requestFocus()
+        val cards = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("shelfResume")))
+        cards[index].requestFocus()
         compose.waitForIdle()
         advance(HEADER_DEBOUNCE_MS + 50)
-        assertTrue("the card has the focus", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfResume"))).fetchSemanticsNodes().isNotEmpty())
+        cards[index].assert(isFocused())
         assertEquals(listOf(real.title), texts("headerTitle"))
         assertTrue("no synopsis yet", texts("headerPlot").none { it.isNotBlank() })
         val row = compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val card = cards[index].fetchSemanticsNode().boundsInRoot
 
-        compose.runOnIdle { state = tab(real) }
+        compose.runOnIdle { state = tab(reals) }
         advance(HEADER_DEBOUNCE_MS + 50)
         assertEquals("the catalogue's title", listOf(real.movie.plot.orEmpty()), texts("headerPlot"))
         assertEquals(listOf(real.title), texts("headerTitle"))
-        assertTrue("the focus stays on the card", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfResume"))).fetchSemanticsNodes().isNotEmpty())
+        cards[index].assert(isFocused())
         assertEquals("nothing scrolls", row.top, compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top, 0.5f)
+        assertEquals("the card stays where it was", card.left, cards[index].fetchSemanticsNode().boundsInRoot.left, 0.5f)
     }
 
     private fun advance(ms: Long) {
