@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.tracing.trace
@@ -40,6 +41,8 @@ import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.screens.RowOrderUiState
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -111,8 +114,20 @@ class OndoViewModel(
             .mapLatest { repository.keptPosterFacts() }
             .onStart { emit(emptyMap()) }
 
+    /** How many times Home's state and the Movies tab's were started and worked out, and how long that took in all (ColdStartTimingTest). */
+    @VisibleForTesting internal val homeStarted = AtomicInteger()
+    @VisibleForTesting internal val homeComputations = AtomicInteger()
+    @VisibleForTesting internal val homeNanos = AtomicLong()
+    @VisibleForTesting internal val moviesComputations = AtomicInteger()
+    @VisibleForTesting internal val moviesNanos = AtomicLong()
+
     val home: StateFlow<HomeUiState?> = combine(state, minutes, this.labels, keptFacts) { state, now, labels, kept ->
-        UiMappers.home(state, labels, now, kept)
+        homeStarted.incrementAndGet()
+        val start = System.nanoTime()
+        UiMappers.home(state, labels, now, kept).also {
+            homeNanos.addAndGet(System.nanoTime() - start)
+            homeComputations.incrementAndGet()
+        }
     }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
@@ -140,7 +155,13 @@ class OndoViewModel(
     /** The device's date, again when it changes: a selection's row is a new pick every day. */
     private val days: Flow<String> = minutes.map { SelectionRows.day(it) }.distinctUntilChanged()
 
-    val movies: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ -> UiMappers.vod(state, series = false, title = "", now = clock(), kept = kept) }
+    val movies: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ ->
+        val start = System.nanoTime()
+        UiMappers.vod(state, series = false, title = "", now = clock(), kept = kept).also {
+            moviesNanos.addAndGet(System.nanoTime() - start)
+            moviesComputations.incrementAndGet()
+        }
+    }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
