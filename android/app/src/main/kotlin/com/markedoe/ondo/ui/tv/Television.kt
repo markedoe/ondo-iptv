@@ -195,8 +195,11 @@ fun TvPinnedHeaderList(lead: Dp, byRows: Boolean = false, edge: Dp = 0.dp, first
     val density = LocalDensity.current
     val pixels = with(density) { lead.toPx() }
     val edgePixels = with(density) { edge.toPx() }
-    val middlePixels = firstMiddle?.let { with(density) { it.toPx() } } ?: Float.NaN
-    val spec = remember(pixels, edgePixels, byRows, middlePixels) { if (byRows) TvRowPivotScrolling(pixels, middlePixels) else TvPinnedScrolling(pixels, edgePixels) }
+    // Kept from one composition to the next (its card's middle with it): keyed on what can be compared, never on NaN.
+    val spec = remember(pixels, edgePixels, byRows, firstMiddle, density) {
+        val middlePixels = firstMiddle?.let { with(density) { it.toPx() } } ?: Float.NaN
+        if (byRows) TvRowPivotScrolling(pixels, middlePixels) else TvPinnedScrolling(pixels, edgePixels)
+    }
     CompositionLocalProvider(LocalBringIntoViewSpec provides spec, content = content)
 }
 
