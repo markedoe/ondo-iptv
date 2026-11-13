@@ -165,14 +165,15 @@ fun Modifier.reportsFocus(item: ShowcaseItem?): Modifier = composed {
 fun rememberShownTitle(focus: FocusedTitle, keepLast: Boolean): ShowcaseItem? {
     val focused = focus.item
     var shown by remember(focus) { mutableStateOf(focused) }
-    LaunchedEffect(focus, focused?.key) {
+    // Keyed on the title itself, not only its key: the same title changed (made of the history while the catalogue was
+    // read, now the catalogue's) is shown at once, with no wait; another title only once the remote rests on it.
+    LaunchedEffect(focus, focused) {
         if (focused == null && keepLast) return@LaunchedEffect
         // Nothing shown yet (the page's fallback is): the first poster reached shows at once, with no blank between.
         if (shown != null && focused?.key != shown?.key) delay(HEADER_DEBOUNCE_MS)
         shown = focused
     }
-    // The same title as it is now (made of the history while the catalogue was read, now the catalogue's).
-    return if (focused != null && shown?.key == focused.key) focused else shown
+    return shown
 }
 
 /** Once the remote has rested on [item] a moment longer, what the header lacks is fetched; moving on cancels it. */
@@ -221,9 +222,8 @@ private data class HeaderArt(val item: ShowcaseItem, val backdropUrl: String?)
 private fun rememberFocusHeader(fallback: ShowcaseItem?, ready: TitleHeader?): TitleHeader? {
     val focus = LocalFocusedTitle.current ?: return null
     val headers = LocalTitleHeaders.current
-    // The title as the page's state has it now: the first card's is the page's own object (one made of the history while
-    // the catalogue was read gives way to the catalogue's), whatever the focus last reported of it.
-    val item = (rememberShownTitle(focus, keepLast = true) ?: fallback)?.let { shown -> fallback?.takeIf { it.key == shown.key } ?: shown }
+    // The poster's title as it reports it now ([FocusedTitle.update]), else the page's.
+    val item = rememberShownTitle(focus, keepLast = true) ?: fallback
     LoadWhenStill(item, headers)
     // What the page's state holds of it, worked out with the page: whole at once.
     val prepared = ready?.takeIf { item != null && it.item == item }

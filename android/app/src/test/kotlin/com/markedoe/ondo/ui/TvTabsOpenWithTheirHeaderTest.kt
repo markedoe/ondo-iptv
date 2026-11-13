@@ -214,7 +214,7 @@ class TvTabsOpenWithTheirHeaderTest {
             val headerNodes = compose.onAllNodes(hasTestTag("titleHeader"), useUnmergedTree = true).fetchSemanticsNodes().size
             val tree = runCatching { compose.onRoot(useUnmergedTree = true).printToString(maxDepth = Int.MAX_VALUE) }.getOrElse { it.toString() }
             throw AssertionError(
-                "the catalogue's title: expected ${listOf(real.movie.plot.orEmpty())} but was $plot; header nodes=$headerNodes " +
+                "the catalogue's title: expected ${listOf(real.movie.plot.orEmpty())} but was ${plot.map { "\"$it\"" }}; header nodes=$headerNodes " +
                     "headerTitle=${texts("headerTitle")} headerText=${compose.onAllNodes(hasTestTag("headerText"), useUnmergedTree = true).fetchSemanticsNodes().size}\n$tree",
             )
         }
