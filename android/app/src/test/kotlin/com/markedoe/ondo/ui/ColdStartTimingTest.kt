@@ -65,7 +65,9 @@ import org.junit.runners.MethodSorters
  * 400 categories, 15,000 series, 20,000 channels, what the device kept of TMDb for 5,000 titles). Each stage prints a
  * line starting with `COLDSTART:` (the CI log, the test's output, and `build/reports/coldstart/coldstart.txt`): the
  * first call (cold: the JVM's first, and the catalogue's caches empty where the stage says so), then the median of three
- * more. The limits are only there to keep a hang from passing; the numbers are what matters.
+ * more. The stages' limits are only there to keep a hang from passing; the view model's cold open (stage 7) has real
+ * ones: Home's carousel at once with Home kept from the last start, Home worked out no more often than before, the Movies
+ * tab at once. It runs on its own (`./gradlew :app:coldStartTest`, a 2 GB heap).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -489,10 +491,24 @@ class ColdStartTimingTest {
         assertTrue(movies.rows.isNotEmpty())
     }
 
+    /** What one cold open measured, in milliseconds from the view model's creation (-1: never). */
+    private class ColdOpen(
+        val firstHome: Long,
+        val firstHero: Long,
+        /** The first carousel of Home worked out anew (not the one kept from the last start). */
+        val firstWorkedOutHero: Long,
+        val computations: Int,
+        /** From the Movies tab's opening (once Home is ready and the tabs worked out in the background) to its first state. */
+        val moviesTab: Long,
+    )
+
     /**
      * The app's cold start: a repository and a view model on the saved catalogue, as a launch makes them, with Home
-     * watched as the screen does. Prints each state the repository emits (what changed in it, when), each Home state,
-     * how many times Home was worked out and how long that took, then the Movies tab's first opening.
+     * watched as the screen does; first without Home kept from a last start, then with it (the first start kept it).
+     * Prints each state the repository emits (what changed in it, when), each Home state, how many times Home was worked
+     * out and how long that took, then the Movies tab's first opening. Limits: with Home kept, its carousel within 300 ms;
+     * without, within 2.5 s; Home worked out 4 times at most (as before Home was kept); the Movies tab, opened once Home
+     * is ready, within 100 ms.
      */
     @Test
     fun stage7ViewModelColdOpen() {
@@ -513,6 +529,26 @@ class ColdStartTimingTest {
         UiMappers.forgetCatalogue()
         System.gc()
 
+        val kept = File(directory, "home-$PLAYLIST_ID.json")
+        assertTrue("no Home kept before the first start", !kept.exists())
+        val first = coldOpen(store, metadata, awardsText, "7.vm", waitForKeptHome = kept)
+        assertTrue("Home kept for the next start", kept.isFile)
+        say("7.vm.keptHome bytes=${kept.length()}")
+        UiMappers.forgetCatalogue()
+        System.gc()
+        val second = coldOpen(store, metadata, awardsText, "7.vm.kept", waitForKeptHome = null)
+
+        assertTrue("without Home kept, Home came", first.firstHome >= 0)
+        assertTrue("without Home kept, the carousel within 2.5 s: ${first.firstHero} ms", first.firstHero in 0 until 2_500)
+        assertTrue("without Home kept, Home worked out 4 times at most: ${first.computations}", first.computations <= 4)
+        assertTrue("with Home kept, the carousel within 300 ms: ${second.firstHero} ms", second.firstHero in 0 until 300)
+        assertTrue("with Home kept, Home worked out anew with its carousel: ${second.firstWorkedOutHero} ms", second.firstWorkedOutHero >= 0)
+        assertTrue("with Home kept, Home worked out 4 times at most: ${second.computations}", second.computations <= 4)
+        assertTrue("the Movies tab within 100 ms of its opening: ${first.moviesTab} ms", first.moviesTab in 0 until 100)
+        assertTrue("the Movies tab within 100 ms of its opening, Home kept: ${second.moviesTab} ms", second.moviesTab in 0 until 100)
+    }
+
+    private fun coldOpen(store: AppStore, metadata: InMemoryMetadataStore, awardsText: String?, name: String, waitForKeptHome: File?): ColdOpen {
         val mainExecutor = Executors.newSingleThreadExecutor { Thread(it, "main").apply { isDaemon = true } }
         val main = mainExecutor.asCoroutineDispatcher()
         Dispatchers.setMain(main)
@@ -534,22 +570,25 @@ class ColdStartTimingTest {
                 viewModel.state.collect { state ->
                     val number = stateEmissions.incrementAndGet()
                     lastActivity.set(at())
-                    events += "7.vm.state #$number t=${at()} ms changed=${changes(previous, state)} movies=${state.content.movies.size} restoring=${state.isRestoring} loading=${state.isLoading}"
+                    events += "$name.state #$number t=${at()} ms changed=${changes(previous, state)} movies=${state.content.movies.size} restoring=${state.isRestoring} loading=${state.isLoading}"
                     previous = state
                 }
             }
             val homeEmissions = AtomicInteger()
             val firstHome = AtomicLong(-1L)
             val firstHero = AtomicLong(-1L)
+            val firstWorkedOutHero = AtomicLong(-1L)
             val firstVod = AtomicLong(-1L)
             watching.launch(main) {
                 viewModel.home.collect { home ->
                     val number = homeEmissions.incrementAndGet()
+                    val computations = viewModel.homeComputations.get()
                     lastActivity.set(at())
                     if (home != null) firstHome.compareAndSet(-1L, at())
                     if (home != null && home.hasVod) firstVod.compareAndSet(-1L, at())
                     if (home != null && home.hero.isNotEmpty()) firstHero.compareAndSet(-1L, at())
-                    events += "7.vm.home #$number t=${at()} ms null=${home == null} hero=${home?.hero?.size} newMovies=${home?.newMovies?.size} restoring=${home?.isRestoring} computations=${viewModel.homeComputations.get()}"
+                    if (home != null && home.hero.isNotEmpty() && computations > 0 && !home.isRestoring) firstWorkedOutHero.compareAndSet(-1L, at())
+                    events += "$name.home #$number t=${at()} ms null=${home == null} hero=${home?.hero?.size} newMovies=${home?.newMovies?.size} restoring=${home?.isRestoring} computations=$computations"
                 }
             }
 
@@ -567,7 +606,7 @@ class ColdStartTimingTest {
                 }
                 val state = viewModel.state.value
                 val idle = viewModel.homeStarted.get() == viewModel.homeComputations.get()
-                if (state.content.movies.isNotEmpty() && !state.isRestoring && firstHero.get() >= 0 && idle && at() - lastActivity.get() > 3_000) {
+                if (state.content.movies.isNotEmpty() && !state.isRestoring && firstWorkedOutHero.get() >= 0 && idle && at() - lastActivity.get() > 3_000) {
                     quiet = true
                     break
                 }
@@ -575,16 +614,19 @@ class ColdStartTimingTest {
             val homeTotal = viewModel.homeNanos.get() / 1_000_000
             synchronized(events) { events.forEach { say(it) } }
             events.clear()
-            say("7.vm.wait ended=${if (quiet) "quiet" else "deadline"} at=${at()} ms")
+            say("$name.wait ended=${if (quiet) "quiet" else "deadline"} at=${at()} ms")
             say(
-                "7.vm.home firstNonNull=${firstHome.get()} ms firstWithCatalogue=${firstVod.get()} ms firstHero=${firstHero.get()} ms " +
-                    "(from the view model's creation)",
+                "$name.home firstNonNull=${firstHome.get()} ms firstWithCatalogue=${firstVod.get()} ms firstHero=${firstHero.get()} ms " +
+                    "firstWorkedOutHero=${firstWorkedOutHero.get()} ms (from the view model's creation)",
             )
-            say("7.vm.home started=${viewModel.homeStarted.get()} computations=${viewModel.homeComputations.get()} totalComputeTime=$homeTotal ms stateEmissions=${stateEmissions.get()} homeEmissions=${homeEmissions.get()}")
+            say("$name.home started=${viewModel.homeStarted.get()} computations=${viewModel.homeComputations.get()} totalComputeTime=$homeTotal ms stateEmissions=${stateEmissions.get()} homeEmissions=${homeEmissions.get()}")
             val keptAtEnd = runBlocking(main) { repository.keptPosterFacts().size }
-            say("7.vm.keptPosterFacts size=$keptAtEnd")
+            say("$name.keptPosterFacts size=$keptAtEnd")
 
-            // The Movies tab opened for the first time.
+            // The Movies tab, worked out in the background once Home was ready, then opened.
+            val warmDeadline = System.currentTimeMillis() + 120_000
+            while (viewModel.moviesComputations.get() == 0 && System.currentTimeMillis() < warmDeadline) Thread.sleep(20)
+            say("$name.moviesTab workedOutInTheBackground computations=${viewModel.moviesComputations.get()} totalComputeTime=${viewModel.moviesNanos.get() / 1_000_000} ms at=${at()} ms")
             val tabStart = System.nanoTime()
             val firstMovies = AtomicLong(-1L)
             watching.launch(main) {
@@ -593,14 +635,20 @@ class ColdStartTimingTest {
                 }
             }
             val tabDeadline = System.currentTimeMillis() + 120_000
-            while (firstMovies.get() < 0 && System.currentTimeMillis() < tabDeadline) Thread.sleep(20)
+            while (firstMovies.get() < 0 && System.currentTimeMillis() < tabDeadline) Thread.sleep(5)
             Thread.sleep(2_000)
             say(
-                "7.vm.moviesTab firstNonNull=${firstMovies.get()} ms computations=${viewModel.moviesComputations.get()} " +
+                "$name.moviesTab firstNonNull=${firstMovies.get()} ms computations=${viewModel.moviesComputations.get()} " +
                     "totalComputeTime=${viewModel.moviesNanos.get() / 1_000_000} ms",
             )
+            // Home kept for the next start: written in the background (ten seconds at most).
+            if (waitForKeptHome != null) {
+                val keptDeadline = System.currentTimeMillis() + 10_000
+                while (!waitForKeptHome.isFile && System.currentTimeMillis() < keptDeadline) Thread.sleep(20)
+            }
             assertTrue("Home came", firstHome.get() >= 0)
             assertTrue("the Movies tab came", firstMovies.get() >= 0)
+            return ColdOpen(firstHome.get(), firstHero.get(), firstWorkedOutHero.get(), viewModel.homeComputations.get(), firstMovies.get())
         } finally {
             watching.cancel()
             model?.let { runBlocking(main) { it.viewModelScope.cancel() } }

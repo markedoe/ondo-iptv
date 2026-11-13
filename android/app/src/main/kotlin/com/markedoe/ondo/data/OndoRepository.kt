@@ -482,6 +482,19 @@ class OndoRepository(
     /** Saves in order, off the main thread; the job ends once saved. A failed save (disk full) keeps the app running. */
     private fun persist(save: AppStore.() -> Unit): Job = scope.launch(writer) { runCatching { store.save() } }
 
+    /** Home as last drawn for [playlistId] ([HomeSnapshot]), read off the main thread; null without one. */
+    suspend fun homeSnapshot(playlistId: String): HomeSnapshot? = withContext(io) { runCatching { store.loadHomeSnapshot(playlistId) }.getOrNull() }
+
+    /** Keeps [snapshot] for the next start (written in the background, after the saves before it). */
+    fun keepHomeSnapshot(snapshot: HomeSnapshot) {
+        persist {
+            // Not for a playlist or a profile deleted meanwhile (their deletion took their snapshots away).
+            val current = _state.value
+            val profileKept = current.profiles.isEmpty() || current.profiles.any { it.id == snapshot.profileId }
+            if (profileKept && current.playlists.any { it.id == snapshot.playlistId }) saveHomeSnapshot(snapshot)
+        }
+    }
+
     // MARK: Playlists
 
     /** Loads the playlist once to check it, then saves and activates it. */
@@ -571,6 +584,7 @@ class OndoRepository(
             deleteContent(id)
             deleteDetails(id)
             deleteGuide(id)
+            deleteHomeSnapshot(id)
         }
         val wasActive = _state.value.activePlaylistId == id
         _state.update { it.copy(playlists = playlists, library = library, settings = settings, household = household) }
@@ -689,6 +703,8 @@ class OndoRepository(
         persist {
             saveProfiles(profiles)
             deleteLibrary(profile.libraryDocumentName)
+            // Home's snapshots may show its lists: made again from the profiles left.
+            deleteHomeSnapshots()
         }
     }
 

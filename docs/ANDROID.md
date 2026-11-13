@@ -45,6 +45,17 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   Every day (default), Every week), checked when Ondo opens and when it comes back to the front
   (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). One setting for all the playlists on Android (Apple has
   one per playlist). Refresh in Settings shows a spinner and "Updating the playlist…".
+- **Home at once at launch** (`data/HomeSnapshot.kt`, `ui/HomeSnapshots.kt`): each time Home is worked out with its
+  catalogue and its carousel, its featured titles and the first titles of each row are kept (`home-<playlist>.json`,
+  next to the catalogue). At the next start that Home shows at once, the splash screen gone, while the saved catalogue
+  is read and until Home is worked out anew with it; only for the same playlist and profile, with the same hidden
+  categories, languages and words, row order, settings, app language and the profile's own lists (My List, what is
+  watched): any change leaves it unused, so another profile's titles never show. A title it shows that has left the
+  catalogue opens and plays like any title gone (its page goes back, Play plays nothing). The snapshot goes with its
+  playlist, and every one with a deleted profile. Once Home is whole, the Movies and Series tabs are worked out in the
+  background, once per catalogue and profile: their first opening is at once. `ColdStartTimingTest`
+  (`./gradlew :app:coldStartTest`, a 100,000-movie catalogue, in a test JVM of its own with a 2 GB heap) times the cold
+  start; `HomeSnapshotTest` checks what the snapshot is kept for.
 - **TV header** (`ui/tv/TvFocusHeader.kt`): on Home, the Movies and Series tabs and a category's, genre's, year's or
   award's titles, a header of fixed height pinned above the posters shows the one with the focus: its backdrop (else
   its poster, blurred) behind the whole page, edge to edge and down to the screen's bottom, the rows drawn over it

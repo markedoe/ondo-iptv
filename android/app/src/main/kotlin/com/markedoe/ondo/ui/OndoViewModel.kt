@@ -19,6 +19,7 @@ import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
+import com.markedoe.ondo.data.HomeSnapshot
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.OndoRepository
@@ -50,6 +51,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -63,6 +65,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -108,11 +112,17 @@ class OndoViewModel(
     /** Changes when the carousel's fill brought release dates ([fillCarouselReleases]): Home reads what was kept again. */
     private val carouselVersion = MutableStateFlow(0)
 
-    /** What TMDb said of the catalogue's titles and the device kept (votes and release dates included), again as more is kept; empty until read. */
-    private val keptFacts: Flow<Map<String, TitleMetadata>> =
+    /**
+     * What TMDb said of a catalogue's titles and the device kept ([facts]: votes and release dates included), and the
+     * catalogue it was read for ([content]; null: not read yet). Home tells "not read for this catalogue yet" from "none".
+     */
+    private class Kept(val content: PlaylistContent?, val facts: Map<String, TitleMetadata>)
+
+    /** What TMDb said of the catalogue's titles and the device kept, again as more is kept; empty until read. */
+    private val keptFacts: Flow<Kept> =
         combine(state.distinctUntilChanged { old, new -> old.content === new.content && old.tmdbRatings === new.tmdbRatings }, carouselVersion) { state, _ -> state }
-            .mapLatest { repository.keptPosterFacts() }
-            .onStart { emit(emptyMap()) }
+            .mapLatest { Kept(it.content, repository.keptPosterFacts()) }
+            .onStart { emit(Kept(null, emptyMap())) }
 
     /** How many times Home's state and the Movies tab's were started and worked out, and how long that took in all (ColdStartTimingTest). */
     @VisibleForTesting internal val homeStarted = AtomicInteger()
@@ -121,16 +131,99 @@ class OndoViewModel(
     @VisibleForTesting internal val moviesComputations = AtomicInteger()
     @VisibleForTesting internal val moviesNanos = AtomicLong()
 
-    val home: StateFlow<HomeUiState?> = combine(state, minutes, this.labels, keptFacts) { state, now, labels, kept ->
-        homeStarted.incrementAndGet()
-        val start = System.nanoTime()
-        UiMappers.home(state, labels, now, kept).also {
-            homeNanos.addAndGet(System.nanoTime() - start)
-            homeComputations.incrementAndGet()
+    /** How many times Home was the one kept from the last start ([HomeSnapshots]) rather than worked out. */
+    @VisibleForTesting internal val savedHomesShown = AtomicInteger()
+
+    /** Home kept from the last time it was drawn ([HomeSnapshots]), read once as the view model starts; [read] once known. */
+    private class SavedHome(val read: Boolean, val snapshot: HomeSnapshot?)
+
+    private val savedHome = MutableStateFlow(SavedHome(read = false, snapshot = null))
+
+    /** Home worked out anew, or the saved one no longer fits: the saved one is not shown again. */
+    @Volatile private var savedHomeDone = false
+
+    /** The last Home kept for the next start: not written again unchanged. */
+    @Volatile private var keptHome: HomeSnapshot? = null
+
+    init {
+        // The saved Home of the playlist in use, read off the main thread (a small file, apart from the catalogue's read).
+        viewModelScope.launch {
+            val ready = state.first { it.isReady }
+            val snapshot = ready.activePlaylistId?.let { repository.homeSnapshot(it) }
+            keptHome = snapshot
+            savedHome.value = SavedHome(read = true, snapshot = snapshot)
         }
     }
+
+    private class HomeInput(val state: OndoState, val now: Long, val labels: Labels, val kept: Kept)
+
+    /**
+     * At a cold start, Home as it was last drawn ([HomeSnapshots]) while the saved catalogue is read and until Home is
+     * worked out with it and with what the device kept of it (its carousel); then Home worked out anew.
+     */
+    val home: StateFlow<HomeUiState?> = combine(state, minutes, this.labels, keptFacts) { state, now, labels, kept -> HomeInput(state, now, labels, kept) }
+        .map { input -> savedHomeShown(input) ?: workedOutHome(input) }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
+
+    /**
+     * The saved Home while it fits: the same playlist, profile and everything else Home is made of ([HomeSnapshots.matches]),
+     * the saved catalogue being read, or read (the same download) while what the device kept of it is not read yet. Null
+     * once it no longer fits, for good.
+     */
+    private suspend fun savedHomeShown(input: HomeInput): HomeUiState? {
+        if (savedHomeDone) return null
+        val state = input.state
+        if (!state.isReady) return null
+        // The saved Home is read as the playlists are (one small file): Home without its carousel is not shown meanwhile.
+        val snapshot = savedHome.first { it.read }.snapshot
+        val fits = snapshot != null && HomeSnapshots.matches(snapshot, state, input.labels) && if (state.content.isEmpty) {
+            state.isRestoring
+        } else {
+            input.kept.content !== state.content && state.content.fetchedAt == snapshot.fetchedAt
+        }
+        if (!fits || snapshot == null) {
+            savedHomeDone = true
+            return null
+        }
+        savedHomesShown.incrementAndGet()
+        return HomeSnapshots.home(snapshot, state, input.now)
+    }
+
+    private fun workedOutHome(input: HomeInput): HomeUiState {
+        val state = input.state
+        homeStarted.incrementAndGet()
+        val start = System.nanoTime()
+        val home = UiMappers.home(state, input.labels, input.now, input.kept.facts)
+        homeNanos.addAndGet(System.nanoTime() - start)
+        homeComputations.incrementAndGet()
+        // With its catalogue and what the device kept of it: Home whole, kept for the next start, and the tabs worked out.
+        if (!state.isRestoring && !state.content.isEmpty && input.kept.content === state.content) {
+            if (home.hero.isNotEmpty()) keepHome(home, state, input.labels)
+            homeWorkedOut.value = TabsFor(state.content, state.activeProfile.id)
+        }
+        return home
+    }
+
+    private fun keepHome(home: HomeUiState, state: OndoState, labels: Labels) {
+        val snapshot = HomeSnapshots.of(home, state, labels) ?: return
+        if (snapshot == keptHome) return
+        keptHome = snapshot
+        repository.keepHomeSnapshot(snapshot)
+    }
+
+    /** Whether Home can be drawn with its carousel now (the saved one while the catalogue is read): the splash screen goes. */
+    val homeShown: Boolean get() = home.value?.hero?.isNotEmpty() == true
+
+    /** A catalogue and a profile, which the Movies and Series tabs are worked out for (compared by identity). */
+    private class TabsFor(val content: PlaylistContent, val profileId: String) {
+        fun sameAs(other: TabsFor?): Boolean = other != null && other.content === content && other.profileId == profileId
+    }
+
+    /** Set when Home was worked out whole (its catalogue and what was kept of it): the tabs are worked out after it. */
+    private val homeWorkedOut = MutableStateFlow<TabsFor?>(null)
+    private val moviesWorkedOut = MutableStateFlow<TabsFor?>(null)
+    private val seriesWorkedOut = MutableStateFlow<TabsFor?>(null)
 
     /**
      * The playlist in use for a TV's top bar: when its catalogue was last fetched, whether it is being fetched again or
@@ -157,17 +250,44 @@ class OndoViewModel(
 
     val movies: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ ->
         val start = System.nanoTime()
-        UiMappers.vod(state, series = false, title = "", now = clock(), kept = kept).also {
+        UiMappers.vod(state, series = false, title = "", now = clock(), kept = kept.facts).also {
             moviesNanos.addAndGet(System.nanoTime() - start)
             moviesComputations.incrementAndGet()
+            if (kept.content === state.content) moviesWorkedOut.value = TabsFor(state.content, state.activeProfile.id)
         }
     }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
-    val series: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ -> UiMappers.vod(state, series = true, title = "", now = clock(), kept = kept) }
+    val series: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ ->
+        UiMappers.vod(state, series = true, title = "", now = clock(), kept = kept.facts).also {
+            if (kept.content === state.content) seriesWorkedOut.value = TabsFor(state.content, state.activeProfile.id)
+        }
+    }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
+
+    init {
+        // Once Home was worked out whole (its catalogue and what the device kept of it), the Movies and Series tabs are
+        // worked out in the background, one after the other, once per catalogue and profile: their first opening shows
+        // them at once (a tab keeps its last state while no one watches it), then as the state is when it opens. Watched
+        // only until worked out: no work for them while they are not open.
+        viewModelScope.launch {
+            homeWorkedOut.filterNotNull()
+                .distinctUntilChanged { old, new -> new.sameAs(old) }
+                .collectLatest { target ->
+                    workOut(movies, moviesWorkedOut, target)
+                    workOut(series, seriesWorkedOut, target)
+                }
+        }
+    }
+
+    /** Watches [tab] until it was worked out for [target]: started if no one watches it, left as it was after. */
+    private suspend fun workOut(tab: StateFlow<VodUiState?>, workedOut: StateFlow<TabsFor?>, target: TabsFor) = coroutineScope {
+        val watching = launch { tab.collect {} }
+        workedOut.first { target.sameAs(it) }
+        watching.cancel()
+    }
 
     /** Settings → Row order: the rows of the Home, Movies and Series tabs in the viewer's order. */
     val rowOrder: StateFlow<RowOrderUiState?> = state.map { UiMappers.rowOrder(it) }
@@ -531,7 +651,10 @@ class OndoViewModel(
         state.value.content.series.firstOrNull { it.id == seriesId }?.let { emit(repository.playRequest(it, episode)) }
     }
 
-    fun playChannel(row: ChannelRow) = emit(repository.playRequest(row.channel))
+    /** The channel as the catalogue has it now: one no longer in it (Home kept from the last start) plays nothing. */
+    fun playChannel(row: ChannelRow) {
+        state.value.content.channels.firstOrNull { it.id == row.channel.id }?.let { emit(repository.playRequest(it)) }
+    }
 
     /** A programme of the guide from its start, from the provider's archive. */
     fun playReplay(channel: com.markedoe.ondo.core.model.Channel, programme: EpgProgram) = emit(repository.replayRequest(channel, programme))
@@ -545,7 +668,11 @@ class OndoViewModel(
                 val versions = UiMappers.visibleVersions(current, item.movie, UiMappers.filmsIfReady(current))
                 playMovie(UiMappers.defaultVersion(current, item.movie, versions).id)
             }
-            is ShowcaseItem.SeriesItem -> prepare(item.key) { nextEpisode(item.series)?.let { emit(repository.playRequest(item.series, it)) } }
+            // The series as the catalogue has it now: one no longer in it (Home kept from the last start) plays nothing.
+            is ShowcaseItem.SeriesItem -> {
+                val series = state.value.content.series.firstOrNull { it.id == item.series.id } ?: return
+                prepare(item.key) { nextEpisode(series)?.let { emit(repository.playRequest(series, it)) } }
+            }
         }
     }
 
@@ -608,12 +735,13 @@ class OndoViewModel(
      * starts at once: [PREFETCH_LIMIT] at most, one at a time. Stops when the caller is cancelled (Home left).
      */
     suspend fun prefetchSeries(home: HomeUiState) {
+        // The series as the catalogue has them, once read (Home kept from the last start shows them before).
+        val current = state.first { !it.isRestoring }
         val wanted = withContext(computation) {
-            val current = state.value
             val resumed = home.continueWatching.mapNotNull { current.library.progress(it.key) ?: WatchEntry.ofKey(it.key) }
                 .filter { it.kind == ItemKind.SERIES }
                 .mapNotNull { UiMappers.series(current, it.itemId) }
-            (home.hero.mapNotNull { (it.item as? ShowcaseItem.SeriesItem)?.series } + resumed)
+            (home.hero.mapNotNull { (it.item as? ShowcaseItem.SeriesItem)?.series?.let { series -> UiMappers.series(current, series.id) } } + resumed)
                 .distinctBy { it.id }
                 // Without a provider's server, a series' episodes come with the playlist: nothing to fetch.
                 .filter { it.xtreamSeriesId != null }

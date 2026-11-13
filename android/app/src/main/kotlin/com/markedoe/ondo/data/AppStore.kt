@@ -116,7 +116,31 @@ class AppStore(
             if (!source.exists()) continue
             if (target.exists() || !source.renameTo(target)) source.delete()
         }
+        // Home's snapshot names its playlist: [to]'s is made again from its catalogue.
+        deleteHomeSnapshot(from)
     }
+
+    /**
+     * Home as last drawn for a playlist ([HomeSnapshot]), shown at the next start while its catalogue is read. Read and
+     * written under a lock of its own, never behind the catalogue's long read; it can be made again: no previous version
+     * is kept, and one that cannot be read is deleted.
+     */
+    fun loadHomeSnapshot(playlistId: String): HomeSnapshot? =
+        synchronized(snapshotLock) { readFile("home-$playlistId.json", HomeSnapshot.serializer(), disposable = true) }
+    fun saveHomeSnapshot(snapshot: HomeSnapshot) =
+        synchronized(snapshotLock) { writeFile("home-${snapshot.playlistId}.json", HomeSnapshot.serializer(), snapshot, keepPrevious = false) }
+    fun deleteHomeSnapshot(playlistId: String) {
+        synchronized(snapshotLock) { File(directory, "home-$playlistId.json").delete() }
+    }
+
+    /** Every playlist's Home snapshot (a profile deleted: its lists must not show again at a start). */
+    fun deleteHomeSnapshots() {
+        synchronized(snapshotLock) {
+            directory.listFiles { file -> file.name.startsWith("home-") && file.name.endsWith(".json") }?.forEach(File::delete)
+        }
+    }
+
+    private val snapshotLock = Any()
 
     /** The movie and series details kept for a playlist; they can be fetched again: no previous version is kept. */
     fun loadDetails(playlistId: String): DetailsArchive? = read("details-$playlistId.json", DetailsArchive.serializer(), disposable = true)
@@ -137,7 +161,9 @@ class AppStore(
      * keeps the version read as the previous one. With no other version to read, it stays where it is.
      */
     @Synchronized
-    private fun <T> read(name: String, serializer: KSerializer<T>, disposable: Boolean = false): T? {
+    private fun <T> read(name: String, serializer: KSerializer<T>, disposable: Boolean = false): T? = readFile(name, serializer, disposable)
+
+    private fun <T> readFile(name: String, serializer: KSerializer<T>, disposable: Boolean): T? {
         val document = File(directory, name)
         var tooLarge = false
         for (file in listOf(document, File(directory, "$name.bak"))) {
@@ -161,7 +187,9 @@ class AppStore(
     }
 
     @Synchronized
-    private fun <T> write(name: String, serializer: KSerializer<T>, value: T, keepPrevious: Boolean) {
+    private fun <T> write(name: String, serializer: KSerializer<T>, value: T, keepPrevious: Boolean) = writeFile(name, serializer, value, keepPrevious)
+
+    private fun <T> writeFile(name: String, serializer: KSerializer<T>, value: T, keepPrevious: Boolean) {
         directory.mkdirs() // the folder can be removed while the app runs (storage cleared)
         val target = File(directory, name)
         val temporary = File(directory, "$name.tmp")

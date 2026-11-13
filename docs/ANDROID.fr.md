@@ -50,6 +50,19 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   quand il revient au premier plan (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). Un seul réglage pour
   toutes les playlists sur Android (Apple en a un par playlist). Actualiser dans les Réglages affiche un indicateur
   et « Mise à jour de la playlist… ».
+- **L'Accueil tout de suite au lancement** (`data/HomeSnapshot.kt`, `ui/HomeSnapshots.kt`) : chaque fois que l'Accueil
+  est calculé avec son catalogue et son carrousel, ses titres à la une et les premiers titres de chaque rangée sont
+  gardés (`home-<playlist>.json`, à côté du catalogue). Au démarrage suivant, cet Accueil s'affiche aussitôt, l'écran de
+  démarrage parti, pendant la lecture du catalogue enregistré et jusqu'à ce que l'Accueil soit recalculé avec lui ;
+  seulement pour la même playlist et le même profil, avec les mêmes catégories, langues et mots masqués, le même ordre
+  des rangées, les mêmes réglages, la même langue de l'app et les mêmes listes du profil (Ma liste, ce qui est
+  regardé) : tout changement le laisse de côté, si bien que les titres d'un autre profil ne s'affichent jamais. Un titre
+  qu'il montre et qui a quitté le catalogue s'ouvre et se lit comme tout titre disparu (sa page revient en arrière,
+  Lire ne lit rien). L'instantané part avec sa playlist, et tous avec un profil supprimé. Une fois l'Accueil complet,
+  les onglets Films et Séries sont calculés en arrière-plan, une fois par catalogue et par profil : leur première
+  ouverture est immédiate. `ColdStartTimingTest` (`./gradlew :app:coldStartTest`, un catalogue de 100 000 films, dans
+  une JVM de test à part avec un tas de 2 Go) mesure le démarrage à froid ; `HomeSnapshotTest` vérifie pour quoi
+  l'instantané est gardé.
 - **En-tête sur TV** (`ui/tv/TvFocusHeader.kt`) : sur l'accueil, les onglets Films et Séries et les titres d'une
   catégorie, d'un genre, d'une année ou d'une récompense, un en-tête de hauteur fixe au-dessus des affiches montre
   celle qui a le focus : son image de fond (sinon son affiche floutée) derrière toute la page, bord à bord et jusqu'en

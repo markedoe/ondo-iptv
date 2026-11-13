@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.OndoApp
@@ -61,12 +62,15 @@ class MainActivity : ComponentActivity() {
         // The splash screen stays until the saved playlists are read (no welcome screen flash), and the saved
         // catalogue too for a moment (Home appears with its content, see keepsSplash).
         val start = SystemClock.uptimeMillis()
-        splash.setKeepOnScreenCondition { keepsSplash(repository.state.value, SystemClock.uptimeMillis() - start) }
+        // Home kept from the last start, drawn under the splash screen while the catalogue is read: shown at once.
+        var model: OndoViewModel? = null
+        splash.setKeepOnScreenCondition { keepsSplash(repository.state.value, SystemClock.uptimeMillis() - start, model?.homeShown == true) }
         enableEdgeToEdge()
         setContent {
             val viewModel: OndoViewModel = viewModel {
                 OndoViewModel(repository, appLabels(getString(R.string.kind_movie), getString(R.string.kind_series), getString(R.string.hero_new_episode), resources.configuration.locales[0]))
             }
+            SideEffect { model = viewModel }
             // Another app language (Settings, App language) recreates the activity, not the view model.
             val movie = stringResource(R.string.kind_movie)
             val series = stringResource(R.string.kind_series)
@@ -107,10 +111,11 @@ class MainActivity : ComponentActivity() {
 
         /**
          * Whether the splash screen stays, [elapsedMs] after the app started: until the saved playlists are read, then
-         * while the saved catalogue is read, [SPLASH_RESTORE_LIMIT_MS] at most.
+         * while the saved catalogue is read, [SPLASH_RESTORE_LIMIT_MS] at most, unless Home can be drawn with its carousel
+         * meanwhile ([homeShown]: Home kept from the last start).
          */
-        fun keepsSplash(state: OndoState, elapsedMs: Long): Boolean =
-            !state.isReady || (state.isRestoring && elapsedMs < SPLASH_RESTORE_LIMIT_MS)
+        fun keepsSplash(state: OndoState, elapsedMs: Long, homeShown: Boolean = false): Boolean =
+            !state.isReady || (state.isRestoring && !homeShown && elapsedMs < SPLASH_RESTORE_LIMIT_MS)
     }
 }
 
