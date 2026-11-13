@@ -269,12 +269,16 @@ enum UITestFixture {
             let items = model.content.movies.map(ShowcaseItem.movie) + model.content.series.map(ShowcaseItem.series)
             for item in items {
                 guard let days = releasedDaysAgo[item.title] else { continue }
+                // TMDb's rating, the provider's own: the pages and the posters show it (`AppModel.posterScores`).
+                let rating = movies.first { $0.title == item.title }?.rating ?? series.first { $0.title == item.title }?.rating
                 for key in model.metadataKeys(for: item) {
-                    model.tmdbMetadata.titles[key] = TitleMetadata(key: key, kind: MetadataKey.kind(item.contentType), fetchedAt: .now,
+                    model.tmdbMetadata.titles[key] = TitleMetadata(key: key, kind: MetadataKey.kind(item.contentType), voteAverage: rating,
+                                                                   voteCount: rating.map { Int($0 * 160) }, fetchedAt: .now,
                                                                    releaseDate: releaseDate(daysAgo: days))
                 }
             }
             model.tmdbMetadata.carouselRevision += 1
+            model.updatePosterScores(now: true)
         }
         for movie in model.content.movies {
             guard let info = movies.first(where: { $0.title == movie.name }) else { continue }

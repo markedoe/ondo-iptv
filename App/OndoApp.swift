@@ -22,7 +22,8 @@ struct OndoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            // The posters' TMDb scores, read by the badges alone (`PosterScoresProvider`).
+            PosterScoresProvider { RootView() }
                 .environment(model)
                 .preferredColorScheme(.dark)
                 #if os(macOS) && DEBUG

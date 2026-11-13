@@ -207,6 +207,11 @@ final class AppModel {
     @ObservationIgnored var selectionTagsCache: SelectionTags?
     /// The watched titles' keys and what they were made from (`AppModel.watchedKeys`).
     @ObservationIgnored var watchedKeysCache: WatchedKeysCache?
+    /// TMDb's score of each title TMDb rated, by `ShowcaseItem.id`, as written on its poster ("7.8", "7,8" in French):
+    /// worked out off the main thread (AppModel+PosterScores) and given to the cards through the environment
+    /// (`PosterScoresProvider`).
+    var posterScores: [String: String] = [:]
+    @ObservationIgnored let posterScoreState = PosterScoreState()
     /// The selections' rows of titles worked out, by what they depend on (AppModel+Selections).
     @ObservationIgnored var selectionTitlesCache: [String: [ShowcaseItem]] = [:]
     /// The day the selections' rows are picked for: set again when the date changes (`RootView`), so they are drawn anew.
@@ -695,6 +700,7 @@ final class AppModel {
         content = .empty
         rawContent = .empty
         index = ContentIndex()
+        posterScores = [:]
         peopleIndex = PeopleIndex()
         categoryTags = CategoryTagIndex()
         movieAwards = [:]
@@ -754,6 +760,7 @@ final class AppModel {
                 content = .empty
                 rawContent = .empty
                 index = ContentIndex()
+                posterScores = [:]
                 peopleIndex = PeopleIndex()
                 categoryTags = CategoryTagIndex()
                 movieAwards = [:]
@@ -838,6 +845,8 @@ final class AppModel {
         content = edited
         index = built
         categoryTags = tags
+        // The posters' TMDb scores, from what the device kept, at once.
+        updatePosterScores(now: true)
         // The cast and directors for search, and the awards, once the catalogue is on screen: each takes a moment on
         // a large playlist.
         buildPeopleIndex(from: edited, for: playlist)

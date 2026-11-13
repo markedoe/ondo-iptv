@@ -277,6 +277,9 @@ final class OndoUITests: XCTestCase {
         snapshot("08-movies")
         let poster = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Northern Lights'")).firstMatch
         XCTAssertTrue(poster.waitForExistence(timeout: 5), "movie poster")
+        // TMDb's score on the poster (the fixture keeps TMDb's 7.8 for it), said after its title, as its page shows it.
+        let scored = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Northern Lights, TMDb rating 7.8")).firstMatch
+        XCTAssertTrue(scored.waitForExistence(timeout: 5), "TMDb's score on the poster: \(poster.label)")
         poster.tap()
         XCTAssertTrue(app.navigationBars["Northern Lights"].waitForExistence(timeout: 5), "movie detail on top")
         // The film's versions as badges (the fixture lists it four times): the film is one poster, its page offers them.

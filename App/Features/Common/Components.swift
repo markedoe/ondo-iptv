@@ -67,29 +67,22 @@ struct PosterCard: View {
     let title: String
     let imageURL: URL?
     var subtitle: String?
-    var rating: Double?
+    /// The title (`ShowcaseItem.id`) whose TMDb score shows on the artwork (`AppModel.posterScores`): TMDb's alone, the
+    /// same as its page's, never the provider's rating.
+    var scoreKey: String?
     var progress: Double?
     /// Watched (`AppModel.isWatched`): the check mark on the artwork.
     var watched = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            PosterArtwork(url: imageURL, title: title, progress: progress, watched: watched)
-                .overlay(alignment: .topTrailing) {
-                    if let rating, rating > 0 {
-                        Label(Formatting.rating(rating), systemImage: "star.fill")
-                            .font(.caption2.weight(.semibold))
-                            .labelStyle(.titleAndIcon)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .padding(6)
-                    }
-                }
+            PosterArtwork(url: imageURL, title: title, progress: progress, watched: watched, scoreKey: scoreKey)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.caption.weight(.semibold))
                     .lineLimit(1)
+                    // The title, then TMDb's score ("TMDb rating 7.8").
+                    .posterScoreLabel(title: title, key: scoreKey)
                 if let subtitle {
                     Text(subtitle).font(.caption2).foregroundStyle(.secondary)
                 }

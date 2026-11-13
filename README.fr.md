@@ -47,7 +47,10 @@ chaque changement de l'interface.
   dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom. Des pages noires, du blanc pour
   ce qui est choisi ; les cartes se soulèvent sous le pointeur, le focus du clavier ou le doigt.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
-  ou note (celle de TMDb d'abord avec un jeton, voir TMDb plus bas), une coche sur l'affiche de chaque titre déjà vu (une série
+  ou note (celle de TMDb d'abord avec un jeton, voir TMDb plus bas), **la note TMDb sur chaque affiche et chaque carte de
+  Continuer à regarder** (une étoile et « 7,8 » en français, dans le coin inférieur de début ; la même que la note TMDb de
+  la fiche du titre, d'après ce que TMDb a dit et ce que l'appareil a gardé, jamais celle du fournisseur ; VoiceOver dit
+  « Note TMDb 7,8 » après le titre), une coche sur l'affiche de chaque titre déjà vu (une série
   une fois tous ses épisodes vus), **Marquer comme vu / Marquer comme non vu** sur sa fiche (chaque épisode aussi), films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), **versions d'un film
   regroupées** (4K, Dolby Vision, HD, VOSTFR… : le film une fois, ses versions en badges sur sa fiche ;
   [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (synopsis, casting, bande-annonce), saisons /

@@ -194,6 +194,8 @@ extension AppModel {
         movieDetailsCache[movie.id] = details
         movieDetailsFetchedAt[movie.id] = .now
         detailsRevision += 1
+        // A TMDb id in the details: the posters' scores follow the title page's keys.
+        updatePosterScores()
         scheduleStoredDetailsSave()
         indexProviderPeople([(.movie(movie), details)])
         return details
@@ -225,6 +227,8 @@ extension AppModel {
             )
             seriesDetailsCache[series.id] = details
             detailsRevision += 1
+            // A TMDb id in the details: the posters' scores follow the title page's keys.
+            updatePosterScores()
             return details
         }
         if let kept, DetailsArchive.isFresh(seriesDetailsFetchedAt[series.id], maxAge: DetailsArchive.seriesMaxAge) { return kept }
@@ -240,6 +244,8 @@ extension AppModel {
         seriesDetailsCache[series.id] = details
         seriesDetailsFetchedAt[series.id] = .now
         detailsRevision += 1
+        // A TMDb id in the details: the posters' scores follow the title page's keys.
+        updatePosterScores()
         scheduleStoredDetailsSave()
         indexProviderPeople([(.series(series), details.info)])
         return details

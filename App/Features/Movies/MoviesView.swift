@@ -89,7 +89,7 @@ struct MovieGridView: View {
                             title: movie.name,
                             imageURL: movie.posterURL,
                             subtitle: movie.year.map(String.init),
-                            rating: movie.rating,
+                            scoreKey: ShowcaseItem.movie(movie).id,
                             progress: model.progress(movie: movie)?.progress,
                             watched: watched.contains(ShowcaseItem.movie(movie).id)
                         )

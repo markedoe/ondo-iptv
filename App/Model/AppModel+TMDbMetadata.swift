@@ -107,6 +107,7 @@ extension AppModel {
         await Task.detached(priority: .utility) { store.removeAll() }.value
         tmdbMetadata.read = []
         tmdbMetadata.attempted = []
+        forgetKeptPosterScores()
     }
 
     /// Reads what the store has for these keys, once a session each.
@@ -273,6 +274,8 @@ extension AppModel {
         let rows = keys.map { TitleMetadata(key: $0, kind: MetadataKey.kind(item.contentType), info: info, fetchedAt: now) }
         for row in rows { tmdbMetadata.titles[row.key] = row }
         tmdbMetadata.read.formUnion(keys)
+        // The posters' scores (`AppModel.posterScores`).
+        updatePosterScores()
         let credits = info.map(CreditRecord.credits(of:)) ?? []
         let store = metadataStore
         let savedKeys = keys

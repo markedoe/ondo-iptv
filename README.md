@@ -48,6 +48,9 @@ interface changes.
   or a finger.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating (TMDb's
   first with a token, see TMDb below),
+  **TMDb's score on every poster and Continue Watching card** (a star and "7.8", "7,8" in French, in the bottom leading
+  corner; the same as the title page's TMDb rating, from what TMDb said and what the device kept, never the provider's;
+  VoiceOver says "TMDb rating 7.8" after the title),
   a check mark on the poster of every title watched (a series once all its episodes are), **Mark as Watched / Mark as
   Unwatched** on its page (each episode too), watched movies hidden if you like (Search and My List keep them), **a film's versions grouped** (4K, Dolby Vision,
   HD, VOSTFR…: the film once, its versions as badges on its page; [docs/VERSIONS.md](docs/VERSIONS.md)),

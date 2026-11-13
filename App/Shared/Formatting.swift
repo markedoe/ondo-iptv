@@ -37,9 +37,10 @@ enum Formatting {
         date.formatted(.relative(presentation: .named))
     }
 
-    /// "7.8" / "7,8": the user's decimal separator, like the rest of the app.
-    static func rating(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(1)))
+    /// "7.8" / "7,8": the user's decimal separator, like the rest of the app. The title pages and the posters' TMDb score
+    /// (`AppModel.posterScores`) both write it with this.
+    static func rating(_ value: Double, locale: Locale = .autoupdatingCurrent) -> String {
+        value.formatted(.number.precision(.fractionLength(1)).locale(locale))
     }
 
     static func bytes(_ count: Int64) -> String {

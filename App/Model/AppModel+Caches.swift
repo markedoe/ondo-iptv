@@ -66,6 +66,8 @@ extension AppModel {
                 seriesDetailsFetchedAt[id] = entry.fetchedAt
             }
             detailsRevision += 1
+            // A TMDb id in the details: the posters' scores follow the title page's keys.
+            updatePosterScores()
             // Their cast and directors join the local people index (those of the catalogue already on screen).
             var named: [(item: ShowcaseItem, details: MediaDetails)] = []
             for (id, entry) in archive.movies {

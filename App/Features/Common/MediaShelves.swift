@@ -133,7 +133,7 @@ struct ShowcasePoster: View {
             return nil
         }()
         return VStack(alignment: .leading, spacing: 6) {
-            PosterArtwork(url: item.posterURL, title: item.title, progress: progress, watched: watched)
+            PosterArtwork(url: item.posterURL, title: item.title, progress: progress, watched: watched, scoreKey: item.id)
             if showsTitle {
                 Text(item.title)
                     .font(.caption.weight(.medium))
@@ -141,20 +141,24 @@ struct ShowcasePoster: View {
             }
         }
         .frame(width: width)
-        .accessibilityLabel(Text(item.title))
+        // The title, then TMDb's score ("TMDb rating 7.8").
+        .posterScoreLabel(title: item.title, key: item.id)
         .accessibilityValue(watched ? Text("Watched") : Text(verbatim: ""))
         // What TMDb knows of it is fetched in the background as its row appears (with a TMDb token).
         .onAppear { model.prefetchMetadata([item]) }
     }
 }
 
-/// 2:3 artwork with soft corners, a hairline border, an optional progress bar and the watched badge.
+/// 2:3 artwork with soft corners, a hairline border, an optional progress bar, the watched badge and TMDb's score.
 struct PosterArtwork: View {
     let url: URL?
     let title: String
     var progress: Double?
     /// Watched (`AppModel.isWatched`): a check mark in the top leading corner, its full bar left out.
     var watched = false
+    /// The title whose TMDb score shows in the bottom leading corner (`ShowcaseItem.id`, `AppModel.posterScores`); nil:
+    /// none (a title page's poster, whose facts give the rating).
+    var scoreKey: String?
 
     var body: some View {
         OndoColor.surface
@@ -170,6 +174,14 @@ struct PosterArtwork: View {
             .overlay(alignment: .topLeading) {
                 if watched { WatchedBadge().padding(6) }
             }
+            .overlay(alignment: .bottomLeading) {
+                // Above the progress bar when there is one (4 pt high, 8 pt from the bottom).
+                if let scoreKey {
+                    PosterScoreBadge(key: scoreKey)
+                        .padding(.leading, 6)
+                        .padding(.bottom, (progress ?? 0) > 0 && !watched ? 18 : 6)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -180,8 +192,8 @@ struct PosterArtwork: View {
     }
 }
 
-/// The check mark of a watched title on its thumbnail: white on a dark disc, legible on any poster, in the leading
-/// corner (the trailing one has the rating), never over the title below. VoiceOver says "Watched".
+/// The check mark of a watched title on its thumbnail: white on a dark disc, legible on any poster, in the top leading
+/// corner (TMDb's score is in the bottom one), never over the title below. VoiceOver says "Watched".
 struct WatchedBadge: View {
     var size: CGFloat = 22
 
@@ -195,6 +207,95 @@ struct WatchedBadge: View {
             .accessibilityElement()
             .accessibilityLabel(Text("Watched"))
             .accessibilityIdentifier("watchedBadge")
+    }
+}
+
+private struct PosterScoresKey: EnvironmentKey {
+    static let defaultValue: [String: String] = [:]
+}
+
+extension EnvironmentValues {
+    /// TMDb's score of each title, by `ShowcaseItem.id`, as written ("7.8"): `AppModel.posterScores`, given by
+    /// `PosterScoresProvider`. A card reads it with one lookup.
+    var posterScores: [String: String] {
+        get { self[PosterScoresKey.self] }
+        set { self[PosterScoresKey.self] = newValue }
+    }
+}
+
+/// Gives the cards below it TMDb's scores (`AppModel.posterScores`): only this view and the badges read the map, so a
+/// new one redraws the badges, not the screens.
+struct PosterScoresProvider<Content: View>: View {
+    @Environment(AppModel.self) private var model
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        content().environment(\.posterScores, model.posterScores)
+    }
+}
+
+/// TMDb's score of a title on its thumbnail (`PosterScorePill`), when it is known; nothing otherwise: no placeholder,
+/// never the provider's rating.
+struct PosterScoreBadge: View {
+    @Environment(\.posterScores) private var scores
+    let key: String?
+
+    var body: some View {
+        if let key, let score = scores[key] {
+            PosterScorePill(score: score)
+        }
+    }
+}
+
+/// A white star and the score on a dark pill, legible on any picture; a little larger on iPad and Mac. VoiceOver reads
+/// it with the card's title (`posterScoreLabel`), not on its own.
+struct PosterScorePill: View {
+    let score: String
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var large: Bool { sizeClass == .regular }
+    #else
+    private var large: Bool { true }
+    #endif
+
+    var body: some View {
+        HStack(spacing: large ? 3 : 2) {
+            Image(systemName: "star.fill")
+                .font(.system(size: large ? 10 : 9, weight: .bold))
+            Text(verbatim: score)
+                .font(.system(size: large ? 12.5 : 11, weight: .semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, large ? 6 : 5)
+        .padding(.vertical, 2)
+        .background(.black.opacity(0.65), in: Capsule())
+        .fixedSize()
+        .accessibilityHidden(true)
+    }
+}
+
+/// A card's accessibility label: its title, then TMDb's score when known ("Northern Lights, TMDb rating 7.8").
+struct PosterScoreLabel: ViewModifier {
+    @Environment(\.posterScores) private var scores
+    let title: String
+    let key: String?
+
+    func body(content: Content) -> some View {
+        content.accessibilityLabel(Self.label(title: title, score: key.flatMap { scores[$0] }))
+    }
+
+    static func label(title: String, score: String?) -> Text {
+        guard let score else { return Text(verbatim: title) }
+        return Text(verbatim: title + ", ") + Text("TMDb rating \(score)")
+    }
+}
+
+extension View {
+    /// The card's title, then TMDb's score (`PosterScoreLabel`).
+    func posterScoreLabel(title: String, key: String?) -> some View {
+        modifier(PosterScoreLabel(title: title, key: key))
     }
 }
 
@@ -245,6 +346,9 @@ struct ContinueCard: View {
                                 } else {
                                     Text(entry.timeLeftText).font(.caption.weight(.semibold))
                                 }
+                                // The play icon, then TMDb's score of the title, above the progress bar.
+                                PosterScoreBadge(key: item?.id)
+                                    .padding(.leading, 2)
                             }
                             .foregroundStyle(.white)
                             if !upNext { ProgressBar(value: entry.progress) }
@@ -254,6 +358,8 @@ struct ContinueCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .cardLift()
                 Text(entry.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                    // The title, then TMDb's score ("TMDb rating 7.8").
+                    .posterScoreLabel(title: entry.title, key: item?.id)
                 // A film of several versions: the one in progress.
                 // An episode: its line as its series' page shows it; none for a finished one standing for its series.
                 if let subtitle = (upNext && entry.isFinished ? nil : model.episodeLine(of: entry)) ?? model.versionLabel(for: entry) {

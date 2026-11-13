@@ -48,7 +48,7 @@ struct SeriesGridView: View {
             LazyVGrid(columns: posterColumns, spacing: 18) {
                 ForEach(list) { item in
                     NavigationLink(value: item) {
-                        PosterCard(title: item.name, imageURL: item.coverURL, subtitle: item.year.map(String.init), rating: item.rating,
+                        PosterCard(title: item.name, imageURL: item.coverURL, subtitle: item.year.map(String.init), scoreKey: ShowcaseItem.series(item).id,
                                    watched: watched.contains(ShowcaseItem.series(item).id))
                     }
                     .cardButtonStyle()
