@@ -453,21 +453,25 @@ class AppleSubmitTest(unittest.TestCase):
 
     def test_every_ios_submission_carries_the_header_and_search_results_assets(self):
         fastfile = (ROOT / "fastlane/Fastfile").read_text(encoding="utf-8")
-        helper = fastfile[fastfile.index("def place_header_assets"):fastfile.index("def deliver_submission")]
-        self.assertLess(helper.index('"upload"'), helper.index('"place", app_version'))
-        # Placed after deliver prepared the version, before any submission of it.
+        self.assertIn('sh("python3", "-I", ASSET_LIBRARY, "upload")', fastfile)
+        self.assertIn('sh("python3", "-I", ASSET_LIBRARY, "place", app_version)', fastfile)
         release = fastfile[fastfile.index("def release_for_review"):fastfile.index("def withdraw_from_review")]
+        # Uploaded before the live submission is withdrawn: a refused image leaves it in place.
+        self.assertLess(release.index("upload_header_assets if ios"), release.index("withdraw_from_review(platform) if submit"))
+        # Placed after deliver prepared the version, before any submission of it.
         placed = release.index("place_header_assets if ios")
         self.assertLess(release.index("deliver("), placed)
         self.assertLess(placed, release.index("submit_with_tips(platform, build)"))
-        self.assertLess(placed, release.index("deliver_submission(platform, build)"))
+        self.assertLess(placed, release.index("deliver_version(platform, build, true)"))
         self.assertIn("submits_now = submit && !tips && !ios", release)
+        # A rehearsal (SUBMIT=false) submits nothing.
+        self.assertIn("elsif submit && ios", release)
         manual = fastfile[fastfile.index("def submit_for_review"):fastfile.index("def release_for_review")]
-        placed = manual.index('place_header_assets if platform == "ios"')
+        self.assertLess(manual.index("upload_header_assets if ios"), manual.index("deliver_version(platform, build, !tips && !ios)"))
+        placed = manual.index("place_header_assets if ios")
+        self.assertLess(manual.index("deliver_version(platform, build, !tips && !ios)"), placed)
         self.assertLess(placed, manual.index("submit_with_tips(platform, build)"))
-        self.assertLess(placed, manual.index("deliver_submission(platform, build)"))
-        # deliver submits on its own only in deliver_submission and, for macOS, in the release.
-        self.assertEqual(1, fastfile.count("submit_for_review: true"))
+        self.assertLess(placed, manual.index("deliver_version(platform, build, true)"))
 
     def test_the_settled_states_are_apples(self):
         spec_states = {"MISSING_METADATA", "WAITING_FOR_UPLOAD", "PROCESSING_CONTENT", "READY_TO_SUBMIT", "WAITING_FOR_REVIEW",
@@ -484,8 +488,8 @@ class AppleSubmitTest(unittest.TestCase):
         self.assertIn("submit_for_review: submits_now", release)
         self.assertIn("submit_with_tips(platform, build)", release)
         manual = fastfile[fastfile.index("def submit_for_review"):fastfile.index("def release_for_review")]
-        self.assertIn("return submit_with_tips(platform, build) if tips", manual)
-        self.assertIn("deliver_submission(platform, build)", manual)
+        self.assertIn("deliver_version(platform, build, !tips && !ios)", manual)
+        self.assertIn("submit_with_tips(platform, build)", manual)
         # precheck cannot read In-App Purchases with an API key: it would stop the release.
         self.assertNotIn("precheck_include_in_app_purchases: true", fastfile)
         self.assertNotIn("include_in_app_purchases: true", fastfile)

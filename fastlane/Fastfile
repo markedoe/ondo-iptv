@@ -454,16 +454,21 @@ def submit_with_tips(platform, build)
   sh("python3", "-I", ASSET_LIBRARY, "iap_submit", API_PLATFORMS.fetch(platform), app_version, build)
 end
 
-# The product page header and search results assets (iOS and iPadOS 27) in every listing language: put into the Asset
-# Library (once per file content) and onto this version, before its submission, so App Review sees the version with them.
-def place_header_assets
+# The product page header and search results assets (iOS and iPadOS 27) in every listing language. upload puts them in
+# the Asset Library (once per file content) and touches no version: it runs before anything is withdrawn, so a refused
+# image stops the release while the live submission is still there. place puts them on this version once deliver has
+# prepared it, before its submission, so App Review sees the version with them.
+def upload_header_assets
   sh("python3", "-I", ASSET_LIBRARY, "upload")
+end
+
+def place_header_assets
   sh("python3", "-I", ASSET_LIBRARY, "place", app_version)
 end
 
-# deliver's own submission of this version with the App Store edition build BUILD_NUMBER, the listing as it is on App
-# Store Connect, released as soon as Apple approves it.
-def deliver_submission(platform, build)
+# This version with the App Store edition build BUILD_NUMBER and the listing as it is on App Store Connect: deliver
+# makes the editable version this version, and submits it when asked, released as soon as Apple approves it.
+def deliver_version(platform, build, submit)
   deliver(
     api_key: api_key,
     app_identifier: APP_ID,
@@ -474,9 +479,9 @@ def deliver_submission(platform, build)
     skip_metadata: true,
     skip_screenshots: true,
     force: true,
-    submit_for_review: true,
+    submit_for_review: submit,
     automatic_release: true,
-    run_precheck_before_submit: true,
+    run_precheck_before_submit: submit,
     precheck_include_in_app_purchases: false,
     submission_information: { add_id_info_uses_idfa: false }
   )
@@ -490,10 +495,15 @@ def submit_for_review(platform)
   build = ENV.fetch("BUILD_NUMBER", "").strip
   UI.user_error!("BUILD_NUMBER must be the App Store edition's build number (from its release run's log)") unless build.match?(/\A\d+\z/)
   tips = tips_to_submit?(platform)
-  place_header_assets if platform == "ios"
-  return submit_with_tips(platform, build) if tips
-
-  deliver_submission(platform, build)
+  ios = platform == "ios"
+  upload_header_assets if ios
+  deliver_version(platform, build, !tips && !ios)
+  place_header_assets if ios
+  if tips
+    submit_with_tips(platform, build)
+  elsif ios
+    deliver_version(platform, build, true)
+  end
 end
 
 # A version tag's release (the user's go: CLAUDE.md, App Store): the listing and its screenshots, the App Store edition
@@ -507,11 +517,12 @@ def release_for_review(platform, screenshots)
   # Before the withdrawal too: a tip that is not ready stops the release here, so a live submission is never
   # cancelled for a release that would then refuse to submit.
   tips_to_submit?(platform) if submit
+  ios = platform == "ios"
+  upload_header_assets if ios
   withdraw_from_review(platform) if submit
   # After the withdrawal: tips it took back out of App Review are waiting again.
   tips = submit && tips_to_submit?(platform)
   # iOS: the header and search results assets go onto the version deliver has just prepared, then it is submitted.
-  ios = platform == "ios"
   submits_now = submit && !tips && !ios
   deliver(
     api_key: api_key,
@@ -538,7 +549,7 @@ def release_for_review(platform, screenshots)
   if tips
     submit_with_tips(platform, build)
   elsif submit && ios
-    deliver_submission(platform, build)
+    deliver_version(platform, build, true)
   end
 end
 
