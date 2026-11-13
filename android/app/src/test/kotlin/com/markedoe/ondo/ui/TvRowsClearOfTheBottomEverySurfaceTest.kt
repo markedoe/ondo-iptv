@@ -459,20 +459,8 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
         }
     }
 
-    /**
-     * Every page with rows of posters under a header pinned above them, on a 960 x 540 dp TV: the focus on the first
-     * poster of its first row (Home: Down from Play), then Down to the rows below; each time the focused poster and its
-     * row show whole, its focus growth included, with Home's margins. Movies and Series open on a row of posters (Award
-     * winners), as a tab with no title in progress does. Every source file that shows a header above rows
-     * ([com.markedoe.ondo.ui.tv.TvHeaderAbove]) is listed in [headerSurfaces], with its pages here.
-     */
-    @Test
-    fun everyPageUnderAHeaderShowsItsFocusedRowWhole() {
-        val root = File("src/main/kotlin/com/markedoe/ondo")
-        val found = root.walkTopDown().filter { it.isFile && it.extension == "kt" }
-            .filter { file -> headerAbove.containsMatchIn(file.readText()) }
-            .map { it.relativeTo(root).invariantSeparatorsPath }.toSet()
-        assertEquals("a page with a header above its rows is added to `headerSurfaces`, with its page here", headerSurfaces.keys - "ui/tv/TvHomeScreen.kt", found)
+    /** The pages with rows of posters under a header pinned above them: every surface of [headerSurfaces]. */
+    private fun headerPages(): List<HeaderPage> {
         val awards = (1..8).map { movie("a$it", "Award Film $it") }
         val seriesAwards = (1..8).map { series("as$it", "Award Series $it") }
         val movieCategories = (1..3).map { MediaCategory("m-c$it", "Example Category $it", ContentType.MOVIE) }
@@ -491,14 +479,20 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
             rows = seriesCategories.map { category -> CategoryRow(category, (1..8).map { series("${category.id}-$it", "${category.name} Series $it", category.id) }) },
         )
         val homeState = home(RowOrder.HOME_NEW_MOVIES)
-        val pages = listOf(
+        return listOf(
             HeaderPage("Home", TopLevel.HOME, true, "homeRows") { TvHomeScreen(homeState, HomeActions(), autoAdvance = false) },
             HeaderPage("Movies", TopLevel.MOVIES, true, "vod") { VodScreen(moviesState, VodActions()) },
             HeaderPage("Series", TopLevel.SERIES, true, "vod") { VodScreen(seriesState, VodActions()) },
             HeaderPage("a category's grid", TopLevel.MOVIES, false, "grid") { PosterGridScreen("Drama", longGrid, filter = "", onFilter = {}, onOpen = {}, onBack = {}) },
             HeaderPage("a genre's titles", TopLevel.HOME, false, "browse") { BrowseScreen(BrowseUiState(BrowseKind.GENRE, "Mystery", movies = longGrid), onOpen = {}, onFestival = {}, onBack = {}) },
         )
-        assertEquals("every page is listed", headerSurfaces.values.flatten().toSet(), pages.map { it.name }.toSet())
+    }
+
+    /**
+     * Shows each of [pages] in turn, as the app does on a TV, the focus on the first poster of its first row (Home: Down
+     * from Play), then [walk] on it.
+     */
+    private fun visitHeaderPages(pages: List<HeaderPage>, walk: (HeaderPage) -> Unit) {
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
@@ -532,6 +526,89 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
                 compose.onAllNodes(rows).onFirst().requestFocus()
                 advance(1_000)
             }
+            walk(page)
+        }
+    }
+
+    /** The moves along a row: Right and Left, back and forth. */
+    private val alongTheRow = listOf(Key.DirectionRight, Key.DirectionRight, Key.DirectionLeft, Key.DirectionRight, Key.DirectionLeft, Key.DirectionLeft)
+
+    /**
+     * Where the things of [page]'s list stand, by node: each poster's middle (the same grown by its focus or not) and
+     * each text's top (the rows' names, the cards' lines).
+     */
+    private fun heights(page: HeaderPage): Map<Int, Pair<String, Float>> {
+        fun drawn(node: SemanticsNode): Rect {
+            val coordinates = node.layoutInfo.coordinates
+            return coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+        }
+        val posters = compose.onAllNodes(posters(page.list)).fetchSemanticsNodes().associate { node ->
+            node.id to ("poster " + node.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull().orEmpty() to drawn(node).center.y)
+        }
+        val texts = compose.onAllNodes(within(page.list) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).fetchSemanticsNodes().associate { node ->
+            node.id to ("text " + node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ").orEmpty() to drawn(node).top)
+        }
+        return posters + texts
+    }
+
+    /**
+     * On [page], moving along the focused row (Right and Left, back and forth) moves nothing up or down: at every frame
+     * of every move, each poster, each row's name and each card's line stays at its height, within half a pixel.
+     */
+    private fun assertStillAlongTheRow(page: HeaderPage, step: String) {
+        val before = heights(page)
+        assertTrue("${page.name}, $step: the page's posters are measured", before.isNotEmpty())
+        alongTheRow.forEachIndexed { index, key ->
+            compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(key) }
+            repeat(30) { frame ->
+                advance(16)
+                val now = heights(page)
+                for ((id, was) in before) {
+                    val (name, y) = now[id] ?: continue
+                    assertTrue(
+                        "${page.name}, $step, move ${index + 1} ($key), frame ${frame + 1}: $name moved from ${was.second.inDp()} to ${y.inDp()}",
+                        abs(y - was.second) <= 0.5f,
+                    )
+                }
+            }
+            advance(500)
+        }
+        assertTrue("${page.name}, $step: the focus still on a poster of the page", focusedIn(posters(page.list)))
+    }
+
+    /**
+     * Every page with rows of posters under a header pinned above them, on a 960 x 540 dp TV: moving along a row, in
+     * the first row and in one reached by Down, never moves the rows, their names or the header up or down; only Up
+     * and Down do.
+     */
+    @Test
+    fun aMoveAlongARowNeverMovesTheRows() {
+        val pages = headerPages()
+        assertEquals("every page is listed", headerSurfaces.values.flatten().toSet(), pages.map { it.name }.toSet())
+        visitHeaderPages(pages) { page ->
+            assertStillAlongTheRow(page, "first row")
+            press(Key.DirectionDown)
+            assertStillAlongTheRow(page, "a row reached by Down")
+        }
+    }
+
+    /**
+     * Every page with rows of posters under a header pinned above them, on a 960 x 540 dp TV: the focus on the first
+     * poster of its first row (Home: Down from Play), then Down to the rows below; each time the focused poster and its
+     * row show whole, its focus growth included, with Home's margins. Movies and Series open on a row of posters (Award
+     * winners), as a tab with no title in progress does. Every source file that shows a header above rows
+     * ([com.markedoe.ondo.ui.tv.TvHeaderAbove]) is listed in [headerSurfaces], with its pages here.
+     */
+    @Test
+    fun everyPageUnderAHeaderShowsItsFocusedRowWhole() {
+        val root = File("src/main/kotlin/com/markedoe/ondo")
+        val found = root.walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .filter { file -> headerAbove.containsMatchIn(file.readText()) }
+            .map { it.relativeTo(root).invariantSeparatorsPath }.toSet()
+        assertEquals("a page with a header above its rows is added to `headerSurfaces`, with its page here", headerSurfaces.keys - "ui/tv/TvHomeScreen.kt", found)
+        val pages = headerPages()
+        assertEquals("every page is listed", headerSurfaces.values.flatten().toSet(), pages.map { it.name }.toSet())
+        visitHeaderPages(pages) { page ->
             assertFocusedRowWhole(page, "first row")
             repeat(2) { step ->
                 press(Key.DirectionDown)
