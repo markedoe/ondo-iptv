@@ -225,6 +225,8 @@ fun TvHomeScreen(
         listState.scrollToItem(0)
         // After the page's own focus effects (a card given its focus back as the page comes back).
         withFrameNanos { }
+        // A key pressed meanwhile (Down as a row came in): the viewer has moved, the remote stays where they took it.
+        if (viewerMoved) return
         bar?.browsing = false
         initialKey?.let { memory?.handTo(it) } ?: memory?.given()
     }
