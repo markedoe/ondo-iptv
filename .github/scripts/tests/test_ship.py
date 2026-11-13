@@ -11,6 +11,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+# Not a key: a PEM header split so that secret scanners do not take it for one, and one letter.
+FAKE_KEY = "-----BEGIN " + "PRIVATE KEY-----\nx"
+
 SCRIPTS = Path(__file__).resolve().parents[1]
 WORKFLOWS = SCRIPTS.parent / "workflows"
 spec = importlib.util.spec_from_file_location("ship", SCRIPTS / "ship.py")
@@ -197,7 +200,7 @@ class AppleTests(unittest.TestCase):
             def close(self):
                 pass
 
-        environment = {"ASC_KEY_ID": "id", "ASC_ISSUER_ID": "issuer", "ASC_KEY_P8": "-----BEGIN PRIVATE KEY-----\nx"}
+        environment = {"ASC_KEY_ID": "id", "ASC_ISSUER_ID": "issuer", "ASC_KEY_P8": FAKE_KEY}
         with mock.patch.dict(os.environ, environment), mock.patch.object(ship.asset_library, "Client", Refusing):
             self.assertEqual(ship.read_apple(), (None, None))
         with mock.patch.dict(os.environ, {"ASC_KEY_ID": ""}):
@@ -221,7 +224,7 @@ class AppleTests(unittest.TestCase):
             def close(self):
                 pass
 
-        environment = {"ASC_KEY_ID": "id", "ASC_ISSUER_ID": "issuer", "ASC_KEY_P8": "-----BEGIN PRIVATE KEY-----\nx"}
+        environment = {"ASC_KEY_ID": "id", "ASC_ISSUER_ID": "issuer", "ASC_KEY_P8": FAKE_KEY}
         with mock.patch.dict(os.environ, environment), mock.patch.object(ship.asset_library, "Client", Recording):
             self.assertEqual(ship.read_apple(), ([], []))
         self.assertEqual(set(calls), {"GET"})
