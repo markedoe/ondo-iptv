@@ -8,8 +8,9 @@ ASC_KEY_P8, as for the release workflow):
                             on each iOS version. Changes nothing.
   asset_library.py upload   puts fastlane/creative/<locale>/header.png and search.jpg into the Asset Library, once per file
                             content. No placement and no submission: the assets wait there, unreviewed.
-  asset_library.py place    shows them in the Header and Search Results tab of the iOS version being prepared, one
-                            pair per listing language. Refused for a version in review or already approved: App Review
+  asset_library.py place [VERSION]
+                            shows them in the Header and Search Results tab of the iOS version being prepared (or of
+                            VERSION: the release lanes, before each iOS submission), one pair per listing language. Refused for a version in review or already approved: App Review
                             sees the version as it was submitted.
   asset_library.py submit   submits them for review on their own (a review submission of the Asset Library), once an
                             iOS version is approved. Refused while an iOS version or review submission is in review,
@@ -71,7 +72,8 @@ IAP_VERSION_EDITABLE = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "REJECTED"
 # In-App Purchases App Review holds: nothing about them is changed meanwhile.
 IAP_IN_REVIEW = {"WAITING_FOR_REVIEW", "IN_REVIEW"}
 PLATFORMS = ("IOS", "MAC_OS")
-LOCALES = ("en-US", "fr-FR")
+# Every language of the iOS App Store listing (fastlane/metadata): each gets its header and search results asset.
+LOCALES = ("en-US", "fr-FR", "es-ES", "es-MX", "pt-BR", "zh-Hans", "ar-SA", "hi")
 # Asset → App Store slot.
 SLOTS = {"header": "PRODUCT_PAGE_HEADER_ASSET", "search": "APP_STORE_SEARCH_RESULTS_ASSET"}
 # The file of each asset in fastlane/creative/<locale>/: the 21:9 header is taken as PNG only (reference data).
@@ -551,11 +553,14 @@ def all_assets(client: Client, library: str) -> dict:
     return assets
 
 
-def place(client: Client):
+def place(client: Client, version_string: str = ""):
+    """Onto the iOS version being prepared, or that version (the release lanes, before its submission)."""
     app = app_id(client)
-    versions = [version for version in ios_versions(client, app) if version["attributes"]["appStoreState"] in EDITABLE]
+    versions = [version for version in ios_versions(client, app) if version["attributes"]["appStoreState"] in EDITABLE
+                and (not version_string or version["attributes"]["versionString"] == version_string)]
     if not versions:
-        raise SystemExit("No iOS version being prepared: a version in review or approved cannot change. Nothing placed.")
+        named = f"iOS {version_string}" if version_string else "No iOS version"
+        raise SystemExit(f"{named} being prepared: a version in review or approved cannot change. Nothing placed.")
     put_on_version(client, versions[0], all_assets(client, library_id(client, app)))
 
 
@@ -1052,7 +1057,7 @@ def iap_submit(client, platform: str, version_string: str, build_number: str, se
 
 def main() -> None:
     # Each command and how many arguments follow it.
-    commands = {"status": (status, 0), "upload": (upload, 0), "place": (place, 0), "submit": (submit, 0),
+    commands = {"status": (status, 0), "upload": (upload, 0), "place": (place, 0, 1), "submit": (submit, 0),
                 "publish": (publish, 0), "iap": (iap, 0), "iap_create": (iap_create, 0, 1), "iap_screenshot": (iap_screenshot, 1),
                 "iap_pending": (iap_pending, 1), "iap_submit": (iap_submit, 3)}
     if len(sys.argv) < 2 or sys.argv[1] not in commands or not (

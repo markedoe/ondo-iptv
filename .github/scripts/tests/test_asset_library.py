@@ -68,6 +68,11 @@ class AssetLibraryTest(unittest.TestCase):
         self.assertNotEqual(name, asset_library.reference_name("search", "fr-FR", b"one"))
         self.assertTrue(name.startswith("Ondo header fr-FR "))
 
+    def test_every_language_of_the_app_store_listing_gets_its_assets(self):
+        metadata = asset_library.ROOT / "fastlane" / "metadata"
+        listing = {path.name for path in metadata.iterdir() if path.is_dir() and path.name != "review_information"}
+        self.assertEqual(listing, set(asset_library.LOCALES))
+
     def test_each_listing_language_has_both_assets_at_the_app_store_sizes(self):
         for locale in asset_library.LOCALES:
             header = (asset_library.CREATIVE / locale / asset_library.FILES["header"]).read_bytes()
@@ -103,7 +108,8 @@ class FakeAppStoreConnect:
 
     def all(self, path, query=None):
         if path.endswith("/appStoreVersions"):
-            return [{"id": "version", "attributes": {"versionString": "1.1.0", "appStoreState": self.version_state}}]
+            return getattr(self, "versions", None) or [
+                {"id": "version", "attributes": {"versionString": "1.1.0", "appStoreState": self.version_state}}]
         if path == "/v1/reviewSubmissions":
             return self.submissions
         if path.endswith("/images"):
@@ -111,6 +117,37 @@ class FakeAppStoreConnect:
         if path.endswith("/items"):
             return []
         raise AssertionError(path)
+
+
+class PlaceTest(unittest.TestCase):
+    """place VERSION, as the release lanes call it before each iOS submission."""
+
+    def placed_on(self, versions, version_string=""):
+        fake = FakeAppStoreConnect("PREPARE_FOR_SUBMISSION")
+        fake.versions = versions
+        chosen = []
+        original = asset_library.put_on_version
+        asset_library.put_on_version = lambda client, version, assets: chosen.append(version["id"])
+        try:
+            asset_library.place(fake, version_string)
+        finally:
+            asset_library.put_on_version = original
+        return chosen
+
+    def version(self, ident, string, state):
+        return {"id": ident, "attributes": {"versionString": string, "appStoreState": state}}
+
+    def test_the_named_version_gets_the_assets_not_another_one_being_prepared(self):
+        versions = [self.version("old", "2.0.0", "DEVELOPER_REJECTED"), self.version("new", "2.1.0", "PREPARE_FOR_SUBMISSION")]
+        self.assertEqual(["new"], self.placed_on(versions, "2.1.0"))
+
+    def test_a_named_version_in_review_or_approved_is_refused(self):
+        for state in ("WAITING_FOR_REVIEW", "IN_REVIEW", "READY_FOR_SALE"):
+            with self.assertRaises(SystemExit):
+                self.placed_on([self.version("v", "2.1.0", state), self.version("o", "2.0.0", "PREPARE_FOR_SUBMISSION")], "2.1.0")
+
+    def test_without_a_version_the_one_being_prepared_gets_them(self):
+        self.assertEqual(["v"], self.placed_on([self.version("v", "2.1.0", "PREPARE_FOR_SUBMISSION")]))
 
 
 class SubmitTest(unittest.TestCase):
@@ -127,10 +164,11 @@ class SubmitTest(unittest.TestCase):
             asset_library.submit(fake)
         self.assertEqual([], fake.changes)
 
-    def test_once_approved_the_four_assets_go_in_one_submission(self):
+    def test_once_approved_every_asset_goes_in_one_submission(self):
         fake = FakeAppStoreConnect("READY_FOR_SALE")
         asset_library.submit(fake)
-        self.assertEqual([("POST", "/v1/reviewSubmissions")] + [("POST", "/v1/reviewSubmissionItems")] * 4
+        assets = len(asset_library.LOCALES) * len(asset_library.SLOTS)
+        self.assertEqual([("POST", "/v1/reviewSubmissions")] + [("POST", "/v1/reviewSubmissionItems")] * assets
                          + [("PATCH", "/v1/reviewSubmissions/submission")], fake.changes)
 
     def test_assets_already_submitted_are_not_sent_again(self):

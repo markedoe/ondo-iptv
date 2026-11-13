@@ -6,7 +6,7 @@
 //   git fetch origin appstore-screenshots && mkdir -p /tmp/shots && git archive FETCH_HEAD | tar -x -C /tmp/shots
 //   NODE_PATH="$(npm root -g)" node fastlane/creative/render.mjs /tmp/shots
 //
-// Needs Playwright's Chromium, the Inter font and, for the feature graphics, Noto Sans Arabic, Devanagari and CJK SC
+// Needs Playwright's Chromium, the Inter font and, for the other scripts, Noto Sans Arabic, Devanagari and CJK SC
 // (Debian, Ubuntu: fonts-noto-core, fonts-noto-cjk). The App Store Connect upload is
 // .github/workflows/app-store-assets.yml.
 //
@@ -17,7 +17,7 @@
 // (feature.html, 1024 × 500); the release workflow uploads them.
 //
 //   NODE_PATH="$(npm root -g)" node fastlane/creative/render.mjs --tv
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { dirname, join, normalize, resolve, sep } from "node:path";
@@ -101,12 +101,15 @@ if (tv) {
 }
 
 try {
-  for (const locale of ["en-US", "fr-FR"]) {
+  // Every language of the iOS App Store listing (fastlane/metadata; asset_library.py LOCALES): one without screenshots
+  // of its own shows the English ones, as its listing does.
+  for (const locale of ["en-US", "fr-FR", "es-ES", "es-MX", "pt-BR", "zh-Hans", "ar-SA", "hi"]) {
+    const screens = existsSync(join(shots, locale)) ? locale : "en-US";
     mkdirSync(join(here, locale), { recursive: true });
     for (const [kind, [width, height, type]] of Object.entries(assets)) {
       const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
       const url = new URL("/template.html", origin);
-      url.search = new URLSearchParams({ kind, locale, shots: "/shots" }).toString();
+      url.search = new URLSearchParams({ kind, locale, screens, shots: "/shots" }).toString();
       await page.goto(url.href);
       await page.waitForSelector("body[data-ready='1']");
       const file = join(here, locale, `${kind}.${type === "png" ? "png" : "jpg"}`);

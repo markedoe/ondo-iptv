@@ -380,12 +380,14 @@ réseau, fichiers choisis par l'utilisateur).
 
    **En-tête et résultats de recherche** (iPhone et iPad sous iOS / iPadOS 27 ou plus ; pas le Mac) : l'onglet
    *En-tête et résultats de recherche* de la page de la version. Les images sont
-   `fastlane/creative/<langue>/header.png` (21:9, 3840×1646, PNG seulement) et `search.jpg` (3:2, 3840×2560), en anglais et en
-   français, dessinées à partir des captures App Store par `fastlane/creative/render.mjs` (voir ses premières
+   `fastlane/creative/<langue>/header.png` (21:9, 3840×1646, PNG seulement) et `search.jpg` (3:2, 3840×2560), dans chaque langue
+   de la fiche (un test échoue s'il en manque une ; une langue sans captures à elle montre les captures anglaises), dessinées à partir des captures App Store par `fastlane/creative/render.mjs` (voir ses premières
    lignes) ; dessinez-les de nouveau quand les captures changent. *Actions → App Store header and search results
    → Run workflow* : `status` montre ce que contient App Store Connect (lecture seule), `upload` dépose les
    images dans la bibliothèque de ressources (Asset Library) sans toucher à aucune version, `place` les affiche
-   sur la version iOS en préparation. Une version en review ou approuvée ne peut pas changer : `place` la
+   sur la version iOS en préparation. La release d'un tag de version et la cible `submit` font les deux d'elles-mêmes,
+   après la fiche et avant la soumission iOS : chaque version iOS soumise les porte. Une version en review ou approuvée
+   ne peut pas changer : `place` la
    refuse. Les ressources passent en review avec la version qui les porte, ou seules : `submit` les soumet une
    fois une version iOS approuvée, et refuse tant qu'une version iOS ou une soumission est en review, pour ne
    rien changer à ce qu'App Review examine. Une fois approuvées par Apple, `publish` les affiche sur la version

@@ -1,0 +1,3 @@
+# Gitleaks findings checked by hand and known to be false positives (fingerprint: commit:file:rule:line).
+# A fake API key in a test, the first line of a PEM header and one letter: no key.
+f6f1b557d7599f70a0e902a283ea5e31675ea68f:.github/scripts/tests/test_ship.py:private-key:195
