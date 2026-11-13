@@ -71,6 +71,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -95,6 +96,7 @@ import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.MyListBadge
 import com.markedoe.ondo.ui.components.ScoreBadge
 import com.markedoe.ondo.ui.components.posterScore
+import com.markedoe.ondo.ui.components.scoreDescription
 import com.markedoe.ondo.ui.components.PlayIcon
 import com.markedoe.ondo.ui.components.ResumeCardMenu
 import com.markedoe.ondo.ui.components.posterLongClick
@@ -430,11 +432,16 @@ fun TvResumeCard(
     var asking by remember { mutableStateOf(false) }
     if (asking) ResumeCardMenu(item, onOpen, onRemove, onDismiss = { asking = false })
     var focused by remember { mutableStateOf(false) }
+    val score = scoreDescription(item.showcase?.key)
     Column(modifier.width(TvTokens.WideCardWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
             onLongClick = if (onRemove != null || onOpen != null) ({ asking = true }) else null,
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.reportsFocus(item.showcase).semantics { contentDescription = item.title },
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.reportsFocus(item.showcase).semantics {
+                contentDescription = item.title
+                // TMDb's score of the title, said as its state where its badge shows it.
+                if (score != null) stateDescription = score
+            },
             shape = CardDefaults.shape(TvTokens.CardShape),
             scale = scale,
             border = border,

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui
 
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasStateDescription
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -25,6 +40,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.InMemoryMetadataStore
+import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
@@ -57,6 +73,7 @@ import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TvPosterCard
 import com.markedoe.ondo.ui.tv.TvResumeCard
 import java.io.File
+import java.time.Duration
 import java.util.Locale
 import kotlinx.serialization.json.Json
 import org.junit.After
@@ -67,6 +84,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -75,6 +93,8 @@ import org.robolectric.annotation.Config
  * has none yet.
  */
 class PosterScoreMapperTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
+
     private val northern = ShowcaseItem.MovieItem(Fixtures.northernLights)
     private val glass = ShowcaseItem.MovieItem(Fixtures.glassCity)
     private val harbor = ShowcaseItem.SeriesItem(Fixtures.harborLights)
@@ -201,10 +221,12 @@ class PosterScoreBadgeTest {
             }
         }
         assertEquals("no badge without TMDb's score", 2, badges().size)
-        // TalkBack: the title, then the score, on the card itself.
-        compose.onAllNodes(hasContentDescription("Northern Lights") and hasContentDescription("TMDb rating 7.8") and hasClickAction()).assertCountEquals(1)
-        compose.onAllNodes(hasContentDescription("Harbor Lights") and hasContentDescription("TMDb rating 6.0") and hasClickAction()).assertCountEquals(1)
-        compose.onAllNodes(hasContentDescription("TMDb rating", substring = true) and hasContentDescription("Glass City")).assertCountEquals(0)
+        // TalkBack: the title, then the score as the card's state.
+        compose.onAllNodes(hasContentDescription("Northern Lights") and hasStateDescription("TMDb rating 7.8") and hasClickAction()).assertCountEquals(1)
+        compose.onAllNodes(hasContentDescription("Harbor Lights") and hasStateDescription("TMDb rating 6.0") and hasClickAction()).assertCountEquals(1)
+        compose.onAllNodes(hasStateDescription("TMDb rating", substring = true) and hasContentDescription("Glass City")).assertCountEquals(0)
+        // The badge adds nothing to the card's description: the tests and TalkBack find a card by its title.
+        compose.onAllNodes(hasContentDescription("TMDb rating", substring = true)).assertCountEquals(0)
         val poster = card("Northern Lights")
         val badge = badges().first { poster.contains(it.center) }
         assertTrue("in the start half: $badge in $poster", badge.right < poster.center.x)
@@ -264,7 +286,7 @@ class PosterScoreBadgeTest {
             }
         }
         val badge = badges().single()
-        val picture = compose.onAllNodes(hasContentDescription("TMDb rating 7.8") and hasClickAction()).fetchSemanticsNodes().single().boundsInRoot
+        val picture = compose.onAllNodes(hasStateDescription("TMDb rating 7.8") and hasClickAction()).fetchSemanticsNodes().single().boundsInRoot
         assertTrue("in the start half: $badge in $picture", badge.right < picture.center.x)
         // The picture is 16:9 of the card's width, its bar at its bottom: the badge ends above the bar.
         val pictureBottom = picture.top + picture.width * 9f / 16f
@@ -290,7 +312,7 @@ class PosterScoreBadgeTest {
             compose.runOnIdle { shown = index }
             compose.waitForIdle()
             // Down to the first badge, wherever the page's list is.
-            val badge = hasContentDescription("TMDb rating 7.8")
+            val badge = hasStateDescription("TMDb rating 7.8")
             for (list in compose.onAllNodes(hasScrollToNodeAction()).fetchSemanticsNodes().indices) {
                 if (compose.onAllNodes(badge).fetchSemanticsNodes().isNotEmpty()) break
                 runCatching { compose.onAllNodes(hasScrollToNodeAction())[list].performScrollToNode(badge) }
@@ -391,7 +413,7 @@ class TvPosterScoreTest {
         compose.onNode(hasContentDescription("Glass City") and hasClickAction()).assertIsFocused()
         assertEquals("the card stays where it was", before, card("Glass City"))
         assertEquals(2, badges().size)
-        compose.onAllNodes(hasContentDescription("TMDb rating 7.1") and hasContentDescription("Glass City")).assertCountEquals(1)
+        compose.onAllNodes(hasStateDescription("TMDb rating 7.1") and hasContentDescription("Glass City")).assertCountEquals(1)
         val poster = card("Northern Lights")
         val badge = badges().first { poster.contains(it.center) }
         assertTrue("bottom start: $badge in $poster", badge.right < poster.center.x && badge.top > poster.center.y)
@@ -416,8 +438,9 @@ class TvPosterScoreTest {
 }
 
 /**
- * In the app: the scores come from what the device kept of TMDb, through the view model's state ([OndoViewModel.posterScores],
- * worked out off the main thread), the same as each title's header, and show on the posters without asking TMDb.
+ * In the app: TMDb's score kept on the device reaches the view model ([OndoViewModel.posterScores], worked out off the
+ * main thread) and the focused poster of the Movies tab, the same number as the header above it, said as the card's
+ * state after its title; a title TMDb's score is unknown of shows none, its header the provider's.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -428,31 +451,122 @@ class PosterScoreAppTest {
 
     @get:Rule val folder = TemporaryFolder()
 
-    private fun badges() = compose.onAllNodesWithTag(SCORE_BADGE_TAG, useUnmergedTree = true).fetchSemanticsNodes()
+    private val movieTitles = Fixtures.content.movies.map { it.name }.toSet()
 
-    @Test
-    fun theKeptScoresReachThePostersAndMatchTheHeader() {
-        // Every title of the catalogue, as TMDb answered for it, with its votes.
-        val kept = Fixtures.released(Fixtures.content).mapValues { (_, title) -> title.copy(voteAverage = 7.84, voteCount = 1_000) }
-        assertTrue("the fixtures keep some titles", kept.isNotEmpty())
+    private lateinit var viewModel: OndoViewModel
+
+    /** The app on a TV, TMDb's answer for Northern Lights kept on the device from an earlier launch (7.3). */
+    private fun start() {
         val store = AppStore(folder.root)
         store.savePlaylists(listOf(Fixtures.playlist))
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
         store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content.copy(fetchedAt = System.currentTimeMillis()))
-        val metadata = InMemoryMetadataStore().apply { save(kept.values.toList()) }
+        val northern = Fixtures.northernLights
+        val metadata = InMemoryMetadataStore()
+        metadata.save(
+            listOf(
+                TitleMetadata(
+                    MetadataKey.title(false, northern.name, northern.year)!!, "movie", tmdbId = 11, voteAverage = 7.3, voteCount = 950,
+                    fetchedAt = System.currentTimeMillis(),
+                ),
+            ),
+        )
         val repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main), metadata = metadata)
-        val viewModel = OndoViewModel(repository, Labels(locale = Locale.US), minutes = flowOf(Fixtures.NOW))
+        viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
+        var inputModes: InputModeManager? = null
         compose.setContent {
+            inputModes = LocalInputModeManager.current
             OndoTheme { CompositionLocalProvider(LocalCarouselAutoAdvance provides false) { OndoApp(viewModel) } }
         }
-        compose.waitUntil(10_000) { kept.keys.all { viewModel.posterScores.value[it] != null } }
-        val state = viewModel.state.value
-        val items = state.content.movies.map { ShowcaseItem.MovieItem(it) } + state.content.series.map { ShowcaseItem.SeriesItem(it) }
-        for (item in items) {
-            val header = UiMappers.titleHeader(state, item, kept[item.key], Locale.US)
-            assertEquals(item.title, header.tmdbRating, viewModel.posterScores.value[item.key])
+        compose.waitUntil(10_000) { exists("home") }
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        compose.mainClock.autoAdvance = false
+        settle()
+    }
+
+    private fun settle(ms: Long = 300) {
+        val deadline = System.currentTimeMillis() + ms
+        do {
+            Thread.sleep(20)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(20))
+            compose.mainClock.advanceTimeBy(20)
+            compose.waitForIdle()
+        } while (System.currentTimeMillis() < deadline)
+    }
+
+    private fun waitFor(what: String, timeout: Long = 10_000, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeout
+        while (!condition()) {
+            check(System.currentTimeMillis() < deadline) { "timed out waiting for $what; the focus is on ${focused()}, scores ${viewModel.posterScores.value}" }
+            settle(60)
         }
-        assertEquals("7.8", viewModel.posterScores.value[kept.keys.first()])
-        compose.waitUntil(10_000) { badges().isNotEmpty() }
+    }
+
+    private fun exists(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
+    private fun focusedNode(): SemanticsNode? = compose.onAllNodes(isFocused()).fetchSemanticsNodes().lastOrNull()
+
+    private fun focusedTag(): String = focusedNode()?.config?.getOrNull(SemanticsProperties.TestTag).orEmpty()
+
+    private fun focused(): String = focusedNode()?.let { node ->
+        node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+            ?: node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ")
+            ?: node.config.getOrNull(SemanticsProperties.TestTag).orEmpty()
+    } ?: "(nothing)"
+
+    private fun focusedState(): String? = focusedNode()?.config?.getOrNull(SemanticsProperties.StateDescription)
+
+    /** The score badges drawn inside the focused card. */
+    private fun focusedBadges() = compose.onAllNodes(hasTestTag(SCORE_BADGE_TAG) and hasAnyAncestor(isFocused()), useUnmergedTree = true).fetchSemanticsNodes().size
+
+    private fun press(key: Key) {
+        compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(key) }
+        settle(150)
+    }
+
+    private fun pressUntil(key: Key, max: Int = 14, done: () -> Boolean) {
+        repeat(max) {
+            if (done()) return
+            press(key)
+        }
+        check(done()) { "never reached with $key; the focus is on ${focused()}" }
+    }
+
+    private fun header(tag: String): List<String> =
+        compose.onAllNodes(hasTestTag(tag) and hasAnyAncestor(hasTestTag("titleHeader")), useUnmergedTree = true).fetchSemanticsNodes()
+            .flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty().map { text -> text.text } }
+
+    private fun reach(title: String) {
+        for (key in listOf(Key.DirectionRight, Key.DirectionLeft, Key.DirectionDown)) {
+            repeat(10) {
+                if (focused() == title) return
+                press(key)
+            }
+        }
+        check(focused() == title) { "never reached $title; the focus is on ${focused()}" }
+    }
+
+    @Test
+    fun theKeptScoreReachesThePosterAndMatchesTheHeader() {
+        start()
+        val key = "m-" + Fixtures.northernLights.id
+        waitFor("the kept score in the view model") { viewModel.posterScores.value[key] == "7.3" }
+        assertEquals("only the title TMDb answered for", setOf(key), viewModel.posterScores.value.keys)
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == "tabMovies" }
+        press(Key.DirectionCenter)
+        waitFor("the Movies tab") { exists("vod") && !focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionDown, max = 20) { focused() in movieTitles }
+        reach("Northern Lights")
+        waitFor("the header of Northern Lights") { header("headerTitle") == listOf("Northern Lights") && header("headerRating").isNotEmpty() }
+        assertEquals("the header says TMDb's", listOf("7.3"), header("headerRating"))
+        assertEquals("the poster's badge, the same", 1, focusedBadges())
+        assertEquals("said after the title", "TMDb rating 7.3", focusedState())
+        // Unknown to TMDb: no badge, the header the provider's.
+        reach("Glass City")
+        waitFor("the header of Glass City") { header("headerTitle") == listOf("Glass City") }
+        assertEquals(listOf("★ 7.1"), header("headerRating"))
+        assertEquals(0, focusedBadges())
+        assertEquals(null, focusedState())
     }
 }

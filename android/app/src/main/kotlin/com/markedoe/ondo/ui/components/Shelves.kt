@@ -188,12 +188,16 @@ internal fun Modifier.posterClick(item: ShowcaseItem, interaction: MutableIntera
     )
 }
 
-/** TalkBack's words for a poster: its title, that it is watched, and that it is in My List where its bookmark shows it. */
+/**
+ * TalkBack's words for a poster: its title, that it is watched, that it is in My List where its bookmark shows it, and
+ * TMDb's score where its badge shows it ([ScoreBadge]). The title alone is its description: the rest is its state.
+ */
 @Composable
 internal fun Modifier.posterSemantics(item: ShowcaseItem, kept: Boolean): Modifier {
     val states = listOfNotNull(
         if (isWatched(item)) stringResource(R.string.watched) else null,
         if (kept) stringResource(R.string.in_my_list) else null,
+        scoreDescription(item.key),
     )
     val state = states.takeIf { it.isNotEmpty() }?.joinToString(", ")
     return semantics {
@@ -246,23 +250,24 @@ val LocalPosterScores = compositionLocalOf<Map<String, String>> { emptyMap() }
 @Composable
 fun posterScore(key: String?): String? = if (key == null) null else LocalPosterScores.current[key]
 
+/** "TMDb rating 7.8" for the title of [key] when its badge shows; the card says it as its state, after its title. */
+@Composable
+fun scoreDescription(key: String?): String? = posterScore(key)?.let { stringResource(R.string.tmdb_score_description, it) }
+
 /**
  * TMDb's score on a thumbnail, in its bottom start corner (the top ones have the watched check mark and My List's
  * bookmark): a star and the number, white on a dark pill, legible on any picture and kept clear of the card's rounded
- * corners by the caller's inset. TalkBack says "TMDb rating 7.8" with the card's title. Larger on a TV.
+ * corners by the caller's inset. TalkBack says it through the card ([scoreDescription], its state: the card's
+ * description stays its title alone). Larger on a TV.
  */
 @Composable
 fun ScoreBadge(score: String, modifier: Modifier = Modifier) {
     val television = isTelevision()
-    val description = stringResource(R.string.tmdb_score_description, score)
     Row(
         modifier
             .background(Color.Black.copy(alpha = 0.65f), CircleShape)
             .padding(horizontal = if (television) 7.dp else 5.dp, vertical = if (television) 2.dp else 1.dp)
-            .clearAndSetSemantics {
-                contentDescription = description
-                semanticsTestTag = SCORE_BADGE_TAG
-            },
+            .clearAndSetSemantics { semanticsTestTag = SCORE_BADGE_TAG },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Rounded.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(if (television) 13.dp else 11.dp))
@@ -490,6 +495,8 @@ fun ContinueCard(
             onLongClick = { asking = true },
         )
     }
+    // TMDb's score of the title, said as the card's state where its badge shows it.
+    val score = scoreDescription(item.showcase?.key)
     Column(
         modifier
             .width(width)
@@ -499,6 +506,7 @@ fun ContinueCard(
             .reportsFocus(item.showcase)
             .clip(CardShape)
             .then(click)
+            .then(if (score != null) Modifier.semantics { stateDescription = score } else Modifier)
             .padding(bottom = 4.dp),
     ) {
         if (asking) ResumeCardMenu(item, onOpen, onRemove, onDismiss = { asking = false })
