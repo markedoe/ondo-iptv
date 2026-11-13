@@ -114,14 +114,42 @@ class HomeSnapshotTest {
             "a word hidden" to state.copy(library = mine.copy(hiddenWords = setOf("harbor"))),
             "the rows' order" to state.copy(library = mine.keepingRowOrder(SyncRows("home", order = listOf("newMovies"), updatedAt = Fixtures.NOW))),
             "adult categories shown" to state.copy(settings = state.settings.copy(showAdultCategories = true)),
-            "a title in progress more" to state.copy(library = mine.copy(history = mine.history + WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.longRoad.id, title = Fixtures.longRoad.name, position = 60.0, duration = 6_000.0, lastWatchedAt = Fixtures.NOW))),
-            "My List changed" to state.copy(library = mine.copy(favorites = emptyList())),
         )
         for ((change, changed) in changes) {
             assertFalse("$change: Home kept is not shown", HomeSnapshots.matches(snapshot, changed, labels))
         }
         assertFalse("another language of the app", HomeSnapshots.matches(snapshot, state, Labels(locale = Locale.FRENCH)))
         assertTrue("the same again", HomeSnapshots.matches(snapshot, state.copy(), labels))
+    }
+
+    /**
+     * What the profile watched or changed since Home was kept (in the player, on a title's page, Home not on screen):
+     * Home kept is still shown, its lists as the library has them now: a film watched further shows where it is now, one
+     * taken out of Continue watching or finished is gone, My List and the carousel's mark as they are now. Nothing shows
+     * that the library no longer holds.
+     */
+    @Test
+    fun theProfilesListsShowAsTheyAreNow() {
+        val snapshot = snapshotOf(state)
+        val northern = mine.history.first { it.itemId == Fixtures.northernLights.id }
+        val now = mine.copy(
+            history = listOf(
+                northern.copy(position = 3_000.0, lastWatchedAt = Fixtures.NOW),
+                // Glass City watched to its end: out of Continue watching.
+                mine.history.first { it.itemId == Fixtures.glassCity.id }.let { it.copy(position = it.duration, lastWatchedAt = Fixtures.NOW - 10L) },
+            ),
+            favorites = emptyList(),
+        )
+        val changed = state.copy(library = now)
+        assertTrue("the profile's lists are not what Home kept is for", HomeSnapshots.matches(snapshot, changed, labels))
+        val drawn = HomeSnapshots.home(snapshot, changed.copy(isRestoring = true), Fixtures.NOW)
+        assertEquals("only the film still in progress", listOf(northern.key), drawn.continueWatching.map { it.key })
+        assertEquals("where it is now", 0.5f, drawn.continueWatching.single().progress, 0.001f)
+        assertEquals("as many minutes left as now", 50, drawn.continueWatching.single().minutesLeft)
+        assertTrue("My List as it is now: empty", drawn.myList.isEmpty())
+        assertTrue("no carousel title marked as in My List", drawn.hero.none { it.inMyList })
+        val shown = now.continueWatching(Fixtures.PLAYLIST_ID).map { it.key }.toSet()
+        assertTrue("every card shown is in the library now", drawn.continueWatching.all { it.key in shown })
     }
 
     // The view model, on a store as the app keeps it.
@@ -208,6 +236,30 @@ class HomeSnapshotTest {
             assertTrue("no title in progress of the main profile: ${home.continueWatching.map { it.key }}", home.continueWatching.none { it.key in mineKeys })
             assertTrue("nothing of the main profile's My List: ${home.myList.map { it.key }}", home.myList.none { it.key == "m-" + Fixtures.lastSignal.id })
         }
+    }
+
+    /**
+     * Watched in the player after Home was kept (Home not on screen, so not kept again): the next start still shows Home
+     * kept at once, its cards as the library has them now (the film watched further where it is now), none it no longer holds.
+     */
+    @Test
+    fun watchingAfterHomeWasKeptStillShowsItAtTheNextStart() {
+        start(store(launchProfile = me.id))
+        val store = store(launchProfile = me.id)
+        val northern = mine.history.first { it.itemId == Fixtures.northernLights.id }
+        val watched = mine.copy(
+            history = mine.history.map { if (it.key == northern.key) it.copy(position = 3_000.0, lastWatchedAt = Fixtures.NOW) else it } +
+                WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.longRoad.id, title = Fixtures.longRoad.name, position = 120.0, duration = 6_000.0, lastWatchedAt = Fixtures.NOW + 1L),
+        )
+        store.saveLibrary(watched)
+        val again = start(store)
+        assertTrue("Home kept is shown", again.savedHomesShown > 0)
+        val inLibrary = watched.continueWatching(Fixtures.PLAYLIST_ID).map { it.key }.toSet()
+        for (home in again.homes) {
+            assertTrue("every card is in the library now: ${home.continueWatching.map { it.key }}", home.continueWatching.all { it.key in inLibrary })
+        }
+        val first = again.homes.first { it.hero.isNotEmpty() }
+        assertEquals("the film watched further, where it is now", 0.5f, first.continueWatching.first { it.key == northern.key }.progress, 0.001f)
     }
 
     /** A series or a channel Home kept from the last start shows, no longer in the catalogue: Play plays nothing. */

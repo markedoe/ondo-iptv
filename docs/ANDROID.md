@@ -49,10 +49,12 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   catalogue and its carousel, its featured titles and the first titles of each row are kept (`home-<playlist>.json`,
   next to the catalogue). At the next start that Home shows at once, the splash screen gone, while the saved catalogue
   is read and until Home is worked out anew with it; only for the same playlist and profile, with the same hidden
-  categories, languages and words, row order, settings, app language and the profile's own lists (My List, what is
-  watched): any change leaves it unused, so another profile's titles never show. A title it shows that has left the
-  catalogue opens and plays like any title gone (its page goes back, Play plays nothing). The snapshot goes with its
-  playlist, and every one with a deleted profile. Once Home is whole, the Movies and Series tabs are worked out in the
+  categories, languages and words, row order, settings and app language: any change leaves it unused. Its titles in
+  progress and My List show as the profile's library has them at that start (what was watched since, in the player,
+  where it is now; what is no longer there, gone), so nothing another profile watched or kept ever shows. Play, Resume
+  or a channel chosen before the catalogue is read play once it is; a title that has left the catalogue opens and
+  plays like any title gone (its page goes back, Play plays nothing). The snapshot goes with its playlist, and every
+  one with a deleted profile. Once Home is whole, the Movies and Series tabs are worked out in the
   background, once per catalogue and profile: their first opening is at once. `ColdStartTimingTest`
   (`./gradlew :app:coldStartTest`, a 100,000-movie catalogue, in a test JVM of its own with a 2 GB heap) times the cold
   start; `HomeSnapshotTest` checks what the snapshot is kept for.

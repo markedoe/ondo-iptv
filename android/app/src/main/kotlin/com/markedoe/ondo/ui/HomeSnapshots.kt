@@ -2,7 +2,9 @@ package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.data.HomeSnapshot
+import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
+import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
@@ -13,23 +15,31 @@ import java.security.MessageDigest
 /**
  * Home kept for the next start ([HomeSnapshot]): made from a Home worked out with its catalogue and its carousel, shown
  * at a cold start while the catalogue is read, only when it is the same playlist, the same profile and nothing else Home
- * is made of changed since ([fingerprint]): another playlist or profile, hidden categories or languages, the rows'
- * order, the profile's lists (My List, what is watched), a setting or the app's language leave it unused.
+ * is made of changed since ([fingerprint]): another playlist or profile, hidden categories, languages or words, the
+ * rows' order, a setting or the app's language leave it unused. The profile's own lists are checked as it is shown
+ * ([home]): only what its history and My List still hold shows, so what was watched or changed since Home was kept
+ * (in the player, on a title's page) never brings back what is gone, and nothing of another profile ever shows.
  */
 object HomeSnapshots {
     fun of(home: HomeUiState, state: OndoState, labels: Labels): HomeSnapshot? {
         val playlistId = state.activePlaylistId ?: return null
+        // Each card's entry of the history: the latest of its title, as Continue watching takes them.
+        val entries = state.library.continueWatching(playlistId).associateBy { "${it.kind}|${it.itemId}" }
         return HomeSnapshot(
             playlistId = playlistId,
             profileId = state.activeProfile.id,
             fingerprint = fingerprint(state, labels),
             fetchedAt = state.content.fetchedAt,
             playlistName = home.playlistName,
-            hero = home.hero.map { HomeSnapshot.Hero(title(it.item), it.meta, it.inMyList, it.resumable, it.backdropUrl, it.plot) },
-            continueWatching = home.continueWatching.map {
-                HomeSnapshot.Resume(it.key, it.title, it.subtitle, it.imageUrl, it.progress, it.minutesLeft, it.isSeries, it.hasPage, it.showcase?.let(::title), it.upNext)
+            hero = home.hero.map { HomeSnapshot.Hero(listed(it.item, state), it.meta, it.inMyList, it.resumable, it.backdropUrl, it.plot) },
+            continueWatching = home.continueWatching.mapNotNull { card ->
+                val entry = WatchEntry.ofKey(card.key)?.let { entries["${it.kind}|${it.itemId}"] } ?: return@mapNotNull null
+                HomeSnapshot.Resume(
+                    card.key, card.title, card.subtitle, card.imageUrl, card.progress, card.minutesLeft, card.isSeries, card.hasPage,
+                    card.showcase?.let(::title), card.upNext, entryKey = entry.key, entryResumable = entry.isResumable,
+                )
             },
-            myList = home.myList.map(::title),
+            myList = home.myList.map { listed(it, state) },
             newMovies = home.newMovies.map(::title),
             newSeries = home.newSeries.map(::title),
             trending = home.trending.map(::title),
@@ -41,49 +51,71 @@ object HomeSnapshots {
         )
     }
 
-    /** Whether [snapshot] is Home as [state] would show it, its catalogue aside. */
+    /** Whether [snapshot] is Home as [state] would show it, its catalogue and the profile's lists aside. */
     fun matches(snapshot: HomeSnapshot, state: OndoState, labels: Labels): Boolean =
         snapshot.version == HomeSnapshot.VERSION &&
             snapshot.playlistId == state.activePlaylistId &&
             snapshot.profileId == state.activeProfile.id &&
             snapshot.fingerprint == fingerprint(state, labels)
 
-    /** Home drawn from [snapshot], with [state]'s own playlist name, profile and progress flags. */
-    fun home(snapshot: HomeSnapshot, state: OndoState, now: Long): HomeUiState = HomeUiState(
-        playlistName = state.activePlaylist?.name ?: snapshot.playlistName,
-        updatedAt = snapshot.fetchedAt.takeIf { it > 0 },
-        now = now,
-        hero = snapshot.hero.mapNotNull { page -> item(page.title)?.let { HeroPage(it, page.meta, page.inMyList, page.resumable, page.backdropUrl, page.plot) } },
-        continueWatching = snapshot.continueWatching.map {
-            ResumeItem(it.key, it.title, it.subtitle, it.imageUrl, it.progress, it.minutesLeft, it.isSeries, it.hasPage, it.showcase?.let(::item), it.upNext)
-        },
-        myList = snapshot.myList.mapNotNull(::item),
-        newMovies = snapshot.newMovies.mapNotNull(::item),
-        newSeries = snapshot.newSeries.mapNotNull(::item),
-        trending = snapshot.trending.mapNotNull(::item),
-        hasVod = snapshot.hasVod,
-        order = snapshot.order,
-        selections = snapshot.selections.associate { row -> row.key to SelectionRow(row.id, row.name, row.tags, row.genreNames, row.items.mapNotNull(::item)) },
-        channels = snapshot.channels.map { ChannelRow(it, null, null, null) },
-        channelsAreFavorites = snapshot.channelsAreFavorites,
-        isLoading = state.isLoading,
-        isRestoring = state.isRestoring,
-        profile = state.activeProfile.takeIf { state.profiles.isNotEmpty() },
-    )
+    /**
+     * Home drawn from [snapshot], with [state]'s own playlist name, profile and progress flags, and its lists as the
+     * profile's library has them now: a card to continue watching only while its entry is still its title's latest (its
+     * progress as it is now), a title of My List only while My List holds it, the carousel's My List mark as it is now.
+     */
+    fun home(snapshot: HomeSnapshot, state: OndoState, now: Long): HomeUiState {
+        val playlistId = state.activePlaylistId.orEmpty()
+        val library = state.library
+        val entries = if (playlistId == snapshot.playlistId) library.continueWatching(playlistId).associateBy { "${it.kind}|${it.itemId}" } else emptyMap()
+        fun inMyList(title: HomeSnapshot.Title): Boolean = when {
+            title.movie != null -> (title.ids + title.movie.id).any { library.isFavorite(playlistId, ItemKind.MOVIE, it) }
+            title.series != null -> library.isFavorite(playlistId, ItemKind.SERIES, title.series.id)
+            else -> false
+        }
+        return HomeUiState(
+            playlistName = state.activePlaylist?.name ?: snapshot.playlistName,
+            updatedAt = snapshot.fetchedAt.takeIf { it > 0 },
+            now = now,
+            hero = snapshot.hero.mapNotNull { page -> item(page.title)?.let { HeroPage(it, page.meta, inMyList(page.title), page.resumable, page.backdropUrl, page.plot) } },
+            continueWatching = snapshot.continueWatching.mapNotNull { card ->
+                val kept = WatchEntry.ofKey(card.key)?.takeIf { it.playlistId == playlistId } ?: return@mapNotNull null
+                val entry = entries["${kept.kind}|${kept.itemId}"] ?: return@mapNotNull null
+                if (entry.key != card.entryKey || entry.isResumable != card.entryResumable) return@mapNotNull null
+                val same = entry.key == card.key && !card.upNext
+                ResumeItem(
+                    card.key, card.title, card.subtitle, card.imageUrl,
+                    progress = if (same) entry.progress.toFloat() else card.progress,
+                    minutesLeft = if (same) entry.minutesLeft else card.minutesLeft,
+                    isSeries = card.isSeries, hasPage = card.hasPage, showcase = card.showcase?.let(::item), upNext = card.upNext,
+                )
+            },
+            myList = snapshot.myList.filter(::inMyList).mapNotNull(::item),
+            newMovies = snapshot.newMovies.mapNotNull(::item),
+            newSeries = snapshot.newSeries.mapNotNull(::item),
+            trending = snapshot.trending.mapNotNull(::item),
+            hasVod = snapshot.hasVod,
+            order = snapshot.order,
+            selections = snapshot.selections.associate { row -> row.key to SelectionRow(row.id, row.name, row.tags, row.genreNames, row.items.mapNotNull(::item)) },
+            channels = snapshot.channels.map { ChannelRow(it, null, null, null) },
+            channelsAreFavorites = snapshot.channelsAreFavorites,
+            isLoading = state.isLoading,
+            isRestoring = state.isRestoring,
+            profile = state.activeProfile.takeIf { state.profiles.isNotEmpty() },
+        )
+    }
 
     /**
-     * What Home is made of besides its catalogue, the time and what the device kept of TMDb, as one value: the playlist,
-     * the profile and its lists of this playlist (My List, what is watched and where), hidden categories, languages and
-     * words, the rows' order and selections, the settings Home reads, and the app's words and language.
+     * What Home is made of besides its catalogue, the time, what the device kept of TMDb and the profile's lists (checked
+     * as it is shown), as one value: the playlist, the profile, hidden categories, languages and words, the rows' order
+     * and selections, the settings Home reads, and the app's words and language.
      */
     fun fingerprint(state: OndoState, labels: Labels): String {
-        val playlistId = state.activePlaylistId.orEmpty()
         val settings = state.settings
         val library = state.library
         val profile = state.activeProfile
         val text = buildString {
             append(HomeSnapshot.VERSION).append('\n')
-            append(playlistId).append('\n')
+            append(state.activePlaylistId.orEmpty()).append('\n')
             append(profile.id).append(' ').append(profile.isKids).append('\n')
             append(settings.showAdultCategories).append(' ').append(settings.hideWatchedMovies).append(' ').append(settings.groupVersions).append('\n')
             settings.chosenVersions.sorted().joinTo(this, ",").append('\n')
@@ -92,8 +124,6 @@ object HomeSnapshots {
             library.hiddenWords.sorted().joinTo(this, ",").append('\n')
             append(library.rowOrder(RowOrder.HOME)).append('\n')
             append(library.selections).append('\n')
-            library.favorites.filter { it.playlistId == playlistId }.joinTo(this, ",") { "${it.kind}|${it.itemId}" }.append('\n')
-            library.history.filter { it.playlistId == playlistId }.joinTo(this, ",") { "${it.key}@${it.position}/${it.duration}/${it.lastWatchedAt}" }.append('\n')
             append(labels.locale.toLanguageTag()).append('|').append(labels.movie).append('|').append(labels.series).append('|')
             append(labels.newEpisode).append('|').append(labels.dayMonth)
         }
@@ -103,6 +133,12 @@ object HomeSnapshots {
     private fun title(item: ShowcaseItem): HomeSnapshot.Title = when (item) {
         is ShowcaseItem.MovieItem -> HomeSnapshot.Title(movie = item.movie)
         is ShowcaseItem.SeriesItem -> HomeSnapshot.Title(series = item.series)
+    }
+
+    /** A title with the ids My List may hold it by: a film by any of its versions. */
+    private fun listed(item: ShowcaseItem, state: OndoState): HomeSnapshot.Title = when (item) {
+        is ShowcaseItem.MovieItem -> HomeSnapshot.Title(movie = item.movie, ids = UiMappers.visibleVersions(state, item.movie, UiMappers.filmsIfReady(state)).map { it.id })
+        is ShowcaseItem.SeriesItem -> HomeSnapshot.Title(series = item.series, ids = listOf(item.series.id))
     }
 
     private fun item(title: HomeSnapshot.Title): ShowcaseItem? =

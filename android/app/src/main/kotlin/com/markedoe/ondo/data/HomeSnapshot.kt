@@ -16,7 +16,7 @@ data class HomeSnapshot(
     val version: Int = VERSION,
     val playlistId: String,
     val profileId: String,
-    /** What else Home was made of: settings, hidden categories and languages, row order, the profile's lists, words. */
+    /** What else Home was made of: settings, hidden categories, languages and words, row order and selections, the app's language. */
     val fingerprint: String,
     /** When the catalogue it was made from was downloaded. */
     val fetchedAt: Long,
@@ -34,9 +34,12 @@ data class HomeSnapshot(
     val channels: List<Channel> = emptyList(),
     val channelsAreFavorites: Boolean = false,
 ) {
-    /** A movie or a series of a row. */
+    /**
+     * A movie or a series of a row; in the carousel and My List, the ids My List may hold it by ([ids]: each version of
+     * a film), checked against the profile's My List when shown.
+     */
     @Serializable
-    data class Title(val movie: Movie? = null, val series: Series? = null)
+    data class Title(val movie: Movie? = null, val series: Series? = null, val ids: List<String> = emptyList())
 
     /** A page of the carousel. */
     @Serializable
@@ -49,7 +52,10 @@ data class HomeSnapshot(
         val plot: String? = null,
     )
 
-    /** A card to continue watching. */
+    /**
+     * A card to continue watching, and the entry of the history it came from ([entryKey], resumable or not): shown only
+     * while the profile's history still has that entry as its title's latest.
+     */
     @Serializable
     data class Resume(
         val key: String,
@@ -62,6 +68,8 @@ data class HomeSnapshot(
         val hasPage: Boolean = false,
         val showcase: Title? = null,
         val upNext: Boolean = false,
+        val entryKey: String,
+        val entryResumable: Boolean,
     )
 
     /** A selection's row, under its row key. */

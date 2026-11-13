@@ -153,6 +153,13 @@ class OndoViewModel(
             keptHome = snapshot
             savedHome.value = SavedHome(read = true, snapshot = snapshot)
         }
+        // A playlist or a profile deleted or replaced may take its kept Home away: the next one is kept, even unchanged.
+        viewModelScope.launch {
+            state.map { current -> current.playlists.map { it.id } to current.profiles.map { it.id } }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { keptHome = null }
+        }
     }
 
     private class HomeInput(val state: OndoState, val now: Long, val labels: Labels, val kept: Kept)
@@ -653,7 +660,28 @@ class OndoViewModel(
 
     /** The channel as the catalogue has it now: one no longer in it (Home kept from the last start) plays nothing. */
     fun playChannel(row: ChannelRow) {
+        if (afterRestoring { playChannel(row) }) return
         state.value.content.channels.firstOrNull { it.id == row.channel.id }?.let { emit(repository.playRequest(it)) }
+    }
+
+    /** What was asked while the saved catalogue is read ([afterRestoring]). */
+    private var afterRestore: Job? = null
+
+    /**
+     * While the saved catalogue is read at a start, Home kept from the last start on screen (its titles not in the
+     * catalogue yet): [action] once it is read, on the same playlist, the last one asked only. False otherwise (another
+     * playlist being opened plays nothing of the one before, as always).
+     */
+    private fun afterRestoring(action: () -> Unit): Boolean {
+        val current = state.value
+        if (!current.isRestoring || savedHomeDone || savedHome.value.snapshot == null) return false
+        val playlist = current.activePlaylistId
+        afterRestore?.cancel()
+        afterRestore = viewModelScope.launch {
+            val restored = state.first { !it.isRestoring }
+            if (restored.activePlaylistId == playlist) action()
+        }
+        return true
     }
 
     /** A programme of the guide from its start, from the provider's archive. */
@@ -661,12 +689,15 @@ class OndoViewModel(
 
     /** Movie: plays it. Series: the next episode (details loaded first when needed, see [preparing]). */
     fun play(item: ShowcaseItem) {
+        if (afterRestoring { play(item) }) return
         when (item) {
-            // A film's card plays its default version (the one in progress, chosen last, or best for the screen).
+            // A film's card plays its default version (the one in progress, chosen last, or best for the screen), the film
+            // as the catalogue has it now: one no longer in it (Home kept from the last start) plays nothing.
             is ShowcaseItem.MovieItem -> {
                 val current = state.value
-                val versions = UiMappers.visibleVersions(current, item.movie, UiMappers.filmsIfReady(current))
-                playMovie(UiMappers.defaultVersion(current, item.movie, versions).id)
+                val movie = current.content.movies.firstOrNull { it.id == item.movie.id } ?: return
+                val versions = UiMappers.visibleVersions(current, movie, UiMappers.filmsIfReady(current))
+                playMovie(UiMappers.defaultVersion(current, movie, versions).id)
             }
             // The series as the catalogue has it now: one no longer in it (Home kept from the last start) plays nothing.
             is ShowcaseItem.SeriesItem -> {
@@ -684,6 +715,7 @@ class OndoViewModel(
      * (its key says which); a finished one stands for its series while its seasons are not known: the next one plays.
      */
     fun resume(key: String) {
+        if (afterRestoring { resume(key) }) return
         val current = state.value
         val entry = current.library.progress(key) ?: WatchEntry.ofKey(key)?.takeIf { it.kind == ItemKind.SERIES } ?: return
         when (entry.kind) {

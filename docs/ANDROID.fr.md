@@ -55,9 +55,11 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   gardés (`home-<playlist>.json`, à côté du catalogue). Au démarrage suivant, cet Accueil s'affiche aussitôt, l'écran de
   démarrage parti, pendant la lecture du catalogue enregistré et jusqu'à ce que l'Accueil soit recalculé avec lui ;
   seulement pour la même playlist et le même profil, avec les mêmes catégories, langues et mots masqués, le même ordre
-  des rangées, les mêmes réglages, la même langue de l'app et les mêmes listes du profil (Ma liste, ce qui est
-  regardé) : tout changement le laisse de côté, si bien que les titres d'un autre profil ne s'affichent jamais. Un titre
-  qu'il montre et qui a quitté le catalogue s'ouvre et se lit comme tout titre disparu (sa page revient en arrière,
+  des rangées, les mêmes réglages et la même langue de l'app : tout changement le laisse de côté. Ses titres en cours
+  et Ma liste s'affichent comme la bibliothèque du profil les a à ce démarrage (ce qui a été regardé depuis, dans le
+  lecteur, là où il en est ; ce qui n'y est plus, parti), si bien que rien de ce qu'un autre profil a regardé ou gardé
+  ne s'affiche jamais. Lire, Reprendre ou une chaîne choisis avant la lecture du catalogue se lancent une fois qu'il
+  est lu ; un titre qui a quitté le catalogue s'ouvre et se lit comme tout titre disparu (sa page revient en arrière,
   Lire ne lit rien). L'instantané part avec sa playlist, et tous avec un profil supprimé. Une fois l'Accueil complet,
   les onglets Films et Séries sont calculés en arrière-plan, une fois par catalogue et par profil : leur première
   ouverture est immédiate. `ColdStartTimingTest` (`./gradlew :app:coldStartTest`, un catalogue de 100 000 films, dans
