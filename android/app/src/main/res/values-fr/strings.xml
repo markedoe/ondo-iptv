@@ -12,6 +12,7 @@
     <string name="my_list">Ma liste</string>
     <string name="more_info">Plus d\'infos</string>
     <string name="in_my_list">Dans ma liste</string>
+    <string name="tmdb_score_description">Note TMDb %1$s</string>
     <string name="not_in_my_list">Pas dans ma liste</string>
     <string name="from_start">Depuis le début</string>
     <string name="play_episode">Lire %1$s</string>

@@ -369,9 +369,11 @@ fun TvHeaderAbove(
                 )
                 val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
                 // A grid sets its own scrolling once it knows its posters' height ([TvGridScrolling]).
-                // Rows end above the 5 % kept clear by a focused poster's growth: wherever a scroll lands the focused
-                // card, at the list's very end too, grown it stays clear of the screen's bottom.
-                if (byRows) content(rest, UNDER_HEADER_TOP, true) else TvPinnedHeaderList(lead) { content(rest.padding(bottom = FOCUS_GROWTH_ROOM), UNDER_HEADER_TOP, true) }
+                // Rows run down to the 5 % a TV may crop. Their scrolling keeps a focused poster's growth more above it, as
+                // Home's keeps the 5 % ([TvPinnedScrolling]'s edge): wherever a scroll lands the focused card, grown it
+                // stays clear of the screen's bottom. Kept as room outside the list instead, it moved the list's own
+                // edge up into the growth of a row left where the page opened it, and cut its poster.
+                if (byRows) content(rest, UNDER_HEADER_TOP, true) else TvPinnedHeaderList(lead, edge = FOCUS_GROWTH_ROOM) { content(rest, UNDER_HEADER_TOP, true) }
             }
             // Last: over the posters, and its Back before the page's.
             if (sorting && chips != null) {
@@ -399,13 +401,12 @@ private val UNDER_HEADER_TOP = 8.dp
 
 /**
  * A grid under a TV's header scrolls by whole rows ([TvRowPivotScrolling]): each focused row's poster at [top] below the
- * grid's top, as the first row's is when the page opens. What the grid scrolls into view is the focused poster as it is
- * drawn, grown ([FOCUS_GROW]) around its middle: its grown top goes that much higher, the rows below where [top] says.
+ * grid's top, as the first row's is when the page opens. What the grid scrolls into view is the focused poster's place:
+ * its focus grows it inside its focus target ([focusFrame]), into the room [top] leaves above it.
  */
 @Composable
-fun TvGridScrolling(top: Dp, posterHeight: Dp, content: @Composable () -> Unit) {
-    val grownBy = posterHeight * ((FOCUS_GROW - 1f) / 2f)
-    TvPinnedHeaderList(lead = top - grownBy, byRows = true, content = content)
+fun TvGridScrolling(top: Dp, content: @Composable () -> Unit) {
+    TvPinnedHeaderList(lead = top, byRows = true, content = content)
 }
 
 /** The posters across a grid under a TV's header: five, bigger than a phone's, to read from the sofa. */

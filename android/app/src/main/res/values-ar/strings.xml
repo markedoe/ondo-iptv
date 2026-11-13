@@ -12,6 +12,7 @@
     <string name="my_list">قائمتي</string>
     <string name="more_info">مزيد من المعلومات</string>
     <string name="in_my_list">في قائمتي</string>
+    <string name="tmdb_score_description">تقييم TMDb %1$s</string>
     <string name="not_in_my_list">ليس في قائمتي</string>
     <string name="from_start">من البداية</string>
     <string name="play_episode">تشغيل %1$s</string>

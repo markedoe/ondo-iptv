@@ -55,6 +55,7 @@ import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.ArtworkAlignment
+import com.markedoe.ondo.ui.tv.FOCUS_GROW
 import com.markedoe.ondo.ui.tv.LocalTitleHeaders
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TitleHeaders
@@ -750,8 +751,10 @@ class TvLayoutRegressionTest {
 
     private fun assertCardWithinTheRow(shelf: String, which: String) {
         val card = focusedCard(shelf)
-        val drawn = drawnBounds(card)
-        // The scale shows in the bounds: else the check below would hold for a card drawn at its plain size.
+        val place = drawnBounds(card)
+        // A TV card's scale shows in its bounds; a poster's grows inside its focus target (its place is what the rows
+        // scroll into view): its frame drawn grown around its place's middle.
+        val drawn = if (place.width > card.size.width * 1.03f) place else place.inflate(place.width * (FOCUS_GROW - 1f) / 2f)
         assertTrue("$which of $shelf is grown by its focus: ${drawn.width} for ${card.size.width}", drawn.width > card.size.width * 1.03f)
         val row = compose.onNode(hasTestTag("shelfRow") and hasAnyAncestor(hasTestTag(shelf)), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertTrue("$which of $shelf is cut at the left: $drawn in $row", drawn.left >= row.left - 0.5f)

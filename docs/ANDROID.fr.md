@@ -134,6 +134,14 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Affiches sur TV** : maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
   court message dit lequel), et une coche marque les titres de Ma liste. Dans Ma liste, les personnes gardées ont
   leur photo (complétée depuis leur page ou les titres gardés sur l'appareil).
+- **Note TMDb sur les vignettes** (TV et téléphone) : chaque affiche, et chaque carte de Reprendre la lecture à côté de
+  son icône de lecture, montre la note de TMDb dans son coin inférieur de début (une étoile et « 7,8 » en français ; en
+  miroir de droite à gauche), la même que celle de l'en-tête sur TV, d'après ce que TMDb a dit pendant la session et ce
+  que l'appareil a gardé (`UiMappers.posterScores`, calculé hors du fil principal par `OndoViewModel.posterScores`, de
+  nouveau quand l'appareil en garde davantage ; chaque carte fait une seule recherche). Rien tant que la note de TMDb
+  n'est pas connue : aucun espace réservé, jamais celle du fournisseur. L'accueil gardé du dernier lancement garde les
+  notes de ses titres, qui s'affichent donc dès le lancement, avant la lecture de ce que l'appareil a gardé. TalkBack dit
+  « Note TMDb 7,8 ».
 - **TMDb** avec le jeton de l'utilisateur (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`) :
   vérifié par `/authentication` de TMDb avant d'être enregistré (accepté, refusé, injoignable), gardé dans le
   stockage privé de l'app et transmis par la synchronisation (`key:tmdb`, docs/SYNC.fr.md) ; une rangée Tendances, les
@@ -317,7 +325,10 @@ onglets, Recherche et Réglages, le nom d'une catégorie entier sur sa ligne, le
 sans rangée à eux au-dessus des affiches, Bas depuis l'onglet sur la première affiche et jamais sur une puce de tri,
 l'ordre choisi avec la puce Tri atteinte par Haut depuis la première rangée, la grille d'une catégorie à cinq affiches
 par rangée qui défile par rangées entières vers le bas et vers le haut, et une rangée de Films d'environ cinq affiches
-de large) ; `SeeAllEverywhereTest` (chaque rangée de l'Accueil, de Films et de
+de large) ; `TvRowsClearOfTheBottomEverySurfaceTest` (sur chaque page à rangées d'affiches, la carte sélectionnée,
+agrandie par le focus, à l'écart des 5 % qu'un téléviseur peut rogner ; sous un en-tête (Accueil, Films, Séries, titres
+d'une catégorie et d'un genre), l'affiche sélectionnée et sa rangée entières dans leur liste, qui descend jusqu'à ces 5 %
+comme celle de l'Accueil, et un déplacement le long d'une rangée ne déplace jamais les rangées vers le haut ou le bas) ; `SeeAllEverywhereTest` (chaque rangée de l'Accueil, de Films et de
 Séries, sur une TV et sur un téléphone : Tout voir là où la rangée peut contenir plus qu'elle n'affiche, qui ouvre la
 grille commençant par les titres de la rangée dans son ordre ; les rangées sans Tout voir nommées avec la raison) ;
 `TelevisionFocusTest` (Tout voir ouvre les titres d'une catégorie et Retour revient à la même rangée et à

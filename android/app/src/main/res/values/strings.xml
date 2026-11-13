@@ -13,6 +13,7 @@
     <string name="my_list">My List</string>
     <string name="more_info">More Info</string>
     <string name="in_my_list">In My List</string>
+    <string name="tmdb_score_description">TMDb rating %1$s</string>
     <string name="not_in_my_list">Not in My List</string>
     <string name="from_start">From Start</string>
     <string name="play_episode">Play %1$s</string>

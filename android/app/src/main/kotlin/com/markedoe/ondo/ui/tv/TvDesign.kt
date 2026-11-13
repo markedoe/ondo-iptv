@@ -71,6 +71,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -93,6 +94,9 @@ import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.MyListBadge
+import com.markedoe.ondo.ui.components.ScoreBadge
+import com.markedoe.ondo.ui.components.posterScore
+import com.markedoe.ondo.ui.components.scoreDescription
 import com.markedoe.ondo.ui.components.PlayIcon
 import com.markedoe.ondo.ui.components.ResumeCardMenu
 import com.markedoe.ondo.ui.components.posterLongClick
@@ -405,6 +409,7 @@ fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = M
             CardSheen(focused)
             if (isWatched(item)) WatchedBadge(Modifier.align(Alignment.TopStart))
             if (kept) MyListBadge(Modifier.align(Alignment.TopEnd), size = 28.dp)
+            posterScore(item.key)?.let { ScoreBadge(it, Modifier.align(Alignment.BottomStart).padding(6.dp)) }
         }
     }
 }
@@ -427,11 +432,16 @@ fun TvResumeCard(
     var asking by remember { mutableStateOf(false) }
     if (asking) ResumeCardMenu(item, onOpen, onRemove, onDismiss = { asking = false })
     var focused by remember { mutableStateOf(false) }
+    val score = scoreDescription(item.showcase?.key)
     Column(modifier.width(TvTokens.WideCardWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
             onLongClick = if (onRemove != null || onOpen != null) ({ asking = true }) else null,
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.reportsFocus(item.showcase).semantics { contentDescription = item.title },
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.reportsFocus(item.showcase).semantics {
+                contentDescription = item.title
+                // TMDb's score of the title, said as its state where its badge shows it.
+                if (score != null) stateDescription = score
+            },
             shape = CardDefaults.shape(TvTokens.CardShape),
             scale = scale,
             border = border,
@@ -440,7 +450,11 @@ fun TvResumeCard(
             Box(Modifier.fillMaxSize()) {
                 Artwork(url = item.imageUrl, title = item.title, modifier = Modifier.fillMaxSize(), showsTitleFallback = false)
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))))
-                PlayIcon(preparing, Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 12.dp).size(22.dp), tint = Color.White)
+                // The play icon, then TMDb's score of the title beside it, above the progress bar.
+                Row(Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PlayIcon(preparing, Modifier.size(22.dp), tint = Color.White)
+                    posterScore(item.showcase?.key)?.let { ScoreBadge(it, Modifier.padding(start = 8.dp)) }
+                }
                 TvProgress(item.progress, Modifier.align(Alignment.BottomCenter).fillMaxWidth())
                 CardSheen(focused)
             }

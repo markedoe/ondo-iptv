@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsNode
@@ -86,6 +88,7 @@ import com.markedoe.ondo.ui.tv.tvSafeArea
 import java.io.File
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlin.math.abs
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -411,6 +414,221 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
         walkDown(episodeCard, presses = 10, surface = "a series' page")
     }
 
+    /** A page with rows of posters under a header pinned above them, as the app shows it, and its vertical list's tag. */
+    private class HeaderPage(val name: String, val tab: TopLevel, val tabPage: Boolean, val list: String, val content: @Composable () -> Unit)
+
+    private var headerPage by mutableStateOf<HeaderPage?>(null)
+
+    /** Where the focused [node] is drawn, grown by its focus, in the root's pixels (as [grownBottom]). */
+    private fun grownBounds(node: SemanticsNode): Rect {
+        val coordinates = node.layoutInfo.coordinates
+        val drawn = coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+        if (drawn.height > node.size.height * 1.03f) return drawn
+        val spill = node.size.height * CARD_FOCUS_SPILL
+        return Rect(drawn.left, drawn.top - spill, drawn.right, drawn.bottom + spill)
+    }
+
+    private fun Float.inDp(): String = "%.1f dp".format(this / compose.density.density)
+
+    /**
+     * On [page], the focused poster is drawn whole, grown by its focus: inside the window, clear of the 5 % a TV may crop
+     * at its bottom, and inside its list's own bounds (the list clips what it draws). The list itself reaches down to
+     * that 5 %, as Home's does, so its clip never cuts what the window shows; the posters of the focused row end inside
+     * the list.
+     */
+    private fun assertFocusedRowWhole(page: HeaderPage, step: String) {
+        val rows = posters(page.list)
+        assertTrue("${page.name}, $step: a poster of the page has the focus", focusedIn(rows))
+        val card = compose.onAllNodes(isFocused() and rows).onLast().fetchSemanticsNode()
+        val name = card.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull().orEmpty()
+        val grown = grownBounds(card)
+        val list = compose.onNodeWithTag(page.list, useUnmergedTree = true).fetchSemanticsNode().layoutInfo.coordinates.boundsInRoot()
+        val where = "${page.name}, $step: $name drawn ${grown.top.inDp()}..${grown.bottom.inDp()}, list ${list.top.inDp()}..${list.bottom.inDp()}, safe bottom ${safeBottom().inDp()}"
+        assertTrue("$where: the grown poster starts in the window", grown.top >= -0.5f)
+        assertTrue("$where: the grown poster ends clear of the screen's bottom", grown.bottom <= safeBottom() + 0.5f)
+        assertTrue("$where: the list reaches the screen's safe bottom, as Home's", list.bottom >= safeBottom() - 0.5f)
+        assertTrue("$where: the poster's place starts inside its list", grown.center.y - card.size.height / 2f >= list.top - 0.5f)
+        assertTrue("$where: the grown poster ends inside its list", grown.bottom <= list.bottom + 0.5f)
+        // The other posters of its row: the same middle, not grown.
+        val middle = grown.center.y
+        compose.onAllNodes(rows).fetchSemanticsNodes().filter { it.id != card.id }.forEach { other ->
+            val coordinates = other.layoutInfo.coordinates
+            val bounds = coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+            if (abs(bounds.center.y - middle) > 1f || bounds.left >= list.right) return@forEach
+            assertTrue("$where: the row's poster ending at ${bounds.bottom.inDp()} ends inside the list", bounds.bottom <= list.bottom + 0.5f)
+        }
+    }
+
+    /** The pages with rows of posters under a header pinned above them: every surface of [headerSurfaces]. */
+    private fun headerPages(): List<HeaderPage> {
+        val awards = (1..8).map { movie("a$it", "Award Film $it") }
+        val seriesAwards = (1..8).map { series("as$it", "Award Series $it") }
+        val movieCategories = (1..3).map { MediaCategory("m-c$it", "Example Category $it", ContentType.MOVIE) }
+        val seriesCategories = (1..3).map { MediaCategory("s-c$it", "Example Category $it", ContentType.SERIES) }
+        val moviesState = VodUiState(
+            title = "Movies",
+            categories = movieCategories,
+            awardWinners = awards,
+            rows = movieCategories.map { category -> CategoryRow(category, (1..8).map { movie("${category.id}-$it", "${category.name} Film $it", category.id) }) },
+        )
+        val seriesState = VodUiState(
+            title = "Series",
+            categories = seriesCategories,
+            awardWinners = seriesAwards,
+            series = true,
+            rows = seriesCategories.map { category -> CategoryRow(category, (1..8).map { series("${category.id}-$it", "${category.name} Series $it", category.id) }) },
+        )
+        val homeState = home(RowOrder.HOME_NEW_MOVIES)
+        return listOf(
+            HeaderPage("Home", TopLevel.HOME, true, "homeRows") { TvHomeScreen(homeState, HomeActions(), autoAdvance = false) },
+            HeaderPage("Movies", TopLevel.MOVIES, true, "vod") { VodScreen(moviesState, VodActions()) },
+            HeaderPage("Series", TopLevel.SERIES, true, "vod") { VodScreen(seriesState, VodActions()) },
+            HeaderPage("a category's grid", TopLevel.MOVIES, false, "grid") { PosterGridScreen("Drama", longGrid, filter = "", onFilter = {}, onOpen = {}, onBack = {}) },
+            HeaderPage("a genre's titles", TopLevel.HOME, false, "browse") { BrowseScreen(BrowseUiState(BrowseKind.GENRE, "Mystery", movies = longGrid), onOpen = {}, onFestival = {}, onBack = {}) },
+        )
+    }
+
+    /**
+     * Shows each of [pages] in turn, as the app does on a TV, the focus on the first poster of its first row (Home: Down
+     * from Play), then [walk] on it.
+     */
+    private fun visitHeaderPages(pages: List<HeaderPage>, walk: (HeaderPage) -> Unit) {
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            headerPage?.let { page ->
+                key(page) {
+                    OndoTheme {
+                        TelevisionFrame {
+                            TvNavigationFrame(page.tab, showBar = true, tabPage = page.tabPage, onSelect = {}, onSearch = {}, onSettings = {}) {
+                                CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory(), LocalTitleHeaders provides Headers) {
+                                    FocusEntry { page.content() }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        compose.mainClock.autoAdvance = false
+        for (page in pages) {
+            headerPage = page
+            advance(1_000)
+            val rows = posters(page.list)
+            if (page.name == "Home") {
+                compose.onNodeWithTag("heroPlay").requestFocus()
+                advance(1_000)
+                press(Key.DirectionDown)
+            } else if (!focusedIn(rows)) {
+                // The page's first poster, as the remote coming down to it.
+                compose.onAllNodes(rows).onFirst().requestFocus()
+                advance(1_000)
+            }
+            walk(page)
+        }
+    }
+
+    /** The moves along a row: Right and Left, back and forth. */
+    private val alongTheRow = listOf(Key.DirectionRight, Key.DirectionRight, Key.DirectionLeft, Key.DirectionRight, Key.DirectionLeft, Key.DirectionLeft)
+
+    /**
+     * Where what must stay still on [page] stands, by node: each card's middle (its place's, which its focus scale keeps),
+     * each text of the list outside the cards (the rows' names, the lines below a card; not a text drawn inside a card,
+     * which grows with it) by its top, and the header's foot.
+     */
+    private fun heights(page: HeaderPage): Map<Int, Pair<String, Float>> {
+        fun drawn(node: SemanticsNode): Rect {
+            val coordinates = node.layoutInfo.coordinates
+            return coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+        }
+        val posters = compose.onAllNodes(posters(page.list)).fetchSemanticsNodes().associate { node ->
+            node.id to ("card " + node.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull().orEmpty() to drawn(node).center.y)
+        }
+        val outsideTheCards = within(page.list) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text) and !hasAnyAncestor(poster)
+        val texts = compose.onAllNodes(outsideTheCards, useUnmergedTree = true).fetchSemanticsNodes().associate { node ->
+            node.id to ("text " + node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ").orEmpty() to drawn(node).top)
+        }
+        val header = compose.onAllNodes(hasTestTag("titleHeader") or hasTestTag("heroFrame"), useUnmergedTree = true).fetchSemanticsNodes().associate { node ->
+            node.id to ("the header's foot" to drawn(node).bottom)
+        }
+        return posters + texts + header
+    }
+
+    /**
+     * On [page], moves along the focused row (Right and Left, back and forth), each followed frame by frame; what moved
+     * up or down by more than half a pixel is added to [moved], each thing once with its largest move.
+     */
+    private fun walkAlongTheRow(page: HeaderPage, step: String, moved: MutableList<String>) {
+        val before = heights(page)
+        if (before.isEmpty()) {
+            moved += "${page.name}, $step: nothing of the page measured"
+            return
+        }
+        val largest = mutableMapOf<Int, Pair<Float, String>>()
+        alongTheRow.forEachIndexed { index, key ->
+            compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(key) }
+            repeat(30) { frame ->
+                advance(16)
+                val now = heights(page)
+                for ((id, was) in before) {
+                    val (name, y) = now[id] ?: continue
+                    val shift = abs(y - was.second)
+                    if (shift > 0.5f && shift > (largest[id]?.first ?: 0f)) {
+                        largest[id] = shift to "$name moved from ${was.second.inDp()} to ${y.inDp()} (move ${index + 1}, ${if (key == Key.DirectionRight) "Right" else "Left"}, frame ${frame + 1})"
+                    }
+                }
+            }
+            advance(500)
+        }
+        largest.values.forEach { (_, what) -> moved += "${page.name}, $step: $what" }
+        if (!focusedIn(posters(page.list))) moved += "${page.name}, $step: the focus left the page's posters"
+    }
+
+    /**
+     * Every page with rows of posters under a header pinned above them, on a 960 x 540 dp TV: moving along a row, in
+     * the first row and in one reached by Down, never moves the cards, the rows' names, the lines below the cards or
+     * the header up or down; only Up and Down do. Every page is walked, and all that moved is told at once.
+     */
+    @Test
+    fun aMoveAlongARowNeverMovesTheRows() {
+        val pages = headerPages()
+        assertEquals("every page is listed", headerSurfaces.values.flatten().toSet(), pages.map { it.name }.toSet())
+        val moved = mutableListOf<String>()
+        visitHeaderPages(pages) { page ->
+            walkAlongTheRow(page, "first row", moved)
+            press(Key.DirectionDown)
+            walkAlongTheRow(page, "a row reached by Down", moved)
+        }
+        assertTrue("moving along a row moved:\n" + moved.joinToString("\n"), moved.isEmpty())
+    }
+
+    /**
+     * Every page with rows of posters under a header pinned above them, on a 960 x 540 dp TV: the focus on the first
+     * poster of its first row (Home: Down from Play), then Down to the rows below; each time the focused poster and its
+     * row show whole, its focus growth included, with Home's margins. Movies and Series open on a row of posters (Award
+     * winners), as a tab with no title in progress does. Every source file that shows a header above rows
+     * ([com.markedoe.ondo.ui.tv.TvHeaderAbove]) is listed in [headerSurfaces], with its pages here.
+     */
+    @Test
+    fun everyPageUnderAHeaderShowsItsFocusedRowWhole() {
+        val root = File("src/main/kotlin/com/markedoe/ondo")
+        val found = root.walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .filter { file -> headerAbove.containsMatchIn(file.readText()) }
+            .map { it.relativeTo(root).invariantSeparatorsPath }.toSet()
+        assertEquals("a page with a header above its rows is added to `headerSurfaces`, with its page here", headerSurfaces.keys - "ui/tv/TvHomeScreen.kt", found)
+        val pages = headerPages()
+        assertEquals("every page is listed", headerSurfaces.values.flatten().toSet(), pages.map { it.name }.toSet())
+        visitHeaderPages(pages) { page ->
+            assertFocusedRowWhole(page, "first row")
+            repeat(2) { step ->
+                press(Key.DirectionDown)
+                assertFocusedRowWhole(page, "Down ${step + 1}")
+            }
+        }
+    }
+
     companion object {
         /**
          * Every source file that shows poster rows or grids on a TV, and the walk above that covers it. A new one is
@@ -426,6 +644,16 @@ class TvRowsClearOfTheBottomEverySurfaceTest {
             "ui/tv/TvHomeScreen.kt" to "homeFromTheFeaturedTitlesDownEveryRow",
             "ui/tv/TvSearchScreen.kt" to "searchDownEveryRow",
         )
+
+        /** Every source file that shows rows of posters under a TV's pinned header, and its pages in the test above. */
+        val headerSurfaces = mapOf(
+            "ui/tv/TvHomeScreen.kt" to listOf("Home"),
+            "ui/screens/VodScreens.kt" to listOf("Movies", "Series", "a category's grid"),
+            "ui/screens/BrowseScreen.kt" to listOf("a genre's titles"),
+        )
+
+        /** A call of the header above rows (not its definition). */
+        private val headerAbove = Regex("""(?<!fun )TvHeaderAbove\(""")
 
         /** Where the cards and rows are defined, or a phone's own screens (a TV has its own of these). */
         private val notASurface = setOf(
