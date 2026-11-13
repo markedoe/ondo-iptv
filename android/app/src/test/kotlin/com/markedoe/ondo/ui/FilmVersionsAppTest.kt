@@ -187,6 +187,15 @@ class FilmVersionsAppTest {
         assertFalse(UiMappers.resume(library.progress(watching.key)!!, state(library, grouped = false)).subtitle == "4K DV")
     }
 
+    /** The version in progress without a tag of its own (the plain stream) is named too, as its page names it. */
+    @Test
+    fun continueWatchingNamesAPlainVersionToo() {
+        val watching = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, hd.id, title = hd.name, lastWatchedAt = 1)
+        val library = LibraryState().recordStart(watching).updateProgress(watching.key, 600.0, 6_000.0, now = 2)
+        val subtitle = UiMappers.resume(library.progress(watching.key)!!, state(library)).subtitle
+        assertTrue("the plain version says which it is: $subtitle", !subtitle.isNullOrBlank())
+    }
+
     /** A panel listing a stream twice (the same id): one version, one badge (the page's rows need one key each). */
     @Test
     fun aStreamListedTwiceIsOneVersion() {

@@ -230,6 +230,14 @@ final class FilmVersionsTests: XCTestCase {
         XCTAssertEqual(badges.map(\.ordinal), [1, 1, 2, 2], "two versions of the same tags are two badges")
     }
 
+    /// A film offered plain and in "4K DV": the plain one had no tag, so its chip only said "Version".
+    func testAPlainVersionNextToATaggedOneSaysWhatItIs() {
+        let list = [movie("Copper Valley", 2026), movie("Copper Valley 4K DV", 2026)]
+        let labels = FilmVersions.badges(list) { _ in nil }.map(\.label)
+        XCTAssertFalse(labels.contains(nil), "every version names itself: \(labels)")
+        XCTAssertEqual(Set(labels).count, labels.count, "two versions never read the same: \(labels)")
+    }
+
     func testTheDefaultVersion() {
         let dv = movie("Sandstorm 4K DV", 2021)
         let uhd = movie("Sandstorm 4K", 2021)

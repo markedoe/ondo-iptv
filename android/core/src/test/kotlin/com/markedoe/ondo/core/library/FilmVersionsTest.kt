@@ -271,6 +271,15 @@ class FilmVersionsTest {
         assertEquals(listOf(1, 1, 2, 2), badges.map { it.ordinal }, "two versions of the same tags are two badges")
     }
 
+    /** A film offered plain and in "4K DV": the plain one had no tag, so its chip only said "Version". */
+    @Test
+    fun aPlainVersionNextToATaggedOneSaysWhatItIs() {
+        val list = listOf(movie("Copper Valley", 2026), movie("Copper Valley 4K DV", 2026))
+        val labels = FilmVersions.badges(list) { null }.map { it.label }
+        assertTrue(labels.none { it == null }, "every version names itself: $labels")
+        assertEquals(labels.size, labels.distinct().size, "two versions never read the same: $labels")
+    }
+
     @Test
     fun theDefaultVersion() {
         val dv = movie("Sandstorm 4K DV", 2021)
