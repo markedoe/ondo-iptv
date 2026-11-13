@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasStateDescription
@@ -224,7 +225,8 @@ class PosterScoreBadgeTest {
         // TalkBack: the title, then the score as the card's state.
         compose.onAllNodes(hasContentDescription("Northern Lights") and hasStateDescription("TMDb rating 7.8") and hasClickAction()).assertCountEquals(1)
         compose.onAllNodes(hasContentDescription("Harbor Lights") and hasStateDescription("TMDb rating 6.0") and hasClickAction()).assertCountEquals(1)
-        compose.onAllNodes(hasStateDescription("TMDb rating", substring = true) and hasContentDescription("Glass City")).assertCountEquals(0)
+        val saysAScore = SemanticsMatcher("says a TMDb score") { it.config.getOrNull(SemanticsProperties.StateDescription)?.contains("TMDb rating") == true }
+        compose.onAllNodes(saysAScore and hasContentDescription("Glass City")).assertCountEquals(0)
         // The badge adds nothing to the card's description: the tests and TalkBack find a card by its title.
         compose.onAllNodes(hasContentDescription("TMDb rating", substring = true)).assertCountEquals(0)
         val poster = card("Northern Lights")
