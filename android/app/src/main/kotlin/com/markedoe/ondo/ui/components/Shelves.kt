@@ -70,13 +70,16 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.testTag as semanticsTestTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ResumeItem
@@ -232,6 +235,52 @@ fun WatchedBadge(modifier: Modifier = Modifier, size: Dp = 22.dp) {
 /** The tag of [WatchedBadge], for the tests. */
 const val WATCHED_BADGE_TAG = "watchedBadge"
 
+/**
+ * TMDb's score of each title the device knows it of, by poster key ([ShowcaseItem.key]), formatted as the TV's header
+ * shows it ("7.8", "7,8" in French; `UiMappers.posterScores`): made off the main thread by the view model from what
+ * TMDb said this session and what the device kept, again when more is known. Each badge is one lookup; empty: none.
+ */
+val LocalPosterScores = compositionLocalOf<Map<String, String>> { emptyMap() }
+
+/** TMDb's score of the title of [key], as [LocalPosterScores] has it; null when not known (no badge). */
+@Composable
+fun posterScore(key: String?): String? = if (key == null) null else LocalPosterScores.current[key]
+
+/**
+ * TMDb's score on a thumbnail, in its bottom start corner (the top ones have the watched check mark and My List's
+ * bookmark): a star and the number, white on a dark pill, legible on any picture and kept clear of the card's rounded
+ * corners by the caller's inset. TalkBack says "TMDb rating 7.8" with the card's title. Larger on a TV.
+ */
+@Composable
+fun ScoreBadge(score: String, modifier: Modifier = Modifier) {
+    val television = isTelevision()
+    val description = stringResource(R.string.tmdb_score_description, score)
+    Row(
+        modifier
+            .background(Color.Black.copy(alpha = 0.65f), CircleShape)
+            .padding(horizontal = if (television) 7.dp else 5.dp, vertical = if (television) 2.dp else 1.dp)
+            .clearAndSetSemantics {
+                contentDescription = description
+                semanticsTestTag = SCORE_BADGE_TAG
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Rounded.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(if (television) 13.dp else 11.dp))
+        Text(
+            score,
+            color = Color.White,
+            fontSize = if (television) 12.sp else 11.sp,
+            lineHeight = if (television) 16.sp else 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            modifier = Modifier.padding(start = 3.dp),
+        )
+    }
+}
+
+/** The tag of [ScoreBadge], for the tests. */
+const val SCORE_BADGE_TAG = "posterScore"
+
 /** Whether the poster is in My List, where [LocalPosterMyList] says so. */
 @Composable
 fun inMyList(item: ShowcaseItem): Boolean = LocalPosterMyList.current?.keys?.contains(item.key) == true
@@ -298,6 +347,9 @@ fun PosterCard(
     val interaction = remember { MutableInteractionSource() }
     val kept = inMyList(item)
     val watched = isWatched(item)
+    val score = posterScore(item.key)
+    // Above the progress bar when there is one (8 dp from the bottom, 4 dp high).
+    val scoreInset = if (!watched && progress != null && progress > 0f) 16.dp else 4.dp
     if (!showsTitle) {
         Column(
             modifier = modifier
@@ -314,6 +366,7 @@ fun PosterCard(
                 Poster(url = item.posterUrl, title = item.title, progress = progress.takeUnless { watched })
                 if (watched) WatchedBadge(Modifier.align(Alignment.TopStart))
                 if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
+                if (score != null) ScoreBadge(score, Modifier.align(Alignment.BottomStart).padding(start = 4.dp, bottom = scoreInset))
             }
         }
         return
@@ -344,6 +397,7 @@ fun PosterCard(
             )
             if (watched) WatchedBadge(Modifier.align(Alignment.TopStart))
             if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
+            if (score != null) ScoreBadge(score, Modifier.align(Alignment.BottomStart).padding(start = 4.dp, bottom = scoreInset))
         }
         Text(
             // Without the provider's tags: the title as people read it (the stored name stays as it is).
@@ -455,7 +509,11 @@ fun ContinueCard(
                     .fillMaxSize()
                     .background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))),
             )
-            PlayIcon(preparing, Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 12.dp).size(22.dp), tint = Color.White)
+            // The play icon, then TMDb's score of the title beside it, above the progress bar.
+            Row(Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                PlayIcon(preparing, Modifier.size(22.dp), tint = Color.White)
+                posterScore(item.showcase?.key)?.let { ScoreBadge(it, Modifier.padding(start = 8.dp)) }
+            }
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
                 Box(Modifier.fillMaxWidth(item.progress.coerceIn(0f, 1f)).height(3.dp).background(Color.White))
             }

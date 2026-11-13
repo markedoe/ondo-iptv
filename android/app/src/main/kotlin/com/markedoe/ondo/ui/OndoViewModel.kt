@@ -71,6 +71,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -240,15 +241,17 @@ class OndoViewModel(
         if (!state.isRestoring && !state.content.isEmpty && input.kept.content === state.content) {
             if (home.hero.isNotEmpty()) {
                 workedOutWhole.compareAndSet(0L, System.nanoTime())
-                keepHome(home, state, input.labels)
+                keepHome(home, state, input.labels, input.kept.facts)
             }
             homeWorkedOut.value = TabsFor(state.content, state.activeProfile.id)
         }
         return home
     }
 
-    private fun keepHome(home: HomeUiState, state: OndoState, labels: Labels) {
-        val snapshot = HomeSnapshots.of(home, state, labels) ?: return
+    private fun keepHome(home: HomeUiState, state: OndoState, labels: Labels, kept: Map<String, TitleMetadata>) {
+        // Its titles' scores too: their badges show at once at the next start.
+        val scores = UiMappers.posterScores(state, kept, labels.locale, only = HomeSnapshots.keys(home))
+        val snapshot = HomeSnapshots.of(home, state, labels, scores) ?: return
         if (snapshot == keptHome) return
         keptHome = snapshot
         repository.keepHomeSnapshot(snapshot)
@@ -1054,6 +1057,42 @@ class OndoViewModel(
 
     /** Changes when a grid's fill brought TMDb ratings ([fillRatingSort]): the pages sorted by rating read them again. */
     val ratingSortVersion: StateFlow<Int> = _ratingSortVersion.asStateFlow()
+
+    /**
+     * What the device kept, read again when a grid's fill brought TMDb ratings ([fillRatingSort]): the posters' scores
+     * follow, though neither Home nor the tabs are worked out again for it.
+     */
+    private val refilledFacts: Flow<Kept> = _ratingSortVersion.drop(1)
+        .mapLatest { Kept(state.value.content, repository.keptPosterFacts()).also { kept -> latestKept = kept } }
+
+    /**
+     * TMDb's score of each title the device knows it of, by poster key, formatted ([UiMappers.posterScores]): what every
+     * poster's badge shows, the same as a TV's header. Worked out off the main thread, again only when what is known
+     * changes (TMDb's answers, what the device kept, the catalogue, the app's language), never as the posters scroll.
+     * Until what the device kept is read at a cold start, the scores of Home kept from the last start
+     * ([HomeSnapshot.scores]): its titles show theirs at once, the same as once read.
+     */
+    val posterScores: StateFlow<Map<String, String>> = combine(
+        state.distinctUntilChanged { old, new ->
+            old.content === new.content && old.tmdbRatings === new.tmdbRatings && old.trending === new.trending &&
+                old.activePlaylistId == new.activePlaylistId && old.isReady == new.isReady
+        },
+        merge(keptFacts, refilledFacts),
+        this.labels,
+        savedHome,
+    ) { state, kept, labels, home -> scoresOf(state, keptFor(state, kept), labels, home.snapshot) }
+        .distinctUntilChanged()
+        .flowOn(computation)
+        .stateIn(viewModelScope, sharing, emptyMap())
+
+    private fun scoresOf(state: OndoState, kept: Kept, labels: Labels, snapshot: HomeSnapshot?): Map<String, String> {
+        val known = UiMappers.posterScores(state, kept.facts, labels.locale)
+        // What the device kept was read for a catalogue (this one, or the one before it while it is read): it says it all.
+        if (kept.content != null && !kept.content.isEmpty) return known
+        val saved = snapshot?.takeIf { it.scores.isNotEmpty() && it.playlistId == state.activePlaylistId && it.fingerprint == HomeSnapshots.fingerprint(state, labels) }
+            ?.scores ?: return known
+        return if (known.isEmpty()) saved else saved + known
+    }
 
     /**
      * A page sorted by rating shows [items] (in its order), in the caller's coroutine (cancelled when the page goes):

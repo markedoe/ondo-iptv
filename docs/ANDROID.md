@@ -119,6 +119,12 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **TV posters**: holding OK on a poster adds the title to My List or takes it out (a short message says which), and a check mark
   marks the titles in My List. In My List, the people kept get their photo (filled from their page or from the titles
   kept on the device).
+- **TMDb score on the thumbnails** (TV and phone): every poster, and every Continue Watching card next to its play
+  icon, shows TMDb's rating in its bottom start corner (a star and "7.8", "7,8" in French; mirrored right to left), the
+  same as the TV header's, from what TMDb said this session and what the device kept (`UiMappers.posterScores`, worked
+  out off the main thread by `OndoViewModel.posterScores`, again when more is kept; each card does one lookup). Nothing
+  while TMDb's rating is unknown: no placeholder, never the provider's. Home kept from the last start carries its titles'
+  scores, so they show at launch before what the device kept is read. TalkBack says "TMDb rating 7.8".
 - **TMDb** with the viewer's own token (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`): checked
   with TMDb's `/authentication` before it is saved (accepted, refused, unreachable), kept in the app's private
   storage and carried by sync (`key:tmdb`, docs/SYNC.md); a Trending row, the carousel's release dates and votes, TMDb's backdrop when

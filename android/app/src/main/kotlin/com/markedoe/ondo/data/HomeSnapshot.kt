@@ -35,6 +35,11 @@ data class HomeSnapshot(
     /** The channels' row, without what is on (the guide is read later). */
     val channels: List<Channel> = emptyList(),
     val channelsAreFavorites: Boolean = false,
+    /**
+     * TMDb's score of its titles, by poster key, formatted in the app's language ("7.8"): their badges show at once at
+     * the next start, before what the device kept is read. Absent from a snapshot kept before: none then.
+     */
+    val scores: Map<String, String> = emptyMap(),
 ) {
     /**
      * A movie or a series of a row; in the carousel and My List, the ids My List may hold it by ([ids]: each version of

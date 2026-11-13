@@ -134,6 +134,14 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Affiches sur TV** : maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
   court message dit lequel), et une coche marque les titres de Ma liste. Dans Ma liste, les personnes gardées ont
   leur photo (complétée depuis leur page ou les titres gardés sur l'appareil).
+- **Note TMDb sur les vignettes** (TV et téléphone) : chaque affiche, et chaque carte de Reprendre la lecture à côté de
+  son icône de lecture, montre la note de TMDb dans son coin inférieur de début (une étoile et « 7,8 » en français ; en
+  miroir de droite à gauche), la même que celle de l'en-tête sur TV, d'après ce que TMDb a dit pendant la session et ce
+  que l'appareil a gardé (`UiMappers.posterScores`, calculé hors du fil principal par `OndoViewModel.posterScores`, de
+  nouveau quand l'appareil en garde davantage ; chaque carte fait une seule recherche). Rien tant que la note de TMDb
+  n'est pas connue : aucun espace réservé, jamais celle du fournisseur. L'accueil gardé du dernier lancement garde les
+  notes de ses titres, qui s'affichent donc dès le lancement, avant la lecture de ce que l'appareil a gardé. TalkBack dit
+  « Note TMDb 7,8 ».
 - **TMDb** avec le jeton de l'utilisateur (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`) :
   vérifié par `/authentication` de TMDb avant d'être enregistré (accepté, refusé, injoignable), gardé dans le
   stockage privé de l'app et transmis par la synchronisation (`key:tmdb`, docs/SYNC.fr.md) ; une rangée Tendances, les

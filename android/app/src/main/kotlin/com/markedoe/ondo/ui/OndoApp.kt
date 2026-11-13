@@ -87,6 +87,7 @@ import com.markedoe.ondo.player.PlayerActivity
 import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.components.LocalWatchedTitles
+import com.markedoe.ondo.ui.components.LocalPosterScores
 import com.markedoe.ondo.ui.components.PosterMyList
 import com.markedoe.ondo.ui.components.TMDB_API_PAGE
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -301,8 +302,10 @@ private fun MainTabs(viewModel: OndoViewModel, launch: Long) {
     val headers = if (isTelevision()) rememberTitleHeaders(viewModel) else null
     // On every device: the watched titles, whose thumbnails show a check mark.
     val watched = rememberWatchedTitles(viewModel)
+    // On every device: TMDb's score of the titles known, on their thumbnails (worked out off the main thread).
+    val scores by viewModel.posterScores.collectAsStateWithLifecycle()
     frame {
-        CompositionLocalProvider(LocalPosterMyList provides myList, LocalTitleHeaders provides headers, LocalWatchedTitles provides watched) {
+        CompositionLocalProvider(LocalPosterMyList provides myList, LocalTitleHeaders provides headers, LocalWatchedTitles provides watched, LocalPosterScores provides scores) {
             Box(Modifier.fillMaxSize()) {
                 // A short fade between pages (the default crossfade lasts 700 ms).
                 NavHost(

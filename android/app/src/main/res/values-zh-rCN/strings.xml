@@ -12,6 +12,7 @@
     <string name="my_list">我的片单</string>
     <string name="more_info">更多信息</string>
     <string name="in_my_list">已在我的片单中</string>
+    <string name="tmdb_score_description">TMDb 评分 %1$s</string>
     <string name="not_in_my_list">不在我的片单中</string>
     <string name="from_start">从头播放</string>
     <string name="play_episode">播放 %1$s</string>

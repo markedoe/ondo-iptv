@@ -384,7 +384,7 @@ object UiMappers {
             is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
         }
         val format = { value: Double -> String.format(locale, "%.1f", value.coerceIn(0.0, 10.0)) }
-        val tmdb = (tmdbRating(state, item) ?: kept?.rating)?.average
+        val tmdb = tmdbScore(state, item, kept)
         val provider = (details?.rating ?: item.rating)?.takeIf { it > 0 }
         val genres = kept?.genres?.map { it.name }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
             ?: genres(details?.genre ?: (item as? ShowcaseItem.SeriesItem)?.series?.genre)
@@ -395,13 +395,49 @@ object UiMappers {
         return TitleHeader(
             item = item,
             genres = genres.distinct().take(3),
-            tmdbRating = tmdb?.let(format),
+            tmdbRating = tmdb?.let { formatScore(it, locale) },
             providerRating = if (tmdb == null) provider?.let(format) else null,
             plot = (details?.plot?.takeIf { it.isNotBlank() } ?: plot)?.trim()?.takeIf { it.isNotEmpty() },
             backdropUrl = backdrop(state, item),
             category = category?.takeIf { it.isNotBlank() },
             logoUrl = state.tmdbLogos[item.key],
         )
+    }
+
+    /**
+     * TMDb's score of [item] as a TV's header shows it and its poster's badge too ([posterScores]): from the pages opened
+     * (its first trending match included), else what the device [kept]; null when not known, or 0 (no votes yet).
+     */
+    fun tmdbScore(state: OndoState, item: ShowcaseItem, kept: TitleMetadata?): Double? =
+        (tmdbRating(state, item) ?: kept?.rating)?.average?.takeIf { it > 0 }
+
+    /** A score out of 10 as the header and the posters show it: "7.8", "7,8" in French. */
+    fun formatScore(value: Double, locale: Locale): String = String.format(locale, "%.1f", value.coerceIn(0.0, 10.0))
+
+    /**
+     * TMDb's score of each title the device knows it of, by poster key, formatted ([formatScore]): what the posters'
+     * badges show ([com.markedoe.ondo.ui.components.LocalPosterScores]), the same as the header's ([tmdbScore]) for every
+     * title. Made off the main thread, once per change of what is known, never per card: a card's badge is one lookup.
+     * [only]: those keys alone (Home kept for the next start); null: every title known.
+     */
+    fun posterScores(state: OndoState, kept: Map<String, TitleMetadata>, locale: Locale, only: Collection<String>? = null): Map<String, String> {
+        // The first trending match of a title, as the header takes it ([tmdbRating]), even without a rating.
+        val trending = HashMap<String, TrendingMatch>()
+        for (match in state.trending) trending.putIfAbsent(match.id, match)
+        val keys: Collection<String> = only ?: HashSet<String>(kept.size + state.tmdbRatings.size + trending.size).apply {
+            addAll(kept.keys)
+            addAll(state.tmdbRatings.keys)
+            addAll(trending.keys)
+        }
+        // Many titles share a score: each value is formatted once.
+        val formatted = HashMap<Double, String>()
+        val result = HashMap<String, String>(keys.size * 2)
+        for (key in keys) {
+            val votes = state.tmdbRatings[key] ?: trending[key]?.trending?.rating ?: kept[key]?.rating ?: continue
+            val score = votes.average.takeIf { it > 0 } ?: continue
+            result[key] = formatted.getOrPut(score) { formatScore(score, locale) }
+        }
+        return result
     }
 
     /** A rating out of 10 as half stars out of five stars: 7.4 is three and a half stars. */

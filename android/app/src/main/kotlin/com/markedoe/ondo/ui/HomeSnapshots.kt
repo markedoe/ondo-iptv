@@ -21,7 +21,8 @@ import java.security.MessageDigest
  * (in the player, on a title's page) never brings back what is gone, and nothing of another profile ever shows.
  */
 object HomeSnapshots {
-    fun of(home: HomeUiState, state: OndoState, labels: Labels): HomeSnapshot? {
+    /** [scores]: TMDb's score of Home's titles ([keys]), formatted (`UiMappers.posterScores`), kept with it. */
+    fun of(home: HomeUiState, state: OndoState, labels: Labels, scores: Map<String, String> = emptyMap()): HomeSnapshot? {
         val playlistId = state.activePlaylistId ?: return null
         // Each card's entry of the history: the latest of its title, as Continue watching takes them.
         val entries = state.library.continueWatching(playlistId).associateBy { "${it.kind}|${it.itemId}" }
@@ -49,7 +50,18 @@ object HomeSnapshots {
             selections = home.selections.map { (key, row) -> HomeSnapshot.Selection(key, row.id, row.name, row.tags, row.genreNames, row.items.map(::title)) },
             channels = home.channels.map { it.channel },
             channelsAreFavorites = home.channelsAreFavorites,
+            scores = scores,
         )
+    }
+
+    /** The poster keys of every title [home] shows: its carousel, its cards to continue watching and its rows. */
+    fun keys(home: HomeUiState): Set<String> {
+        val keys = HashSet<String>()
+        home.hero.forEach { keys.add(it.item.key) }
+        home.continueWatching.forEach { card -> card.showcase?.let { keys.add(it.key) } }
+        (home.myList + home.newMovies + home.newSeries + home.trending).forEach { keys.add(it.key) }
+        home.selections.values.forEach { row -> row.items.forEach { keys.add(it.key) } }
+        return keys
     }
 
     /**

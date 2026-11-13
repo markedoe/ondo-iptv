@@ -93,6 +93,8 @@ import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.MyListBadge
+import com.markedoe.ondo.ui.components.ScoreBadge
+import com.markedoe.ondo.ui.components.posterScore
 import com.markedoe.ondo.ui.components.PlayIcon
 import com.markedoe.ondo.ui.components.ResumeCardMenu
 import com.markedoe.ondo.ui.components.posterLongClick
@@ -405,6 +407,7 @@ fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = M
             CardSheen(focused)
             if (isWatched(item)) WatchedBadge(Modifier.align(Alignment.TopStart))
             if (kept) MyListBadge(Modifier.align(Alignment.TopEnd), size = 28.dp)
+            posterScore(item.key)?.let { ScoreBadge(it, Modifier.align(Alignment.BottomStart).padding(6.dp)) }
         }
     }
 }
@@ -440,7 +443,11 @@ fun TvResumeCard(
             Box(Modifier.fillMaxSize()) {
                 Artwork(url = item.imageUrl, title = item.title, modifier = Modifier.fillMaxSize(), showsTitleFallback = false)
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))))
-                PlayIcon(preparing, Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 12.dp).size(22.dp), tint = Color.White)
+                // The play icon, then TMDb's score of the title beside it, above the progress bar.
+                Row(Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PlayIcon(preparing, Modifier.size(22.dp), tint = Color.White)
+                    posterScore(item.showcase?.key)?.let { ScoreBadge(it, Modifier.padding(start = 8.dp)) }
+                }
                 TvProgress(item.progress, Modifier.align(Alignment.BottomCenter).fillMaxWidth())
                 CardSheen(focused)
             }

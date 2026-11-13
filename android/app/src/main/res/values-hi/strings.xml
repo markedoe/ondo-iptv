@@ -12,6 +12,7 @@
     <string name="my_list">मेरी सूची</string>
     <string name="more_info">ज़्यादा जानकारी</string>
     <string name="in_my_list">मेरी सूची में</string>
+    <string name="tmdb_score_description">TMDb रेटिंग %1$s</string>
     <string name="not_in_my_list">मेरी सूची में नहीं</string>
     <string name="from_start">शुरू से</string>
     <string name="play_episode">%1$s चलाएँ</string>
