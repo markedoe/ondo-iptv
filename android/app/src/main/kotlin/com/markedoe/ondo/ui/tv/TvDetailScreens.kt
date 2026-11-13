@@ -397,7 +397,7 @@ internal fun TvArtwork(
 ) {
     Box(modifier.semantics { this[ArtworkAlignment] = alignment }.testTag("tvArtwork")) {
         if (!backdropUrl.isNullOrBlank()) {
-            Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize(), alignment = alignment, onFailed = onBackdropFailed)
+            Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize().testTag("tvArtworkBackdrop"), alignment = alignment, onFailed = onBackdropFailed)
         } else {
             BlurredPoster(url = posterUrl, title = title, modifier = Modifier.fillMaxSize().alpha(0.55f))
             Artwork(

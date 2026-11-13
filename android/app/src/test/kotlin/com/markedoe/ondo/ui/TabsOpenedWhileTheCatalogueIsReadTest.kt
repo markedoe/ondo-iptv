@@ -10,6 +10,7 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.WatchEntry
+import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.ui.screens.VodUiState
 import java.io.File
 import java.io.InputStream
@@ -164,6 +165,51 @@ class TabsOpenedWhileTheCatalogueIsReadTest {
                 }
             } finally {
                 gate.countDown()
+            }
+        }
+    }
+
+    /**
+     * Once the catalogue is read, a title to continue watching that has left it has no title for the header (as
+     * before): nothing of it is shown or fetched. While the catalogue is read, every card has one.
+     */
+    @Test
+    fun aTitleGoneFromTheReadCatalogueHasNoTitleForTheHeader() {
+        val gone = LibraryState(
+            history = listOf(
+                WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, "gone-movie", title = "Gone Film", position = 600.0, duration = 6_000.0, lastWatchedAt = Fixtures.NOW - 1_000L),
+                WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, "gone-series", "gone-series-1-1", "Gone Series", position = 300.0, duration = 2_400.0, lastWatchedAt = Fixtures.NOW - 2_000L),
+            ),
+        )
+        val read = Fixtures.state(library = gone)
+        val reading = read.copy(content = PlaylistContent(), seriesDetails = emptyMap(), isRestoring = true)
+        for ((name, series) in surfaces) {
+            val whole = UiMappers.vod(read, series = series, title = name, now = Fixtures.NOW)
+            assertTrue("$name: the card still listed", whole.continueWatching.isNotEmpty())
+            assertTrue("$name: no title for a title gone: ${whole.continueWatching.map { it.showcase }}", whole.continueWatching.all { it.showcase == null })
+            val opened = UiMappers.vod(reading, series = series, title = name, now = Fixtures.NOW)
+            assertTrue("$name: the card while the catalogue is read", opened.continueWatching.isNotEmpty())
+            assertTrue("$name: its title while the catalogue is read", opened.continueWatching.all { it.showcase != null })
+        }
+    }
+
+    /**
+     * A playlist of channels only: what the device kept of TMDb is the same empty map for every catalogue. The tab open
+     * (Home not), the catalogue read: the tab is worked out with it, so the other one is worked out after it and no tab
+     * is watched for nothing until the minute's limit.
+     */
+    @Test
+    fun aPlaylistOfChannelsOnlyEndsTheTabsWatchAtOnce() {
+        val store = AppStore(folder.root.resolve("channels"))
+        store.savePlaylists(listOf(Fixtures.playlist))
+        store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
+        store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content.copy(movies = emptyList(), series = emptyList(), fetchedAt = System.currentTimeMillis()))
+        for ((name, series) in surfaces) {
+            started(store) { viewModel, watching ->
+                watching.launch { tab(viewModel, series).collect {} }
+                assertTrue("$name: the catalogue read", waitUntil(20_000) { !viewModel.state.value.isRestoring && viewModel.state.value.content.channels.isNotEmpty() })
+                assertTrue("$name: the other tab worked out after it", waitUntil(15_000) { tab(viewModel, !series).value != null })
+                assertTrue("$name: no tab watched for nothing: ${viewModel.tabsWatched.get()}", waitUntil(15_000) { viewModel.tabsWatched.get() == 0 })
             }
         }
     }

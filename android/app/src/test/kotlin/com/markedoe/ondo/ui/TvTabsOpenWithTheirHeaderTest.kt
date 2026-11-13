@@ -33,6 +33,20 @@ import com.markedoe.ondo.ui.tv.TitleHeaders
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.requestFocus
+import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.ui.model.ResumeItem
+import com.markedoe.ondo.ui.screens.CategoryRow
+import com.markedoe.ondo.ui.tv.HEADER_DEBOUNCE_MS
+import java.util.Locale
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -87,12 +101,21 @@ class TvTabsOpenWithTheirHeaderTest {
 
     private fun exists(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
+    /** The header worked out with the tab ([VodUiState.header]), as the view model does: a backdrop of its own. */
+    private fun withHeader(state: OndoState, vod: VodUiState): VodUiState {
+        val item = requireNotNull(vod.headerTitle) { "a title for the header" }
+        val header = UiMappers.titleHeader(state, item, Fixtures.kept()[item.key], Locale.ENGLISH)
+        return vod.copy(header = header.copy(backdropUrl = "https://img.example.com/backdrop/${item.key}-ready.jpg"))
+    }
+
     @Test
     fun theMoviesAndSeriesTabsOpenWithTheirRowsAndTheirHeaderAtOnce() {
         val opened = surfaces.flatMap { (name, series) ->
+            val whole = UiMappers.vod(read, series = series, title = name, now = Fixtures.NOW, kept = Fixtures.kept())
             listOf(
                 "$name, the catalogue being read" to UiMappers.vod(reading, series = series, title = name, now = Fixtures.NOW),
-                "$name, the catalogue read" to UiMappers.vod(read, series = series, title = name, now = Fixtures.NOW, kept = Fixtures.kept()),
+                "$name, the catalogue read" to whole,
+                "$name, the catalogue read, its header worked out with it" to withHeader(read, whole),
             )
         }
         var shown by mutableStateOf(0)
@@ -116,6 +139,71 @@ class TvTabsOpenWithTheirHeaderTest {
             val expected = if (first == RowOrder.CONTINUE_WATCHING) state.continueWatching.first().title else state.firstTitle(first)?.title
             assertTrue("$what: a title to show in the header", expected != null)
             assertEquals("$what: the header shows the first card's title with the rows", listOf(CatalogueMatcher.displayTitle(expected!!)), texts("headerTitle"))
+            val ready = state.header ?: continue
+            // What the tab's state holds, at once: nothing else could bring it here.
+            assertEquals("$what: its rating at once", 1, texts("headerRating").filter { it.isNotBlank() }.size)
+            assertEquals("$what: its synopsis at once", listOf(ready.plot.orEmpty()), texts("headerPlot"))
+            assertTrue("$what: a synopsis to show", !ready.plot.isNullOrBlank())
+            assertTrue(
+                "$what: its backdrop at once",
+                compose.onAllNodes(hasTestTag("tvArtworkBackdrop") and hasAnyAncestor(hasTestTag("pageBackdrop")), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty(),
+            )
         }
+    }
+
+    /** What the view model says of a title: its synopsis and rating, as soon as asked. */
+    private object Echo : TitleHeaders {
+        override fun header(item: ShowcaseItem): Flow<TitleHeader> =
+            flowOf(TitleHeader(item, plot = (item as? ShowcaseItem.MovieItem)?.movie?.plot, providerRating = item.rating?.toString()))
+
+        override suspend fun load(item: ShowcaseItem) = Unit
+    }
+
+    /**
+     * The card with the focus is of a title made of the history (the catalogue being read); the catalogue is read: the
+     * header shows the catalogue's title, the focus stays on that card and nothing scrolls.
+     */
+    @Test
+    fun aFocusedCardsTitleMadeOfTheHistoryGivesWayToTheCataloguesOne() {
+        val real = ShowcaseItem.MovieItem(Fixtures.northernLights)
+        val standIn = ShowcaseItem.MovieItem(Movie(id = real.movie.id, name = real.movie.name, categoryId = "", streamUrl = ""))
+        val others = listOf(Fixtures.summerInLisbon, Fixtures.longRoad).map { ShowcaseItem.MovieItem(it) }
+        fun tab(title: ShowcaseItem) = VodUiState(
+            title = "Movies",
+            categories = listOf(Fixtures.drama),
+            continueWatching = listOf(
+                ResumeItem("${Fixtures.PLAYLIST_ID}|MOVIE|${real.movie.id}|", real.title, subtitle = null, imageUrl = null, progress = 0.1f, minutesLeft = 90, hasPage = true, showcase = title),
+            ),
+            rows = listOf(CategoryRow(Fixtures.drama, others)),
+        )
+        var state by mutableStateOf(tab(standIn))
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            OndoTheme { TelevisionFrame { CompositionLocalProvider(LocalTitleHeaders provides Echo) { VodScreen(state, VodActions()) } } }
+        }
+        compose.waitForIdle()
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        compose.mainClock.autoAdvance = false
+        advance(500)
+        val card = hasClickAction() and hasAnyAncestor(hasTestTag("shelfResume"))
+        compose.onAllNodes(card).onFirst().requestFocus()
+        compose.waitForIdle()
+        advance(HEADER_DEBOUNCE_MS + 50)
+        assertEquals(listOf(real.title), texts("headerTitle"))
+        assertTrue("no synopsis yet", texts("headerPlot").none { it.isNotBlank() })
+        val row = compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+        compose.runOnIdle { state = tab(real) }
+        advance(HEADER_DEBOUNCE_MS + 50)
+        assertEquals("the catalogue's title", listOf(real.movie.plot.orEmpty()), texts("headerPlot"))
+        assertEquals(listOf(real.title), texts("headerTitle"))
+        assertTrue("the focus stays on the card", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfResume"))).fetchSemanticsNodes().isNotEmpty())
+        assertEquals("nothing scrolls", row.top, compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top, 0.5f)
+    }
+
+    private fun advance(ms: Long) {
+        compose.mainClock.advanceTimeBy(ms)
+        compose.waitForIdle()
     }
 }

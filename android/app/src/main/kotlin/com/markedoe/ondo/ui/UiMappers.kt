@@ -492,9 +492,9 @@ object UiMappers {
     }
 
     /**
-     * The Movies or Series tab. A card to continue watching whose title the catalogue does not hold (the saved catalogue
-     * still being read, or a title gone from it) still has one for a TV's header: [keptTitle]'s (the one Home kept from
-     * the last start), else one made of what the history holds of it ([standIn]).
+     * The Movies or Series tab. While the catalogue is not read yet (the saved one being read), a card to continue
+     * watching still has a title for a TV's header: [keptTitle]'s (the one Home kept from the last start), else one made
+     * of what the history holds of it ([standIn]). Once it is read, a title gone from it has none.
      */
     fun vod(
         state: OndoState,
@@ -551,6 +551,8 @@ object UiMappers {
         }
         val rows = categories.mapNotNull { category -> byCategory[category.id]?.take(ROW_LENGTH)?.let { CategoryRow(category, it) } }
         val kind = if (series) ItemKind.SERIES else ItemKind.MOVIE
+        // The catalogue not read yet: a card's title is not in it for now. Once read, a title not in it is gone (no title).
+        val reading = state.isRestoring || state.content.isEmpty
         val saved = state.library.rowOrder(series)
         val selections = SelectionRows.rows(state, if (series) RowOrder.SERIES else RowOrder.MOVIES, now, kept, ROW_LENGTH)
         // The viewer's order (Settings → Row order); a row they hid never shows, nor one a hidden category or language left out.
@@ -560,7 +562,7 @@ object UiMappers {
             title = title,
             categories = rows.map { it.category },
             continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).filter { it.kind == kind }.map { entry ->
-                resume(entry, state).let { card -> if (card.showcase != null) card else card.copy(showcase = keptTitle(entry) ?: standIn(entry)) }
+                resume(entry, state).let { card -> if (card.showcase != null || !reading) card else card.copy(showcase = keptTitle(entry) ?: standIn(entry)) }
             },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,

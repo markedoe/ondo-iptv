@@ -292,9 +292,16 @@ class OndoViewModel(
     /** The device's date, again when it changes: a selection's row is a new pick every day. */
     private val days: Flow<String> = minutes.map { SelectionRows.day(it) }.distinctUntilChanged()
 
-    /** What a tab is worked out from: the same again (the tab watched anew, what was kept read again) is not worked out again. */
-    private class TabInput(val state: OndoState, val kept: Kept, val day: String, val locale: java.util.Locale) {
-        fun sameAs(other: TabInput): Boolean = other.state === state && other.kept.facts === kept.facts && other.day == day && other.locale == locale
+    /**
+     * What a tab is worked out from: the same again (the tab watched anew, what was kept read again) is not worked out
+     * again. What was kept is compared with the catalogue it was read for: an empty one (a playlist of channels only)
+     * is the same map for every catalogue. [home]: Home kept from the last start, its titles shown while the catalogue
+     * is read; worked out again once it is read.
+     */
+    private class TabInput(val state: OndoState, val kept: Kept, val day: String, val locale: java.util.Locale, val home: SavedHome) {
+        fun sameAs(other: TabInput): Boolean =
+            other.state === state && other.kept.content === kept.content && other.kept.facts === kept.facts && other.day == day &&
+                other.locale == locale && other.home === home
     }
 
     /**
@@ -306,8 +313,8 @@ class OndoViewModel(
         /** Set once the tab was worked out with its catalogue and what the device kept of it. */
         val workedOut = MutableStateFlow<TabsFor?>(null)
 
-        val state: StateFlow<VodUiState?> = combine(this@OndoViewModel.state, keptFacts, days, this@OndoViewModel.labels) { state, kept, day, labels ->
-            TabInput(state, keptFor(state, kept), day, labels.locale)
+        val state: StateFlow<VodUiState?> = combine(this@OndoViewModel.state, keptFacts, days, this@OndoViewModel.labels, savedHome) { state, kept, day, labels, home ->
+            TabInput(state, keptFor(state, kept), day, labels.locale, home)
         }
             .distinctUntilChanged { old, new -> new.sameAs(old) }
             .map { workedOutTab(it) }
@@ -318,7 +325,7 @@ class OndoViewModel(
             val state = input.state
             val start = System.nanoTime()
             // A card whose title the catalogue does not hold yet (being read): the one Home kept from the last start.
-            val keptTitles by lazy { HomeSnapshots.resumeTitles(keptHome ?: savedHome.value.snapshot) }
+            val keptTitles by lazy { HomeSnapshots.titles(input.home.snapshot) }
             val vod = UiMappers.vod(state, series, title = "", now = clock(), kept = input.kept.facts) { entry -> keptTitles[HomeSnapshots.resumeKey(entry)] }
             val header = vod.headerTitle?.let { UiMappers.titleHeader(state, it, input.kept.facts[it.key], input.locale) }
             nanos.addAndGet(System.nanoTime() - start)

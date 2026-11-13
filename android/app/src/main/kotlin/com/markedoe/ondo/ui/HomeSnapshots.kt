@@ -136,15 +136,27 @@ object HomeSnapshots {
     }
 
     /**
-     * The titles of [snapshot]'s cards to continue watching, by the title they are of ([resumeKey]): the Movies and
-     * Series tabs show them in a TV's header while the catalogue is read.
+     * Every title [snapshot] holds (its cards to continue watching, its carousel and its rows), by the title it is of
+     * ([resumeKey]): the Movies and Series tabs show them in a TV's header while the catalogue is read, a series with its
+     * own picture rather than an episode's.
      */
-    fun resumeTitles(snapshot: HomeSnapshot?): Map<String, ShowcaseItem> =
-        snapshot?.continueWatching.orEmpty().mapNotNull { card ->
-            val entry = WatchEntry.ofKey(card.key) ?: return@mapNotNull null
-            val item = card.showcase?.let(::item) ?: return@mapNotNull null
-            resumeKey(entry) to item
-        }.toMap()
+    fun titles(snapshot: HomeSnapshot?): Map<String, ShowcaseItem> {
+        if (snapshot == null) return emptyMap()
+        val titles = HashMap<String, ShowcaseItem>()
+        fun add(item: ShowcaseItem?) {
+            val key = when (item) {
+                is ShowcaseItem.MovieItem -> "${snapshot.playlistId}|${ItemKind.MOVIE}|${item.movie.id}"
+                is ShowcaseItem.SeriesItem -> "${snapshot.playlistId}|${ItemKind.SERIES}|${item.series.id}"
+                null -> return
+            }
+            titles.putIfAbsent(key, item)
+        }
+        snapshot.continueWatching.forEach { add(it.showcase?.let(::item)) }
+        snapshot.hero.forEach { add(item(it.title)) }
+        (snapshot.myList + snapshot.newMovies + snapshot.newSeries + snapshot.trending).forEach { add(item(it)) }
+        snapshot.selections.forEach { row -> row.items.forEach { add(item(it)) } }
+        return titles
+    }
 
     /** The title an entry of the history is of, its playlist's: the same in every one of its entries (its episodes). */
     fun resumeKey(entry: WatchEntry): String = "${entry.playlistId}|${entry.kind}|${entry.itemId}"
