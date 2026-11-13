@@ -10,6 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -231,6 +234,28 @@ class TvHomeOpensAtTheTopTest {
         homeState = homeState.copy(hero = hero)
         advance(1_500)
         assertTrue("Play has the focus", compose.onNodeWithTag("heroPlay").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
+    }
+
+    /**
+     * A row comes above the first one, Play focused and the remote not used yet: Home goes back to its top, Play focused,
+     * once the next frame is drawn. Down pressed before that frame: the remote goes into the rows and stays there, not
+     * taken back to Play when Home's move to its top ends (the viewer has pressed a key: Home is theirs).
+     */
+    @Test
+    fun downPressedAsARowComesAboveStaysInTheRows() {
+        val seriesFirst = HomeUiState(playlistName = "Example Playlist", hero = hero, newSeries = shows, hasVod = true)
+        show(seriesFirst)
+        assertTrue("Play has the focus, not ${focusedTag()}", compose.onNodeWithTag("heroPlay").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
+        // The movies' row comes above the series' one: one frame, Home's move to its top started, not ended.
+        homeState = seriesFirst.copy(newMovies = movies)
+        Snapshot.sendApplyNotifications()
+        shadowOf(Looper.getMainLooper()).idle()
+        compose.mainClock.advanceTimeByFrame()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue("the movies' row is there", compose.onAllNodesWithTag("shelfNewMovies", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        compose.onNodeWithTag("heroPlay").performKeyInput { pressKey(Key.DirectionDown) }
+        advance(1_500)
+        assertTrue("the remote went down into the rows and stays there, not on ${focusedTag()}", focusedIn("homeRows"))
     }
 
     @Test
