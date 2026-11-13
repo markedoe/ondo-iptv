@@ -79,6 +79,7 @@ import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.model.TitleHeader
 import com.markedoe.ondo.ui.tv.focusMemory
 import com.markedoe.ondo.ui.tv.TvSeeAllCard
 import com.markedoe.ondo.ui.tv.rememberLeaveField
@@ -125,6 +126,11 @@ data class VodUiState(
     /** The rows of the selections shown in the tab, by row key (`sel:<id>`). */
     val selections: Map<String, SelectionRow> = emptyMap(),
     val series: Boolean = false,
+    /**
+     * What a TV's header shows of [headerTitle] as the tab opens, worked out with the tab off the main thread (its facts,
+     * its backdrop): whole at once, as Home's carousel is. Null: the header works it out as it shows it.
+     */
+    val header: TitleHeader? = null,
 ) {
     /** The rows shown, in their order: those with titles. */
     val shownRows: List<String>
@@ -155,6 +161,13 @@ data class VodUiState(
         RowOrder.AWARD_WINNERS -> awardWinners.firstOrNull()
         else -> (rows.firstOrNull { it.key == key }?.items ?: selections[key]?.items)?.firstOrNull()
     }
+
+    /**
+     * The title a TV's header shows as the tab opens: the first card's of the first row, the one the focus starts on;
+     * else the first one a row shown has. Never none while a row shows a title.
+     */
+    val headerTitle: ShowcaseItem?
+        get() = shownRows.firstNotNullOfOrNull { firstTitle(it) }
 }
 
 class VodActions(
@@ -186,10 +199,9 @@ const val TV_ROW_LENGTH = 10
  */
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
-    // The first card's title: the one the focus starts on when the tab opens.
-    val fallback = state.firstTitle(state.shownRows.firstOrNull())
+    // The first card's title: the one the focus starts on when the tab opens, with what the tab's state holds of it.
     // The focused poster below its row's name, at the same place at every press.
-    TvHeaderAbove(fallback, lead = SHELF_TITLE_ROOM) { modifier, top, underHeader ->
+    TvHeaderAbove(state.headerTitle, lead = SHELF_TITLE_ROOM, ready = state.header) { modifier, top, underHeader ->
         VodRows(state, actions, modifier, top, underHeader)
     }
 }

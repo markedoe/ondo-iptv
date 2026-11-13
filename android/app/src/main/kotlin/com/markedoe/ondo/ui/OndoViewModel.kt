@@ -119,18 +119,30 @@ class OndoViewModel(
      */
     private class Kept(val content: PlaylistContent?, val facts: Map<String, TitleMetadata>)
 
+    /**
+     * The last of [keptFacts] read, whoever read it: a screen that starts watching again (a tab opened anew) has it at
+     * once for the same catalogue, rather than nothing until it is read again.
+     */
+    @Volatile private var latestKept: Kept? = null
+
     /** What TMDb said of the catalogue's titles and the device kept, again as more is kept; empty until read. */
     private val keptFacts: Flow<Kept> =
         combine(state.distinctUntilChanged { old, new -> old.content === new.content && old.tmdbRatings === new.tmdbRatings }, carouselVersion) { state, _ -> state }
-            .mapLatest { Kept(it.content, repository.keptPosterFacts()) }
+            .mapLatest { Kept(it.content, repository.keptPosterFacts()).also { kept -> latestKept = kept } }
             .onStart { emit(Kept(null, emptyMap())) }
 
-    /** How many times Home's state and the Movies tab's were started and worked out, and how long that took in all (ColdStartTimingTest). */
+    /** [kept] when it was read for [state]'s catalogue; else the last one read for it, if any ([latestKept]). */
+    private fun keptFor(state: OndoState, kept: Kept): Kept =
+        if (kept.content === state.content) kept else latestKept?.takeIf { it.content === state.content } ?: kept
+
+    /** How many times Home's state and the Movies and Series tabs' were started and worked out, and how long that took in all (ColdStartTimingTest). */
     @VisibleForTesting internal val homeStarted = AtomicInteger()
     @VisibleForTesting internal val homeComputations = AtomicInteger()
     @VisibleForTesting internal val homeNanos = AtomicLong()
     @VisibleForTesting internal val moviesComputations = AtomicInteger()
     @VisibleForTesting internal val moviesNanos = AtomicLong()
+    @VisibleForTesting internal val seriesComputations = AtomicInteger()
+    @VisibleForTesting internal val seriesNanos = AtomicLong()
 
     /** How many times Home was the one kept from the last start ([HomeSnapshots]) rather than worked out. */
     @VisibleForTesting internal val savedHomesShown = AtomicInteger()
@@ -250,10 +262,12 @@ class OndoViewModel(
         fun sameAs(other: TabsFor?): Boolean = other != null && other.content === content && other.profileId == profileId
     }
 
-    /** Set when Home was worked out whole (its catalogue and what was kept of it): the tabs are worked out after it. */
+    /**
+     * Set when Home, or the Movies or Series tab, was worked out whole (its catalogue and what was kept of it): the tabs
+     * are worked out after it. Not Home's alone: Home kept from the last start shows at once, and the viewer may have
+     * left it for a tab long before the catalogue is read, Home then no longer worked out.
+     */
     private val homeWorkedOut = MutableStateFlow<TabsFor?>(null)
-    private val moviesWorkedOut = MutableStateFlow<TabsFor?>(null)
-    private val seriesWorkedOut = MutableStateFlow<TabsFor?>(null)
 
     /**
      * The playlist in use for a TV's top bar: when its catalogue was last fetched, whether it is being fetched again or
@@ -278,36 +292,67 @@ class OndoViewModel(
     /** The device's date, again when it changes: a selection's row is a new pick every day. */
     private val days: Flow<String> = minutes.map { SelectionRows.day(it) }.distinctUntilChanged()
 
-    val movies: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ ->
-        val start = System.nanoTime()
-        UiMappers.vod(state, series = false, title = "", now = clock(), kept = kept.facts).also {
-            moviesNanos.addAndGet(System.nanoTime() - start)
-            moviesComputations.incrementAndGet()
-            if (kept.content === state.content) moviesWorkedOut.value = TabsFor(state.content, state.activeProfile.id)
-        }
+    /** What a tab is worked out from: the same again (the tab watched anew, what was kept read again) is not worked out again. */
+    private class TabInput(val state: OndoState, val kept: Kept, val day: String, val locale: java.util.Locale) {
+        fun sameAs(other: TabInput): Boolean = other.state === state && other.kept.facts === kept.facts && other.day == day && other.locale == locale
     }
-        .flowOn(computation)
-        .stateIn(viewModelScope, sharing, null)
 
-    val series: StateFlow<VodUiState?> = combine(state, keptFacts, days) { state, kept, _ ->
-        UiMappers.vod(state, series = true, title = "", now = clock(), kept = kept.facts).also {
-            if (kept.content === state.content) seriesWorkedOut.value = TabsFor(state.content, state.activeProfile.id)
+    /**
+     * The Movies tab ([series] false) or the Series tab: both worked out by this one path, so that they never differ.
+     * Its state holds the header a TV shows above its rows as it opens ([VodUiState.header]), worked out with it off the
+     * main thread from what is in memory and kept on the device: the header is whole at once, as Home's carousel is.
+     */
+    private inner class VodTab(private val series: Boolean, private val computations: AtomicInteger, private val nanos: AtomicLong) {
+        /** Set once the tab was worked out with its catalogue and what the device kept of it. */
+        val workedOut = MutableStateFlow<TabsFor?>(null)
+
+        val state: StateFlow<VodUiState?> = combine(this@OndoViewModel.state, keptFacts, days, this@OndoViewModel.labels) { state, kept, day, labels ->
+            TabInput(state, keptFor(state, kept), day, labels.locale)
+        }
+            .distinctUntilChanged { old, new -> new.sameAs(old) }
+            .map { workedOutTab(it) }
+            .flowOn(computation)
+            .stateIn(viewModelScope, sharing, null)
+
+        private fun workedOutTab(input: TabInput): VodUiState {
+            val state = input.state
+            val start = System.nanoTime()
+            // A card whose title the catalogue does not hold yet (being read): the one Home kept from the last start.
+            val keptTitles by lazy { HomeSnapshots.resumeTitles(keptHome ?: savedHome.value.snapshot) }
+            val vod = UiMappers.vod(state, series, title = "", now = clock(), kept = input.kept.facts) { entry -> keptTitles[HomeSnapshots.resumeKey(entry)] }
+            val header = vod.headerTitle?.let { UiMappers.titleHeader(state, it, input.kept.facts[it.key], input.locale) }
+            nanos.addAndGet(System.nanoTime() - start)
+            computations.incrementAndGet()
+            if (input.kept.content === state.content) {
+                val whole = TabsFor(state.content, state.activeProfile.id)
+                workedOut.value = whole
+                // The catalogue in use, read: the other tab is worked out after this one, Home on screen or not.
+                if (state.isReady && !state.isRestoring && !state.content.isEmpty && this@OndoViewModel.state.value.content === state.content) {
+                    homeWorkedOut.value = whole
+                }
+            }
+            return vod.copy(header = header)
         }
     }
-        .flowOn(computation)
-        .stateIn(viewModelScope, sharing, null)
+
+    private val moviesTab = VodTab(series = false, moviesComputations, moviesNanos)
+    private val seriesTab = VodTab(series = true, seriesComputations, seriesNanos)
+
+    val movies: StateFlow<VodUiState?> = moviesTab.state
+
+    val series: StateFlow<VodUiState?> = seriesTab.state
 
     init {
-        // Once Home was worked out whole (its catalogue and what the device kept of it), the Movies and Series tabs are
-        // worked out in the background, one after the other, once per catalogue and profile: their first opening shows
-        // them at once (a tab keeps its last state while no one watches it), then as the state is when it opens. Watched
-        // only until worked out: no work for them while they are not open.
+        // Once Home or a tab was worked out whole (its catalogue and what the device kept of it), the Movies and Series
+        // tabs are worked out in the background, one after the other, once per catalogue and profile: their first
+        // opening shows them at once (a tab keeps its last state while no one watches it), then as the state is when it
+        // opens. Watched only until worked out: no work for them while they are not open.
         viewModelScope.launch {
             homeWorkedOut.filterNotNull()
                 .distinctUntilChanged { old, new -> new.sameAs(old) }
                 .collectLatest { target ->
-                    workOut(movies, moviesWorkedOut, target)
-                    workOut(series, seriesWorkedOut, target)
+                    workOut(moviesTab, target)
+                    workOut(seriesTab, target)
                 }
         }
     }
@@ -317,12 +362,12 @@ class OndoViewModel(
      * than [target] is what the app shows: another catalogue (a download ended, Home not on screen) or another profile
      * ends it, and a minute at most, so that the tab is never watched for nothing.
      */
-    private suspend fun workOut(tab: StateFlow<VodUiState?>, workedOut: StateFlow<TabsFor?>, target: TabsFor) = coroutineScope {
-        val watching = launch { tab.collect {} }
+    private suspend fun workOut(tab: VodTab, target: TabsFor) = coroutineScope {
+        val watching = launch { tab.state.collect {} }
         tabsWatched.incrementAndGet()
         try {
             withTimeoutOrNull(WORK_OUT_LIMIT_MS) {
-                combine(workedOut, state) { done, current ->
+                combine(tab.workedOut, state) { done, current ->
                     target.sameAs(done) || current.content !== target.content || current.activeProfile.id != target.profileId
                 }.first { it }
             }
@@ -540,7 +585,9 @@ class OndoViewModel(
     fun titleHeader(item: ShowcaseItem, locale: java.util.Locale): Flow<TitleHeader> {
         val kept = state.distinctUntilChanged { old, new -> old.content === new.content && old.tmdbRatings === new.tmdbRatings }
             .mapLatest<OndoState, TitleMetadata?> { repository.keptPosterFacts()[item.key] }
-            .onStart { emit(null) }
+            // What was last read for this catalogue first, if anything: the header never shows less than it did (a tab's
+            // header worked out with it, VodUiState.header) while it is read again.
+            .onStart { emit(latestKept?.takeIf { it.content === state.value.content }?.facts?.get(item.key)) }
         return combine(state, kept) { state, stored -> UiMappers.titleHeader(state, item, stored, locale) }
             .distinctUntilChanged()
             .flowOn(computation)

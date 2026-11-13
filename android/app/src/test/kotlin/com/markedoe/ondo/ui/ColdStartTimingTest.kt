@@ -26,6 +26,7 @@ import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.SavedPlaylist
 import com.markedoe.ondo.data.WatchEntry
+import com.markedoe.ondo.ui.screens.VodUiState
 import java.io.File
 import java.io.FileDescriptor
 import java.io.FileOutputStream
@@ -37,12 +38,14 @@ import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -502,16 +505,18 @@ class ColdStartTimingTest {
         val savedHomesShown: Int,
         /** From the Movies tab's opening (once Home is ready and the tabs worked out in the background) to its first state. */
         val moviesTab: Long,
+        /** The same for the Series tab, opened after it. */
+        val seriesTab: Long,
     )
 
     /**
      * The app's cold start: a repository and a view model on the saved catalogue, as a launch makes them, with Home
      * watched as the screen does; first without Home kept from a last start, then with it (the first start kept it).
      * Prints each state the repository emits (what changed in it, when), each Home state, how many times Home was worked
-     * out and how long that took, then the Movies tab's first opening. Always: Home kept is shown at the second start, and
+     * out and how long that took, then the Movies tab's first opening, then the Series tab's. Always: Home kept is shown at the second start, and
      * Home is worked out 3 times at most without it and once with it (see the counts). Targets, held in the night's run
      * (`ONDO_COLDSTART_STRICT`) and only ten times over them otherwise (a hang): with Home kept, its carousel within 300 ms;
-     * without, within 2.5 s; the Movies tab, opened once Home is ready, within 100 ms.
+     * without, within 2.5 s; the Movies tab and the Series tab, each opened once Home is ready, within 100 ms.
      */
     @Test
     fun stage7ViewModelColdOpen() {
@@ -560,6 +565,8 @@ class ColdStartTimingTest {
         within("with Home kept, the carousel", second.firstHero, 300)
         within("the Movies tab, from its opening", first.moviesTab, 100)
         within("the Movies tab, from its opening, Home kept", second.moviesTab, 100)
+        within("the Series tab, from its opening", first.seriesTab, 100)
+        within("the Series tab, from its opening, Home kept", second.seriesTab, 100)
     }
 
     /** [value] (ms, -1: never) within [targetMs] in the night's strict run, else within ten times it; printed either way. */
@@ -645,32 +652,19 @@ class ColdStartTimingTest {
             val keptAtEnd = runBlocking(main) { repository.keptPosterFacts().size }
             say("$name.keptPosterFacts size=$keptAtEnd")
 
-            // The Movies tab, worked out in the background once Home was ready, then opened.
-            val warmDeadline = System.currentTimeMillis() + 120_000
-            while (viewModel.moviesComputations.get() == 0 && System.currentTimeMillis() < warmDeadline) Thread.sleep(20)
-            say("$name.moviesTab workedOutInTheBackground computations=${viewModel.moviesComputations.get()} totalComputeTime=${viewModel.moviesNanos.get() / 1_000_000} ms at=${at()} ms")
-            val tabStart = System.nanoTime()
-            val firstMovies = AtomicLong(-1L)
-            watching.launch(main) {
-                viewModel.movies.collect { movies ->
-                    if (movies != null) firstMovies.compareAndSet(-1L, (System.nanoTime() - tabStart) / 1_000_000)
-                }
-            }
-            val tabDeadline = System.currentTimeMillis() + 120_000
-            while (firstMovies.get() < 0 && System.currentTimeMillis() < tabDeadline) Thread.sleep(5)
-            Thread.sleep(2_000)
-            say(
-                "$name.moviesTab firstNonNull=${firstMovies.get()} ms computations=${viewModel.moviesComputations.get()} " +
-                    "totalComputeTime=${viewModel.moviesNanos.get() / 1_000_000} ms",
-            )
+            // The Movies tab, then the Series tab, worked out in the background once Home was ready, then opened: the same
+            // way, the same target.
+            val moviesTab = openTab(name, "moviesTab", viewModel.movies, viewModel.moviesComputations, viewModel.moviesNanos, watching, main)
+            val seriesTab = openTab(name, "seriesTab", viewModel.series, viewModel.seriesComputations, viewModel.seriesNanos, watching, main)
             // Home kept for the next start: written in the background (ten seconds at most).
             if (waitForKeptHome != null) {
                 val keptDeadline = System.currentTimeMillis() + 10_000
                 while (!waitForKeptHome.isFile && System.currentTimeMillis() < keptDeadline) Thread.sleep(20)
             }
             assertTrue("Home came", firstHome.get() >= 0)
-            assertTrue("the Movies tab came", firstMovies.get() >= 0)
-            return ColdOpen(firstHome.get(), firstHero.get(), firstWorkedOutHero(), viewModel.homeComputations.get(), viewModel.savedHomesShown.get(), firstMovies.get())
+            assertTrue("the Movies tab came", moviesTab >= 0)
+            assertTrue("the Series tab came", seriesTab >= 0)
+            return ColdOpen(firstHome.get(), firstHero.get(), firstWorkedOutHero(), viewModel.homeComputations.get(), viewModel.savedHomesShown.get(), moviesTab, seriesTab)
         } finally {
             watching.cancel()
             model?.let { runBlocking(main) { it.viewModelScope.cancel() } }
@@ -679,6 +673,36 @@ class ColdStartTimingTest {
             main.close()
             UiMappers.forgetCatalogue()
         }
+    }
+
+    /**
+     * A tab worked out in the background ([computations] above 0, two minutes at most), then opened: ms from its opening
+     * to its first state (-1: never). Printed as [label].
+     */
+    private fun openTab(
+        name: String,
+        label: String,
+        tab: StateFlow<VodUiState?>,
+        computations: AtomicInteger,
+        nanos: AtomicLong,
+        watching: CoroutineScope,
+        main: CoroutineDispatcher,
+    ): Long {
+        val warmDeadline = System.currentTimeMillis() + 120_000
+        while (computations.get() == 0 && System.currentTimeMillis() < warmDeadline) Thread.sleep(20)
+        say("$name.$label workedOutInTheBackground computations=${computations.get()} totalComputeTime=${nanos.get() / 1_000_000} ms")
+        val tabStart = System.nanoTime()
+        val first = AtomicLong(-1L)
+        watching.launch(main) {
+            tab.collect { state ->
+                if (state != null) first.compareAndSet(-1L, (System.nanoTime() - tabStart) / 1_000_000)
+            }
+        }
+        val tabDeadline = System.currentTimeMillis() + 120_000
+        while (first.get() < 0 && System.currentTimeMillis() < tabDeadline) Thread.sleep(5)
+        Thread.sleep(2_000)
+        say("$name.$label firstNonNull=${first.get()} ms computations=${computations.get()} totalComputeTime=${nanos.get() / 1_000_000} ms")
+        return first.get()
     }
 
     /** What changed from [old] to [new], by field (the same object or not). */

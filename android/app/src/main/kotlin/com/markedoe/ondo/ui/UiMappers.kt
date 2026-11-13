@@ -491,15 +491,38 @@ object UiMappers {
         )
     }
 
+    /**
+     * The Movies or Series tab. A card to continue watching whose title the catalogue does not hold (the saved catalogue
+     * still being read, or a title gone from it) still has one for a TV's header: [keptTitle]'s (the one Home kept from
+     * the last start), else one made of what the history holds of it ([standIn]).
+     */
     fun vod(
         state: OndoState,
         series: Boolean,
         title: String,
         now: Long = System.currentTimeMillis(),
         kept: Map<String, TitleMetadata> = emptyMap(),
-    ): VodUiState = trace(if (series) "Ondo.vod.series" else "Ondo.vod.movies") { vodState(state, series, title, now, kept) }
+        keptTitle: (WatchEntry) -> ShowcaseItem? = { null },
+    ): VodUiState = trace(if (series) "Ondo.vod.series" else "Ondo.vod.movies") { vodState(state, series, title, now, kept, keptTitle) }
 
-    private fun vodState(state: OndoState, series: Boolean, title: String, now: Long, kept: Map<String, TitleMetadata>): VodUiState {
+    /**
+     * A title made of what the history holds of [entry] (its name and picture), for a TV's header to show a card to
+     * continue watching whose title the catalogue does not hold; null for a channel.
+     */
+    fun standIn(entry: WatchEntry): ShowcaseItem? = when (entry.kind) {
+        ItemKind.MOVIE -> ShowcaseItem.MovieItem(Movie(id = entry.itemId, name = entry.title, posterUrl = entry.imageUrl, categoryId = "", streamUrl = ""))
+        ItemKind.SERIES -> ShowcaseItem.SeriesItem(Series(id = entry.itemId, name = entry.title, coverUrl = entry.imageUrl, categoryId = ""))
+        ItemKind.CHANNEL, ItemKind.PERSON -> null
+    }
+
+    private fun vodState(
+        state: OndoState,
+        series: Boolean,
+        title: String,
+        now: Long,
+        kept: Map<String, TitleMetadata>,
+        keptTitle: (WatchEntry) -> ShowcaseItem?,
+    ): VodUiState {
         // What is hidden, worked out once for every row of the tab.
         val hidden = hiddenCategoryIds(state)
         val showcase = showcase(state, hidden = hidden)
@@ -536,7 +559,9 @@ object UiMappers {
         return VodUiState(
             title = title,
             categories = rows.map { it.category },
-            continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).filter { it.kind == kind }.map { resume(it, state) },
+            continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).filter { it.kind == kind }.map { entry ->
+                resume(entry, state).let { card -> if (card.showcase != null) card else card.copy(showcase = keptTitle(entry) ?: standIn(entry)) }
+            },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
             awardWinners = rowTitles(state, GridSource.AWARDS, series, now, ROW_LENGTH, showcase, hidden),

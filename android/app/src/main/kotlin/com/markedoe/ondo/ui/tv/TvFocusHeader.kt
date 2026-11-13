@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -122,6 +123,11 @@ class FocusedTitle {
         this.item = item
     }
 
+    /** [owner] still has the focus and its title changed (made of the history, now the catalogue's): the header follows. */
+    fun update(owner: Any, item: ShowcaseItem) {
+        if (this.owner === owner) this.item = item
+    }
+
     fun release(owner: Any) {
         if (this.owner !== owner) return
         this.owner = null
@@ -142,6 +148,7 @@ fun Modifier.reportsFocus(item: ShowcaseItem?): Modifier = composed {
     val owner = remember { Any() }
     val current by rememberUpdatedState(title)
     DisposableEffect(focus, owner) { onDispose { focus.release(owner) } }
+    SideEffect { focus.update(owner, title) }
     onFocusChanged { if (it.isFocused) focus.focus(owner, current) else focus.release(owner) }
 }
 
@@ -160,7 +167,8 @@ fun rememberShownTitle(focus: FocusedTitle, keepLast: Boolean): ShowcaseItem? {
         if (shown != null && focused?.key != shown?.key) delay(HEADER_DEBOUNCE_MS)
         shown = focused
     }
-    return shown
+    // The same title as it is now (made of the history while the catalogue was read, now the catalogue's).
+    return if (focused != null && shown?.key == focused.key) focused else shown
 }
 
 /** Once the remote has rested on [item] a moment longer, what the header lacks is fetched; moving on cancels it. */
@@ -180,12 +188,14 @@ fun LoadWhenStill(item: ShowcaseItem?, headers: TitleHeaders?) {
 }
 
 /**
- * What the header shows of [item]: the title, year and poster at once, the rest as it is known. The title shown before
- * stays until the new one's is ready, so nothing flashes empty between two posters.
+ * What the header shows of [item]: the title, year and poster at once ([initial], when what is known of it is at hand),
+ * the rest as it is known. The title shown before stays until the new one's is ready, so nothing flashes empty between
+ * two posters. [restartOn]: worked out anew when it changes too.
  */
 @Composable
-fun rememberTitleHeader(item: ShowcaseItem?, headers: TitleHeaders?): TitleHeader? {
-    val header by produceState(item?.let { TitleHeader(it) }, item?.key, headers) {
+fun rememberTitleHeader(item: ShowcaseItem?, headers: TitleHeaders?, initial: TitleHeader? = null, restartOn: Any? = null): TitleHeader? {
+    val header by produceState(initial ?: item?.let { TitleHeader(it) }, item?.key, headers, restartOn) {
+        if (initial != null) value = initial
         when {
             item == null -> value = null
             headers == null -> value = TitleHeader(item)
@@ -204,12 +214,17 @@ private data class HeaderArt(val item: ShowcaseItem, val backdropUrl: String?)
  * once the remote stays. Null on a page without a header.
  */
 @Composable
-private fun rememberFocusHeader(fallback: ShowcaseItem?): TitleHeader? {
+private fun rememberFocusHeader(fallback: ShowcaseItem?, ready: TitleHeader?): TitleHeader? {
     val focus = LocalFocusedTitle.current ?: return null
     val headers = LocalTitleHeaders.current
     val item = rememberShownTitle(focus, keepLast = true) ?: fallback
     LoadWhenStill(item, headers)
-    return rememberTitleHeader(item, headers)
+    // What the page's state holds of it, worked out with the page: whole at once.
+    val prepared = ready?.takeIf { item != null && it.item == item }
+    // Again for the same title changed (one made of the history gives way to the catalogue's).
+    val header = rememberTitleHeader(item, headers, initial = prepared, restartOn = item)
+    // Never an empty band over the posters: what is known of the title at once, if nothing was shown yet.
+    return header ?: item?.let { prepared ?: TitleHeader(it) }
 }
 
 /**
@@ -296,6 +311,8 @@ fun TvHeaderAbove(
     label: String? = null,
     /** The posters' order, as chips at the end of the label's line; only with [label]. */
     sort: TvSortChoice? = null,
+    /** What the page's state holds of [fallback] for the header ([TitleHeader]), worked out with it: shown at once. */
+    ready: TitleHeader? = null,
     content: @Composable (modifier: Modifier, top: Dp, underHeader: Boolean) -> Unit,
 ) {
     val headers = if (isTelevision()) LocalTitleHeaders.current else null
@@ -317,7 +334,7 @@ fun TvHeaderAbove(
         sorting = false
     }
     CompositionLocalProvider(LocalFocusedTitle provides focus, LocalSortChip provides sortChip.takeIf { chips != null }) {
-        val header = rememberFocusHeader(fallback)
+        val header = rememberFocusHeader(fallback, ready)
         Box(Modifier.fillMaxSize().onGloballyPositioned { page = it }) {
             // The picture behind the whole page, the header's words and the posters over it.
             TvPageBackdrop(header?.item, header?.backdropUrl, Modifier.matchParentSize()) { item, url -> headers.backdropFailed(item, url) }

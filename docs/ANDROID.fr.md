@@ -62,13 +62,18 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   ne s'affiche jamais. Lire, Reprendre ou une chaîne choisis avant la lecture du catalogue se lancent une fois qu'il
   est lu, sauf si l'Accueil a été quitté entre-temps ; un titre qui a quitté le catalogue s'ouvre et se lit comme tout titre disparu (sa page revient en arrière,
   Lire ne lit rien). L'instantané part avec sa playlist, et tous avec un profil supprimé. Une fois l'Accueil complet,
-  les onglets Films et Séries sont calculés en arrière-plan, une fois par catalogue et par profil : leur première
-  ouverture est immédiate. `ColdStartTimingTest` (`./gradlew :app:coldStartTest`, un catalogue de 100 000 films, dans
+  ou un onglet (l'Accueil quitté pour lui pendant la lecture du catalogue), les onglets Films et Séries sont calculés en
+  arrière-plan par un même chemin, l'un après l'autre, une fois par catalogue et par profil : leur première ouverture
+  est immédiate, l'en-tête TV au-dessus de leurs rangées compris (calculé avec l'onglet : le titre de la première carte,
+  ses infos et son image de fond). Un onglet ouvert pendant la lecture du catalogue montre ses titres à reprendre,
+  chacun avec son titre pour l'en-tête : celui que l'Accueil a gardé, sinon son nom et son image tirés de l'historique ;
+  jamais d'en-tête vide au-dessus des rangées. `ColdStartTimingTest` (`./gradlew :app:coldStartTest`, un catalogue de 100 000 films, dans
   une JVM de test à part avec un tas de 2 Go) mesure le démarrage à froid : il vérifie toujours que l'Accueil gardé
   s'affiche et que l'Accueil est calculé 3 fois au plus (une avec l'Accueil gardé) ; ses objectifs de temps (le carrousel en 300 ms
-  avec l'Accueil gardé, 2,5 s sans, l'onglet Films en 100 ms) sont exigés dans le run de la nuit et rapportés sinon.
-  `HomeSnapshotTest` vérifie pour quoi l'instantané est gardé, `TabsWorkedOutAheadTest` qu'un onglet n'est jamais
-  observé pour rien.
+  avec l'Accueil gardé, 2,5 s sans, l'onglet Films et l'onglet Séries chacun en 100 ms) sont exigés dans le run de la
+  nuit et rapportés sinon. `HomeSnapshotTest` vérifie pour quoi l'instantané est gardé, `TabsWorkedOutAheadTest` qu'un
+  onglet n'est jamais observé pour rien, `TabsOpenedWhileTheCatalogueIsReadTest` et `TvTabsOpenWithTheirHeaderTest` que
+  Films et Séries s'ouvrent de la même façon, leurs rangées et leur en-tête aussitôt.
 - **En-tête sur TV** (`ui/tv/TvFocusHeader.kt`) : sur l'accueil, les onglets Films et Séries et les titres d'une
   catégorie, d'un genre, d'une année ou d'une récompense, un en-tête de hauteur fixe au-dessus des affiches montre
   celle qui a le focus : son image de fond (sinon son affiche floutée) derrière toute la page, bord à bord et jusqu'en
