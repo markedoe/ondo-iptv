@@ -44,6 +44,17 @@ class TvPinnedScrollingTest {
     }
 
     @Test
+    fun theNextCardAlongTheRowStaysThoughItsFocusHasNotGrownItYet() {
+        // Movies at 960 × 540 dp, xhdpi: rows 289 dp tall. Down: a 222 dp poster asked into view grown by its focus (1.06).
+        val vod = TvPinnedScrolling(lead = 104f)
+        val grown = 444f * 1.06f
+        val landed = 700f - vod.calculateScrollDistance(offset = 700f, size = grown, containerSize = 578f)
+        // Right: the next poster of the row, the same middle, asked into view at its place's size before it grows.
+        val middle = landed + grown / 2f
+        assertEquals(0f, vod.calculateScrollDistance(offset = middle - 222f, size = 444f, containerSize = 578f), 0f)
+    }
+
+    @Test
     fun aListToTheScreensBottomKeepsItsEdgeBelowTheFocusedCard() {
         // Home at 960 × 540 dp, xhdpi: rows 308 dp tall, a 222 dp poster, the 27 dp a TV may crop kept below it.
         val home = TvPinnedScrolling(lead = 100f, edge = 54f)
