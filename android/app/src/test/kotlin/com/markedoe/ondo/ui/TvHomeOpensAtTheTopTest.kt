@@ -258,6 +258,27 @@ class TvHomeOpensAtTheTopTest {
         assertTrue("the remote went down into the rows and stays there, not on ${focusedTag()}", focusedIn("homeRows"))
     }
 
+    /**
+     * Home kept from the last start (its carousel, its titles in progress filtered out) handed over to Home worked out
+     * anew, whose first row is another one (a row to continue watching above), the remote not used yet: the focus stays
+     * on Play, the frame full size, the rows at their top, the new first row whole right under the frame.
+     */
+    @Test
+    fun theHandOverToHomeWorkedOutAnewMovesNothing() {
+        val kept = HomeUiState(playlistName = "Example Playlist", hero = hero, newMovies = movies, newSeries = shows, hasVod = true, isRestoring = true)
+        show(kept)
+        fun playFocused() = compose.onNodeWithTag("heroPlay").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true
+        assertTrue("Play has the focus on Home kept, not ${focusedTag()}", playFocused())
+        val heroBefore = compose.onNodeWithTag("hero", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        homeState = kept.copy(isRestoring = false, continueWatching = resume)
+        advance(1_500)
+        assertTrue("Play keeps the focus, not ${focusedTag()}", playFocused())
+        val heroAfter = compose.onNodeWithTag("hero", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("the frame did not move: $heroBefore then $heroAfter", (heroAfter.top - heroBefore.top).value in -1f..1f && (heroAfter.bottom - heroBefore.bottom).value in -1f..1f)
+        val first = compose.onNodeWithTag("shelfResumeMovies", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("the rows at their top: the new first row at ${first.top}, the frame ending at ${heroAfter.bottom}", first.top >= heroAfter.bottom && first.top <= heroAfter.bottom + 24.dp)
+    }
+
     @Test
     fun continueWatchingFirstThenAPauseThenTheFeaturedTitles() = assertOpensAtTheTop(
         HomeUiState(playlistName = "Example Playlist", continueWatching = resume, newMovies = movies, newSeries = shows, hasVod = true),
