@@ -68,6 +68,11 @@ class AssetLibraryTest(unittest.TestCase):
         self.assertNotEqual(name, asset_library.reference_name("search", "fr-FR", b"one"))
         self.assertTrue(name.startswith("Ondo header fr-FR "))
 
+    def test_every_language_of_the_app_store_listing_gets_its_assets(self):
+        metadata = asset_library.ROOT / "fastlane" / "metadata"
+        listing = {path.name for path in metadata.iterdir() if path.is_dir() and path.name != "review_information"}
+        self.assertEqual(listing, set(asset_library.LOCALES))
+
     def test_each_listing_language_has_both_assets_at_the_app_store_sizes(self):
         for locale in asset_library.LOCALES:
             header = (asset_library.CREATIVE / locale / asset_library.FILES["header"]).read_bytes()
@@ -127,10 +132,11 @@ class SubmitTest(unittest.TestCase):
             asset_library.submit(fake)
         self.assertEqual([], fake.changes)
 
-    def test_once_approved_the_four_assets_go_in_one_submission(self):
+    def test_once_approved_every_asset_goes_in_one_submission(self):
         fake = FakeAppStoreConnect("READY_FOR_SALE")
         asset_library.submit(fake)
-        self.assertEqual([("POST", "/v1/reviewSubmissions")] + [("POST", "/v1/reviewSubmissionItems")] * 4
+        assets = len(asset_library.LOCALES) * len(asset_library.SLOTS)
+        self.assertEqual([("POST", "/v1/reviewSubmissions")] + [("POST", "/v1/reviewSubmissionItems")] * assets
                          + [("PATCH", "/v1/reviewSubmissions/submission")], fake.changes)
 
     def test_assets_already_submitted_are_not_sent_again(self):

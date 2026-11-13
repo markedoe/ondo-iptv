@@ -361,7 +361,8 @@ user-selected files).
 
    **Header and search results** (iPhone and iPad on iOS / iPadOS 27 and later; not the Mac): the *Header and
    Search Results* tab of the version page. The images are `fastlane/creative/<locale>/header.png` (21:9,
-   3840×1646, PNG only) and `search.jpg` (3:2, 3840×2560), in English and French, drawn from the App Store screenshots by
+   3840×1646, PNG only) and `search.jpg` (3:2, 3840×2560), in every language of the listing (a test fails on a missing
+   one; a language without screenshots of its own shows the English ones), drawn from the App Store screenshots by
    `fastlane/creative/render.mjs` (see its first lines); render them again when the screenshots change.
    *Actions → App Store header and search results → Run workflow*: `status` shows what App Store Connect holds
    (read only), `upload` puts the images in the Asset Library without touching any version, `place` shows them

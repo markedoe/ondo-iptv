@@ -71,7 +71,8 @@ IAP_VERSION_EDITABLE = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "REJECTED"
 # In-App Purchases App Review holds: nothing about them is changed meanwhile.
 IAP_IN_REVIEW = {"WAITING_FOR_REVIEW", "IN_REVIEW"}
 PLATFORMS = ("IOS", "MAC_OS")
-LOCALES = ("en-US", "fr-FR")
+# Every language of the iOS App Store listing (fastlane/metadata): each gets its header and search results asset.
+LOCALES = ("en-US", "fr-FR", "es-ES", "es-MX", "pt-BR", "zh-Hans", "ar-SA", "hi")
 # Asset → App Store slot.
 SLOTS = {"header": "PRODUCT_PAGE_HEADER_ASSET", "search": "APP_STORE_SEARCH_RESULTS_ASSET"}
 # The file of each asset in fastlane/creative/<locale>/: the 21:9 header is taken as PNG only (reference data).

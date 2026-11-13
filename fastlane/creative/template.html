@@ -2,7 +2,8 @@
 <!--
   The App Store product page header (21:9) and search results asset (3:2) for iOS and iPadOS 27, and the GitHub
   social preview (2:1), drawn from the App Store screenshots. render.mjs opens this page once per asset and language:
-  template.html?kind=header|search|social&locale=en-US|fr-FR&shots=<folder of the appstore-screenshots branch>
+  template.html?kind=header|search|social&locale=<App Store listing language>&screens=<screenshots language>&shots=<folder of
+  the appstore-screenshots branch>
   Key elements stay in the centre: the App Store shows its own icon, name and Get button around the header.
 -->
 <html>
@@ -19,7 +20,7 @@
   html, body { width: 100%; height: 100%; overflow: hidden; background: var(--ground); }
   body {
     position: relative;
-    font-family: "Inter Display", "Inter", sans-serif;
+    font-family: "Inter Display", "Inter", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans CJK SC", sans-serif;
     /* Pure black, a faint light from above the devices: the pictures on their screens carry the colour. */
     background: radial-gradient(ellipse 60% 55% at 50% 30%, rgba(255, 255, 255, 0.07), transparent 70%), var(--ground);
   }
@@ -55,10 +56,18 @@
   const kind = params.get("kind") || "header";
   const locale = params.get("locale") || "en-US";
   const shots = params.get("shots");
+  // A language with no screenshots of its own shows those its App Store listing shows (render.mjs: English).
+  const screens = params.get("screens") || locale;
   // A short phrase on the search results asset only: what Ondo is, at a glance. Never "free" (CLAUDE.md).
   const titles = {
     "en-US": ["Movies, series and live TV", "from your own playlist"],
     "fr-FR": ["Films, séries et TV en direct", "depuis votre playlist"],
+    "es-ES": ["Películas, series y TV en directo", "desde tu playlist"],
+    "es-MX": ["Películas, series y TV en vivo", "desde tu playlist"],
+    "pt-BR": ["Filmes, séries e TV ao vivo", "da sua playlist"],
+    "zh-Hans": ["电影、剧集和直播电视", "来自你自己的播放列表"],
+    "ar-SA": ["أفلام ومسلسلات وبث مباشر", "من قائمة التشغيل الخاصة بك"],
+    "hi": ["फ़िल्में, सीरीज़ और लाइव टीवी", "आपकी अपनी प्लेलिस्ट से"],
   };
   const size = { header: [3840, 1646], search: [3840, 2560], social: [2560, 1280] }[kind];
   document.documentElement.style.width = size[0] + "px";
@@ -82,7 +91,7 @@
     frame.style.top = top + "px";
     frame.style.zIndex = z;
     const image = document.createElement("img");
-    image.src = `${shots}/${locale}/${file}`;
+    image.src = `${shots}/${screens}/${file}`;
     frame.appendChild(image);
     stage.appendChild(frame);
     return frame;
@@ -99,6 +108,8 @@
   if (kind === "search") {
     const title = document.getElementById("title");
     const [first, second] = titles[locale];
+    title.lang = locale;
+    title.dir = locale === "ar-SA" ? "rtl" : "ltr";
     title.style.top = "230px";
     title.style.fontSize = "176px";
     title.textContent = first;
@@ -119,7 +130,7 @@
   }
 
   // render.mjs waits for this before taking the picture.
-  Promise.all([...document.images].map((image) => image.decode())).then(() => { document.body.dataset.ready = "1"; });
+  Promise.all([...document.images].map((image) => image.decode()).concat(document.fonts.ready)).then(() => { document.body.dataset.ready = "1"; });
 </script>
 </body>
 </html>
