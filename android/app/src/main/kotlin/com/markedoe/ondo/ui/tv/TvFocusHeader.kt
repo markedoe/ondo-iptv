@@ -369,10 +369,11 @@ fun TvHeaderAbove(
                 )
                 val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
                 // A grid sets its own scrolling once it knows its posters' height ([TvGridScrolling]).
-                // Rows run down to the 5 % a TV may crop, as Home's run to the screen's bottom: their scrolling
-                // ([TvPinnedScrolling]) keeps the focused card's growth inside the list, so the list's own edge never
-                // cuts it (room kept outside the list would move that edge up into the growth of a row left unscrolled).
-                if (byRows) content(rest, UNDER_HEADER_TOP, true) else TvPinnedHeaderList(lead) { content(rest, UNDER_HEADER_TOP, true) }
+                // Rows run down to the 5 % a TV may crop. Their scrolling keeps a focused poster's growth more above it, as
+                // Home's keeps the 5 % ([TvPinnedScrolling]'s edge): wherever a scroll lands the focused card, grown it
+                // stays clear of the screen's bottom. Kept as room outside the list instead, it moved the list's own
+                // edge up into the growth of a row left where the page opened it, and cut its poster.
+                if (byRows) content(rest, UNDER_HEADER_TOP, true) else TvPinnedHeaderList(lead, edge = FOCUS_GROWTH_ROOM) { content(rest, UNDER_HEADER_TOP, true) }
             }
             // Last: over the posters, and its Back before the page's.
             if (sorting && chips != null) {
@@ -388,6 +389,9 @@ fun TvHeaderAbove(
         }
     }
 }
+
+/** How far a focused poster (2:3, [TvTokens.PosterWidth] wide) is drawn past its place's end, grown by its focus. */
+private val FOCUS_GROWTH_ROOM = TvTokens.PosterWidth * 1.5f * CARD_FOCUS_SPILL
 
 /** A grid's focused poster lands this far below the grid's top. */
 private val GRID_LEAD = 12.dp
