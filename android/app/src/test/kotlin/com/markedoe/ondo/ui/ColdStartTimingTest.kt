@@ -599,7 +599,8 @@ class ColdStartTimingTest {
             val homeEmissions = AtomicInteger()
             val firstHome = AtomicLong(-1L)
             val firstHero = AtomicLong(-1L)
-            val firstWorkedOutHero = AtomicLong(-1L)
+            // Home worked out whole: by the view model, as it may equal Home kept (then no new state reaches the screen).
+            fun firstWorkedOutHero(): Long = viewModel.workedOutWhole.get().let { if (it == 0L) -1L else (it - start) / 1_000_000 }
             val firstVod = AtomicLong(-1L)
             watching.launch(main) {
                 viewModel.home.collect { home ->
@@ -609,7 +610,6 @@ class ColdStartTimingTest {
                     if (home != null) firstHome.compareAndSet(-1L, at())
                     if (home != null && home.hasVod) firstVod.compareAndSet(-1L, at())
                     if (home != null && home.hero.isNotEmpty()) firstHero.compareAndSet(-1L, at())
-                    if (home != null && home.hero.isNotEmpty() && computations > 0 && !home.isRestoring) firstWorkedOutHero.compareAndSet(-1L, at())
                     events += "$name.home #$number t=${at()} ms null=${home == null} hero=${home?.hero?.size} newMovies=${home?.newMovies?.size} restoring=${home?.isRestoring} computations=$computations"
                 }
             }
@@ -628,7 +628,7 @@ class ColdStartTimingTest {
                 }
                 val state = viewModel.state.value
                 val idle = viewModel.homeStarted.get() == viewModel.homeComputations.get()
-                if (state.content.movies.isNotEmpty() && !state.isRestoring && firstWorkedOutHero.get() >= 0 && idle && at() - lastActivity.get() > 3_000) {
+                if (state.content.movies.isNotEmpty() && !state.isRestoring && firstWorkedOutHero() >= 0 && idle && at() - lastActivity.get() > 3_000) {
                     quiet = true
                     break
                 }
@@ -639,7 +639,7 @@ class ColdStartTimingTest {
             say("$name.wait ended=${if (quiet) "quiet" else "deadline"} at=${at()} ms")
             say(
                 "$name.home firstNonNull=${firstHome.get()} ms firstWithCatalogue=${firstVod.get()} ms firstHero=${firstHero.get()} ms " +
-                    "firstWorkedOutHero=${firstWorkedOutHero.get()} ms (from the view model's creation)",
+                    "firstWorkedOutHero=${firstWorkedOutHero()} ms (from the view model's creation)",
             )
             say("$name.home started=${viewModel.homeStarted.get()} computations=${viewModel.homeComputations.get()} totalComputeTime=$homeTotal ms stateEmissions=${stateEmissions.get()} homeEmissions=${homeEmissions.get()}")
             val keptAtEnd = runBlocking(main) { repository.keptPosterFacts().size }
@@ -670,7 +670,7 @@ class ColdStartTimingTest {
             }
             assertTrue("Home came", firstHome.get() >= 0)
             assertTrue("the Movies tab came", firstMovies.get() >= 0)
-            return ColdOpen(firstHome.get(), firstHero.get(), firstWorkedOutHero.get(), viewModel.homeComputations.get(), viewModel.savedHomesShown.get(), firstMovies.get())
+            return ColdOpen(firstHome.get(), firstHero.get(), firstWorkedOutHero(), viewModel.homeComputations.get(), viewModel.savedHomesShown.get(), firstMovies.get())
         } finally {
             watching.cancel()
             model?.let { runBlocking(main) { it.viewModelScope.cancel() } }

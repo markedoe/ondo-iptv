@@ -135,6 +135,12 @@ class OndoViewModel(
     /** How many times Home was the one kept from the last start ([HomeSnapshots]) rather than worked out. */
     @VisibleForTesting internal val savedHomesShown = AtomicInteger()
 
+    /**
+     * When Home was first worked out whole (its catalogue, what the device kept of it, its carousel), by
+     * [System.nanoTime]; 0: not yet. Equal to Home kept, it is no new state for the screen: only this tells it came.
+     */
+    @VisibleForTesting internal val workedOutWhole = AtomicLong(0L)
+
     /** Home kept from the last time it was drawn ([HomeSnapshots]), read once as the view model starts; [read] once known. */
     private class SavedHome(val read: Boolean, val snapshot: HomeSnapshot?)
 
@@ -220,7 +226,10 @@ class OndoViewModel(
         withoutCatalogue = if (state.content.isEmpty) input to home else null
         // With its catalogue and what the device kept of it: Home whole, kept for the next start, and the tabs worked out.
         if (!state.isRestoring && !state.content.isEmpty && input.kept.content === state.content) {
-            if (home.hero.isNotEmpty()) keepHome(home, state, input.labels)
+            if (home.hero.isNotEmpty()) {
+                workedOutWhole.compareAndSet(0L, System.nanoTime())
+                keepHome(home, state, input.labels)
+            }
             homeWorkedOut.value = TabsFor(state.content, state.activeProfile.id)
         }
         return home

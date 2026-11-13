@@ -15,6 +15,7 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.SavedPlaylist
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.player.PlayRequest
@@ -179,7 +180,7 @@ class HomeSnapshotTest {
     }
 
     /** What one start showed: each Home, and how many of them were the one kept. */
-    private class Start(val homes: List<HomeUiState>, val savedHomesShown: Int, val requests: List<PlayRequest>)
+    private class Start(val homes: List<HomeUiState>, val savedHomesShown: Int, val requests: List<PlayRequest>, val computations: Int = 0)
 
     /**
      * Ondo started on [store]: a repository and a view model, Home watched as the screen does, until Home was worked out
@@ -212,7 +213,7 @@ class HomeSnapshotTest {
             Thread.sleep(300)
             runBlocking(main) { act(viewModel) }
             Thread.sleep(300)
-            return Start(homes.toList(), viewModel.savedHomesShown.get(), requests.toList())
+            return Start(homes.toList(), viewModel.savedHomesShown.get(), requests.toList(), viewModel.homeComputations.get())
         } finally {
             watching.cancel()
             model?.let { runBlocking(main) { it.viewModelScope.cancel() } }
@@ -272,6 +273,29 @@ class HomeSnapshotTest {
         }
         val first = again.homes.first { it.hero.isNotEmpty() }
         assertEquals("the film watched further, where it is now", 0.5f, first.continueWatching.first { it.key == northern.key }.progress, 0.001f)
+    }
+
+    /**
+     * Home kept equal to Home worked out anew (the same titles; what the device kept of TMDb read once, never again): no
+     * new state reaches the screen, yet once the catalogue is read Home is worked out whole and Home kept is retired: a
+     * later change works Home out, Home kept is not shown again.
+     */
+    @Test
+    fun homeKeptIsRetiredOnceTheCatalogueIsReadThoughNothingChanged() {
+        start(store(launchProfile = me.id))
+        var whole = 0L
+        var shownBefore = 0
+        var computedBefore = 0
+        val again = start(store(launchProfile = me.id)) { viewModel ->
+            whole = viewModel.workedOutWhole.get()
+            shownBefore = viewModel.savedHomesShown.get()
+            computedBefore = viewModel.homeComputations.get()
+            viewModel.setPosterSort(PosterSort.NAME)
+        }
+        assertTrue("Home kept was shown", shownBefore > 0)
+        assertTrue("Home worked out whole once the catalogue was read", whole != 0L)
+        assertTrue("a later change works Home out: $computedBefore then ${again.computations}", again.computations > computedBefore)
+        assertEquals("Home kept not shown again", shownBefore, again.savedHomesShown)
     }
 
     /** A series or a channel Home kept from the last start shows, no longer in the catalogue: Play plays nothing. */
