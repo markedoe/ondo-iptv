@@ -328,7 +328,7 @@ par rangée qui défile par rangées entières vers le bas et vers le haut, et u
 de large) ; `TvRowsClearOfTheBottomEverySurfaceTest` (sur chaque page à rangées d'affiches, la carte sélectionnée,
 agrandie par le focus, à l'écart des 5 % qu'un téléviseur peut rogner ; sous un en-tête (Accueil, Films, Séries, titres
 d'une catégorie et d'un genre), l'affiche sélectionnée et sa rangée entières dans leur liste, qui descend jusqu'à ces 5 %
-comme celle de l'Accueil) ; `SeeAllEverywhereTest` (chaque rangée de l'Accueil, de Films et de
+comme celle de l'Accueil, et un déplacement le long d'une rangée ne déplace jamais les rangées vers le haut ou le bas) ; `SeeAllEverywhereTest` (chaque rangée de l'Accueil, de Films et de
 Séries, sur une TV et sur un téléphone : Tout voir là où la rangée peut contenir plus qu'elle n'affiche, qui ouvre la
 grille commençant par les titres de la rangée dans son ordre ; les rangées sans Tout voir nommées avec la raison) ;
 `TelevisionFocusTest` (Tout voir ouvre les titres d'une catégorie et Retour revient à la même rangée et à
