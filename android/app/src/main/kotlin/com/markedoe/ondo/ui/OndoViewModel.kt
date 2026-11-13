@@ -170,9 +170,16 @@ class OndoViewModel(
      * worked out with it and with what the device kept of it (its carousel); then Home worked out anew.
      */
     val home: StateFlow<HomeUiState?> = combine(state, minutes, this.labels, keptFacts) { state, now, labels, kept -> HomeInput(state, now, labels, kept) }
-        .map { input -> savedHomeShown(input) ?: workedOutHome(input) }
+        // Nothing before the saved playlists and settings are read: no screen shows Home then (OndoApp).
+        .map { input -> if (!input.state.isReady) null else savedHomeShown(input) ?: workedOutHome(input) }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
+
+    /**
+     * Home of the last state without a catalogue (the saved one being read, the first download), and what it was worked
+     * out from: without titles, neither what the device kept of TMDb nor the awards change it, which come meanwhile.
+     */
+    @Volatile private var withoutCatalogue: Pair<HomeInput, HomeUiState>? = null
 
     /**
      * The saved Home while it fits: the same playlist, profile and everything else Home is made of ([HomeSnapshots.matches]),
@@ -200,11 +207,17 @@ class OndoViewModel(
 
     private fun workedOutHome(input: HomeInput): HomeUiState {
         val state = input.state
+        if (state.content.isEmpty) {
+            withoutCatalogue?.let { (before, home) ->
+                if (before.now == input.now && before.labels == input.labels && before.state.copy(awards = state.awards) == state) return home
+            }
+        }
         homeStarted.incrementAndGet()
         val start = System.nanoTime()
         val home = UiMappers.home(state, input.labels, input.now, input.kept.facts)
         homeNanos.addAndGet(System.nanoTime() - start)
         homeComputations.incrementAndGet()
+        withoutCatalogue = if (state.content.isEmpty) input to home else null
         // With its catalogue and what the device kept of it: Home whole, kept for the next start, and the tabs worked out.
         if (!state.isRestoring && !state.content.isEmpty && input.kept.content === state.content) {
             if (home.hero.isNotEmpty()) keepHome(home, state, input.labels)

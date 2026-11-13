@@ -65,7 +65,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   les onglets Films et Séries sont calculés en arrière-plan, une fois par catalogue et par profil : leur première
   ouverture est immédiate. `ColdStartTimingTest` (`./gradlew :app:coldStartTest`, un catalogue de 100 000 films, dans
   une JVM de test à part avec un tas de 2 Go) mesure le démarrage à froid : il vérifie toujours que l'Accueil gardé
-  s'affiche et que l'Accueil n'est pas calculé plus souvent qu'avant ; ses objectifs de temps (le carrousel en 300 ms
+  s'affiche et que l'Accueil est calculé 3 fois au plus (une avec l'Accueil gardé) ; ses objectifs de temps (le carrousel en 300 ms
   avec l'Accueil gardé, 2,5 s sans, l'onglet Films en 100 ms) sont exigés dans le run de la nuit et rapportés sinon.
   `HomeSnapshotTest` vérifie pour quoi l'instantané est gardé, `TabsWorkedOutAheadTest` qu'un onglet n'est jamais
   observé pour rien.

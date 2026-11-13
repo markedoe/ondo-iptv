@@ -509,7 +509,7 @@ class ColdStartTimingTest {
      * watched as the screen does; first without Home kept from a last start, then with it (the first start kept it).
      * Prints each state the repository emits (what changed in it, when), each Home state, how many times Home was worked
      * out and how long that took, then the Movies tab's first opening. Always: Home kept is shown at the second start, and
-     * Home is worked out 4 times at most (as before Home was kept). Targets, held in the night's run
+     * Home is worked out 3 times at most without it and once with it (see the counts). Targets, held in the night's run
      * (`ONDO_COLDSTART_STRICT`) and only ten times over them otherwise (a hang): with Home kept, its carousel within 300 ms;
      * without, within 2.5 s; the Movies tab, opened once Home is ready, within 100 ms.
      */
@@ -541,13 +541,20 @@ class ColdStartTimingTest {
         System.gc()
         val second = coldOpen(store, metadata, awardsText, "7.vm.kept", waitForKeptHome = null)
 
-        // Counts, always.
+        // Counts, always. What reaches Home in a cold open: the state before the saved playlists are read (S1), then read
+        // with the catalogue being read (S2), the awards (S3), the catalogue (S4); what the device kept of TMDb, empty at
+        // first (K0), read for the empty catalogue (K1), then for the catalogue (K2). Before Home was kept, each could
+        // work Home out (S1 with K0, K1, S2, S3, S4, K2: six; 4 to 6 as they came together, 6 in CI). Now:
+        //  - without Home kept: S2 (Home without its catalogue, its rows to continue watching); S4 (the catalogue's rows,
+        //    TMDb's facts not read for it yet); K2 (its carousel). S1 is not worked out (nothing shows Home before the
+        //    playlists are read), K1 and S3 change nothing without a catalogue (the Home of S2 again). 3 at most.
+        //  - with Home kept: K2 only (Home kept shows from S2 until TMDb's facts are read for the catalogue). 1 at most.
         assertTrue("without Home kept, Home came", first.firstHome >= 0)
         assertEquals("without Home kept, none shown", 0, first.savedHomesShown)
-        assertTrue("without Home kept, Home worked out 4 times at most: ${first.computations}", first.computations <= 4)
+        assertTrue("without Home kept, Home worked out 3 times at most: ${first.computations}", first.computations <= 3)
         assertTrue("with Home kept, it is shown: ${second.savedHomesShown}", second.savedHomesShown > 0)
         assertTrue("with Home kept, Home worked out anew with its carousel: ${second.firstWorkedOutHero} ms", second.firstWorkedOutHero >= 0)
-        assertTrue("with Home kept, Home worked out 4 times at most: ${second.computations}", second.computations <= 4)
+        assertTrue("with Home kept, Home worked out once at most: ${second.computations}", second.computations <= 1)
         // Times: the targets in the night's run (ONDO_COLDSTART_STRICT); ten times them otherwise, only to catch a hang.
         within("without Home kept, the carousel", first.firstHero, 2_500)
         within("with Home kept, the carousel", second.firstHero, 300)

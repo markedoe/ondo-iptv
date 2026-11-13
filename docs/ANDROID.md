@@ -58,7 +58,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   one with a deleted profile. Once Home is whole, the Movies and Series tabs are worked out in the
   background, once per catalogue and profile: their first opening is at once. `ColdStartTimingTest`
   (`./gradlew :app:coldStartTest`, a 100,000-movie catalogue, in a test JVM of its own with a 2 GB heap) times the cold
-  start: it always checks that Home kept is shown and that Home is worked out no more often than before; its time targets
+  start: it always checks that Home kept is shown and that Home is worked out 3 times at most (once with Home kept); its time targets
   (the carousel within 300 ms with Home kept, 2.5 s without, the Movies tab within 100 ms) hold in the night's run and are
   reported otherwise. `HomeSnapshotTest` checks what the snapshot is kept for, `TabsWorkedOutAheadTest` that a tab is
   never watched for nothing.
