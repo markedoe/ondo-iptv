@@ -109,6 +109,17 @@ interface TitleHeaders {
 
 val LocalTitleHeaders = staticCompositionLocalOf<TitleHeaders?> { null }
 
+/** TEMPORARY (claude/tabsheader-debug): what the header path does, printed for CI. */
+internal fun hdrDescribe(item: ShowcaseItem?): String = if (item == null) "null" else
+    "${item.key}@${Integer.toHexString(System.identityHashCode(item))}" +
+        "(plot=${!((item as? ShowcaseItem.MovieItem)?.movie?.plot ?: (item as? ShowcaseItem.SeriesItem)?.series?.plot).isNullOrBlank()})"
+
+internal fun hdrOwner(owner: Any?): String = if (owner == null) "null" else Integer.toHexString(System.identityHashCode(owner))
+
+internal fun hdrHeader(header: TitleHeader?): String = if (header == null) "null" else "header(${hdrDescribe(header.item)} plot=${!header.plot.isNullOrBlank()})"
+
+internal fun hdrTrace(text: String) = println("HDRTRACE ${System.nanoTime() / 1_000_000} [${Thread.currentThread().name}] $text")
+
 /** The poster with the remote's focus on a page with a header; set by the posters themselves ([reportsFocus]). */
 @Stable
 class FocusedTitle {
@@ -119,6 +130,7 @@ class FocusedTitle {
     private var owner: Any? = null
 
     fun focus(owner: Any, item: ShowcaseItem) {
+        hdrTrace("FocusedTitle.focus owner=${hdrOwner(owner)} item=${hdrDescribe(item)} (was owner=${hdrOwner(this.owner)} item=${hdrDescribe(this.item)})")
         this.owner = owner
         this.item = item
     }
@@ -128,11 +140,24 @@ class FocusedTitle {
      * the same title, whichever poster of it reports it.
      */
     fun update(owner: Any, item: ShowcaseItem) {
-        val current = this.item ?: return
-        if ((this.owner === owner || current.key == item.key) && current != item) this.item = item
+        val current = this.item
+        if (current == null) {
+            if (item.key == "m-1" || item.key == "m-2") hdrTrace("FocusedTitle.update owner=${hdrOwner(owner)} item=${hdrDescribe(item)}: no item focused, skipped")
+            return
+        }
+        val sameOwner = this.owner === owner
+        val sameKey = current.key == item.key
+        val changed = current != item
+        if ((sameOwner || sameKey) && changed) {
+            hdrTrace("FocusedTitle.update owner=${hdrOwner(owner)} item=${hdrDescribe(item)}: set (was ${hdrDescribe(current)}, focus owner=${hdrOwner(this.owner)})")
+            this.item = item
+        } else if (sameOwner || sameKey) {
+            hdrTrace("FocusedTitle.update owner=${hdrOwner(owner)} item=${hdrDescribe(item)}: skipped, equal to current ${hdrDescribe(current)} (sameOwner=$sameOwner)")
+        }
     }
 
     fun release(owner: Any) {
+        hdrTrace("FocusedTitle.release owner=${hdrOwner(owner)} (focus owner=${hdrOwner(this.owner)} item=${hdrDescribe(this.item)}) ${if (this.owner === owner) "released" else "ignored"}")
         if (this.owner !== owner) return
         this.owner = null
         item = null
@@ -152,8 +177,14 @@ fun Modifier.reportsFocus(item: ShowcaseItem?): Modifier = composed {
     val owner = remember { Any() }
     val current by rememberUpdatedState(title)
     DisposableEffect(focus, owner) { onDispose { focus.release(owner) } }
-    SideEffect { focus.update(owner, title) }
-    onFocusChanged { if (it.isFocused) focus.focus(owner, current) else focus.release(owner) }
+    SideEffect {
+        if (title.key == "m-1" || title.key == "m-2") hdrTrace("reportsFocus.SideEffect owner=${hdrOwner(owner)} title=${hdrDescribe(title)}")
+        focus.update(owner, title)
+    }
+    onFocusChanged {
+        hdrTrace("reportsFocus.onFocusChanged owner=${hdrOwner(owner)} title=${hdrDescribe(current)} isFocused=${it.isFocused} hasFocus=${it.hasFocus}")
+        if (it.isFocused) focus.focus(owner, current) else focus.release(owner)
+    }
 }
 
 /**
@@ -165,13 +196,19 @@ fun Modifier.reportsFocus(item: ShowcaseItem?): Modifier = composed {
 fun rememberShownTitle(focus: FocusedTitle, keepLast: Boolean): ShowcaseItem? {
     val focused = focus.item
     var shown by remember(focus) { mutableStateOf(focused) }
+    hdrTrace("rememberShownTitle compose focused=${hdrDescribe(focused)} shown=${hdrDescribe(shown)}")
     // Keyed on the title itself, not only its key: the same title changed (made of the history while the catalogue was
     // read, now the catalogue's) is shown at once, with no wait; another title only once the remote rests on it.
     LaunchedEffect(focus, focused) {
-        if (focused == null && keepLast) return@LaunchedEffect
+        hdrTrace("rememberShownTitle effect start focused=${hdrDescribe(focused)} shown=${hdrDescribe(shown)}")
+        if (focused == null && keepLast) {
+            hdrTrace("rememberShownTitle effect end: nothing focused, last kept")
+            return@LaunchedEffect
+        }
         // Nothing shown yet (the page's fallback is): the first poster reached shows at once, with no blank between.
         if (shown != null && focused?.key != shown?.key) delay(HEADER_DEBOUNCE_MS)
         shown = focused
+        hdrTrace("rememberShownTitle effect end shown=${hdrDescribe(shown)}")
     }
     return shown
 }
@@ -200,12 +237,17 @@ fun LoadWhenStill(item: ShowcaseItem?, headers: TitleHeaders?) {
 @Composable
 fun rememberTitleHeader(item: ShowcaseItem?, headers: TitleHeaders?, initial: TitleHeader? = null, restartOn: Any? = null): TitleHeader? {
     val header by produceState(initial ?: item?.let { TitleHeader(it) }, item?.key, headers, restartOn) {
+        hdrTrace("rememberTitleHeader produce start key=${item?.key} item=${hdrDescribe(item)} restartOn=${hdrDescribe(restartOn as? ShowcaseItem)} initial=${hdrHeader(initial)} value=${hdrHeader(value)}")
         if (initial != null) value = initial
         when {
             item == null -> value = null
             headers == null -> value = TitleHeader(item)
-            else -> headers.header(item).collect { value = it }
+            else -> headers.header(item).collect {
+                hdrTrace("rememberTitleHeader produce set ${hdrHeader(it)} for item=${hdrDescribe(item)}")
+                value = it
+            }
         }
+        hdrTrace("rememberTitleHeader produce end item=${hdrDescribe(item)}")
     }
     return header
 }
@@ -227,8 +269,10 @@ private fun rememberFocusHeader(fallback: ShowcaseItem?, ready: TitleHeader?): T
     LoadWhenStill(item, headers)
     // What the page's state holds of it, worked out with the page: whole at once.
     val prepared = ready?.takeIf { item != null && it.item == item }
+    hdrTrace("rememberFocusHeader compose item=${hdrDescribe(item)} fallback=${hdrDescribe(fallback)} prepared=${hdrHeader(prepared)}")
     // Again for the same title changed (one made of the history gives way to the catalogue's).
     val header = rememberTitleHeader(item, headers, initial = prepared, restartOn = item)
+    hdrTrace("rememberFocusHeader compose header=${hdrHeader(header)}")
     // Never an empty band over the posters: what is known of the title at once, if nothing was shown yet.
     return header ?: item?.let { prepared ?: TitleHeader(it) }
 }

@@ -98,6 +98,8 @@ jobs:
 
   core:
     name: Core (Kotlin) tests
+    # TEMPORARY (claude/tvfocus-debug): only the focus race job runs on this branch.
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -131,6 +133,8 @@ jobs:
   app:
     # Short: every run, the testers' builds wait for it (with the core tests and the listing limits).
     name: App — lint, debug APK, release bundle
+    # TEMPORARY (claude/tvfocus-debug): only the focus race job runs on this branch.
+    if: false
     timeout-minutes: 30
     runs-on: ubuntu-24.04
     defaults:
@@ -176,8 +180,8 @@ jobs:
             android/app/build/outputs/bundle/release/*.aab
 
   app-tests:
-    # Long (about 12 minutes of tests): at night and by hand only (job "What to run").
-    name: App — unit, Compose and screenshot tests
+    # TEMPORARY (claude/tabsheader-debug): TvTabsOpenWithTheirHeaderTest only, one leg with no load, HDRTRACE printed.
+    name: TV tabs header trace
     needs: scope
     if: needs.scope.outputs.run == 'true'
     timeout-minutes: 45
@@ -194,88 +198,25 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-      - name: Screenshots, compared or recorded
-        # Compared with the committed reference screenshots (app/src/test/snapshots); recorded instead when asked by
-        # hand on a working branch, or while there are none yet (then said in the summary, nothing is compared).
-        id: shots
-        env:
-          RECORD: ${{ github.event_name == 'workflow_dispatch' && inputs.record_screenshots }}
+      - name: TV tabs header test
         run: |
-          if [ "$RECORD" = "true" ]; then
-            if [ "$GITHUB_REF_TYPE" != "branch" ] || [ "$GITHUB_REF_NAME" = "main" ]; then
-              echo "::error::The reference screenshots are recorded on a working branch, never on main or a tag"
-              exit 1
-            fi
-            echo "task=record" >> "$GITHUB_OUTPUT"
-            # Recorded for real, never taken from the build cache (the screenshots are not its outputs).
-            echo "fresh=true" >> "$GITHUB_OUTPUT"
-            echo "### Screenshots: reference screenshots recorded, to be committed to \`$GITHUB_REF_NAME\`" >> "$GITHUB_STEP_SUMMARY"
-          elif find app/src/test/snapshots -name '*.png' 2>/dev/null | grep -q .; then
-            echo "task=verify" >> "$GITHUB_OUTPUT"
-          else
-            echo "task=record" >> "$GITHUB_OUTPUT"
-            {
-              echo "### Screenshots: not compared"
-              echo
-              echo "No reference screenshot in \`android/app/src/test/snapshots\` yet: the screenshots were recorded, not compared."
-              echo "Run this workflow by hand on a working branch with *record_screenshots* to commit them (docs/ANDROID.md)."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-      - name: Unit and Compose UI tests, screenshots
-        env:
-          TASK: ${{ steps.shots.outputs.task }}
-          FRESH: ${{ steps.shots.outputs.fresh }}
-          # The cold start's time targets (ColdStartTimingTest) hold at night only; a run by hand reports them.
-          ONDO_COLDSTART_STRICT: ${{ github.event_name == 'schedule' }}
+          ./gradlew :app:testDebugUnitTest \
+            --tests 'com.markedoe.ondo.ui.TvTabsOpenWithTheirHeaderTest' \
+            --continue --no-build-cache --stacktrace
+      - name: HDRTRACE lines
+        if: always()
         run: |
-          if [ "$FRESH" = "true" ]; then set -- --no-build-cache; fi
-          ./gradlew ":app:${TASK}RoborazziDebug" :app:coldStartTest "$@" --stacktrace
-      - name: Screenshot differences
-        # Each screenshot that no longer matches its reference: in the summary, and the images (reference,
-        # difference, new) in the android-screenshot-diffs artifact.
-        if: failure() && steps.shots.outputs.task == 'verify'
-        run: |
-          changed=$(find app/build/outputs/roborazzi \( -name '*_compare.png' -o -name '*_actual.png' \) 2>/dev/null | sort)
-          [ -n "$changed" ] || exit 0
-          {
-            echo "### Screenshots that changed"
-            echo
-            echo "The images are in the **android-screenshot-diffs** artifact. A change made on purpose: record the reference"
-            echo "screenshots anew (this workflow by hand on the branch, *record_screenshots*; docs/ANDROID.md)."
-            echo
-            echo "$changed" | sed 's|^app/build/outputs/roborazzi/|- |'
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: Screenshot differences artifact
-        if: failure() && steps.shots.outputs.task == 'verify'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: android-screenshot-diffs
-          path: android/app/build/outputs/roborazzi
-          if-no-files-found: ignore
-      - name: Reference screenshots artifact
-        # For the job that commits them (references), when recorded by hand.
-        if: steps.shots.outputs.task == 'record' && github.event_name == 'workflow_dispatch' && inputs.record_screenshots
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: android-screenshot-references
-          path: android/app/src/test/snapshots
-          if-no-files-found: error
-      - name: Test counts
-        if: success() || failure()
-        run: python3 ../.github/scripts/test_summary.py "Android app tests (unit, Compose, screenshots)" app/build/test-results
-      - name: Reports
+          for f in app/build/test-results/testDebugUnitTest/*.xml; do
+            echo "::group::$(basename "$f")"
+            grep -E 'HDRTRACE|<testcase|<failure|<skipped' "$f" | sed -E 's/^[[:space:]]+//' | cut -c1-800
+            echo "::endgroup::"
+          done
+      - name: Results artifact
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: app-test-reports
-          path: android/app/build/reports
-          if-no-files-found: ignore
-      - name: Screenshots
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: android-screenshots
-          path: android/app/src/test/screenshots
+          name: tabsheader-results
+          path: android/app/build/test-results
           if-no-files-found: ignore
 
   screenshots:
@@ -355,6 +296,8 @@ jobs:
   listing:
     # Google Play rejects the whole upload when one text is too long; better to know before a release.
     name: Google Play listing limits
+    # TEMPORARY (claude/tvfocus-debug): only the focus race job runs on this branch.
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

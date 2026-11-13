@@ -195,19 +195,27 @@ class TvTabsOpenWithTheirHeaderTest {
         compose.waitForIdle()
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
+        println("HDRTRACE test card=$index composed, before advance(500)")
         advance(500)
         val cards = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("shelfResume")))
+        println("HDRTRACE test card=$index requestFocus")
         cards[index].requestFocus()
         compose.waitForIdle()
         advance(HEADER_DEBOUNCE_MS + 50)
+        println("HDRTRACE test card=$index before assertion line 203")
         cards[index].assert(isFocused())
+        println("HDRTRACE test card=$index before assertion line 204")
         assertEquals(listOf(real.title), texts("headerTitle"))
+        println("HDRTRACE test card=$index before assertion line 205")
         assertTrue("no synopsis yet", texts("headerPlot").none { it.isNotBlank() })
         val row = compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val card = cards[index].fetchSemanticsNode().boundsInRoot
 
+        println("HDRTRACE test card=$index before state = tab(reals)")
         compose.runOnIdle { state = tab(reals) }
+        println("HDRTRACE test card=$index after state = tab(reals), before advance")
         advance(HEADER_DEBOUNCE_MS + 50)
+        println("HDRTRACE test card=$index after advance, before the synopsis assertion")
         val plot = texts("headerPlot")
         if (plot != listOf(real.movie.plot.orEmpty())) {
             // What the screen holds then, for the report: the header and its words, or why they are not there.
@@ -218,8 +226,11 @@ class TvTabsOpenWithTheirHeaderTest {
                     "headerTitle=${texts("headerTitle")} headerText=${compose.onAllNodes(hasTestTag("headerText"), useUnmergedTree = true).fetchSemanticsNodes().size}\n$tree",
             )
         }
+        println("HDRTRACE test card=$index before assertion line 221")
         assertEquals(listOf(real.title), texts("headerTitle"))
+        println("HDRTRACE test card=$index before assertion line 222")
         cards[index].assert(isFocused())
+        println("HDRTRACE test card=$index before assertion line 223")
         assertEquals("nothing scrolls", row.top, compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top, 0.5f)
         assertEquals("the card stays where it was", card.left, cards[index].fetchSemanticsNode().boundsInRoot.left, 0.5f)
     }
