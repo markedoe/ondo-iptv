@@ -385,7 +385,9 @@ réseau, fichiers choisis par l'utilisateur).
    lignes) ; dessinez-les de nouveau quand les captures changent. *Actions → App Store header and search results
    → Run workflow* : `status` montre ce que contient App Store Connect (lecture seule), `upload` dépose les
    images dans la bibliothèque de ressources (Asset Library) sans toucher à aucune version, `place` les affiche
-   sur la version iOS en préparation. Une version en review ou approuvée ne peut pas changer : `place` la
+   sur la version iOS en préparation. La release d'un tag de version et la cible `submit` font les deux d'elles-mêmes,
+   après la fiche et avant la soumission iOS : chaque version iOS soumise les porte. Une version en review ou approuvée
+   ne peut pas changer : `place` la
    refuse. Les ressources passent en review avec la version qui les porte, ou seules : `submit` les soumet une
    fois une version iOS approuvée, et refuse tant qu'une version iOS ou une soumission est en review, pour ne
    rien changer à ce qu'App Review examine. Une fois approuvées par Apple, `publish` les affiche sur la version

@@ -366,7 +366,9 @@ user-selected files).
    `fastlane/creative/render.mjs` (see its first lines); render them again when the screenshots change.
    *Actions → App Store header and search results → Run workflow*: `status` shows what App Store Connect holds
    (read only), `upload` puts the images in the Asset Library without touching any version, `place` shows them
-   on the iOS version being prepared. A version in review or approved cannot change: `place` refuses it. The
+   on the iOS version being prepared. A version tag's release and target `submit` do both on their own, after the listing
+   and before the iOS submission, so every submitted iOS version carries them. A version in review or approved cannot
+   change: `place` refuses it. The
    assets are reviewed with the version they are placed on, or on their own: `submit` sends them for review
    once an iOS version is approved, and refuses while an iOS version or review submission is in review, so that
    nothing changes what App Review is looking at. Once Apple approves them, `publish` shows them on the live
