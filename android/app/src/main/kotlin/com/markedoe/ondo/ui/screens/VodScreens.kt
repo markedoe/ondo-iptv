@@ -91,7 +91,6 @@ import com.markedoe.ondo.ui.tv.upToTheSortChip
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
 import com.markedoe.ondo.ui.tv.TV_GRID_COLUMNS
 import com.markedoe.ondo.ui.tv.tvGridBottomRoom
-import com.markedoe.ondo.ui.tv.tvGridPosterHeight
 import com.markedoe.ondo.ui.tv.TvGridScrolling
 import com.markedoe.ondo.ui.tv.KeptForTheRemote
 import com.markedoe.ondo.ui.tv.LocalTvTopBar
@@ -465,7 +464,7 @@ fun PosterGridScreen(
                 }
             }
             // On a TV, by whole rows.
-            if (posterOnly) TvGridScrolling(top, tvGridPosterHeight(maxWidth, metrics.gutter, GRID_GAP), grid) else grid()
+            if (posterOnly) TvGridScrolling(top, grid) else grid()
         }
     }
 }

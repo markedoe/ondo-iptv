@@ -401,13 +401,12 @@ private val UNDER_HEADER_TOP = 8.dp
 
 /**
  * A grid under a TV's header scrolls by whole rows ([TvRowPivotScrolling]): each focused row's poster at [top] below the
- * grid's top, as the first row's is when the page opens. What the grid scrolls into view is the focused poster as it is
- * drawn, grown ([FOCUS_GROW]) around its middle: its grown top goes that much higher, the rows below where [top] says.
+ * grid's top, as the first row's is when the page opens. What the grid scrolls into view is the focused poster's place:
+ * its focus grows it inside its focus target ([focusFrame]), into the room [top] leaves above it.
  */
 @Composable
-fun TvGridScrolling(top: Dp, posterHeight: Dp, content: @Composable () -> Unit) {
-    val grownBy = posterHeight * ((FOCUS_GROW - 1f) / 2f)
-    TvPinnedHeaderList(lead = top - grownBy, byRows = true, content = content)
+fun TvGridScrolling(top: Dp, content: @Composable () -> Unit) {
+    TvPinnedHeaderList(lead = top, byRows = true, content = content)
 }
 
 /** The posters across a grid under a TV's header: five, bigger than a phone's, to read from the sofa. */

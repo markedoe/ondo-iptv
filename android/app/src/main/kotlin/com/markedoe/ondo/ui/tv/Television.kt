@@ -21,6 +21,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RippleConfiguration
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -299,10 +301,26 @@ fun ProvideFocusRipple(content: @Composable () -> Unit) {
  */
 fun Modifier.focusFrame(shape: Shape = RoundedCornerShape(12.dp), grow: Float = FOCUS_GROW, frame: Boolean = true): Modifier = composed {
     var focused by remember { mutableStateOf(false) }
+    this
+        .onFocusChanged { focused = it.isFocused }
+        .grownFrame(focused, shape, grow, frame)
+}
+
+/**
+ * The same frame ([focusFrame]) drawn inside the item's `clickable`, put after it: it follows the focus [interaction]
+ * reports. The item's place, the one a list scrolls into view, is then its place at rest, never its grown frame: the
+ * next card along a row is asked in at the size its neighbour had at rest, and the rows never move under it (as the
+ * TV cards scale inside their focus target).
+ */
+fun Modifier.focusFrame(interaction: InteractionSource, shape: Shape = RoundedCornerShape(12.dp), grow: Float = FOCUS_GROW): Modifier = composed {
+    val focused by interaction.collectIsFocusedAsState()
+    grownFrame(focused, shape, grow, frame = true)
+}
+
+private fun Modifier.grownFrame(focused: Boolean, shape: Shape, grow: Float, frame: Boolean): Modifier = composed {
     val scale by animateFloatAsState(if (focused) grow else 1f, label = "focusScale")
     val color = if (focused && frame) MaterialTheme.colorScheme.onBackground else Color.Transparent
     this
-        .onFocusChanged { focused = it.isFocused }
         .graphicsLayer {
             scaleX = scale
             scaleY = scale

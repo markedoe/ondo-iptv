@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -359,13 +360,15 @@ fun PosterCard(
         Column(
             modifier = modifier
                 .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
-                .pressScale(interaction)
-                .focusFrame(PosterShape)
                 .focusMemory(focusKey, initialFocus)
                 .reportsFocus(item)
+                .posterClick(item, interaction, null, onClick)
+                .posterSemantics(item, kept)
+                // Drawn inside the focus target: a list scrolls the poster's place into view, never its grown frame.
+                .pressScale(interaction)
+                .focusFrame(interaction, PosterShape)
                 .clip(PosterShape)
-                .posterClick(item, interaction, LocalIndication.current, onClick)
-                .posterSemantics(item, kept),
+                .indication(interaction, LocalIndication.current),
         ) {
             Box {
                 Poster(url = item.posterUrl, title = item.title, progress = progress.takeUnless { watched })
