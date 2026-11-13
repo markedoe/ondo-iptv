@@ -254,7 +254,7 @@ jobs:
             --tests 'com.markedoe.ondo.ui.TvHomeHandToRaceTest' \
             --tests 'com.markedoe.ondo.ui.TvFocusRaceLoopTest' \
             --tests 'com.markedoe.ondo.ui.TelevisionFocusTest.theRemoteComesBackToHomeWhenThePlaylistTypedHereBecomesThePhones' \
-            --continue --stacktrace || status=$?
+            --continue --no-build-cache --stacktrace || status=$?
           if [ -n "$pids" ]; then kill $pids 2>/dev/null || true; fi
           exit $status
       - name: FOCUSTRACE lines
