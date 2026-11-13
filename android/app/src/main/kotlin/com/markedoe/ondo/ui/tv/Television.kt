@@ -481,6 +481,7 @@ fun FocusEntry(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
             delay(100)
             // A page opened as the remote moves along the top bar leaves the focus there (OK on its tab goes in).
             if (hasFocus || bar?.browsing == true) return@LaunchedEffect
+            com.markedoe.ondo.FocusTrace.log("focusEntry requestFocus (page had no focus)")
             if (runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.given()
         }
     }
@@ -514,6 +515,10 @@ class FocusMemory(key: String? = null) {
      * chose. The item they left stays [last], and gets the focus back when the page is shown again ([cameBack]).
      */
     internal var leaving = false
+        set(value) {
+            if (field != value) com.markedoe.ondo.FocusTrace.log("memory leaving=$value last=$last")
+            field = value
+        }
 
     /** The page shown again without being built anew (Back from a page that opened over it): [last] takes the focus. */
     internal fun cameBack() {
@@ -527,6 +532,7 @@ class FocusMemory(key: String? = null) {
      * first item may take the focus.
      */
     fun given() {
+        com.markedoe.ondo.FocusTrace.log("memory given last=$last")
         chosen = false
     }
 
@@ -540,11 +546,13 @@ class FocusMemory(key: String? = null) {
      * back.
      */
     fun dropped() {
+        com.markedoe.ondo.FocusTrace.log("memory dropped last=$last drops=${drops + 1}")
         chosen = false
         drops++
     }
 
     fun restored() {
+        com.markedoe.ondo.FocusTrace.log("memory restored (was $restore)")
         restore = null
     }
 
@@ -573,6 +581,7 @@ class FocusMemory(key: String? = null) {
      * leave (a card taken away), and the remote goes on from beside it.
      */
     fun handTo(key: String) {
+        com.markedoe.ondo.FocusTrace.log("memory handTo $key (restore was $restore)")
         restore = key
     }
 
@@ -632,13 +641,14 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
             restoring != null -> restoring == key
             else -> television && initial && (memory?.last == null || !memory.chosen)
         }
+        if (wanted || restoring != null) com.markedoe.ondo.FocusTrace.log("focusMemory effect key=$key restoring=$restoring wanted=$wanted initial=$initial last=${memory?.last} chosen=${memory?.chosen} drops=${memory?.drops} browsing=${bar?.browsing} restoreNow=${memory?.restore}")
         if (wanted && runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.restored()
     }
     val focus = remember { HeldFocus() }
     SideEffect { focus.key = key }
     val scope = rememberCoroutineScope()
     // Gone with the focus, unless it was handed on just before ([FocusMemory.handTo]): it then went elsewhere already.
-    DisposableEffect(memory) { onDispose { if (focus.held && memory?.last == focus.key) memory.dropped() } }
+    DisposableEffect(memory) { onDispose { if (focus.held) com.markedoe.ondo.FocusTrace.log("focusMemory disposed while held key=${focus.key} last=${memory?.last}"); if (focus.held && memory?.last == focus.key) memory.dropped() } }
     DisposableEffect(memory, key, initial) {
         if (initial) memory?.first = key
         memory?.attach(key, requester)
@@ -648,6 +658,7 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
         .focusRequester(requester)
         .onFocusChanged {
             val change = ++focus.changes
+            if (it.isFocused || focus.held) com.markedoe.ondo.FocusTrace.log("focus key=$key isFocused=${it.isFocused} hasFocus=${it.hasFocus}")
             if (it.isFocused) {
                 focus.held = true
                 memory?.focused(key)

@@ -98,6 +98,8 @@ jobs:
 
   core:
     name: Core (Kotlin) tests
+    # TEMPORARY (claude/tvfocus-debug): only the focus race job runs on this branch.
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -131,6 +133,8 @@ jobs:
   app:
     # Short: every run, the testers' builds wait for it (with the core tests and the listing limits).
     name: App — lint, debug APK, release bundle
+    # TEMPORARY (claude/tvfocus-debug): only the focus race job runs on this branch.
+    if: false
     timeout-minutes: 30
     runs-on: ubuntu-24.04
     defaults:
@@ -177,11 +181,18 @@ jobs:
 
   app-tests:
     # Long (about 12 minutes of tests): at night and by hand only (job "What to run").
-    name: App — unit, Compose and screenshot tests
+    # TEMPORARY (claude/tvfocus-debug): the TV Home focus race tests only, under CPU load (matrix), FOCUSTRACE printed.
+    name: TV focus race (load ${{ matrix.load }})
     needs: scope
     if: needs.scope.outputs.run == 'true'
     timeout-minutes: 45
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # none: no load; busy1x / busy2x: one / two busy loops per core, started before Gradle; coldstart: the
+        # cold start timing test in the same Gradle run, as in the failing CI runs.
+        load: [none, busy1x, busy2x, coldstart]
     defaults:
       run:
         working-directory: android
@@ -221,15 +232,55 @@ jobs:
               echo "Run this workflow by hand on a working branch with *record_screenshots* to commit them (docs/ANDROID.md)."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Unit and Compose UI tests, screenshots
+      - name: TV focus race tests
         env:
-          TASK: ${{ steps.shots.outputs.task }}
-          FRESH: ${{ steps.shots.outputs.fresh }}
-          # The cold start's time targets (ColdStartTimingTest) hold at night only; a run by hand reports them.
-          ONDO_COLDSTART_STRICT: ${{ github.event_name == 'schedule' }}
+          LOAD: ${{ matrix.load }}
         run: |
-          if [ "$FRESH" = "true" ]; then set -- --no-build-cache; fi
-          ./gradlew ":app:${TASK}RoborazziDebug" :app:coldStartTest "$@" --stacktrace
+          echo "cores: $(nproc)"
+          case "$LOAD" in
+            busy1x) loops=$(nproc) ;;
+            busy2x) loops=$(( $(nproc) * 2 )) ;;
+            *) loops=0 ;;
+          esac
+          pids=""
+          for _ in $(seq 1 "$loops"); do
+            (while :; do :; done) </dev/null >/dev/null 2>&1 &
+            pids="$pids $!"
+          done
+          extra=""
+          if [ "$LOAD" = "coldstart" ]; then extra=":app:coldStartTest"; fi
+          status=0
+          ./gradlew $extra :app:testDebugUnitTest \
+            --tests 'com.markedoe.ondo.ui.TvHomeHandToRaceTest' \
+            --tests 'com.markedoe.ondo.ui.TvFocusRaceLoopTest' \
+            --tests 'com.markedoe.ondo.ui.TelevisionFocusTest.theRemoteComesBackToHomeWhenThePlaylistTypedHereBecomesThePhones' \
+            --continue --stacktrace || status=$?
+          if [ -n "$pids" ]; then kill $pids 2>/dev/null || true; fi
+          exit $status
+      - name: FOCUSTRACE lines
+        if: always()
+        run: |
+          for f in app/build/test-results/testDebugUnitTest/*.xml; do
+            echo "::group::$(basename "$f")"
+            grep -E 'FOCUSTRACE|<testcase|<failure|<skipped' "$f" | sed -E 's/^[[:space:]]+//' | cut -c1-600
+            echo "::endgroup::"
+          done
+          {
+            echo "### TV focus race, load ${LOAD}"
+            echo
+            echo '```'
+            grep -h -E 'FOCUSTRACE (.*)(test run|hand-to race)' app/build/test-results/testDebugUnitTest/*.xml | sed -E 's/^.*FOCUSTRACE [0-9]+ \[[^]]*\] //' | grep -E 'MISS|press Down end|1\.5 s later|Down, focus' | cut -c1-300
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          LOAD: ${{ matrix.load }}
+      - name: Focus race results artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tvfocus-results-${{ matrix.load }}
+          path: android/app/build/test-results
+          if-no-files-found: ignore
       - name: Screenshot differences
         # Each screenshot that no longer matches its reference: in the summary, and the images (reference,
         # difference, new) in the android-screenshot-diffs artifact.
@@ -249,7 +300,7 @@ jobs:
         if: failure() && steps.shots.outputs.task == 'verify'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: android-screenshot-diffs
+          name: android-screenshot-diffs-${{ matrix.load }}
           path: android/app/build/outputs/roborazzi
           if-no-files-found: ignore
       - name: Reference screenshots artifact
@@ -267,14 +318,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: app-test-reports
+          name: app-test-reports-${{ matrix.load }}
           path: android/app/build/reports
           if-no-files-found: ignore
       - name: Screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: android-screenshots
+          name: android-screenshots-${{ matrix.load }}
           path: android/app/src/test/screenshots
           if-no-files-found: ignore
 
@@ -355,6 +406,8 @@ jobs:
   listing:
     # Google Play rejects the whole upload when one text is too long; better to know before a release.
     name: Google Play listing limits
+    # TEMPORARY (claude/tvfocus-debug): only the focus race job runs on this branch.
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

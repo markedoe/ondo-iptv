@@ -71,6 +71,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -179,6 +180,12 @@ class OndoViewModel(
         // Nothing before the saved playlists and settings are read: no screen shows Home then (OndoApp).
         .map { input -> if (!input.state.isReady) null else savedHomeShown(input) ?: workedOutHome(input) }
         .flowOn(computation)
+        // TEMPORARY (claude/tvfocus-debug): each Home handed to the screens, its first rows and carousel.
+        .onEach { home ->
+            com.markedoe.ondo.FocusTrace.log(
+                "vm home emitted: " + (home?.let { "hero=${it.hero.size} heroKeys=${it.hero.take(3).map { p -> p.item.key }} rows=${it.shownRows} loading=${it.isLoading} restoring=${it.isRestoring} updatedAt=${it.updatedAt != null} suggestion=${it.tagSuggestion != null} newMovies=${it.newMovies.take(3).map { m -> m.key }}" } ?: "null"),
+            )
+        }
         .stateIn(viewModelScope, sharing, null)
 
     /**

@@ -34,6 +34,8 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -222,17 +224,27 @@ fun TvHomeScreen(
     // and on Ondo opened again from the TV's home screen. A row coming above the one with the focus never leaves the
     // list scrolled down, the rows above cut under the bar.
     suspend fun toTop() {
+        com.markedoe.ondo.FocusTrace.log("home toTop start firstItem=$firstItem initialKey=$initialKey viewerMoved=$viewerMoved")
         listState.scrollToItem(0)
         // After the page's own focus effects (a card given its focus back as the page comes back).
         withFrameNanos { }
+        com.markedoe.ondo.FocusTrace.log("home toTop after frame viewerMoved=$viewerMoved restore=${memory?.restore}")
         // A key pressed meanwhile (Down as a row came in): the viewer has moved, the remote stays where they took it.
         if (viewerMoved) return
         bar?.browsing = false
+        com.markedoe.ondo.FocusTrace.log("home toTop handTo=$initialKey")
         initialKey?.let { memory?.handTo(it) } ?: memory?.given()
     }
     LaunchedEffect(firstItem, initialKey) {
+        com.markedoe.ondo.FocusTrace.log("home toTop effect launched firstItem=$firstItem initialKey=$initialKey viewerMoved=$viewerMoved browsing=${bar?.browsing}")
         if (viewerMoved || bar?.browsing == true) return@LaunchedEffect
         toTop()
+    }
+    // TEMPORARY (claude/tvfocus-debug): each composition of Home, and Home entering or leaving the composition.
+    SideEffect { com.markedoe.ondo.FocusTrace.log("home composed firstItem=$firstItem initialKey=$initialKey hero=${state.hero.size} pending=$heroPending rows=${state.shownRows}") }
+    DisposableEffect(Unit) {
+        com.markedoe.ondo.FocusTrace.log("home entered composition")
+        onDispose { com.markedoe.ondo.FocusTrace.log("home left composition") }
     }
     // Back on the frame's buttons (Up from the first row), the rows at their top again: under the smaller frame the
     // first row came up to keep its focused card clear of the screen's bottom, and would stay so under the full one.
@@ -244,6 +256,7 @@ fun TvHomeScreen(
     LaunchedEffect(launch) {
         if (launch == 0L || launch == handledLaunch) return@LaunchedEffect
         handledLaunch = launch
+        com.markedoe.ondo.FocusTrace.log("home launch effect: back to top")
         viewerMoved = false
         heroIndex = 0
         toTop()
@@ -255,6 +268,7 @@ fun TvHomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .onPreviewKeyEvent {
+                com.markedoe.ondo.FocusTrace.log("home key ${it.key} ${it.type} viewerMovedBefore=$viewerMoved restore=${memory?.restore}")
                 if (it.type == KeyEventType.KeyDown) viewerMoved = true
                 false
             }
