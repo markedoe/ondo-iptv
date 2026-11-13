@@ -51,11 +51,26 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
 - **Les listes** (rangées, grilles, recherche, pages d'une personne, d'un genre, d'une année ou d'une récompense,
   Accueil, Ma liste, Titres similaires) : chaque film une fois. Dans une catégorie, la première de ses versions dans
   cette catégorie le représente : un film est donc dans chaque catégorie où se trouve l'une de ses versions.
-- **La fiche d'un film** : ses versions en badges (des pastilles qu'atteint la télécommande sur une TV), lus dans le nom
-  du flux et dans sa catégorie : 4K (4K, UHD, 2160p), HDR (HDR, HDR10), DV (DV, Dolby Vision), HD (HD, FHD, 1080p,
-  720p), HEVC (HEVC, H.265, x265), TRUEFRENCH, VFF, VFQ, VF, VOSTFR (VOSTFR, STFR, SUBFR, ST FR, FR SUB), MULTI. Une version sans aucun d'eux s'appelle
-  « Version ». Deux versions au même badge font deux badges (« 4K », « 4K 2 »). La version choisie est celle qui est
-  lue ; Lecture, la progression et le badge du format sont les siens.
+- **La fiche d'un film** : ses versions en pastilles (qu'atteint la télécommande sur une TV). Chaque pastille dit en
+  toutes lettres, dans la langue de l'app, ce qui distingue sa version des autres (`FilmVersions.labels`, les mêmes
+  règles et la même table dans les deux apps : `fixtures/film-versions/labels.json`). Les tags sont lus dans le nom du
+  flux et dans celui de sa catégorie :
+  - qualité : 4K (4K, UHD, 2160p), Full HD (FHD, 1080p), HD (HD, 720p), SD (SD, 480p, 576p) ;
+  - image : Dolby Vision (DV, DoVi, Dolby Vision), HDR (HDR, HDR10, HDR10+), 3D (3D, SBS, HSBS), IMAX, HEVC (HEVC,
+    H.265, x265) ;
+  - langue : Multilingue (MULTI, DUAL), Français (France) (VFF, TRUEFRENCH), Français (Québec) (VFQ), Français
+    (international) (VFI), Français (VF, FRENCH), Version originale (VO), Anglais, Espagnol, Allemand, Italien,
+    Portugais, Arabe (le mot, ou un code en capitales à un bout du nom ou de la catégorie : « FR - … », « |EN| Movies ») ;
+  - sous-titres : VO, sous-titres français (VOSTFR, STFR, SUBFR, ST FR, FR SUB), VO sous-titrée (VOST, VOSTA,
+    SUBBED).
+
+  Une pastille ne nomme que ce qui diffère entre les versions, dans cet ordre (« 4K Dolby Vision », « HD · VO,
+  sous-titres français ») : un tag que toutes les versions ont est omis. Deux versions qui se liraient pareil ajoutent
+  les mots de leur nom que les autres n'ont pas (« Extended Cut ») ; une version sans aucun tag, à côté de versions qui
+  en ont, s'appelle « Standard » ; des pastilles encore identiques sont numérotées (« 4K 1 », « 4K 2 » ; « Version 1 »,
+  « Version 2 » quand rien ne les distingue). Deux pastilles d'un même film ne se lisent jamais pareil. Un lecteur
+  d'écran dit « Version : 4K Dolby Vision ». La version choisie est celle qui est lue ; Lecture, la progression et le
+  badge du format sont les siens.
 - **La version montrée d'abord** (et lue depuis une affiche) : celle en cours ; sinon la dernière choisie sur cet
   appareil ; sinon celle qui convient le mieux à l'écran (la 4K sur un écran 4K, le HDR ou le Dolby Vision seulement là
   où l'écran les affiche, selon l'écran d'Android et AVFoundation chez Apple) ; sinon la première.
@@ -63,7 +78,7 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   rien de nouveau n'est synchronisé. Un film est vu (et écarté par « Masquer les films déjà vus ») quand l'une de ses
   versions est terminée, et dans Ma liste quand l'une de ses versions y est ; ajouter un film depuis son affiche ajoute
   sa version montrée d'abord, le retirer retire toutes les versions gardées. « Continuer à regarder » garde chaque flux,
-  avec le badge de sa version. La dernière version choisie reste sur l'appareil.
+  avec la pastille de sa version. La dernière version choisie reste sur l'appareil.
 
 ## Limites connues
 

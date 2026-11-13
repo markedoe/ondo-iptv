@@ -257,7 +257,7 @@ class FilmVersionsTest {
         assertEquals(listOf(VersionTag.UHD, VersionTag.DOLBY_VISION, VersionTag.VFF), FilmVersions.tags("|FR| Sandstorm 4K DV VFF", null))
         assertEquals(listOf(VersionTag.UHD, VersionTag.HDR, VersionTag.HEVC), FilmVersions.tags("Sandstorm 2160p HDR10 H.265", null))
         assertEquals(listOf(VersionTag.DOLBY_VISION), FilmVersions.tags("Sandstorm Dolby Vision", null))
-        assertEquals(listOf(VersionTag.HD, VersionTag.VOSTFR), FilmVersions.tags("Sandstorm", "FILMS 1080p VOSTFR"))
+        assertEquals(listOf(VersionTag.FHD, VersionTag.VOSTFR), FilmVersions.tags("Sandstorm", "FILMS 1080p VOSTFR"))
         // French subtitles however a provider writes them.
         for (name in listOf("STFR| Sandstorm", "ST FR - Sandstorm", "[SUBFR] Sandstorm", "FR SUB | Sandstorm", "Sandstorm SUB FR")) {
             assertEquals(listOf(VersionTag.VOSTFR), FilmVersions.tags(name, null), name)
@@ -265,18 +265,18 @@ class FilmVersionsTest {
         assertEquals(emptyList<VersionTag>(), FilmVersions.tags("St Francis", null))
         assertEquals(listOf(VersionTag.UHD), FilmVersions.tags("Sandstorm FHD", "UHD"), "4K leaves HD out")
         assertEquals(emptyList(), FilmVersions.tags("Sandstorm", "Action"))
+        assertEquals(listOf(VersionTag.FHD, VersionTag.VFI), FilmVersions.tags("Sandstorm FHD MULTI VFI", null).filter { it != VersionTag.MULTI })
+        assertEquals(listOf(VersionTag.VOST), FilmVersions.tags("Sandstorm VO VOST", null), "subtitled: the original language")
         val list = listOf(movie("Sandstorm 4K", 2021), movie("Sandstorm", 2021), movie("Sandstorm 4K", 2021), movie("Sandstorm", 2021))
-        val badges = FilmVersions.badges(list) { null }
-        assertEquals(listOf("4K", null, "4K 2", null), badges.map { it.label })
-        assertEquals(listOf(1, 1, 2, 2), badges.map { it.ordinal }, "two versions of the same tags are two badges")
+        assertEquals(listOf("4K 1", "Standard 1", "4K 2", "Standard 2"), FilmVersions.labels(list, { null }), "two versions of the same tags are two chips")
     }
 
     /** A film offered plain and in "4K DV": the plain one had no tag, so its chip only said "Version". */
     @Test
     fun aPlainVersionNextToATaggedOneSaysWhatItIs() {
         val list = listOf(movie("Copper Valley", 2026), movie("Copper Valley 4K DV", 2026))
-        val labels = FilmVersions.badges(list) { null }.map { it.label }
-        assertTrue(labels.none { it == null }, "every version names itself: $labels")
+        val labels = FilmVersions.labels(list, { null })
+        assertEquals(listOf("Standard", "4K Dolby Vision"), labels)
         assertEquals(labels.size, labels.distinct().size, "two versions never read the same: $labels")
     }
 

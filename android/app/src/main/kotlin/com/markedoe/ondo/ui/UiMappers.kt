@@ -16,6 +16,7 @@ import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
+import com.markedoe.ondo.core.library.VersionWords
 import com.markedoe.ondo.core.library.WeightedRating
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.sync.SyncSelection
@@ -73,6 +74,8 @@ data class Labels(
     val movie: String = "Movie",
     val series: String = "Series",
     val locale: Locale = Locale.getDefault(),
+    /** What a film version's chip says, and Continue Watching of the version in progress ([FilmVersions.labels]). */
+    val versionWords: VersionWords = VersionWords(),
     /** The viewer's language and country codes, for the "show only your languages?" suggestion. */
     val viewerCodes: Set<String> = CategoryFilter.viewerCodes(listOf(locale)),
     /** Why a series is in the carousel: "New episode", before the day it aired. */
@@ -211,11 +214,11 @@ object UiMappers {
         ) ?: movie
     }
 
-    /** The badges of a film's versions, each with its stream (for its page); empty when the film has one. */
-    fun versionChips(state: OndoState, versions: List<Movie>): List<VersionChip> {
+    /** The chips of a film's versions, each with its stream (for its page), in [words]; empty when the film has one. */
+    fun versionChips(state: OndoState, versions: List<Movie>, words: VersionWords = VersionWords()): List<VersionChip> {
         if (versions.size < 2) return emptyList()
-        val badges = FilmVersions.badges(versions, FilmVersions.categoryNames(state.content.movieCategories))
-        return versions.zip(badges) { movie, badge -> VersionChip(movie.id, badge.label, badge.ordinal) }
+        val labels = FilmVersions.labels(versions, FilmVersions.categoryNames(state.content.movieCategories), words)
+        return versions.zip(labels) { movie, label -> VersionChip(movie.id, label) }
     }
 
     /** Movies and series by id; the first of an id the catalogue lists twice, as a search through the list would find. */
@@ -263,7 +266,7 @@ object UiMappers {
         return entry.subtitle?.let { EpisodeTitles.cleanSubtitle(it, series?.name ?: entry.title, state.placeholderNames) }
     }
 
-    fun resume(entry: WatchEntry, state: OndoState): ResumeItem {
+    fun resume(entry: WatchEntry, state: OndoState, versionWords: VersionWords = VersionWords()): ResumeItem {
         // A series that goes on with its next episode: none of it seen yet, and no finished episode named as if to resume.
         val upNext = entry.kind == ItemKind.SERIES && !entry.isResumable
         val backdrop = when (entry.kind) {
@@ -273,7 +276,7 @@ object UiMappers {
         }
         // Continue Watching stays per stream: a film of several versions says which one is in progress.
         val version = if (entry.kind == ItemKind.MOVIE && entry.subtitle.isNullOrBlank()) {
-            movie(state, entry.itemId)?.let { movie -> versionChips(state, visibleVersions(state, movie)).firstOrNull { it.id == movie.id }?.label }
+            movie(state, entry.itemId)?.let { movie -> versionChips(state, visibleVersions(state, movie), versionWords).firstOrNull { it.id == movie.id }?.label }
         } else {
             null
         }
@@ -474,7 +477,7 @@ object UiMappers {
             updatedAt = state.content.fetchedAt.takeIf { it > 0 && !state.content.isEmpty },
             now = now,
             hero = hero,
-            continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).map { resume(it, state) },
+            continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).map { resume(it, state, labels.versionWords) },
             myList = showcase.myList(),
             newMovies = showcase.newMovies(now),
             newSeries = showcase.newSeries(now),
@@ -502,8 +505,9 @@ object UiMappers {
         title: String,
         now: Long = System.currentTimeMillis(),
         kept: Map<String, TitleMetadata> = emptyMap(),
+        versionWords: VersionWords = VersionWords(),
         keptTitle: (WatchEntry) -> ShowcaseItem? = { null },
-    ): VodUiState = trace(if (series) "Ondo.vod.series" else "Ondo.vod.movies") { vodState(state, series, title, now, kept, keptTitle) }
+    ): VodUiState = trace(if (series) "Ondo.vod.series" else "Ondo.vod.movies") { vodState(state, series, title, now, kept, versionWords, keptTitle) }
 
     /**
      * A title made of what the history holds of [entry] (its name and picture), for a TV's header to show a card to
@@ -521,6 +525,7 @@ object UiMappers {
         title: String,
         now: Long,
         kept: Map<String, TitleMetadata>,
+        versionWords: VersionWords,
         keptTitle: (WatchEntry) -> ShowcaseItem?,
     ): VodUiState {
         // What is hidden, worked out once for every row of the tab.
@@ -562,7 +567,7 @@ object UiMappers {
             title = title,
             categories = rows.map { it.category },
             continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).filter { it.kind == kind }.map { entry ->
-                resume(entry, state).let { card -> if (card.showcase != null || !reading) card else card.copy(showcase = keptTitle(entry) ?: standIn(entry)) }
+                resume(entry, state, versionWords).let { card -> if (card.showcase != null || !reading) card else card.copy(showcase = keptTitle(entry) ?: standIn(entry)) }
             },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
@@ -1003,7 +1008,13 @@ object UiMappers {
      * the viewer picked on the page), else the default version ([defaultVersion]), the one Play plays and whose progress
      * shows.
      */
-    fun movieDetail(state: OndoState, movie: Movie, locale: Locale = Locale.getDefault(), selected: String? = null): MovieDetailUiState {
+    fun movieDetail(
+        state: OndoState,
+        movie: Movie,
+        locale: Locale = Locale.getDefault(),
+        selected: String? = null,
+        versionWords: VersionWords = VersionWords(),
+    ): MovieDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.MovieItem(movie)
         val versions = visibleVersions(state, movie)
@@ -1020,7 +1031,7 @@ object UiMappers {
             // A film is watched once one of its versions is.
             watched = films(state).versions(movie).any { showcase.progress(it)?.isFinished == true },
             inMyList = isFavorite(state, item),
-            versions = versionChips(state, versions),
+            versions = versionChips(state, versions, versionWords),
             version = version,
             similar = showcase.similarMovies(movie, related = state.tmdbRelated[item.key].orEmpty().mapNotNull { (it as? TrendingMatch.MovieMatch)?.movie }) { state.movieDetails[it] }
                 .map { ShowcaseItem.MovieItem(it) },

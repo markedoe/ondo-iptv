@@ -73,6 +73,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
@@ -178,13 +179,15 @@ data class SeriesDetailUiState(
     val collections: List<CollectionChoice> = emptyList(),
 )
 
-/** A version of a film on its page: its stream and its badge (`FilmVersions.badges`; no tag: "Version"). */
-data class VersionChip(val id: String, val label: String?, val ordinal: Int)
+/**
+ * A version of a film on its page: its stream and what its chip says, what sets it apart from the film's other
+ * versions in the app's words ("4K Dolby Vision", "Original, French subtitles", "Standard": `FilmVersions.labels`).
+ */
+data class VersionChip(val id: String, val label: String)
 
-/** What a version's badge says: its tags ("4K DV"), else "Version" in the viewer's language, with its number from the second on. */
+/** What a screen reader says of a version's chip: "Version: 4K Dolby Vision", so the row reads as the film's versions. */
 @Composable
-fun versionLabel(chip: VersionChip): String =
-    chip.label ?: stringResource(R.string.film_version).let { if (chip.ordinal > 1) "$it ${chip.ordinal}" else it }
+fun versionDescription(chip: VersionChip): String = stringResource(R.string.version_chip_description, chip.label)
 
 class DetailActions(
     val onBack: () -> Unit = {},
@@ -271,11 +274,12 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                         modifier = Modifier.testTag("versions"),
                     ) {
                         itemsIndexed(state.versions, key = { index, chip -> "$index:${chip.id}" }) { _, chip ->
+                            val description = versionDescription(chip)
                             FilterChip(
                                 selected = chip.id == selected,
                                 onClick = { actions.onVersion(chip.id) },
-                                label = { Text(versionLabel(chip)) },
-                                modifier = Modifier.testTag("version-${chip.id}"),
+                                label = { Text(chip.label) },
+                                modifier = Modifier.testTag("version-${chip.id}").semantics { contentDescription = description },
                             )
                         }
                     }

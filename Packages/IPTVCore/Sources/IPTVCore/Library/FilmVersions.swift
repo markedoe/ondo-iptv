@@ -13,46 +13,91 @@ public struct PictureSupport: Hashable, Sendable {
     }
 }
 
-/// A tag of a version, read from its name and its category's name; `label` is what its badge says (never translated).
-public enum VersionTag: Int, CaseIterable, Hashable, Sendable, Comparable {
-    case uhd, dolbyVision, hdr, hd, hevc, truefrench, vff, vfq, vf, vostfr, multi
+/// What a version's tag says about it, in the order a version's chip names them (docs/VERSIONS.md).
+public enum VersionAspect: Int, CaseIterable, Hashable, Sendable, Comparable {
+    case quality, range, threeD, edition, codec, language, subtitles
 
-    public var label: String {
+    public static func < (lhs: VersionAspect, rhs: VersionAspect) -> Bool { lhs.rawValue < rhs.rawValue }
+}
+
+/// A tag of a version, read from its name and its category's name. Its chip says it in words (`VersionWords`): "DV" is
+/// "Dolby Vision", "VOSTFR" "Original, French subtitles". In the order of `VersionAspect`, the best quality first.
+public enum VersionTag: Int, CaseIterable, Hashable, Sendable, Comparable {
+    case uhd, fhd, hd, sd, dolbyVision, hdr, threeD, imax, hevc
+    case multi, vff, vfq, vfi, vf, vo, english, spanish, german, italian, portuguese, arabic
+    case vostfr, vost
+
+    public var aspect: VersionAspect {
         switch self {
-        case .uhd: return "4K"
-        case .dolbyVision: return "DV"
-        case .hdr: return "HDR"
-        case .hd: return "HD"
-        case .hevc: return "HEVC"
-        case .truefrench: return "TRUEFRENCH"
-        case .vff: return "VFF"
-        case .vfq: return "VFQ"
-        case .vf: return "VF"
-        case .vostfr: return "VOSTFR"
-        case .multi: return "MULTI"
+        case .uhd, .fhd, .hd, .sd: return .quality
+        case .dolbyVision, .hdr: return .range
+        case .threeD: return .threeD
+        case .imax: return .edition
+        case .hevc: return .codec
+        case .multi, .vff, .vfq, .vfi, .vf, .vo, .english, .spanish, .german, .italian, .portuguese, .arabic: return .language
+        case .vostfr, .vost: return .subtitles
         }
     }
+
+    /// Said with the other picture tags without a dot ("4K Dolby Vision"); a language or subtitles apart ("4K · English").
+    public var isPicture: Bool { aspect < .language }
 
     public static func < (lhs: VersionTag, rhs: VersionTag) -> Bool { lhs.rawValue < rhs.rawValue }
 }
 
-/// A version's badge: its `tags` ("4K DV VFF"), and its `ordinal` among the versions of its film with the same tags
-/// (1 for the first, 2 for the second…): two versions with the same tags are two badges, "4K" and "4K 2". No tag: the
-/// app says "Version" in the viewer's language.
-public struct VersionBadge: Hashable, Sendable {
-    public var tags: [VersionTag]
-    public var ordinal: Int
+/// The words of a version's chip in the viewer's language (the app's strings; English by default). The names of formats
+/// ("4K", "Dolby Vision", "HDR", "3D", "IMAX", "HEVC") are the same in every language.
+public struct VersionWords {
+    /// A version without a tag next to versions with one: the provider's plain stream.
+    public var standard = "Standard"
+    /// Versions nothing tells apart, numbered: "Version 1", "Version 2".
+    public var numbered: (Int) -> String = { "Version \($0)" }
+    public var fullHD = "Full HD"
+    public var hd = "HD"
+    public var sd = "SD"
+    public var multilingual = "Multilingual"
+    public var french = "French"
+    public var frenchFrance = "French (France)"
+    public var frenchQuebec = "French (Quebec)"
+    public var frenchInternational = "French (international)"
+    public var original = "Original language"
+    public var english = "English"
+    public var spanish = "Spanish"
+    public var german = "German"
+    public var italian = "Italian"
+    public var portuguese = "Portuguese"
+    public var arabic = "Arabic"
+    public var frenchSubtitles = "Original, French subtitles"
+    public var subtitled = "Original, subtitled"
 
-    public init(tags: [VersionTag], ordinal: Int) {
-        self.tags = tags
-        self.ordinal = ordinal
-    }
+    public init() {}
 
-    /// The tags' words, with the ordinal from the second on; nil when there is no tag (the app names it).
-    public var label: String? {
-        guard !tags.isEmpty else { return nil }
-        let words = tags.map(\.label).joined(separator: " ")
-        return ordinal > 1 ? "\(words) \(ordinal)" : words
+    public func word(_ tag: VersionTag) -> String {
+        switch tag {
+        case .uhd: return "4K"
+        case .fhd: return fullHD
+        case .hd: return hd
+        case .sd: return sd
+        case .dolbyVision: return "Dolby Vision"
+        case .hdr: return "HDR"
+        case .threeD: return "3D"
+        case .imax: return "IMAX"
+        case .hevc: return "HEVC"
+        case .multi: return multilingual
+        case .vff: return frenchFrance
+        case .vfq: return frenchQuebec
+        case .vfi: return frenchInternational
+        case .vf: return french
+        case .vo: return original
+        case .english: return english
+        case .spanish: return spanish
+        case .german: return german
+        case .italian: return italian
+        case .portuguese: return portuguese
+        case .arabic: return arabic
+        case .vostfr: return frenchSubtitles
+        case .vost: return subtitled
+        }
     }
 }
 
@@ -467,13 +512,35 @@ public struct FilmVersions: Sendable {
 
     private static let tagWords: [String: VersionTag] = [
         "4k": .uhd, "uhd": .uhd, "2160p": .uhd,
+        "fhd": .fhd, "1080p": .fhd, "hd": .hd, "720p": .hd,
+        "sd": .sd, "480p": .sd, "576p": .sd,
         "dv": .dolbyVision, "dovi": .dolbyVision,
         "hdr": .hdr, "hdr10": .hdr, "hdr10plus": .hdr,
-        "hd": .hd, "fhd": .hd, "1080p": .hd, "720p": .hd,
+        "3d": .threeD, "sbs": .threeD, "hsbs": .threeD, "imax": .imax,
         "hevc": .hevc, "h265": .hevc, "x265": .hevc,
-        "truefrench": .truefrench, "vff": .vff, "vfq": .vfq, "vf": .vf,
-        "vostfr": .vostfr, "stfr": .vostfr, "subfr": .vostfr, "frsub": .vostfr, "multi": .multi,
+        "multi": .multi, "dual": .multi,
+        "truefrench": .vff, "vff": .vff, "vfq": .vfq, "vfi": .vfi,
+        "vf": .vf, "french": .vf, "vo": .vo, "english": .english,
+        "spanish": .spanish, "espanol": .spanish, "castellano": .spanish,
+        "german": .german, "deutsch": .german, "italian": .italian,
+        "italiano": .italian, "portuguese": .portuguese, "portugues": .portuguese,
+        "arabic": .arabic,
+        "vostfr": .vostfr, "stfr": .vostfr, "subfr": .vostfr, "frsub": .vostfr,
+        "vost": .vost, "vosta": .vost, "vosten": .vost, "subbed": .vost,
     ]
+
+    /// A language's code: a tag only in capitals, at either end of a name or a category ("FR - Sandstorm", "EN | Movies",
+    /// "Sandstorm (DE)"), where "It" and "De" are words of titles.
+    private static let edgeCodes: [String: VersionTag] = [
+        "fr": .vf, "en": .english, "eng": .english, "es": .spanish,
+        "esp": .spanish, "de": .german, "ger": .german, "it": .italian,
+        "ita": .italian, "pt": .portuguese, "br": .portuguese, "ar": .arabic,
+    ]
+
+    /// Words of a provider's tag in two words ("Dolby Vision", "H 265", "ST FR"): never a word of a version's own.
+    private static let tagParts: Set<String> = ["dolby", "vision", "h", "265", "st", "sub", "fr"]
+
+    private static let nameSeparators = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "|[](){}:·_,/"))
 
     /// The tags of a version, from its name and its category's name, in `VersionTag`'s order; 4K leaves HD out.
     public static func tags(name: String, categoryName: String?) -> [VersionTag] {
@@ -489,19 +556,96 @@ public struct FilmVersions: Sendable {
                 if (word == "st" || word == "sub") && next == "fr" || word == "fr" && next == "sub" { found.insert(.vostfr) }
             }
         }
-        if found.contains(.uhd) { found.remove(.hd) }
+        return tidy(found)
+    }
+
+    /// One quality (the best) and one French; subtitles mean the original language, not a dub.
+    private static func tidy(_ tags: Set<VersionTag>) -> [VersionTag] {
+        var found = tags
+        if found.contains(.uhd) { found.subtract([.fhd, .hd, .sd]) }
+        if found.contains(.fhd) { found.subtract([.hd, .sd]) }
+        if found.contains(.hd) { found.remove(.sd) }
+        if found.contains(.vostfr) { found.remove(.vost) }
+        if found.contains(.vostfr) || found.contains(.vost) { found.subtract([.vo, .vf]) }
+        if found.contains(.vff) || found.contains(.vfq) || found.contains(.vfi) { found.remove(.vf) }
         return found.sorted()
     }
 
-    /// The badges of a film's `versions`, in their order; `categoryName` names a stream's category.
-    public static func badges(_ versions: [Movie], categoryName: (String) -> String?) -> [VersionBadge] {
-        var seen: [[VersionTag]: Int] = [:]
-        return versions.map { movie in
-            let tags = tags(name: movie.name, categoryName: categoryName(movie.categoryID))
-            let ordinal = (seen[tags] ?? 0) + 1
-            seen[tags] = ordinal
-            return VersionBadge(tags: tags, ordinal: ordinal)
+    private static func nameWords(_ text: String, trimming: String) -> [String] {
+        let edges = CharacterSet(charactersIn: trimming)
+        return text.components(separatedBy: nameSeparators).map { $0.trimmingCharacters(in: edges) }.filter { !$0.isEmpty }
+    }
+
+    /// `tags`, with a language's code at either end of the name or the category (`edgeCodes`): a chip's tags.
+    static func labelTags(name: String, categoryName: String?) -> [VersionTag] {
+        var found = Set(tags(name: name, categoryName: categoryName))
+        for text in [name, categoryName].compactMap({ $0 }) {
+            let words = nameWords(text, trimming: "-.")
+            for word in [words.first, words.last].compactMap({ $0 }) {
+                if (2...3).contains(word.count), word.allSatisfy({ $0.isASCII && $0.isUppercase }), let tag = edgeCodes[word.lowercased()] {
+                    found.insert(tag)
+                }
+            }
         }
+        return tidy(found)
+    }
+
+    /// What a film's `versions` say on their chips, in their order, in `words`. Each names what sets it apart from the
+    /// others, in `VersionAspect`'s order ("4K Dolby Vision", "HD · Original, French subtitles"): a tag they all share is
+    /// left out. Two that would read the same add the words of their names the others lack ("Extended Cut"); a version
+    /// without a tag next to tagged ones is "Standard"; labels still the same are numbered ("4K 1", "4K 2"; "Version 1",
+    /// "Version 2"): no two versions read the same. `categoryName` names a stream's category. The same rules as Android's.
+    public static func labels(_ versions: [Movie], categoryName: (String) -> String?, words: VersionWords = VersionWords()) -> [String] {
+        let tags = versions.map { labelTags(name: $0.name, categoryName: categoryName($0.categoryID)) }
+        // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
+        let differing = Set(VersionAspect.allCases.filter { aspect in Set(tags.map { $0.filter { $0.aspect == aspect } }).count > 1 })
+        var texts = tags.map { list -> String in
+            let shown = list.filter { differing.contains($0.aspect) }
+            let picture = shown.filter(\.isPicture).map(words.word).joined(separator: " ")
+            return ([picture].filter { !$0.isEmpty } + shown.filter { !$0.isPicture }.map(words.word)).joined(separator: " · ")
+        }
+        // Versions that would read the same: the words of their names the others lack.
+        let extras = extraWords(versions)
+        for same in Dictionary(grouping: texts.indices, by: { texts[$0] }).values {
+            guard same.count > 1, Set(same.map { extras[$0] }).count > 1 else { continue }
+            for i in same where !extras[i].isEmpty {
+                texts[i] = [texts[i], extras[i]].filter { !$0.isEmpty }.joined(separator: " · ")
+            }
+        }
+        let anyTagged = texts.contains { !$0.isEmpty }
+        let labels = texts.map { $0.isEmpty && anyTagged ? words.standard : $0 }
+        // Still the same: numbered, each of them.
+        let counts = labels.reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
+        var seen: [String: Int] = [:]
+        let numbered = labels.map { label -> String in
+            guard counts[label, default: 0] > 1 else { return label.isEmpty ? words.numbered(1) : label }
+            let n = seen[label, default: 0] + 1
+            seen[label] = n
+            return label.isEmpty ? words.numbered(n) : "\(label) \(n)"
+        }
+        // A number that made another version's own label ("4K 2" next to two "4K"): their positions tell them apart.
+        guard Set(numbered).count != numbered.count else { return numbered }
+        return numbered.enumerated().map { "\($1) (\($0 + 1))" }
+    }
+
+    /// The words of each version's name that are not in every other one's, tags and years left out ("Extended Cut").
+    private static func extraWords(_ versions: [Movie]) -> [String] {
+        let split = versions.map { nameWords($0.name, trimming: "-.*+\"") }
+        let common = split.map { words in Set(words.flatMap { TextNormalizer.normalize($0).split(separator: " ").map(String.init) }) }
+            .reduce(nil as Set<String>?) { $0?.intersection($1) ?? $1 } ?? []
+        return split.map { words in
+            words.filter { word in
+                let parts = TextNormalizer.normalize(word).split(separator: " ").map(String.init)
+                return !parts.isEmpty && !parts.allSatisfy { common.contains($0) || isNoise($0) }
+            }.joined(separator: " ")
+        }
+    }
+
+    /// A provider's tag, a part of one, or a year: never a word that tells a version apart.
+    private static func isNoise(_ word: String) -> Bool {
+        if tagWords[word] != nil || edgeCodes[word] != nil || tagParts.contains(word) || CatalogueMatcher.isTagWord(word) { return true }
+        guard word.count == 4, word.allSatisfy({ $0.isASCII && $0.isNumber }), let year = Int(word) else { return false }
+        return (1900...2099).contains(year)
     }
 
     /// How well a version suits the screen: 4K on a 4K screen, HD; Dolby Vision or HDR only where the screen shows it
@@ -511,7 +655,7 @@ public struct FilmVersions: Sendable {
         if tags.contains(.dolbyVision) { score += support.dolbyVision ? 4 : -40 }
         if tags.contains(.hdr) { score += support.hdr ? 2 : -20 }
         if tags.contains(.uhd) { score += support.uhd ? 8 : 1 }
-        if tags.contains(.hd) { score += 4 }
+        if tags.contains(.hd) || tags.contains(.fhd) { score += 4 }
         return score
     }
 

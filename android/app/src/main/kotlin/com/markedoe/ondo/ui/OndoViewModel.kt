@@ -11,6 +11,7 @@ import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.RatingFill
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TrendingMatch
+import com.markedoe.ondo.core.library.VersionWords
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
@@ -298,10 +299,17 @@ class OndoViewModel(
      * is the same map for every catalogue. [home]: Home kept from the last start, its titles shown while the catalogue
      * is read; worked out again once it is read.
      */
-    private class TabInput(val state: OndoState, val kept: Kept, val day: String, val locale: java.util.Locale, val home: SavedHome) {
+    private class TabInput(
+        val state: OndoState,
+        val kept: Kept,
+        val day: String,
+        val locale: java.util.Locale,
+        val home: SavedHome,
+        val versionWords: VersionWords,
+    ) {
         fun sameAs(other: TabInput): Boolean =
             other.state === state && other.kept.content === kept.content && other.kept.facts === kept.facts && other.day == day &&
-                other.locale == locale && other.home === home
+                other.locale == locale && other.home === home && other.versionWords == versionWords
     }
 
     /**
@@ -314,7 +322,7 @@ class OndoViewModel(
         val workedOut = MutableStateFlow<TabsFor?>(null)
 
         val state: StateFlow<VodUiState?> = combine(this@OndoViewModel.state, keptFacts, days, this@OndoViewModel.labels, savedHome) { state, kept, day, labels, home ->
-            TabInput(state, keptFor(state, kept), day, labels.locale, home)
+            TabInput(state, keptFor(state, kept), day, labels.locale, home, labels.versionWords)
         }
             .distinctUntilChanged { old, new -> new.sameAs(old) }
             .map { workedOutTab(it) }
@@ -326,7 +334,9 @@ class OndoViewModel(
             val start = System.nanoTime()
             // A card whose title the catalogue does not hold yet (being read): the one Home kept from the last start.
             val keptTitles by lazy { HomeSnapshots.titles(input.home.snapshot) }
-            val vod = UiMappers.vod(state, series, title = "", now = clock(), kept = input.kept.facts) { entry -> keptTitles[HomeSnapshots.resumeKey(entry)] }
+            val vod = UiMappers.vod(state, series, title = "", now = clock(), kept = input.kept.facts, versionWords = input.versionWords) { entry ->
+                keptTitles[HomeSnapshots.resumeKey(entry)]
+            }
             val header = vod.headerTitle?.let { UiMappers.titleHeader(state, it, input.kept.facts[it.key], input.locale) }
             nanos.addAndGet(System.nanoTime() - start)
             computations.incrementAndGet()

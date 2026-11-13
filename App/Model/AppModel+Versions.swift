@@ -44,10 +44,11 @@ extension AppModel {
         ) ?? movie
     }
 
-    /// The badges of a film's versions, in their order (`FilmVersions.badges`).
-    func versionBadges(_ versions: [Movie]) -> [VersionBadge] {
+    /// What the chips of a film's versions say, in their order, in the app's language (`FilmVersions.labels`): what sets
+    /// each apart ("4K Dolby Vision", "Original, French subtitles", "Standard").
+    func versionLabels(_ versions: [Movie]) -> [String] {
         let names = categoryNames
-        return FilmVersions.badges(versions) { names[$0] }
+        return FilmVersions.labels(versions, categoryName: { names[$0] }, words: .app())
     }
 
     private var categoryNames: [String: String] {
@@ -65,13 +66,13 @@ extension AppModel {
         }
     }
 
-    /// What a Continue Watching card says of its stream when its film has several versions: its badge ("4K DV", else
-    /// "Version" with its number); nil for a film of one version, a series or a channel. Continue Watching stays per stream.
+    /// What a Continue Watching card says of its stream when its film has several versions: its chip ("4K Dolby Vision",
+    /// "Standard"); nil for a film of one version, a series or a channel. Continue Watching stays per stream.
     func versionLabel(for entry: HistoryEntry) -> String? {
         guard entry.reference.type == .movie, let movie = index.moviesByID[entry.reference.itemID] else { return nil }
         let versions = visibleVersions(of: movie)
         guard versions.count > 1, let index = versions.firstIndex(where: { $0.id == movie.id }) else { return nil }
-        return VersionChips.label(versionBadges(versions)[index])
+        return versionLabels(versions)[index]
     }
 
     /// Whether a film is in My List: when one of its versions is.
@@ -119,4 +120,31 @@ extension AppModel {
         #endif
         return PictureSupport(hdr: hdr, dolbyVision: dolbyVision, uhd: max(size.width, size.height) >= 3840)
     }()
+}
+
+extension VersionWords {
+    /// The words of a film version's chip in the app's language (`bundle`: another language's, for tests).
+    static func app(bundle: Bundle = .main) -> VersionWords {
+        var words = VersionWords()
+        words.standard = String(localized: "Standard", bundle: bundle)
+        words.numbered = { number in String(localized: "Version \(number)", bundle: bundle) }
+        words.fullHD = String(localized: "Full HD", bundle: bundle)
+        words.hd = String(localized: "HD", bundle: bundle)
+        words.sd = String(localized: "SD", bundle: bundle)
+        words.multilingual = String(localized: "Multilingual", bundle: bundle)
+        words.french = String(localized: "French", bundle: bundle)
+        words.frenchFrance = String(localized: "French (France)", bundle: bundle)
+        words.frenchQuebec = String(localized: "French (Quebec)", bundle: bundle)
+        words.frenchInternational = String(localized: "French (international)", bundle: bundle)
+        words.original = String(localized: "Original language", bundle: bundle)
+        words.english = String(localized: "English", bundle: bundle)
+        words.spanish = String(localized: "Spanish", bundle: bundle)
+        words.german = String(localized: "German", bundle: bundle)
+        words.italian = String(localized: "Italian", bundle: bundle)
+        words.portuguese = String(localized: "Portuguese", bundle: bundle)
+        words.arabic = String(localized: "Arabic", bundle: bundle)
+        words.frenchSubtitles = String(localized: "Original, French subtitles", bundle: bundle)
+        words.subtitled = String(localized: "Original, subtitled", bundle: bundle)
+        return words
+    }
 }

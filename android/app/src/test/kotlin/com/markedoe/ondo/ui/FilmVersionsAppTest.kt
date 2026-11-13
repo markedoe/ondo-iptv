@@ -165,7 +165,7 @@ class FilmVersionsAppTest {
     fun aFilmsPageShowsItsVersionsAndSelectsTheDefaultOne() {
         val page = UiMappers.movieDetail(state(), hd)
         assertEquals(listOf(hd.id, dv.id, uhd.id, vostfr.id), page.versions.map { it.id })
-        assertEquals(listOf(null, "4K DV", "4K", "VOSTFR"), page.versions.map { it.label })
+        assertEquals(listOf("Standard", "4K Dolby Vision", "4K", "Original, French subtitles"), page.versions.map { it.label })
         assertEquals("an HD screen: 4K, not Dolby Vision", uhd, page.version)
         UiMappers.pictureSupport = PictureSupport(hdr = true, dolbyVision = true, uhd = true)
         assertEquals("a Dolby Vision screen", dv, UiMappers.movieDetail(state(), hd).version)
@@ -183,8 +183,8 @@ class FilmVersionsAppTest {
         val watching = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, dv.id, title = dv.name, lastWatchedAt = 1)
         val library = LibraryState().recordStart(watching).updateProgress(watching.key, 600.0, 6_000.0, now = 2)
         val state = state(library)
-        assertEquals("4K DV", UiMappers.resume(library.progress(watching.key)!!, state).subtitle)
-        assertFalse(UiMappers.resume(library.progress(watching.key)!!, state(library, grouped = false)).subtitle == "4K DV")
+        assertEquals("4K Dolby Vision", UiMappers.resume(library.progress(watching.key)!!, state).subtitle)
+        assertFalse(UiMappers.resume(library.progress(watching.key)!!, state(library, grouped = false)).subtitle == "4K Dolby Vision")
     }
 
     /** The version in progress without a tag of its own (the plain stream) is named too, as its page names it. */
@@ -192,8 +192,7 @@ class FilmVersionsAppTest {
     fun continueWatchingNamesAPlainVersionToo() {
         val watching = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, hd.id, title = hd.name, lastWatchedAt = 1)
         val library = LibraryState().recordStart(watching).updateProgress(watching.key, 600.0, 6_000.0, now = 2)
-        val subtitle = UiMappers.resume(library.progress(watching.key)!!, state(library)).subtitle
-        assertTrue("the plain version says which it is: $subtitle", !subtitle.isNullOrBlank())
+        assertEquals("Standard", UiMappers.resume(library.progress(watching.key)!!, state(library)).subtitle)
     }
 
     /** A panel listing a stream twice (the same id): one version, one badge (the page's rows need one key each). */

@@ -47,17 +47,31 @@ Only movies, and only within one playlist (live channels and series are never gr
 - **Lists** (rows, grids, search, a person's, a genre's, a year's or an award's page, Home, My List, More Like This): each
   film once. In a category, the first of its versions in that category stands for it, so a film is in every category one
   of its versions is in.
-- **A film's page**: its versions as badges (focusable chips on a TV), read from the stream's name and category: 4K
-  (4K, UHD, 2160p), HDR (HDR, HDR10), DV (DV, Dolby Vision), HD (HD, FHD, 1080p, 720p), HEVC (HEVC, H.265, x265),
-  TRUEFRENCH, VFF, VFQ, VF, VOSTFR (VOSTFR, STFR, SUBFR, ST FR, FR SUB), MULTI. A version with none of them reads "Version". Two versions with the same
-  badge are two badges ("4K", "4K 2"). The version picked plays; Play, the progress and the format badge are its own.
+- **A film's page**: its versions as chips (focusable on a TV). Each chip says in words, in the app's language, what
+  sets its version apart from the others (`FilmVersions.labels`, the same rules and table on both apps:
+  `fixtures/film-versions/labels.json`). The tags are read from the stream's name and its category's name:
+  - quality: 4K (4K, UHD, 2160p), Full HD (FHD, 1080p), HD (HD, 720p), SD (SD, 480p, 576p);
+  - picture: Dolby Vision (DV, DoVi, Dolby Vision), HDR (HDR, HDR10, HDR10+), 3D (3D, SBS, HSBS), IMAX, HEVC (HEVC,
+    H.265, x265);
+  - language: Multilingual (MULTI, DUAL), French (France) (VFF, TRUEFRENCH), French (Quebec) (VFQ), French
+    (international) (VFI), French (VF, FRENCH), Original language (VO), English, Spanish, German, Italian, Portuguese,
+    Arabic (the word, or a code in capitals at either end of the name or the category: "FR - …", "|EN| Movies");
+  - subtitles: Original, French subtitles (VOSTFR, STFR, SUBFR, ST FR, FR SUB), Original, subtitled (VOST, VOSTA,
+    SUBBED).
+
+  A chip names only what differs between the versions, in that order ("4K Dolby Vision", "HD · Original, French
+  subtitles"): a tag every version has is left out. Two versions that would read the same add the words of their names
+  the others lack ("Extended Cut"); a version without any tag, next to tagged ones, reads "Standard"; chips still alike
+  are numbered ("4K 1", "4K 2"; "Version 1", "Version 2" when nothing tells them apart). No two chips of a film read the
+  same. A screen reader says "Version: 4K Dolby Vision". The version picked plays; Play, the progress and the format
+  badge are its own.
 - **The version shown first** (and played from a card): the one in progress; else the one chosen last on this device;
   else the one the screen suits best (4K on a 4K screen, HDR or Dolby Vision only where the screen shows them, as
   Android's display and Apple's AVFoundation report); else the first.
 - **Stored data stays per stream**: favourites, history, progress and sync are unchanged, and nothing new is synced.
   A film is watched (and left out by "Hide watched movies") when one of its versions is finished, and in My List when
   one of its versions is; adding a film from its card adds its version shown first, taking it out removes every
-  version kept. Continue Watching keeps each stream, with its version's badge. The version chosen last is kept on the
+  version kept. Continue Watching keeps each stream, with its version's chip. The version chosen last is kept on the
   device only.
 
 ## Known limits

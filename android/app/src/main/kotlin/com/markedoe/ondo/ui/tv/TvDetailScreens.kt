@@ -117,7 +117,7 @@ import com.markedoe.ondo.ui.screens.VersionChip
 import com.markedoe.ondo.ui.screens.WatchProgress
 import com.markedoe.ondo.ui.screens.durationText
 import com.markedoe.ondo.ui.screens.myListState
-import com.markedoe.ondo.ui.screens.versionLabel
+import com.markedoe.ondo.ui.screens.versionDescription
 import com.markedoe.ondo.ui.theme.OndoColors
 
 /** Where the text and rows of a page without the drawer start. */
@@ -728,7 +728,7 @@ private fun LazyListScope.awardsShelf(awards: List<AwardRow>, actions: DetailAct
 }
 
 /** The genres and the year: each opens the titles of the playlist sharing it. */
-/** A film's versions (4K DV, HD, VOSTFR…) as chips the remote moves through: the one picked is selected and plays. */
+/** A film's versions ("4K Dolby Vision", "Full HD"…) as chips the remote moves through: the one picked is selected and plays. */
 private fun LazyListScope.versionsShelf(versions: List<VersionChip>, selected: String, actions: DetailActions) {
     if (versions.size < 2) return
     item(key = "versions") {
@@ -739,11 +739,13 @@ private fun LazyListScope.versionsShelf(versions: List<VersionChip>, selected: S
                 modifier = Modifier.testTag("versions"),
             ) {
                 itemsIndexed(versions, key = { index, chip -> "version:$index:${chip.id}" }) { _, chip ->
+                    val description = versionDescription(chip)
                     TvChip(
-                        text = versionLabel(chip),
+                        text = chip.label,
                         selected = chip.id == selected,
                         onClick = { actions.onVersion(chip.id) },
-                        modifier = Modifier.focusMemory("version:${chip.id}").testTag("version-${chip.id}"),
+                        modifier = Modifier.focusMemory("version:${chip.id}").testTag("version-${chip.id}")
+                            .semantics { contentDescription = description },
                     )
                 }
             }

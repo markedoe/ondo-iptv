@@ -72,6 +72,7 @@ import androidx.navigation.toRoute
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
+import com.markedoe.ondo.versionWords
 import com.markedoe.ondo.core.library.Genres
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.RowOrder
@@ -674,8 +675,9 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
     var gone by remember { mutableStateOf(false) }
     // The version picked on the page (a badge), else the film's default version (UiMappers.movieDetail).
     var picked by rememberSaveable(id) { mutableStateOf<String?>(null) }
+    val versionWords = remember(locale) { context.resources.versionWords() }
     val detail by produceKept<MovieDetailUiState?>("movie", null, state, id, locale, picked) {
-        withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale, picked) } }
+        withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale, picked, versionWords) } }
             .also { gone = it == null && !state.isLoading && !state.isRestoring }
     }
     BackWhenGone(gone, navController)

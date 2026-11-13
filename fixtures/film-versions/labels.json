@@ -1,0 +1,126 @@
+{
+  "about": "What each version of a film says on its chip, in English (VersionWords' defaults), written by hand: the same file for Android's FilmVersionsLabelTest and Apple's FilmVersionsLabelTests. A row's category is its category's name. Invented titles only.",
+  "cases": [
+    {
+      "name": "a plain version next to a 4K Dolby Vision one (it read \"Version\")",
+      "rows": [{"name": "Copper Valley (2026)"}, {"name": "Copper Valley 4K DV (2026)"}],
+      "labels": ["Standard", "4K Dolby Vision"]
+    },
+    {
+      "name": "the apps' test playlist: plain, 4K DV, 4K, VOSTFR",
+      "rows": [
+        {"name": "Copper Valley (2026)"}, {"name": "Copper Valley 4K DV (2026)"},
+        {"name": "Copper Valley 4K (2026)"}, {"name": "Copper Valley VOSTFR (2026)"}
+      ],
+      "labels": ["Standard", "4K Dolby Vision", "4K", "Original, French subtitles"]
+    },
+    {
+      "name": "French dubs and subtitles, the language prefix of every one left out",
+      "rows": [{"name": "|FR| Lantern Bay MULTI VFF"}, {"name": "|FR| Lantern Bay MULTI VFI"}, {"name": "|FR| Lantern Bay VOSTFR"}],
+      "labels": ["Multilingual · French (France)", "Multilingual · French (international)", "Original, French subtitles"]
+    },
+    {
+      "name": "TRUEFRENCH is French from France, VFQ from Quebec",
+      "rows": [{"name": "Lantern Bay TRUEFRENCH"}, {"name": "Lantern Bay VFQ"}],
+      "labels": ["French (France)", "French (Quebec)"]
+    },
+    {
+      "name": "a quality ladder",
+      "rows": [{"name": "Lantern Bay 2160p HDR10"}, {"name": "Lantern Bay 1080p"}, {"name": "Lantern Bay 720p"}, {"name": "Lantern Bay SD"}],
+      "labels": ["4K HDR", "Full HD", "HD", "SD"]
+    },
+    {
+      "name": "tags in the category's name",
+      "rows": [
+        {"name": "The Quiet Orchard", "category": "FILMS 4K"},
+        {"name": "The Quiet Orchard", "category": "FILMS FHD"},
+        {"name": "The Quiet Orchard", "category": "VOD | FRENCH"}
+      ],
+      "labels": ["4K", "Full HD", "French"]
+    },
+    {
+      "name": "a language's code before the name",
+      "rows": [{"name": "FR - Midnight Ferry (2024)"}, {"name": "EN - Midnight Ferry (2024)"}, {"name": "DE - Midnight Ferry (2024)"}],
+      "labels": ["French", "English", "German"]
+    },
+    {
+      "name": "a language's code in the category",
+      "rows": [
+        {"name": "Midnight Ferry", "category": "|ES| Peliculas"},
+        {"name": "Midnight Ferry", "category": "|PT| Filmes"},
+        {"name": "Midnight Ferry", "category": "|AR| Aflam"}
+      ],
+      "labels": ["Spanish", "Portuguese", "Arabic"]
+    },
+    {
+      "name": "a code only in capitals: \"IT\" is Italian, \"It\" a word",
+      "rows": [{"name": "IT - Copper Valley"}, {"name": "Copper Valley"}],
+      "labels": ["Italian", "Standard"]
+    },
+    {
+      "name": "nothing tells them apart",
+      "rows": [{"name": "Midnight Ferry"}, {"name": "Midnight Ferry"}],
+      "labels": ["Version 1", "Version 2"]
+    },
+    {
+      "name": "the same tags twice",
+      "rows": [{"name": "Midnight Ferry 4K"}, {"name": "Midnight Ferry 4K"}, {"name": "Midnight Ferry HD"}],
+      "labels": ["4K 1", "4K 2", "HD"]
+    },
+    {
+      "name": "the words of a name the others lack",
+      "rows": [{"name": "Copper Valley (2021)"}, {"name": "Copper Valley Extended Cut (2021)"}],
+      "labels": ["Standard", "Extended Cut"]
+    },
+    {
+      "name": "the words of a name, after tags that read the same",
+      "rows": [{"name": "Copper Valley 4K"}, {"name": "Copper Valley 4K Director's Cut"}, {"name": "Copper Valley HD"}],
+      "labels": ["4K", "4K · Director's Cut", "HD"]
+    },
+    {
+      "name": "original language, subtitled, dubbed",
+      "rows": [{"name": "Lantern Bay VO"}, {"name": "Lantern Bay VOST"}, {"name": "Lantern Bay VF"}],
+      "labels": ["Original language", "Original, subtitled", "French"]
+    },
+    {
+      "name": "a tag every version has is left out",
+      "rows": [{"name": "Copper Valley MULTI 4K"}, {"name": "Copper Valley MULTI HD"}],
+      "labels": ["4K", "HD"]
+    },
+    {
+      "name": "a word of the title that is also a tag",
+      "rows": [{"name": "The French Orchard 4K"}, {"name": "The French Orchard"}],
+      "labels": ["4K", "Standard"]
+    },
+    {
+      "name": "3D and IMAX",
+      "rows": [{"name": "Copper Valley 3D"}, {"name": "Copper Valley IMAX"}, {"name": "Copper Valley"}],
+      "labels": ["3D", "IMAX", "Standard"]
+    },
+    {
+      "name": "only the codec differs",
+      "rows": [{"name": "Copper Valley 4K HEVC"}, {"name": "Copper Valley 4K"}],
+      "labels": ["HEVC", "Standard"]
+    },
+    {
+      "name": "Dolby Vision in two words, HDR",
+      "rows": [{"name": "Copper Valley Dolby Vision"}, {"name": "Copper Valley HDR"}],
+      "labels": ["Dolby Vision", "HDR"]
+    },
+    {
+      "name": "tags in brackets and between bars",
+      "rows": [{"name": "[4K] Copper Valley |MULTI|"}, {"name": "[HD] Copper Valley |VOSTFR|"}],
+      "labels": ["4K · Multilingual", "HD · Original, French subtitles"]
+    },
+    {
+      "name": "quality, range and language at once",
+      "rows": [{"name": "Lantern Bay 4K DV MULTI"}, {"name": "Lantern Bay 1080p VFF"}, {"name": "Lantern Bay 1080p VOSTFR"}],
+      "labels": ["4K Dolby Vision · Multilingual", "Full HD · French (France)", "Full HD · Original, French subtitles"]
+    },
+    {
+      "name": "a name's own word that reads like the plain version's",
+      "rows": [{"name": "Copper Valley Standard"}, {"name": "Copper Valley"}],
+      "labels": ["Standard 1", "Standard 2"]
+    }
+  ]
+}
