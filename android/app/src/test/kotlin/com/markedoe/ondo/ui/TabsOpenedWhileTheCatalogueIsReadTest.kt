@@ -84,8 +84,12 @@ class TabsOpenedWhileTheCatalogueIsReadTest {
         return store
     }
 
-    /** A start of the app on [store]: [run] with its view model, then everything stopped. */
-    private fun <T> started(store: AppStore, run: (OndoViewModel, CoroutineScope) -> T): T {
+    /**
+     * A start of the app on [store]: [run] with its view model, then everything stopped, whether [run] passed or not:
+     * [release] first (a catalogue held back is let through), then the catalogue's read is waited for, so that nothing
+     * of this start is still running, nor resumes on the main dispatcher once it is gone, during another test.
+     */
+    private fun <T> started(store: AppStore, release: () -> Unit = {}, run: (OndoViewModel, CoroutineScope) -> T): T {
         val executor = Executors.newSingleThreadExecutor { Thread(it, "main").apply { isDaemon = true } }
         val main = executor.asCoroutineDispatcher()
         Dispatchers.setMain(main)
@@ -98,9 +102,13 @@ class TabsOpenedWhileTheCatalogueIsReadTest {
             model = viewModel
             return run(viewModel, watching)
         } finally {
+            release()
+            model?.let { viewModel -> waitUntil(30_000) { viewModel.state.value.isReady && !viewModel.state.value.isRestoring } }
             watching.cancel()
             model?.let { runBlocking(main) { it.viewModelScope.cancel() } }
             scope.cancel()
+            // What was under way ends on its own dispatcher before the main one is taken away.
+            Thread.sleep(300)
             Dispatchers.resetMain()
             main.close()
             executor.shutdownNow()
@@ -133,7 +141,7 @@ class TabsOpenedWhileTheCatalogueIsReadTest {
                 file.inputStream()
             })
             try {
-                started(gated) { viewModel, watching ->
+                started(gated, release = { gate.countDown() }) { viewModel, watching ->
                     // Home kept, at once.
                     val home = watching.launch { viewModel.home.collect {} }
                     assertTrue("$name: Home kept is shown", waitUntil(10_000) { viewModel.savedHomesShown.get() > 0 })

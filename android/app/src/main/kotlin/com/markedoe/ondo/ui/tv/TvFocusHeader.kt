@@ -123,9 +123,13 @@ class FocusedTitle {
         this.item = item
     }
 
-    /** [owner] still has the focus and its title changed (made of the history, now the catalogue's): the header follows. */
+    /**
+     * A poster's title changed while the header shows it (made of the history, now the catalogue's): the header follows,
+     * the same title, whichever poster of it reports it.
+     */
     fun update(owner: Any, item: ShowcaseItem) {
-        if (this.owner === owner) this.item = item
+        val current = this.item ?: return
+        if ((this.owner === owner || current.key == item.key) && current != item) this.item = item
     }
 
     fun release(owner: Any) {
@@ -217,7 +221,9 @@ private data class HeaderArt(val item: ShowcaseItem, val backdropUrl: String?)
 private fun rememberFocusHeader(fallback: ShowcaseItem?, ready: TitleHeader?): TitleHeader? {
     val focus = LocalFocusedTitle.current ?: return null
     val headers = LocalTitleHeaders.current
-    val item = rememberShownTitle(focus, keepLast = true) ?: fallback
+    // The title as the page's state has it now: the first card's is the page's own object (one made of the history while
+    // the catalogue was read gives way to the catalogue's), whatever the focus last reported of it.
+    val item = (rememberShownTitle(focus, keepLast = true) ?: fallback)?.let { shown -> fallback?.takeIf { it.key == shown.key } ?: shown }
     LoadWhenStill(item, headers)
     // What the page's state holds of it, worked out with the page: whole at once.
     val prepared = ready?.takeIf { item != null && it.item == item }

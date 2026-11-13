@@ -190,6 +190,7 @@ class TvTabsOpenWithTheirHeaderTest {
         compose.onAllNodes(card).onFirst().requestFocus()
         compose.waitForIdle()
         advance(HEADER_DEBOUNCE_MS + 50)
+        assertTrue("the card has the focus", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfResume"))).fetchSemanticsNodes().isNotEmpty())
         assertEquals(listOf(real.title), texts("headerTitle"))
         assertTrue("no synopsis yet", texts("headerPlot").none { it.isNotBlank() })
         val row = compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
