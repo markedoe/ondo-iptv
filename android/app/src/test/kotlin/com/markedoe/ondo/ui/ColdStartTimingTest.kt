@@ -65,9 +65,9 @@ import org.junit.runners.MethodSorters
  * 400 categories, 15,000 series, 20,000 channels, what the device kept of TMDb for 5,000 titles). Each stage prints a
  * line starting with `COLDSTART:` (the CI log, the test's output, and `build/reports/coldstart/coldstart.txt`): the
  * first call (cold: the JVM's first, and the catalogue's caches empty where the stage says so), then the median of three
- * more. The stages' limits are only there to keep a hang from passing; the view model's cold open (stage 7) has real
- * ones: Home's carousel at once with Home kept from the last start, Home worked out no more often than before, the Movies
- * tab at once. It runs on its own (`./gradlew :app:coldStartTest`, a 2 GB heap).
+ * more. The stages' limits are only there to keep a hang from passing; the view model's cold open (stage 7) checks its
+ * counts always and its time targets in the night's run (see there). It runs on its own (`./gradlew :app:coldStartTest`,
+ * a 2 GB heap).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -498,6 +498,8 @@ class ColdStartTimingTest {
         /** The first carousel of Home worked out anew (not the one kept from the last start). */
         val firstWorkedOutHero: Long,
         val computations: Int,
+        /** How many times Home was the one kept from the last start. */
+        val savedHomesShown: Int,
         /** From the Movies tab's opening (once Home is ready and the tabs worked out in the background) to its first state. */
         val moviesTab: Long,
     )
@@ -506,9 +508,10 @@ class ColdStartTimingTest {
      * The app's cold start: a repository and a view model on the saved catalogue, as a launch makes them, with Home
      * watched as the screen does; first without Home kept from a last start, then with it (the first start kept it).
      * Prints each state the repository emits (what changed in it, when), each Home state, how many times Home was worked
-     * out and how long that took, then the Movies tab's first opening. Limits: with Home kept, its carousel within 300 ms;
-     * without, within 2.5 s; Home worked out 4 times at most (as before Home was kept); the Movies tab, opened once Home
-     * is ready, within 100 ms.
+     * out and how long that took, then the Movies tab's first opening. Always: Home kept is shown at the second start, and
+     * Home is worked out 4 times at most (as before Home was kept). Targets, held in the night's run
+     * (`ONDO_COLDSTART_STRICT`) and only ten times over them otherwise (a hang): with Home kept, its carousel within 300 ms;
+     * without, within 2.5 s; the Movies tab, opened once Home is ready, within 100 ms.
      */
     @Test
     fun stage7ViewModelColdOpen() {
@@ -538,14 +541,26 @@ class ColdStartTimingTest {
         System.gc()
         val second = coldOpen(store, metadata, awardsText, "7.vm.kept", waitForKeptHome = null)
 
+        // Counts, always.
         assertTrue("without Home kept, Home came", first.firstHome >= 0)
-        assertTrue("without Home kept, the carousel within 2.5 s: ${first.firstHero} ms", first.firstHero in 0 until 2_500)
+        assertEquals("without Home kept, none shown", 0, first.savedHomesShown)
         assertTrue("without Home kept, Home worked out 4 times at most: ${first.computations}", first.computations <= 4)
-        assertTrue("with Home kept, the carousel within 300 ms: ${second.firstHero} ms", second.firstHero in 0 until 300)
+        assertTrue("with Home kept, it is shown: ${second.savedHomesShown}", second.savedHomesShown > 0)
         assertTrue("with Home kept, Home worked out anew with its carousel: ${second.firstWorkedOutHero} ms", second.firstWorkedOutHero >= 0)
         assertTrue("with Home kept, Home worked out 4 times at most: ${second.computations}", second.computations <= 4)
-        assertTrue("the Movies tab within 100 ms of its opening: ${first.moviesTab} ms", first.moviesTab in 0 until 100)
-        assertTrue("the Movies tab within 100 ms of its opening, Home kept: ${second.moviesTab} ms", second.moviesTab in 0 until 100)
+        // Times: the targets in the night's run (ONDO_COLDSTART_STRICT); ten times them otherwise, only to catch a hang.
+        within("without Home kept, the carousel", first.firstHero, 2_500)
+        within("with Home kept, the carousel", second.firstHero, 300)
+        within("the Movies tab, from its opening", first.moviesTab, 100)
+        within("the Movies tab, from its opening, Home kept", second.moviesTab, 100)
+    }
+
+    /** [value] (ms, -1: never) within [targetMs] in the night's strict run, else within ten times it; printed either way. */
+    private fun within(what: String, value: Long, targetMs: Long) {
+        val strict = System.getProperty("ondo.coldStart.strict") == "true"
+        val limit = if (strict) targetMs else targetMs * 10
+        say("7.limit $what=$value ms target=$targetMs ms ${if (value in 0 until targetMs) "met" else "MISSED"}${if (strict) " (strict)" else ""}")
+        assertTrue("$what: $value ms, over ${limit} ms", value in 0 until limit)
     }
 
     private fun coldOpen(store: AppStore, metadata: InMemoryMetadataStore, awardsText: String?, name: String, waitForKeptHome: File?): ColdOpen {
@@ -648,7 +663,7 @@ class ColdStartTimingTest {
             }
             assertTrue("Home came", firstHome.get() >= 0)
             assertTrue("the Movies tab came", firstMovies.get() >= 0)
-            return ColdOpen(firstHome.get(), firstHero.get(), firstWorkedOutHero.get(), viewModel.homeComputations.get(), firstMovies.get())
+            return ColdOpen(firstHome.get(), firstHero.get(), firstWorkedOutHero.get(), viewModel.homeComputations.get(), viewModel.savedHomesShown.get(), firstMovies.get())
         } finally {
             watching.cancel()
             model?.let { runBlocking(main) { it.viewModelScope.cancel() } }

@@ -180,4 +180,6 @@ val coldStartTest by tasks.registering(Test::class) {
     useJUnit()
     filter { includeTestsMatching("*ColdStartTimingTest") }
     maxHeapSize = "2g"
+    // Its time targets hold in the night's run only (ONDO_COLDSTART_STRICT, android.yml); otherwise ten times them.
+    systemProperty("ondo.coldStart.strict", System.getenv("ONDO_COLDSTART_STRICT") ?: "false")
 }

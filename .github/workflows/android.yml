@@ -225,6 +225,8 @@ jobs:
         env:
           TASK: ${{ steps.shots.outputs.task }}
           FRESH: ${{ steps.shots.outputs.fresh }}
+          # The cold start's time targets (ColdStartTimingTest) hold at night only; a run by hand reports them.
+          ONDO_COLDSTART_STRICT: ${{ github.event_name == 'schedule' }}
         run: |
           if [ "$FRESH" = "true" ]; then set -- --no-build-cache; fi
           ./gradlew ":app:${TASK}RoborazziDebug" :app:coldStartTest "$@" --stacktrace
