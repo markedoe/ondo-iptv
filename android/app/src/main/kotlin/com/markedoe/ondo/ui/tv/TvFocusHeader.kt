@@ -403,7 +403,8 @@ private val UNDER_HEADER_TOP = 8.dp
 @Composable
 fun TvGridScrolling(top: Dp, posterHeight: Dp, content: @Composable () -> Unit) {
     val grownBy = posterHeight * ((FOCUS_GROW - 1f) / 2f)
-    TvPinnedHeaderList(lead = top - grownBy, byRows = true, content = content)
+    // The first row's posters where the page opens them: a move along it, the next poster not grown yet, stays.
+    TvPinnedHeaderList(lead = top - grownBy, byRows = true, firstMiddle = top + posterHeight / 2, content = content)
 }
 
 /** The posters across a grid under a TV's header: five, bigger than a phone's, to read from the sofa. */

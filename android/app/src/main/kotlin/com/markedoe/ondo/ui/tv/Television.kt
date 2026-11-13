@@ -69,6 +69,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /**
  * Android TV and Google TV: the remote's five-way pad moves a visible focus from item to item (Google's TV app
@@ -137,11 +138,30 @@ fun TvRow(content: @Composable () -> Unit) {
  */
 @ExperimentalFoundationApi
 class TvPinnedScrolling(private val lead: Float, private val edge: Float = 0f) : BringIntoViewSpec {
+    private val row = RowMiddle()
+
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        if (row.holds(offset, size)) return 0f
         // Where the card's own end may come at most: its frame drawn grown around its middle stays above the edge.
         val end = containerSize - edge - size * CARD_FOCUS_SPILL
-        if (offset >= lead && offset + size <= end) return 0f
-        return offset - lead.coerceAtMost((end - size).coerceAtLeast(0f))
+        val distance = if (offset >= lead && offset + size <= end) 0f else offset - lead.coerceAtMost((end - size).coerceAtLeast(0f))
+        return row.leaves(offset, size, distance)
+    }
+}
+
+/**
+ * Where a list under a header left its focused card's middle, in the list's pixels: the next card along the same row
+ * has its middle there too, and stays. A card is asked into view while its focus grows it (a poster's frame grows
+ * around its place, [focusFrame]): the same card is a different size from one frame to the next, and the rules above,
+ * worked out on that size, moved the row by a few pixels at each move along it, then back. Its middle does not change.
+ */
+private class RowMiddle(private var middle: Float = Float.NaN) {
+    fun holds(offset: Float, size: Float): Boolean = abs(offset + size / 2f - middle) < 1f
+
+    /** The card's middle once the list has moved by [distance]. */
+    fun leaves(offset: Float, size: Float, distance: Float): Float {
+        middle = offset - distance + size / 2f
+        return distance
     }
 }
 
@@ -152,18 +172,22 @@ class TvPinnedScrolling(private val lead: Float, private val edge: Float = 0f) :
  * scroll stopped "just enough" leaves both).
  */
 @ExperimentalFoundationApi
-class TvRowPivotScrolling(private val lead: Float) : BringIntoViewSpec {
-    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = offset - lead
+class TvRowPivotScrolling(private val lead: Float, firstMiddle: Float = Float.NaN) : BringIntoViewSpec {
+    // The first row's posters stand where the page opens them ([firstMiddle]): moving along it moves only the focus.
+    private val row = RowMiddle(firstMiddle)
+
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
+        if (row.holds(offset, size)) 0f else row.leaves(offset, size, offset - lead)
 }
 
 /**
  * [content]'s list scrolls as [TvPinnedScrolling] says on a TV, the focused card [lead] below its top and clear of
- * [edge] at its bottom, or with [byRows] as [TvRowPivotScrolling] says, the focused row's start at [lead]; elsewhere,
- * as it is.
+ * [edge] at its bottom, or with [byRows] as [TvRowPivotScrolling] says, the focused row's start at [lead] (the first
+ * row's posters' middle at [firstMiddle] as the page opens); elsewhere, as it is.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TvPinnedHeaderList(lead: Dp, byRows: Boolean = false, edge: Dp = 0.dp, content: @Composable () -> Unit) {
+fun TvPinnedHeaderList(lead: Dp, byRows: Boolean = false, edge: Dp = 0.dp, firstMiddle: Dp? = null, content: @Composable () -> Unit) {
     if (LocalBringIntoViewSpec.current !== TvScrolling) {
         content()
         return
@@ -171,7 +195,8 @@ fun TvPinnedHeaderList(lead: Dp, byRows: Boolean = false, edge: Dp = 0.dp, conte
     val density = LocalDensity.current
     val pixels = with(density) { lead.toPx() }
     val edgePixels = with(density) { edge.toPx() }
-    val spec = remember(pixels, edgePixels, byRows) { if (byRows) TvRowPivotScrolling(pixels) else TvPinnedScrolling(pixels, edgePixels) }
+    val middlePixels = firstMiddle?.let { with(density) { it.toPx() } } ?: Float.NaN
+    val spec = remember(pixels, edgePixels, byRows, middlePixels) { if (byRows) TvRowPivotScrolling(pixels, middlePixels) else TvPinnedScrolling(pixels, edgePixels) }
     CompositionLocalProvider(LocalBringIntoViewSpec provides spec, content = content)
 }
 
