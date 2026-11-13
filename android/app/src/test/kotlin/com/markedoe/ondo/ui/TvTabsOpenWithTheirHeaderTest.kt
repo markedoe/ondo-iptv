@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assert
@@ -206,7 +207,9 @@ class TvTabsOpenWithTheirHeaderTest {
         val row = compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val card = cards[index].fetchSemanticsNode().boundsInRoot
 
-        compose.runOnIdle { state = tab(reals) }
+        // Applied at once, as the view model's state reaching the screen is: with the clock held, a plain write would wait
+        // for an apply notice nothing else in this test sends, and nothing would be drawn anew.
+        compose.runOnIdle { Snapshot.withMutableSnapshot { state = tab(reals) } }
         advance(HEADER_DEBOUNCE_MS + 50)
         val plot = texts("headerPlot")
         if (plot != listOf(real.movie.plot.orEmpty())) {
