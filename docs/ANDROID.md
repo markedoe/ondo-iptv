@@ -279,7 +279,7 @@ tab on the first poster and never on a sort chip, the order chosen with the Sort
 a category's grid five posters a row scrolled by whole rows down and up, and a Movies row about five posters across);
 `TvRowsClearOfTheBottomEverySurfaceTest` (on every page with poster rows, the focused card grown by its focus
 clear of the 5 % a TV may crop; under a header (Home, Movies, Series, a category's and a genre's titles), the focused
-poster and its row inside their list, which reaches that 5 % as Home's does);
+poster and its row inside their list, which reaches that 5 % as Home's does, and a move along a row never moving the rows up or down);
 `SeeAllEverywhereTest` (every row of Home, Movies and Series, on a TV and on a phone: See all where the
 row can hold more than it shows, opening the grid that starts with the row's titles in its order; the rows without one
 named with the reason); `TelevisionFocusTest` (See all opens a category's titles and Back comes back to the same row and card, scrolled as
