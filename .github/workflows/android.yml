@@ -227,7 +227,7 @@ jobs:
           FRESH: ${{ steps.shots.outputs.fresh }}
         run: |
           if [ "$FRESH" = "true" ]; then set -- --no-build-cache; fi
-          ./gradlew ":app:${TASK}RoborazziDebug" "$@" --stacktrace
+          ./gradlew ":app:${TASK}RoborazziDebug" :app:coldStartTest "$@" --stacktrace
       - name: Screenshot differences
         # Each screenshot that no longer matches its reference: in the summary, and the images (reference,
         # difference, new) in the android-screenshot-diffs artifact.

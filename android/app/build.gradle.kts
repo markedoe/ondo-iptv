@@ -146,9 +146,9 @@ dependencies {
 tasks.withType<Test>().configureEach {
     // Robolectric tests run one class after another in a JVM: two JVMs side by side use the runner's cores.
     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
-    // ColdStartTimingTest holds a large panel's catalogue (100,000 movies) beside the Robolectric classes of the
-    // test JVM, which Gradle's default 512 MB does not leave room for.
-    maxHeapSize = "2g"
+    // The cold start's timing runs on its own (coldStartTest below): the other tests keep Gradle's default heap, which
+    // their timings and memory budgets were made with.
+    if (name != "coldStartTest") filter { excludeTestsMatching("*ColdStartTimingTest") }
     // The store screenshots read the demo catalogue: a change there runs them again.
     inputs.dir(rootProject.file("../fixtures/showcase"))
         .withPropertyName("showcase")
@@ -167,4 +167,17 @@ tasks.withType<Test>().configureEach {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showStackTraces = true
     }
+}
+
+// A cold start on a large panel's catalogue (100,000 movies, ColdStartTimingTest), timed in a test JVM of its own with
+// the heap that catalogue needs (`./gradlew :app:coldStartTest`; CI runs it after the unit tests).
+val coldStartTest by tasks.registering(Test::class) {
+    description = "Times a cold start on a 100,000-movie catalogue (ColdStartTimingTest) in a 2 GB heap."
+    group = "verification"
+    val unitTests = tasks.named<Test>("testDebugUnitTest").get()
+    testClassesDirs = unitTests.testClassesDirs
+    classpath = unitTests.classpath
+    useJUnit()
+    filter { includeTestsMatching("*ColdStartTimingTest") }
+    maxHeapSize = "2g"
 }
