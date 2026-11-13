@@ -33,6 +33,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaul
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -54,6 +55,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -547,6 +549,17 @@ private fun Loading() {
 private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostController, launch: Long) {
     val home by viewModel.home.collectAsStateWithLifecycle()
     val preparing by viewModel.preparing.collectAsStateWithLifecycle()
+    // Play chosen on Home kept from the last start waits for the catalogue: dropped once Home is left (another page,
+    // Ondo in the background), so that the player never opens over what the viewer went to.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(viewModel, lifecycle) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) viewModel.cancelHeldPlay() }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            viewModel.cancelHeldPlay()
+        }
+    }
     val state = home ?: return Loading()
     // The series of the carousel and of Continue watching are fetched ahead while Home is shown: Play starts at once.
     LaunchedEffect(state.hero.map { it.item.key }, state.continueWatching.map { it.key }) { viewModel.prefetchSeries(state) }

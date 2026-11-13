@@ -54,17 +54,21 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   est calculé avec son catalogue et son carrousel, ses titres à la une et les premiers titres de chaque rangée sont
   gardés (`home-<playlist>.json`, à côté du catalogue). Au démarrage suivant, cet Accueil s'affiche aussitôt, l'écran de
   démarrage parti, pendant la lecture du catalogue enregistré et jusqu'à ce que l'Accueil soit recalculé avec lui ;
-  seulement pour la même playlist et le même profil, avec les mêmes catégories, langues et mots masqués, le même ordre
-  des rangées, les mêmes réglages et la même langue de l'app : tout changement le laisse de côté. Ses titres en cours
+  seulement le même jour (le carrousel est un nouveau choix chaque jour), pour la même playlist et le même profil, avec
+  les mêmes catégories, langues et mots masqués, le même ordre des rangées, les mêmes réglages et la même langue de
+  l'app : tout changement le laisse de côté. Ses titres en cours
   et Ma liste s'affichent comme la bibliothèque du profil les a à ce démarrage (ce qui a été regardé depuis, dans le
   lecteur, là où il en est ; ce qui n'y est plus, parti), si bien que rien de ce qu'un autre profil a regardé ou gardé
   ne s'affiche jamais. Lire, Reprendre ou une chaîne choisis avant la lecture du catalogue se lancent une fois qu'il
-  est lu ; un titre qui a quitté le catalogue s'ouvre et se lit comme tout titre disparu (sa page revient en arrière,
+  est lu, sauf si l'Accueil a été quitté entre-temps ; un titre qui a quitté le catalogue s'ouvre et se lit comme tout titre disparu (sa page revient en arrière,
   Lire ne lit rien). L'instantané part avec sa playlist, et tous avec un profil supprimé. Une fois l'Accueil complet,
   les onglets Films et Séries sont calculés en arrière-plan, une fois par catalogue et par profil : leur première
   ouverture est immédiate. `ColdStartTimingTest` (`./gradlew :app:coldStartTest`, un catalogue de 100 000 films, dans
-  une JVM de test à part avec un tas de 2 Go) mesure le démarrage à froid ; `HomeSnapshotTest` vérifie pour quoi
-  l'instantané est gardé.
+  une JVM de test à part avec un tas de 2 Go) mesure le démarrage à froid : il vérifie toujours que l'Accueil gardé
+  s'affiche et que l'Accueil n'est pas calculé plus souvent qu'avant ; ses objectifs de temps (le carrousel en 300 ms
+  avec l'Accueil gardé, 2,5 s sans, l'onglet Films en 100 ms) sont exigés dans le run de la nuit et rapportés sinon.
+  `HomeSnapshotTest` vérifie pour quoi l'instantané est gardé, `TabsWorkedOutAheadTest` qu'un onglet n'est jamais
+  observé pour rien.
 - **En-tête sur TV** (`ui/tv/TvFocusHeader.kt`) : sur l'accueil, les onglets Films et Séries et les titres d'une
   catégorie, d'un genre, d'une année ou d'une récompense, un en-tête de hauteur fixe au-dessus des affiches montre
   celle qui a le focus : son image de fond (sinon son affiche floutée) derrière toute la page, bord à bord et jusqu'en

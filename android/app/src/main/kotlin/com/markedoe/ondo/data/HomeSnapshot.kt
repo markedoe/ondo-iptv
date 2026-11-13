@@ -20,6 +20,8 @@ data class HomeSnapshot(
     val fingerprint: String,
     /** When the catalogue it was made from was downloaded. */
     val fetchedAt: Long,
+    /** The device's date it was made on ("2026-11-13"): the carousel and the selections' rows are a new pick each day. */
+    val day: String = "",
     val playlistName: String,
     val hero: List<Hero> = emptyList(),
     val continueWatching: List<Resume> = emptyList(),

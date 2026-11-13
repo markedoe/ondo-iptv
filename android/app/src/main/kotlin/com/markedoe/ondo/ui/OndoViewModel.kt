@@ -78,6 +78,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Live TV filter: one category, the favourites, or everything. No filter at all (null in [OndoViewModel.liveFilter]):
@@ -184,7 +185,7 @@ class OndoViewModel(
         if (!state.isReady) return null
         // The saved Home is read as the playlists are (one small file): Home without its carousel is not shown meanwhile.
         val snapshot = savedHome.first { it.read }.snapshot
-        val fits = snapshot != null && HomeSnapshots.matches(snapshot, state, input.labels) && if (state.content.isEmpty) {
+        val fits = snapshot != null && HomeSnapshots.matches(snapshot, state, input.labels, input.now) && if (state.content.isEmpty) {
             state.isRestoring
         } else {
             input.kept.content !== state.content && state.content.fetchedAt == snapshot.fetchedAt
@@ -289,12 +290,28 @@ class OndoViewModel(
         }
     }
 
-    /** Watches [tab] until it was worked out for [target]: started if no one watches it, left as it was after. */
+    /**
+     * Watches [tab] until it was worked out for [target]: started if no one watches it, left as it was after. Not longer
+     * than [target] is what the app shows: another catalogue (a download ended, Home not on screen) or another profile
+     * ends it, and a minute at most, so that the tab is never watched for nothing.
+     */
     private suspend fun workOut(tab: StateFlow<VodUiState?>, workedOut: StateFlow<TabsFor?>, target: TabsFor) = coroutineScope {
         val watching = launch { tab.collect {} }
-        workedOut.first { target.sameAs(it) }
-        watching.cancel()
+        tabsWatched.incrementAndGet()
+        try {
+            withTimeoutOrNull(WORK_OUT_LIMIT_MS) {
+                combine(workedOut, state) { done, current ->
+                    target.sameAs(done) || current.content !== target.content || current.activeProfile.id != target.profileId
+                }.first { it }
+            }
+        } finally {
+            tabsWatched.decrementAndGet()
+            watching.cancel()
+        }
     }
+
+    /** How many tabs are watched to be worked out ahead now ([workOut]). */
+    @VisibleForTesting internal val tabsWatched = AtomicInteger()
 
     /** Settings → Row order: the rows of the Home, Movies and Series tabs in the viewer's order. */
     val rowOrder: StateFlow<RowOrderUiState?> = state.map { UiMappers.rowOrder(it) }
@@ -668,6 +685,15 @@ class OndoViewModel(
     private var afterRestore: Job? = null
 
     /**
+     * Home left before the catalogue was read (another page, Ondo in the background): what was asked on it then is
+     * dropped, the player never opens over what the viewer went to.
+     */
+    fun cancelHeldPlay() {
+        afterRestore?.cancel()
+        afterRestore = null
+    }
+
+    /**
      * While the saved catalogue is read at a start, Home kept from the last start on screen (its titles not in the
      * catalogue yet): [action] once it is read, on the same playlist, the last one asked only. False otherwise (another
      * playlist being opened plays nothing of the one before, as always).
@@ -996,6 +1022,9 @@ class OndoViewModel(
 
         /** Series whose details Home fetches ahead, at most. */
         const val PREFETCH_LIMIT = 4
+
+        /** The longest a tab is watched to be worked out ahead ([workOut]). */
+        private const val WORK_OUT_LIMIT_MS = 60_000L
 
         /** The carousel's candidates read at most, and the wait before asking about them (see [fillCarouselReleases]). */
         const val CAROUSEL_CANDIDATES = 2_000

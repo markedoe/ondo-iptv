@@ -30,6 +30,7 @@ object HomeSnapshots {
             profileId = state.activeProfile.id,
             fingerprint = fingerprint(state, labels),
             fetchedAt = state.content.fetchedAt,
+            day = SelectionRows.day(home.now),
             playlistName = home.playlistName,
             hero = home.hero.map { HomeSnapshot.Hero(listed(it.item, state), it.meta, it.inMyList, it.resumable, it.backdropUrl, it.plot) },
             continueWatching = home.continueWatching.mapNotNull { card ->
@@ -51,9 +52,13 @@ object HomeSnapshots {
         )
     }
 
-    /** Whether [snapshot] is Home as [state] would show it, its catalogue and the profile's lists aside. */
-    fun matches(snapshot: HomeSnapshot, state: OndoState, labels: Labels): Boolean =
+    /**
+     * Whether [snapshot] is Home as [state] would show it at [now], its catalogue and the profile's lists aside: made the
+     * same day (the carousel and the selections' rows are a new pick each day).
+     */
+    fun matches(snapshot: HomeSnapshot, state: OndoState, labels: Labels, now: Long): Boolean =
         snapshot.version == HomeSnapshot.VERSION &&
+            snapshot.day == SelectionRows.day(now) &&
             snapshot.playlistId == state.activePlaylistId &&
             snapshot.profileId == state.activeProfile.id &&
             snapshot.fingerprint == fingerprint(state, labels)

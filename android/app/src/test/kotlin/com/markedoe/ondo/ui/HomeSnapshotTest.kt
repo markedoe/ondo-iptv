@@ -23,7 +23,9 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.HomeUiState
 import java.util.Collections
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -77,7 +79,7 @@ class HomeSnapshotTest {
         assertTrue("a carousel to keep", home.hero.isNotEmpty())
         assertTrue("titles in progress to keep", home.continueWatching.isNotEmpty())
         val snapshot = requireNotNull(HomeSnapshots.of(home, state, labels)) { "a playlist in use: a Home to keep" }
-        assertTrue(HomeSnapshots.matches(snapshot, state, labels))
+        assertTrue(HomeSnapshots.matches(snapshot, state, labels, Fixtures.NOW))
         val drawn = HomeSnapshots.home(snapshot, state.copy(isRestoring = true), Fixtures.NOW)
         assertEquals(home.hero.map { it.item.key }, drawn.hero.map { it.item.key })
         assertEquals(home.hero.map { it.meta }, drawn.hero.map { it.meta })
@@ -116,10 +118,20 @@ class HomeSnapshotTest {
             "adult categories shown" to state.copy(settings = state.settings.copy(showAdultCategories = true)),
         )
         for ((change, changed) in changes) {
-            assertFalse("$change: Home kept is not shown", HomeSnapshots.matches(snapshot, changed, labels))
+            assertFalse("$change: Home kept is not shown", HomeSnapshots.matches(snapshot, changed, labels, Fixtures.NOW))
         }
-        assertFalse("another language of the app", HomeSnapshots.matches(snapshot, state, Labels(locale = Locale.FRENCH)))
-        assertTrue("the same again", HomeSnapshots.matches(snapshot, state.copy(), labels))
+        assertFalse("another language of the app", HomeSnapshots.matches(snapshot, state, Labels(locale = Locale.FRENCH), Fixtures.NOW))
+        assertTrue("the same again", HomeSnapshots.matches(snapshot, state.copy(), labels, Fixtures.NOW))
+    }
+
+    /** Kept on a day, not shown the next: the carousel and the selections' rows are a new pick each day. */
+    @Test
+    fun homeKeptOnADayIsNotShownTheNext() {
+        val snapshot = snapshotOf(state)
+        val day = 86_400_000L
+        assertEquals(SelectionRows.day(Fixtures.NOW), snapshot.day)
+        assertFalse("the next day", HomeSnapshots.matches(snapshot, state, labels, Fixtures.NOW + day))
+        assertFalse("the day before", HomeSnapshots.matches(snapshot, state, labels, Fixtures.NOW - day))
     }
 
     /**
@@ -141,7 +153,7 @@ class HomeSnapshotTest {
             favorites = emptyList(),
         )
         val changed = state.copy(library = now)
-        assertTrue("the profile's lists are not what Home kept is for", HomeSnapshots.matches(snapshot, changed, labels))
+        assertTrue("the profile's lists are not what Home kept is for", HomeSnapshots.matches(snapshot, changed, labels, Fixtures.NOW))
         val drawn = HomeSnapshots.home(snapshot, changed.copy(isRestoring = true), Fixtures.NOW)
         assertEquals("only the film still in progress", listOf(northern.key), drawn.continueWatching.map { it.key })
         assertEquals("where it is now", 0.5f, drawn.continueWatching.single().progress, 0.001f)
@@ -278,5 +290,70 @@ class HomeSnapshotTest {
         val channel = Fixtures.content.channels.first()
         val playing = start(store(launchProfile = me.id)) { viewModel -> viewModel.playChannel(ChannelRow(channel, null, null, null)) }
         assertEquals("the catalogue's channel plays", 1, playing.requests.size)
+    }
+
+    /**
+     * Ondo started again on the Home kept at the start before, its saved catalogue read only once the test lets it: [act]
+     * on the view model while Home kept is shown and the catalogue is read; the play requests once it is read.
+     */
+    private fun whileTheCatalogueIsRead(act: (OndoViewModel) -> Unit): List<PlayRequest> {
+        start(store(launchProfile = me.id))
+        val gate = CountDownLatch(1)
+        val gated = AppStore(folder.root.resolve("app"), open = { file ->
+            if (file.name.startsWith("content-")) gate.await(20, TimeUnit.SECONDS)
+            file.inputStream()
+        })
+        val executor = Executors.newSingleThreadExecutor { Thread(it, "main").apply { isDaemon = true } }
+        val main = executor.asCoroutineDispatcher()
+        Dispatchers.setMain(main)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        val watching = CoroutineScope(SupervisorJob() + main)
+        var model: OndoViewModel? = null
+        try {
+            val repository = OndoRepository(gated, FakeHttp(emptyMap()), scope, mainProfileName = "Me", metadata = Fixtures.metadata())
+            val viewModel = runBlocking(main) { OndoViewModel(repository, labels, minutes = flowOf(Fixtures.NOW)) }
+            model = viewModel
+            val requests = Collections.synchronizedList(mutableListOf<PlayRequest>())
+            watching.launch { viewModel.home.collect {} }
+            watching.launch { viewModel.playRequests.collect { requests += it } }
+            val shown = System.currentTimeMillis() + 10_000
+            while (viewModel.savedHomesShown.get() == 0 && System.currentTimeMillis() < shown) Thread.sleep(20)
+            assertTrue("Home kept is shown", viewModel.savedHomesShown.get() > 0)
+            assertTrue("the catalogue is being read", viewModel.state.value.isRestoring)
+            runBlocking(main) { act(viewModel) }
+            Thread.sleep(300)
+            assertTrue("nothing plays before the catalogue is read: $requests", requests.isEmpty())
+            gate.countDown()
+            val read = System.currentTimeMillis() + 10_000
+            while ((viewModel.state.value.isRestoring || viewModel.state.value.content.isEmpty) && System.currentTimeMillis() < read) Thread.sleep(20)
+            Thread.sleep(500)
+            return requests.toList()
+        } finally {
+            gate.countDown()
+            watching.cancel()
+            model?.let { runBlocking(main) { it.viewModelScope.cancel() } }
+            scope.cancel()
+            Dispatchers.resetMain()
+            main.close()
+        }
+    }
+
+    /** A channel chosen on Home kept from the last start, before the catalogue is read: it plays once it is. */
+    @Test
+    fun aPlayChosenOnHomeKeptPlaysOnceTheCatalogueIsRead() {
+        val channel = Fixtures.content.channels.first()
+        val requests = whileTheCatalogueIsRead { it.playChannel(ChannelRow(channel, null, null, null)) }
+        assertEquals("played once, after the catalogue was read", 1, requests.size)
+    }
+
+    /** The same, Home left before the catalogue is read (another page, Ondo in the background): nothing plays. */
+    @Test
+    fun aPlayChosenOnHomeKeptIsDroppedWhenHomeIsLeft() {
+        val channel = Fixtures.content.channels.first()
+        val requests = whileTheCatalogueIsRead { viewModel ->
+            viewModel.playChannel(ChannelRow(channel, null, null, null))
+            viewModel.cancelHeldPlay()
+        }
+        assertTrue("nothing played: $requests", requests.isEmpty())
     }
 }
