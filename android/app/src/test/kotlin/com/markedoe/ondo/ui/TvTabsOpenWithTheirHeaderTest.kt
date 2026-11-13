@@ -13,6 +13,8 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.CatalogueMatcher
@@ -206,7 +208,16 @@ class TvTabsOpenWithTheirHeaderTest {
 
         compose.runOnIdle { state = tab(reals) }
         advance(HEADER_DEBOUNCE_MS + 50)
-        assertEquals("the catalogue's title", listOf(real.movie.plot.orEmpty()), texts("headerPlot"))
+        val plot = texts("headerPlot")
+        if (plot != listOf(real.movie.plot.orEmpty())) {
+            // What the screen holds then, for the report: the header and its words, or why they are not there.
+            val headerNodes = compose.onAllNodes(hasTestTag("titleHeader"), useUnmergedTree = true).fetchSemanticsNodes().size
+            val tree = runCatching { compose.onRoot(useUnmergedTree = true).printToString(maxDepth = Int.MAX_VALUE) }.getOrElse { it.toString() }
+            throw AssertionError(
+                "the catalogue's title: expected ${listOf(real.movie.plot.orEmpty())} but was $plot; header nodes=$headerNodes " +
+                    "headerTitle=${texts("headerTitle")} headerText=${compose.onAllNodes(hasTestTag("headerText"), useUnmergedTree = true).fetchSemanticsNodes().size}\n$tree",
+            )
+        }
         assertEquals(listOf(real.title), texts("headerTitle"))
         cards[index].assert(isFocused())
         assertEquals("nothing scrolls", row.top, compose.onNodeWithTag("shelfResume", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top, 0.5f)
