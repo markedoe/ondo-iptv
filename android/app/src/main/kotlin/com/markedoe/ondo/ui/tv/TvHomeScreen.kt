@@ -216,6 +216,9 @@ fun TvHomeScreen(
             else -> state.selections[firstRow]?.let { row -> row.items.firstOrNull()?.let { "sel:${row.id}:${it.key}" } }
         }
     }
+    // Where Home's move to its top handed the focus to, while that item was not on screen yet: Play's own effect gives
+    // it the focus later, unless a key is pressed first.
+    val handedTo = remember { HandedTo() }
     // Home at its top, the focus where it starts ([initialKey]), the carousel full size: from the first frame, and
     // again each time what comes first changes before the viewer has pressed a key (the featured titles, or a row,
     // coming after Home was drawn: the catalogue or what the device kept of TMDb still being read at a cold start);
@@ -228,7 +231,21 @@ fun TvHomeScreen(
         // A key pressed meanwhile (Down as a row came in): the viewer has moved, the remote stays where they took it.
         if (viewerMoved) return
         bar?.browsing = false
-        initialKey?.let { memory?.handTo(it) } ?: memory?.given()
+        // The focus moved at once, in the same step as the check above: a hand-over left to the next frame would undo a
+        // key pressed in between (Down as Home shows, on a slow TV box).
+        val key = initialKey
+        if (key == null) {
+            memory?.given()
+            return
+        }
+        if (memory == null) return
+        if (memory.focusNow(key)) {
+            // No other hand-over left to take the focus away from it afterwards (a card the page came back to).
+            memory.restored()
+            return
+        }
+        handedTo.key = key
+        memory.handTo(key)
     }
     LaunchedEffect(firstItem, initialKey) {
         if (viewerMoved || bar?.browsing == true) return@LaunchedEffect
@@ -255,7 +272,12 @@ fun TvHomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .onPreviewKeyEvent {
-                if (it.type == KeyEventType.KeyDown) viewerMoved = true
+                if (it.type == KeyEventType.KeyDown) {
+                    viewerMoved = true
+                    // A hand-over still to happen from Home's move to its top: the viewer has moved, it never does.
+                    handedTo.key?.let { key -> memory?.cancelHandTo(key) }
+                    handedTo.key = null
+                }
                 false
             }
             .testTag("home"),
@@ -512,6 +534,9 @@ private fun TvHero(
 
 /** The key of the first item of Home's list, as last composed. */
 private class FirstItem(var key: String?)
+
+/** The item Home's move to its top handed the focus to ([FocusMemory.handTo]), not given yet. */
+private class HandedTo(var key: String? = null)
 
 /** Play's place in Home's focus memory: where Home starts. */
 private const val HERO_PLAY = "hero-play"

@@ -576,6 +576,17 @@ class FocusMemory(key: String? = null) {
         restore = key
     }
 
+    /**
+     * Gives the focus to the item [key] at once when it is on screen, and tells whether it did: unlike [handTo], nothing
+     * is left to happen at the next frame, when the viewer may have pressed a key meanwhile.
+     */
+    fun focusNow(key: String): Boolean = requesters[key]?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+
+    /** A key pressed: a hand-over still to happen ([handTo] of [key]) no longer does, the viewer has moved. */
+    fun cancelHandTo(key: String) {
+        if (restore == key) restore = null
+    }
+
     companion object {
         val Saver: Saver<FocusMemory, String> = Saver(save = { it.last ?: "" }, restore = { FocusMemory(it.ifEmpty { null }) })
     }
@@ -629,7 +640,8 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
         val wanted = when {
             // The remote moving along the tabs stays on the bar while each page opens.
             bar?.browsing == true -> false
-            restoring != null -> restoring == key
+            // Still wanted when the effect runs: a key pressed since may have called the hand-over off.
+            restoring != null -> restoring == key && memory?.restore == key
             else -> television && initial && (memory?.last == null || !memory.chosen)
         }
         if (wanted && runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.restored()
