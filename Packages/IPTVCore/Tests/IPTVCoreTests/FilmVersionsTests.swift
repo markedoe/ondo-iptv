@@ -259,6 +259,28 @@ final class FilmVersionsTests: XCTestCase {
         XCTAssertNil(FilmVersions.defaultVersion([], inProgress: nil, chosen: [], support: everything, categoryName: names))
     }
 
+    /// The title data says why a film's card plays the version it plays.
+    func testTheDefaultVersionSaysWhy() {
+        let dv = movie("Sandstorm 4K DV", 2021)
+        let hd = movie("Sandstorm HD", 2021)
+        let vostfr = movie("Sandstorm VOSTFR", 2021)
+        let list = [vostfr, dv, hd]
+        let names: (String) -> String? = { _ in nil }
+        let everything = PictureSupport(hdr: true, dolbyVision: true, uhd: true)
+        func choice(_ versions: [Movie], _ inProgress: String?, _ chosen: [String]) -> (String, DefaultReason)? {
+            FilmVersions.defaultChoice(versions, inProgress: inProgress, chosen: chosen, support: everything, categoryName: names)
+                .map { ($0.movie.id, $0.reason) }
+        }
+        XCTAssertEqual(choice(list, hd.id, [dv.id])?.1, .inProgress)
+        XCTAssertEqual(choice(list, hd.id, [dv.id])?.0, hd.id)
+        XCTAssertEqual(choice(list, nil, [vostfr.id])?.1, .chosen)
+        XCTAssertEqual(choice(list, nil, [])?.0, dv.id)
+        XCTAssertEqual(choice(list, nil, [])?.1, .bestForScreen)
+        XCTAssertEqual(choice([vostfr, movie("Sandstorm VFF", 2021)], nil, [])?.1, .first)
+        XCTAssertEqual(choice([dv], nil, [])?.1, .only)
+        XCTAssertNil(choice([], nil, []))
+    }
+
     /// Random catalogues: every stream in exactly one group, never two ids together, every grouping justified by a rule.
     func testRandomCataloguesKeepEveryStreamOnce() {
         let titles = ["Sandstorm", "Alien", "Aliens", "Le Transport", "The Matrix", "Matrix", "The Godfather", "Dune", "Dune 2", "Ocean Drift", "Up", "[4K]"]

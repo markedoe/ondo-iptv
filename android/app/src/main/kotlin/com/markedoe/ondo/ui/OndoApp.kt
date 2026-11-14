@@ -85,6 +85,8 @@ import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.TipsState
 import com.markedoe.ondo.player.PlayerActivity
+import com.markedoe.ondo.player.TitleData
+import com.markedoe.ondo.player.TitleDataDialog
 import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.components.LocalWatchedTitles
@@ -675,6 +677,8 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
     var gone by remember { mutableStateOf(false) }
     // The version picked on the page (a badge), else the film's default version (UiMappers.movieDetail).
     var picked by rememberSaveable(id) { mutableStateOf<String?>(null) }
+    // The version whose chip OK was held on (TV): its title data shows.
+    var infoFor by remember(id) { mutableStateOf<String?>(null) }
     val versionWords = remember(locale) { context.resources.versionWords() }
     val detail by produceKept<MovieDetailUiState?>("movie", null, state, id, locale, picked) {
         withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale, picked, versionWords) } }
@@ -701,8 +705,17 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
             onBackdropFailed = { viewModel.backdropFailed(ShowcaseItem.MovieItem(movie), it) },
             onTrailer = { context.openTrailer(it) },
             onSetWatched = { viewModel.setFilmWatched(movie, version, it) },
+            onVersionInfo = { held -> infoFor = held },
         )
     if (isTelevision()) TvMovieDetailScreen(ui, actions) else MovieDetailScreen(ui, actions)
+    // OK held on a version's chip: what the provider calls the film and its versions, worked out off the main thread.
+    val info by produceState<TitleData?>(null, infoFor, state) {
+        val held = infoFor
+        value = if (held == null) null else withContext(Dispatchers.Default) {
+            UiMappers.movie(state, held)?.let { TitleData.film(state, it, shownTitle = movie.name, words = versionWords) }
+        }
+    }
+    info?.let { TitleDataDialog(it, onDismiss = { infoFor = null }) }
 }
 
 @Composable

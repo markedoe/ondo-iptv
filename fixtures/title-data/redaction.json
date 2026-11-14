@@ -1,0 +1,15 @@
+{
+  "about": "What the player's title data shows of a provider's text: no address, login, password, query value, IP address or host:port, and the playlist's own login, password and server masked wherever they appear. The same file for Android's RedactionTest and Apple's RedactionTests. Invented values only.",
+  "cases": [
+    {"name": "a title stays as it is", "in": "Copper Valley 4K DV (2026)", "out": "Copper Valley 4K DV (2026)"},
+    {"name": "a title's own colon and at sign stay", "in": "Copper Valley: Night @ Sea", "out": "Copper Valley: Night @ Sea"},
+    {"name": "a time in a title stays", "in": "Lantern Bay 10:30 PM", "out": "Lantern Bay 10:30 PM"},
+    {"name": "an address in a name", "in": "Copper Valley http://panel.example.com/movie/demo/secret/1.mkv", "out": "Copper Valley •••"},
+    {"name": "a login and password before a host", "in": "see demo:hunter22@panel.example.com", "out": "see •••@panel.example.com"},
+    {"name": "query values", "in": "play.php?stream=12&token=abc123&username=demo", "out": "play.php?stream=•••&token=•••&username=•••"},
+    {"name": "an IP address and its port", "in": "Copper Valley 203.0.113.7:8080", "out": "Copper Valley •••"},
+    {"name": "a host and its port", "in": "server panel.example.com:8080 down", "out": "server ••• down"},
+    {"name": "the playlist's login and password", "in": "VIP-demouser Copper Valley Pa55word", "out": "VIP-••• Copper Valley •••", "secrets": ["demouser", "pa55word"]},
+    {"name": "a secret too short to mask", "in": "Copper Valley ab", "out": "Copper Valley ab", "secrets": ["ab"]}
+  ]
+}

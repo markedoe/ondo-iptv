@@ -61,10 +61,21 @@ Only movies, and only within one playlist (live channels and series are never gr
 
   A chip names only what differs between the versions, in that order ("4K Dolby Vision", "HD · Original, French
   subtitles"): a tag every version has is left out. Two versions that would read the same add the words of their names
-  the others lack ("Extended Cut"); a version without any tag, next to tagged ones, reads "Standard"; chips still alike
-  are numbered ("4K 1", "4K 2"; "Version 1", "Version 2" when nothing tells them apart). No two chips of a film read the
-  same. A screen reader says "Version: 4K Dolby Vision". The version picked plays; Play, the progress and the format
-  badge are its own.
+  the others lack ("Extended Cut"); a version without any tag, next to tagged ones, reads "Standard". Chips still alike
+  add, in turn, the words of their categories' names the others lack ("Standard · Recently added"), their container
+  ("Standard · MKV", "Standard · MP4"), then the provider's words the chips have no word for, as the name writes them
+  ("DUB"). Chips still alike are numbered ("4K 1", "4K 2"; "Version 1", "Version 2" when nothing tells them apart: a
+  year alone or punctuation is no difference). No two chips of a film read the same. A screen reader says "Version: 4K
+  Dolby Vision". The version picked plays; Play, the progress and the format badge are its own.
+- **Title data**: what the app read from the provider for a title, to photograph when a chip reads wrong. In the
+  player, More, Stream Statistics shows it next to the statistics (both apps): the title shown, the provider's name,
+  ids, category (name and id), year, the tags read, the TMDb ids (the provider's list, its details, and on Android the
+  title matched), the container; for a film's versions (four at most, the one playing first), each one's chip, name,
+  category, id, container and tags, the one playing, the one played first and why; for an episode, its raw title and
+  its series' name. On a TV, OK held on a version's chip of a film's page shows the same for every version, each a stop
+  of the remote. Never an address, a login, a password or a server: the playlist's own are masked wherever they
+  appear, as are addresses, `user:password@`, query values, IP addresses and `host:port` (`Redaction`, the same rules
+  and table on both apps: `fixtures/title-data/redaction.json`). It is not in the problem report.
 - **The version shown first** (and played from a card): the one in progress; else the one chosen last on this device;
   else the one the screen suits best (4K on a 4K screen, HDR or Dolby Vision only where the screen shows them, as
   Android's display and Apple's AVFoundation report); else the first.

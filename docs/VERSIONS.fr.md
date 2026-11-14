@@ -67,10 +67,24 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   Une pastille ne nomme que ce qui diffère entre les versions, dans cet ordre (« 4K Dolby Vision », « HD · VO,
   sous-titres français ») : un tag que toutes les versions ont est omis. Deux versions qui se liraient pareil ajoutent
   les mots de leur nom que les autres n'ont pas (« Extended Cut ») ; une version sans aucun tag, à côté de versions qui
-  en ont, s'appelle « Standard » ; des pastilles encore identiques sont numérotées (« 4K 1 », « 4K 2 » ; « Version 1 »,
-  « Version 2 » quand rien ne les distingue). Deux pastilles d'un même film ne se lisent jamais pareil. Un lecteur
-  d'écran dit « Version : 4K Dolby Vision ». La version choisie est celle qui est lue ; Lecture, la progression et le
-  badge du format sont les siens.
+  en ont, s'appelle « Standard ». Des pastilles encore identiques ajoutent, dans cet ordre, les mots du nom de leur
+  catégorie que les autres n'ont pas (« Standard · Recently added »), leur conteneur (« Standard · MKV »,
+  « Standard · MP4 »), puis les mots du fournisseur que les pastilles ne savent pas nommer, tels que le nom les écrit
+  (« DUB »). Des pastilles encore identiques sont numérotées (« 4K 1 », « 4K 2 » ; « Version 1 », « Version 2 » quand
+  rien ne les distingue : une année seule ou la ponctuation ne sont pas une différence). Deux pastilles d'un même film
+  ne se lisent jamais pareil. Un lecteur d'écran dit « Version : 4K Dolby Vision ». La version choisie est celle qui est
+  lue ; Lecture, la progression et le badge du format sont les siens.
+- **Données du titre** : ce que l'app a lu chez le fournisseur pour un titre, à photographier quand une pastille se lit
+  mal. Dans le lecteur, Plus, Statistiques du flux les montre à côté des statistiques (les deux apps) : le titre
+  affiché, le nom du fournisseur, les identifiants, la catégorie (nom et identifiant), l'année, les tags lus, les
+  identifiants TMDb (la liste du fournisseur, sa fiche, et sur Android le titre reconnu), le conteneur ; pour les
+  versions d'un film (quatre au plus, celle en lecture d'abord), la pastille, le nom, la catégorie, l'identifiant, le
+  conteneur et les tags de chacune, celle en lecture, celle lue en premier et pourquoi ; pour un épisode, son titre brut
+  et le nom de sa série. Sur une TV, OK maintenu sur la pastille d'une version, sur la page d'un film, montre la même
+  chose pour toutes les versions, chacune une étape de la télécommande. Jamais d'adresse, d'identifiant, de mot de passe
+  ni de serveur : ceux de la playlist sont masqués partout où ils apparaissent, comme les adresses, `user:password@`,
+  les valeurs de requête, les adresses IP et `hôte:port` (`Redaction`, les mêmes règles et la même table sur les deux
+  apps : `fixtures/title-data/redaction.json`). Elles ne sont pas dans le rapport de problème.
 - **La version montrée d'abord** (et lue depuis une affiche) : celle en cours ; sinon la dernière choisie sur cet
   appareil ; sinon celle qui convient le mieux à l'écran (la 4K sur un écran 4K, le HDR ou le Dolby Vision seulement là
   où l'écran les affiche, selon l'écran d'Android et AVFoundation chez Apple) ; sinon la première.

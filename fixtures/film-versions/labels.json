@@ -121,6 +121,51 @@
       "name": "a name's own word that reads like the plain version's",
       "rows": [{"name": "Copper Valley Standard"}, {"name": "Copper Valley"}],
       "labels": ["Standard 1", "Standard 2"]
+    },
+    {
+      "name": "two plain versions next to a 4K Dolby Vision one, nothing else telling them apart",
+      "rows": [{"name": "Copper Valley (2026)"}, {"name": "Copper Valley 4K DV (2026)"}, {"name": "Copper Valley (2026)"}],
+      "labels": ["Standard 1", "4K Dolby Vision", "Standard 2"]
+    },
+    {
+      "name": "two plain versions next to a 4K Dolby Vision one, in two containers",
+      "rows": [
+        {"name": "Copper Valley (2026)", "extension": "mp4"}, {"name": "Copper Valley 4K DV (2026)", "extension": "mkv"},
+        {"name": "Copper Valley (2026)", "extension": "mkv"}
+      ],
+      "labels": ["Standard · MP4", "4K Dolby Vision", "Standard · MKV"]
+    },
+    {
+      "name": "two plain versions next to a 4K Dolby Vision one, in two categories",
+      "rows": [
+        {"name": "Copper Valley (2026)", "category": "Movies | Drama"}, {"name": "Copper Valley 4K DV (2026)", "category": "Movies | Drama"},
+        {"name": "Copper Valley (2026)", "category": "Movies | Recently added"}
+      ],
+      "labels": ["Standard · Drama", "4K Dolby Vision", "Standard · Recently added"]
+    },
+    {
+      "name": "the category first, then the container",
+      "rows": [
+        {"name": "Copper Valley", "category": "Movies | Drama", "extension": "mp4"},
+        {"name": "Copper Valley", "category": "Movies | Drama", "extension": "mkv"},
+        {"name": "Copper Valley", "category": "Movies | Family", "extension": "mkv"}
+      ],
+      "labels": ["Drama · MP4", "Drama · MKV", "Family"]
+    },
+    {
+      "name": "only the container differs",
+      "rows": [{"name": "Midnight Ferry", "extension": "mkv"}, {"name": "Midnight Ferry", "extension": "mp4"}],
+      "labels": ["MKV", "MP4"]
+    },
+    {
+      "name": "a provider's word the chips have no word for, as the name says it",
+      "rows": [{"name": "Copper Valley DUB"}, {"name": "Copper Valley"}],
+      "labels": ["DUB", "Standard"]
+    },
+    {
+      "name": "a year alone tells nothing apart",
+      "rows": [{"name": "Copper Valley (2026)"}, {"name": "Copper Valley"}],
+      "labels": ["Version 1", "Version 2"]
     }
   ]
 }

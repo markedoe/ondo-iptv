@@ -4,6 +4,7 @@ import androidx.tracing.trace
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.CategoryTags
+import com.markedoe.ondo.core.library.DefaultReason
 import com.markedoe.ondo.core.library.EpisodeTitles
 import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.PictureSupport
@@ -204,14 +205,20 @@ object UiMappers {
      */
     fun defaultVersion(state: OndoState, movie: Movie, versions: List<Movie> = visibleVersions(state, movie)): Movie {
         if (versions.size < 2) return movie
+        return defaultChoice(state, movie, versions).first
+    }
+
+    /** [defaultVersion] and why it is that one (`FilmVersions.defaultChoice`), for the player's title data. */
+    fun defaultChoice(state: OndoState, movie: Movie, versions: List<Movie> = visibleVersions(state, movie)): Pair<Movie, DefaultReason> {
+        if (versions.size < 2) return movie to DefaultReason.ONLY
         val playlistId = state.activePlaylistId.orEmpty()
         val inProgress = versions.mapNotNull { version ->
             state.library.progress(WatchEntry(playlistId, ItemKind.MOVIE, version.id, null, title = "", lastWatchedAt = 0).key)
                 ?.takeIf { it.isResumable }?.let { version to it.lastWatchedAt }
         }.maxByOrNull { it.second }?.first
-        return FilmVersions.defaultVersion(
+        return FilmVersions.defaultChoice(
             versions, inProgress?.id, state.settings.chosenVersions, pictureSupport, FilmVersions.categoryNames(state.content.movieCategories),
-        ) ?: movie
+        ) ?: (movie to DefaultReason.ONLY)
     }
 
     /** The chips of a film's versions, each with its stream (for its page), in [words]; empty when the film has one. */

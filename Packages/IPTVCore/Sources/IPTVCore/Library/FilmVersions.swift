@@ -13,6 +13,20 @@ public struct PictureSupport: Hashable, Sendable {
     }
 }
 
+/// Why a film's card plays the version it plays (`FilmVersions.defaultChoice`).
+public enum DefaultReason: String, Hashable, Sendable {
+    /// The film has one version.
+    case only
+    /// The viewer is watching it.
+    case inProgress
+    /// The viewer chose it last on this device.
+    case chosen
+    /// It suits the screen best (4K on a 4K screen, no Dolby Vision where the screen cannot show it).
+    case bestForScreen
+    /// Nothing sets one apart: the first in the catalogue.
+    case first
+}
+
 /// What a version's tag says about it, in the order a version's chip names them (docs/VERSIONS.md).
 public enum VersionAspect: Int, CaseIterable, Hashable, Sendable, Comparable {
     case quality, range, threeD, edition, codec, language, subtitles
@@ -577,7 +591,7 @@ public struct FilmVersions: Sendable {
     }
 
     /// `tags`, with a language's code at either end of the name or the category (`edgeCodes`): a chip's tags.
-    static func labelTags(name: String, categoryName: String?) -> [VersionTag] {
+    public static func labelTags(name: String, categoryName: String?) -> [VersionTag] {
         var found = Set(tags(name: name, categoryName: categoryName))
         for text in [name, categoryName].compactMap({ $0 }) {
             let words = nameWords(text, trimming: "-.")
@@ -593,8 +607,10 @@ public struct FilmVersions: Sendable {
     /// What a film's `versions` say on their chips, in their order, in `words`. Each names what sets it apart from the
     /// others, in `VersionAspect`'s order ("4K Dolby Vision", "HD · Original, French subtitles"): a tag they all share is
     /// left out. Two that would read the same add the words of their names the others lack ("Extended Cut"); a version
-    /// without a tag next to tagged ones is "Standard"; labels still the same are numbered ("4K 1", "4K 2"; "Version 1",
-    /// "Version 2"): no two versions read the same. `categoryName` names a stream's category. The same rules as Android's.
+    /// without a tag next to tagged ones is "Standard". Labels still the same add, in turn, the words of their categories'
+    /// names the others lack, their container ("Standard · MKV", "Standard · MP4"), then the provider's words the chips
+    /// have no word for ("DUB"); labels still the same are numbered ("4K 1", "4K 2"; "Version 1", "Version 2"): no two
+    /// versions read the same. `categoryName` names a stream's category. The same rules as Android's.
     public static func labels(_ versions: [Movie], categoryName: (String) -> String?, words: VersionWords = VersionWords()) -> [String] {
         let tags = versions.map { labelTags(name: $0.name, categoryName: categoryName($0.categoryID)) }
         // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
@@ -613,7 +629,15 @@ public struct FilmVersions: Sendable {
             }
         }
         let anyTagged = texts.contains { !$0.isEmpty }
-        let labels = texts.map { $0.isEmpty && anyTagged ? words.standard : $0 }
+        var labels = texts.map { $0.isEmpty && anyTagged ? words.standard : $0 }
+        // Still the same: what else sets them apart, in this order: the words of their categories' names, their
+        // container ("MKV", "MP4"), then the provider's words the chips have no name for ("DUB").
+        setApart(&labels) { same in differingWords(same.map { categoryName(versions[$0].categoryID) ?? "" }) }
+        setApart(&labels) { same in same.map { container(of: versions[$0]) ?? "" } }
+        setApart(&labels) { same in differingWords(same.map { versions[$0].name }, tagsOnly: true) }
+        if labels.contains(where: { !$0.isEmpty }) {
+            labels = labels.map { $0.isEmpty ? words.standard : $0 }
+        }
         // Still the same: numbered, each of them.
         let counts = labels.reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
         var seen: [String: Int] = [:]
@@ -643,9 +667,7 @@ public struct FilmVersions: Sendable {
 
     /// A provider's tag, a part of one, or a year: never a word that tells a version apart.
     private static func isNoise(_ word: String) -> Bool {
-        if tagWords[word] != nil || edgeCodes[word] != nil || tagParts.contains(word) || CatalogueMatcher.isTagWord(word) { return true }
-        guard word.count == 4, word.allSatisfy({ $0.isASCII && $0.isNumber }), let year = Int(word) else { return false }
-        return (1900...2099).contains(year)
+        tagWords[word] != nil || edgeCodes[word] != nil || tagParts.contains(word) || CatalogueMatcher.isTagWord(word) || isYear(word)
     }
 
     /// How well a version suits the screen: 4K on a 4K screen, HD; Dolby Vision or HDR only where the screen shows it
@@ -669,21 +691,82 @@ public struct FilmVersions: Sendable {
         support: PictureSupport,
         categoryName: (String) -> String?
     ) -> Movie? {
-        guard versions.count > 1 else { return versions.first }
-        if let inProgress, let movie = versions.first(where: { $0.id == inProgress }) { return movie }
+        defaultChoice(versions, inProgress: inProgress, chosen: chosen, support: support, categoryName: categoryName)?.movie
+    }
+
+    /// `defaultVersion` and why it is that one; nil without versions.
+    public static func defaultChoice(
+        _ versions: [Movie],
+        inProgress: String?,
+        chosen: [String],
+        support: PictureSupport,
+        categoryName: (String) -> String?
+    ) -> (movie: Movie, reason: DefaultReason)? {
+        guard versions.count > 1 else { return versions.first.map { ($0, .only) } }
+        if let inProgress, let movie = versions.first(where: { $0.id == inProgress }) { return (movie, .inProgress) }
         if !chosen.isEmpty {
             let ids = Set(versions.map(\.id))
-            if let id = chosen.first(where: { ids.contains($0) }), let movie = versions.first(where: { $0.id == id }) { return movie }
+            if let id = chosen.first(where: { ids.contains($0) }), let movie = versions.first(where: { $0.id == id }) { return (movie, .chosen) }
         }
         var best = versions[0]
         var bestScore = Int.min
+        var scores = Set<Int>()
         for movie in versions {
             let value = score(tags(name: movie.name, categoryName: categoryName(movie.categoryID)), support: support)
+            scores.insert(value)
             if value > bestScore {
                 best = movie
                 bestScore = value
             }
         }
-        return best
+        return (best, scores.count > 1 ? .bestForScreen : .first)
+    }
+}
+
+/// What tells apart the versions whose chips would read the same (`FilmVersions.labels`).
+extension FilmVersions {
+    /// Labels that read the same get what `values` gives each of them (in the order of the group's indices), when those
+    /// differ: "Standard · MKV" next to "Standard · MP4".
+    private static func setApart(_ labels: inout [String], _ values: ([Int]) -> [String]) {
+        var groups: [String: [Int]] = [:]
+        var order: [String] = []
+        for (index, label) in labels.enumerated() {
+            if groups[label] == nil { order.append(label) }
+            groups[label, default: []].append(index)
+        }
+        for label in order {
+            guard let same = groups[label], same.count > 1 else { continue }
+            let found = values(same)
+            guard Set(found).count > 1 else { continue }
+            for (k, i) in same.enumerated() where !found[k].isEmpty {
+                labels[i] = [labels[i], found[k]].filter { !$0.isEmpty }.joined(separator: " · ")
+            }
+        }
+    }
+
+    /// The words of each text that are not in every other one, years left out. The providers' tags are left out too, or,
+    /// with `tagsOnly`, they are the only words kept: those of a name the chips have no word for ("DUB", "TR").
+    private static func differingWords(_ texts: [String], tagsOnly: Bool = false) -> [String] {
+        let split = texts.map { nameWords($0, trimming: "-.*+\"") }
+        let common = split.map { words in Set(words.flatMap { TextNormalizer.normalize($0).split(separator: " ").map(String.init) }) }
+            .reduce(nil as Set<String>?) { $0?.intersection($1) ?? $1 } ?? []
+        return split.map { words in
+            words.filter { word in
+                let parts = TextNormalizer.normalize(word).split(separator: " ").map(String.init)
+                guard !parts.isEmpty, !parts.allSatisfy({ common.contains($0) || isYear($0) || (!tagsOnly && isNoise($0)) }) else { return false }
+                return !tagsOnly || parts.allSatisfy { common.contains($0) || isNoise($0) }
+            }.joined(separator: " ")
+        }
+    }
+
+    /// A version's container in capitals ("MKV", "MP4", "HLS"): the provider's extension, else its address's.
+    public static func container(of movie: Movie) -> String? {
+        if let ext = movie.containerExtension, let format = MediaFormat.label(forExtension: ext) { return format }
+        return MediaFormat.label(for: movie.streamURL)
+    }
+
+    private static func isYear(_ word: String) -> Bool {
+        guard word.count == 4, word.allSatisfy({ $0.isASCII && $0.isNumber }), let year = Int(word) else { return false }
+        return (1900...2099).contains(year)
     }
 }

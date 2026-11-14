@@ -31,17 +31,22 @@ extension AppModel {
     /// The version a film's card plays and its page selects first (`FilmVersions.defaultVersion`): the one in progress,
     /// else the one chosen last on this device, else the best for the screen, else the first.
     func defaultVersion(of movie: Movie, among known: [Movie]? = nil) -> Movie {
+        defaultChoice(of: movie, among: known).movie
+    }
+
+    /// `defaultVersion(of:)` and why it is that one (`FilmVersions.defaultChoice`), for the player's title data.
+    func defaultChoice(of movie: Movie, among known: [Movie]? = nil) -> (movie: Movie, reason: DefaultReason) {
         let versions = known ?? visibleVersions(of: movie)
-        guard versions.count > 1 else { return movie }
+        guard versions.count > 1 else { return (movie, .only) }
         let inProgress = versions.compactMap { version -> (movie: Movie, watched: Date)? in
             guard let entry = progress(movie: version), entry.isResumable else { return nil }
             return (version, entry.lastWatchedAt)
         }.max { $0.watched < $1.watched }?.movie
         let names = categoryNames
-        return FilmVersions.defaultVersion(
+        return FilmVersions.defaultChoice(
             versions, inProgress: inProgress?.id, chosen: settings.chosenVersions, support: Self.pictureSupport,
             categoryName: { names[$0] }
-        ) ?? movie
+        ) ?? (movie, .only)
     }
 
     /// What the chips of a film's versions say, in their order, in the app's language (`FilmVersions.labels`): what sets
@@ -51,7 +56,7 @@ extension AppModel {
         return FilmVersions.labels(versions, categoryName: { names[$0] }, words: .app())
     }
 
-    private var categoryNames: [String: String] {
+    var categoryNames: [String: String] {
         Dictionary(content.movieCategories.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     }
 

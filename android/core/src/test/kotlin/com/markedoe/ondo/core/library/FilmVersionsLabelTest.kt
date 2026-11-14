@@ -22,8 +22,14 @@ class FilmVersionsLabelTest {
 
     private val cases = Json.parseToJsonElement(File("../../fixtures/film-versions/labels.json").readText()).jsonObject["cases"]!!.jsonArray
 
-    private fun versions(names: List<String>, categories: List<String?> = names.map { null }): Pair<List<Movie>, (String) -> String?> {
-        val movies = names.mapIndexed { index, name -> Movie(id = "v$index", name = name, categoryId = "c$index", streamUrl = "http://stream.example.com/$index") }
+    private fun versions(
+        names: List<String>,
+        categories: List<String?> = names.map { null },
+        extensions: List<String?> = names.map { null },
+    ): Pair<List<Movie>, (String) -> String?> {
+        val movies = names.mapIndexed { index, name ->
+            Movie(id = "v$index", name = name, categoryId = "c$index", streamUrl = "http://stream.example.com/$index", containerExtension = extensions[index])
+        }
         val byId = movies.indices.associate { "c$it" to categories[it] }
         return movies to { id: String -> byId[id] }
     }
@@ -34,7 +40,11 @@ class FilmVersionsLabelTest {
         for (case in cases.map { it.jsonObject }) {
             val name = case["name"]!!.jsonPrimitive.content
             val rows = case["rows"]!!.jsonArray.map { it.jsonObject }
-            val (movies, categoryName) = versions(rows.map { it["name"]!!.jsonPrimitive.content }, rows.map { it["category"]?.jsonPrimitive?.content })
+            val (movies, categoryName) = versions(
+                rows.map { it["name"]!!.jsonPrimitive.content },
+                rows.map { it["category"]?.jsonPrimitive?.content },
+                rows.map { it["extension"]?.jsonPrimitive?.content },
+            )
             val expected = case["labels"]!!.jsonArray.map { it.jsonPrimitive.content }
             assertEquals(expected, FilmVersions.labels(movies, categoryName), name)
         }
@@ -60,8 +70,8 @@ class FilmVersionsLabelTest {
 
     /**
      * Every word the grouping reads as a provider's tag (`CatalogueMatcher`'s version and quality words) names its version
-     * next to a plain one, but those that say nothing of the copy ("DUB": dubbed into what?) or name a language the apps
-     * have no word for.
+     * next to a plain one; those that say nothing of the copy ("DUB": dubbed into what?) or name a language the apps have
+     * no word for are shown as the name writes them.
      */
     @Test
     fun everyTagWordOfTheGroupingNamesItsVersion() {
@@ -77,7 +87,7 @@ class FilmVersionsLabelTest {
             val (movies, categoryName) = versions(listOf("Copper Valley $tag", "Copper Valley"))
             val labels = FilmVersions.labels(movies, categoryName)
             if (word in unnamed) {
-                assertEquals(listOf("Version 1", "Version 2"), labels, word)
+                assertEquals(listOf(tag, "Standard"), labels, word)
             } else {
                 assertNotEquals("Standard", labels[0], "$tag -> $labels")
                 assertTrue(!labels[0].startsWith("Version"), "$tag -> $labels")

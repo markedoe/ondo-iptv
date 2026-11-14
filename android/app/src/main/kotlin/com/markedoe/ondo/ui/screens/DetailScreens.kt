@@ -210,6 +210,8 @@ class DetailActions(
     val onTrailer: (String) -> Unit = {},
     /** A version of the film picked on its page (its stream's id). */
     val onVersion: (String) -> Unit = {},
+    /** OK held on a version's chip (TV): what the provider calls the film and its versions, that version marked. */
+    val onVersionInfo: (String) -> Unit = {},
     /** "Mark as watched" (true) or "Mark as unwatched" (false): the movie, or every episode of the series. */
     val onSetWatched: (Boolean) -> Unit = {},
     /** The same for one episode. */

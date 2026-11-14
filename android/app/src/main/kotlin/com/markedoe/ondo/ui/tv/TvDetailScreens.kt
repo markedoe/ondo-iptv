@@ -578,13 +578,22 @@ internal fun TvCollectionDialog(
  * focus has a white ring around it and grows ([tvFocusRing]), selected or not: the two never look alike.
  */
 @Composable
-fun TvChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, selected: Boolean = false, icon: ImageVector? = null, iconTint: Color? = null) {
+fun TvChip(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    icon: ImageVector? = null,
+    iconTint: Color? = null,
+    onLongClick: (() -> Unit)? = null,
+) {
     val interactions = remember { MutableInteractionSource() }
     val focused by interactions.collectIsFocusedAsState()
     val container = if (selected) TvTokens.Accent else Color.White.copy(alpha = 0.1f)
     val content = if (selected) TvTokens.Ink else Color.White
     Button(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = (if (selected) modifier.semantics { this.selected = true } else modifier).tvFocusRing(focused, chipScale(focused)),
         // The ring and its scale are drawn around the chip ([tvFocusRing]); the chip keeps its own colors.
         scale = ButtonDefaults.scale(focusedScale = 1f),
@@ -728,7 +737,10 @@ private fun LazyListScope.awardsShelf(awards: List<AwardRow>, actions: DetailAct
 }
 
 /** The genres and the year: each opens the titles of the playlist sharing it. */
-/** A film's versions ("4K Dolby Vision", "Full HD"…) as chips the remote moves through: the one picked is selected and plays. */
+/**
+ * A film's versions ("4K Dolby Vision", "Full HD"…) as chips the remote moves through: the one picked is selected and
+ * plays. OK held on one shows what the provider calls the film and its versions (the player's title data).
+ */
 private fun LazyListScope.versionsShelf(versions: List<VersionChip>, selected: String, actions: DetailActions) {
     if (versions.size < 2) return
     item(key = "versions") {
@@ -744,6 +756,7 @@ private fun LazyListScope.versionsShelf(versions: List<VersionChip>, selected: S
                         text = chip.label,
                         selected = chip.id == selected,
                         onClick = { actions.onVersion(chip.id) },
+                        onLongClick = { actions.onVersionInfo(chip.id) },
                         modifier = Modifier.focusMemory("version:${chip.id}").testTag("version-${chip.id}")
                             .semantics { contentDescription = description },
                     )

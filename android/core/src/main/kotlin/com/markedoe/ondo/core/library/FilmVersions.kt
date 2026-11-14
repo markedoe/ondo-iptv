@@ -3,10 +3,25 @@ package com.markedoe.ondo.core.library
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.playback.MediaFormat
 import java.util.BitSet
 
 /** What the screen can show, for the version that plays best: high dynamic range, Dolby Vision, 4K. */
 data class PictureSupport(val hdr: Boolean = false, val dolbyVision: Boolean = false, val uhd: Boolean = false)
+
+/** Why a film's card plays the version it plays ([FilmVersions.defaultChoice]). */
+enum class DefaultReason {
+    /** The film has one version. */
+    ONLY,
+    /** The viewer is watching it. */
+    IN_PROGRESS,
+    /** The viewer chose it last on this device. */
+    CHOSEN,
+    /** It suits the screen best (4K on a 4K screen, no Dolby Vision where the screen cannot show it). */
+    BEST_FOR_SCREEN,
+    /** Nothing sets one apart: the first in the catalogue. */
+    FIRST,
+}
 
 /** What a version's tag says about it, in the order a version's chip names them (docs/VERSIONS.md). */
 enum class VersionAspect { QUALITY, RANGE, THREE_D, EDITION, CODEC, LANGUAGE, SUBTITLES }
@@ -601,7 +616,7 @@ class FilmVersions private constructor(
         }
 
         /** [tags], with a language's code at either end of the name or the category ([EDGE_CODES]): a chip's tags. */
-        internal fun labelTags(name: String, categoryName: String?): List<VersionTag> {
+        fun labelTags(name: String, categoryName: String?): List<VersionTag> {
             val found = java.util.EnumSet.noneOf(VersionTag::class.java)
             found.addAll(tags(name, categoryName))
             for (text in listOfNotNull(name, categoryName)) {
@@ -617,8 +632,10 @@ class FilmVersions private constructor(
          * What a film's [versions] say on their chips, in their order, in [words]. Each names what sets it apart from the
          * others, in [VersionAspect]'s order ("4K Dolby Vision", "HD · Original, French subtitles"): a tag they all share
          * is left out. Two that would read the same add the words of their names the others lack ("Extended Cut"); a
-         * version without a tag next to tagged ones is "Standard"; labels still the same are numbered ("4K 1", "4K 2";
-         * "Version 1", "Version 2"): no two versions read the same. [categoryName] names a stream's category.
+         * version without a tag next to tagged ones is "Standard". Labels still the same add, in turn, the words of their
+         * categories' names the others lack, their container ("Standard · MKV", "Standard · MP4"), then the provider's
+         * words the chips have no word for ("DUB"); labels still the same are numbered ("4K 1", "4K 2"; "Version 1",
+         * "Version 2"): no two versions read the same. [categoryName] names a stream's category.
          */
         fun labels(versions: List<Movie>, categoryName: (String) -> String?, words: VersionWords = VersionWords()): List<String> {
             val tags = versions.map { labelTags(it.name, categoryName(it.categoryId)) }
@@ -636,7 +653,13 @@ class FilmVersions private constructor(
                 for (i in same) if (extras[i].isNotEmpty()) texts[i] = listOf(texts[i], extras[i]).filter { it.isNotEmpty() }.joinToString(" · ")
             }
             val anyTagged = texts.any { it.isNotEmpty() }
-            val labels = texts.map { if (it.isEmpty() && anyTagged) words.standard else it }
+            val labels = texts.mapTo(ArrayList(texts.size)) { if (it.isEmpty() && anyTagged) words.standard else it }
+            // Still the same: what else sets them apart, in this order: the words of their categories' names, their
+            // container ("MKV", "MP4"), then the provider's words the chips have no name for ("DUB").
+            setApart(labels) { same -> differingWords(same.map { categoryName(versions[it].categoryId).orEmpty() }) }
+            setApart(labels) { same -> same.map { container(versions[it]).orEmpty() } }
+            setApart(labels) { same -> differingWords(same.map { versions[it].name }, tagsOnly = true) }
+            if (labels.any { it.isNotEmpty() }) for (i in labels.indices) if (labels[i].isEmpty()) labels[i] = words.standard
             // Still the same: numbered, each of them.
             val counts = labels.groupingBy { it }.eachCount()
             val seen = HashMap<String, Int>()
@@ -649,6 +672,42 @@ class FilmVersions private constructor(
             // A number that made another version's own label ("4K 2" next to two "4K"): their positions tell them apart.
             return if (numbered.distinct().size == numbered.size) numbered else numbered.mapIndexed { i, label -> "$label (${i + 1})" }
         }
+
+        /**
+         * Labels that read the same get what [values] gives each of them (in the order of the group's indices), when
+         * those differ: "Standard · MKV" next to "Standard · MP4".
+         */
+        private fun setApart(labels: MutableList<String>, values: (List<Int>) -> List<String>) {
+            for (same in labels.indices.groupBy { labels[it] }.values) {
+                if (same.size < 2) continue
+                val found = values(same)
+                if (found.distinct().size < 2) continue
+                same.forEachIndexed { k, i -> if (found[k].isNotEmpty()) labels[i] = listOf(labels[i], found[k]).filter { it.isNotEmpty() }.joinToString(" · ") }
+            }
+        }
+
+        /**
+         * The words of each text that are not in every other one, years left out. The providers' tags are left out too,
+         * or, with [tagsOnly], they are the only words kept: those of a name the chips have no word for ("DUB", "TR").
+         */
+        private fun differingWords(texts: List<String>, tagsOnly: Boolean = false): List<String> {
+            val split = texts.map { text -> text.split(NAME_SEPARATORS).map { it.trim('-', '.', '*', '+', '"') }.filter { it.isNotEmpty() } }
+            val common = split.map { words -> words.flatMapTo(HashSet()) { TextNormalizer.normalize(it).split(' ') } }
+                .reduceOrNull { a, b -> a.apply { retainAll(b) } } ?: emptySet()
+            return split.map { words ->
+                words.filter { word ->
+                    val parts = TextNormalizer.normalize(word).split(' ').filter { it.isNotEmpty() }
+                    parts.isNotEmpty() && !parts.all { it in common || isYear(it) || (!tagsOnly && isNoise(it)) } &&
+                        (!tagsOnly || parts.all { it in common || isNoise(it) })
+                }.joinToString(" ")
+            }
+        }
+
+        /** A version's container in capitals ("MKV", "MP4", "HLS"): the provider's extension, else its address's. */
+        fun container(movie: Movie): String? =
+            movie.containerExtension?.let(MediaFormat::ofExtension) ?: MediaFormat.label(movie.streamUrl)
+
+        private fun isYear(word: String): Boolean = word.length == 4 && word.all { it in '0'..'9' } && word.toInt() in 1900..2099
 
         /** The words of each version's name that are not in every other one's, tags and years left out ("Extended Cut"). */
         private fun extraWords(versions: List<Movie>): List<String> {
@@ -665,8 +724,7 @@ class FilmVersions private constructor(
 
         /** A provider's tag, a part of one, or a year: never a word that tells a version apart. */
         private fun isNoise(word: String): Boolean =
-            word in TAG_WORDS || word in EDGE_CODES || word in TAG_PARTS || CatalogueMatcher.isTagWord(word) ||
-                (word.length == 4 && word.all { it in '0'..'9' } && word.toInt() in 1900..2099)
+            word in TAG_WORDS || word in EDGE_CODES || word in TAG_PARTS || CatalogueMatcher.isTagWord(word) || isYear(word)
 
         /** The names of a playlist's movie categories by id, for [labels]. */
         fun categoryNames(categories: List<MediaCategory>): (String) -> String? {
@@ -699,23 +757,34 @@ class FilmVersions private constructor(
             chosen: List<String>,
             support: PictureSupport,
             categoryName: (String) -> String?,
-        ): Movie? {
-            if (versions.size < 2) return versions.firstOrNull()
-            inProgress?.let { id -> versions.firstOrNull { it.id == id }?.let { return it } }
+        ): Movie? = defaultChoice(versions, inProgress, chosen, support, categoryName)?.first
+
+        /** [defaultVersion] and why it is that one; null without versions. */
+        fun defaultChoice(
+            versions: List<Movie>,
+            inProgress: String?,
+            chosen: List<String>,
+            support: PictureSupport,
+            categoryName: (String) -> String?,
+        ): Pair<Movie, DefaultReason>? {
+            if (versions.size < 2) return versions.firstOrNull()?.let { it to DefaultReason.ONLY }
+            inProgress?.let { id -> versions.firstOrNull { it.id == id }?.let { return it to DefaultReason.IN_PROGRESS } }
             if (chosen.isNotEmpty()) {
                 val ids = versions.mapTo(HashSet()) { it.id }
-                chosen.firstOrNull { it in ids }?.let { id -> return versions.first { it.id == id } }
+                chosen.firstOrNull { it in ids }?.let { id -> return versions.first { it.id == id } to DefaultReason.CHOSEN }
             }
             var best = versions.first()
             var bestScore = Int.MIN_VALUE
+            val scores = HashSet<Int>()
             for (movie in versions) {
                 val score = score(tags(movie.name, categoryName(movie.categoryId)), support)
+                scores.add(score)
                 if (score > bestScore) {
                     best = movie
                     bestScore = score
                 }
             }
-            return best
+            return best to if (scores.size > 1) DefaultReason.BEST_FOR_SCREEN else DefaultReason.FIRST
         }
     }
 

@@ -299,6 +299,24 @@ class FilmVersionsTest {
         assertNull(FilmVersions.defaultVersion(emptyList(), null, emptyList(), everything, names))
     }
 
+    /** The title data says why a film's card plays the version it plays. */
+    @Test
+    fun theDefaultVersionSaysWhy() {
+        val dv = movie("Sandstorm 4K DV", 2021)
+        val hd = movie("Sandstorm HD", 2021)
+        val vostfr = movie("Sandstorm VOSTFR", 2021)
+        val list = listOf(vostfr, dv, hd)
+        val names: (String) -> String? = { null }
+        val everything = PictureSupport(hdr = true, dolbyVision = true, uhd = true)
+        assertEquals(hd to DefaultReason.IN_PROGRESS, FilmVersions.defaultChoice(list, hd.id, listOf(dv.id), everything, names))
+        assertEquals(vostfr to DefaultReason.CHOSEN, FilmVersions.defaultChoice(list, null, listOf(vostfr.id), everything, names))
+        assertEquals(dv to DefaultReason.BEST_FOR_SCREEN, FilmVersions.defaultChoice(list, null, emptyList(), everything, names))
+        val plain = movie("Sandstorm VFF", 2021)
+        assertEquals(vostfr to DefaultReason.FIRST, FilmVersions.defaultChoice(listOf(vostfr, plain), null, emptyList(), everything, names))
+        assertEquals(dv to DefaultReason.ONLY, FilmVersions.defaultChoice(listOf(dv), null, emptyList(), everything, names))
+        assertNull(FilmVersions.defaultChoice(emptyList(), null, emptyList(), everything, names))
+    }
+
     /** Random catalogues: every stream in exactly one group, never two ids together, every grouping justified by a rule. */
     @Test
     fun randomCataloguesKeepEveryStreamOnce() {

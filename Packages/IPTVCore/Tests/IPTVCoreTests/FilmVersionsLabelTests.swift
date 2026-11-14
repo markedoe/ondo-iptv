@@ -8,6 +8,12 @@ final class FilmVersionsLabelTests: XCTestCase {
         struct Row: Decodable {
             var name: String
             var category: String?
+            var ext: String?
+
+            enum CodingKeys: String, CodingKey {
+                case name, category
+                case ext = "extension"
+            }
         }
         struct Case: Decodable {
             var name: String
@@ -17,9 +23,12 @@ final class FilmVersionsLabelTests: XCTestCase {
         var cases: [Case]
     }
 
-    private func labels(_ names: [String], categories: [String?]? = nil) -> [String] {
+    private func labels(_ names: [String], categories: [String?]? = nil, extensions: [String?]? = nil) -> [String] {
         let movies = names.enumerated().map { index, name in
-            Movie(id: "v\(index)", name: name, categoryID: "c\(index)", streamURL: URL(string: "http://stream.example.com/\(index)")!)
+            Movie(
+                id: "v\(index)", name: name, categoryID: "c\(index)", streamURL: URL(string: "http://stream.example.com/\(index)")!,
+                containerExtension: extensions?[index]
+            )
         }
         let byID = Dictionary(uniqueKeysWithValues: names.indices.map { ("c\($0)", categories?[$0]) })
         return FilmVersions.labels(movies, categoryName: { byID[$0] ?? nil })
@@ -33,7 +42,11 @@ final class FilmVersionsLabelTests: XCTestCase {
         let table = try JSONDecoder().decode(Table.self, from: Data(contentsOf: file))
         XCTAssertFalse(table.cases.isEmpty)
         for test in table.cases {
-            XCTAssertEqual(labels(test.rows.map(\.name), categories: test.rows.map(\.category)), test.labels, test.name)
+            XCTAssertEqual(
+                labels(test.rows.map(\.name), categories: test.rows.map(\.category), extensions: test.rows.map(\.ext)),
+                test.labels,
+                test.name
+            )
         }
     }
 
@@ -58,8 +71,8 @@ final class FilmVersionsLabelTests: XCTestCase {
     }
 
     /// Every word the grouping reads as a provider's tag (`CatalogueMatcher`'s version and quality words) names its
-    /// version next to a plain one, but those that say nothing of the copy ("DUB": dubbed into what?) or name a language
-    /// the apps have no word for.
+    /// version next to a plain one; those that say nothing of the copy ("DUB": dubbed into what?) or name a language the
+    /// apps have no word for are shown as the name writes them.
     func testEveryTagWordOfTheGroupingNamesItsVersion() {
         let unnamed: Set<String> = ["dub", "dubbed", "sub", "tr", "nl", "pl"]
         let words = [
@@ -72,7 +85,7 @@ final class FilmVersionsLabelTests: XCTestCase {
             XCTAssertTrue(CatalogueMatcher.isTagWord(word), word)
             let result = labels(["Copper Valley \(tag)", "Copper Valley"])
             if unnamed.contains(word) {
-                XCTAssertEqual(result, ["Version 1", "Version 2"], word)
+                XCTAssertEqual(result, [tag, "Standard"], word)
             } else {
                 XCTAssertNotEqual(result[0], "Standard", "\(tag) -> \(result)")
                 XCTAssertFalse(result[0].hasPrefix("Version"), "\(tag) -> \(result)")
