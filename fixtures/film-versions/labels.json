@@ -163,6 +163,31 @@
       "labels": ["DUB", "Standard"]
     },
     {
+      "name": "a language word of the title every version shares is no tag",
+      "rows": [{"name": "The English Orchard"}, {"name": "The English Orchard MULTI"}],
+      "labels": ["Standard", "Multilingual"]
+    },
+    {
+      "name": "French in the shared title, French from Quebec in one version",
+      "rows": [{"name": "French Lantern"}, {"name": "French Lantern VFQ"}],
+      "labels": ["Standard", "French (Quebec)"]
+    },
+    {
+      "name": "a title's first word in capitals is no language code",
+      "rows": [{"name": "IT WAITS BELOW"}, {"name": "FR - IT WAITS BELOW"}],
+      "labels": ["Standard", "French"]
+    },
+    {
+      "name": "a language code between brackets",
+      "rows": [{"name": "[IT] Copper Valley"}, {"name": "Copper Valley"}],
+      "labels": ["Italian", "Standard"]
+    },
+    {
+      "name": "a no-break space separates words as a space does",
+      "rows": [{"name": "Copper Valley Extended"}, {"name": "Copper Valley"}],
+      "labels": ["Extended", "Standard"]
+    },
+    {
       "name": "a year alone tells nothing apart",
       "rows": [{"name": "Copper Valley (2026)"}, {"name": "Copper Valley"}],
       "labels": ["Version 1", "Version 2"]

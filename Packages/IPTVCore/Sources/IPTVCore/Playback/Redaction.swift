@@ -22,7 +22,8 @@ public enum Redaction {
     /// masked.
     public static func clean(_ text: String, secrets: [String] = []) -> String {
         var result = text
-        let masked = secrets.map { $0.trimmingCharacters(in: .whitespaces) }.filter { $0.count >= 3 }.sorted { $0.count > $1.count }
+        var seen = Set<String>()
+        let masked = secrets.map { $0.trimmingCharacters(in: .whitespaces) }.filter { $0.count >= 3 && seen.insert($0).inserted }.sorted { $0.count > $1.count }
         for secret in masked {
             result = result.replacingOccurrences(of: secret, with: mask, options: .caseInsensitive)
         }
@@ -32,6 +33,48 @@ public enum Redaction {
         result = replace(ipAddress, in: result, with: mask)
         result = replace(hostPort, in: result, with: mask)
         return result
+    }
+
+    // swiftlint:disable:next force_try
+    private static let providerID = try! NSRegularExpression(pattern: #"^[A-Za-z]{0,2}-?[0-9]{1,12}(?:-[0-9]{1,4})?$"#)
+
+    /// `id` when it is a provider's number ("x1234", "98765"), else nil. The M3U reader's ids are a hash of
+    /// the stream's address, login and password included: a photo of one would let anyone check guesses offline, so
+    /// they never show.
+    public static func shownID(_ id: String) -> String? {
+        providerID.firstMatch(in: id, range: NSRange(id.startIndex..., in: id)) == nil ? nil : id
+    }
+
+    /// What a playlist's `addresses` (its link or server, its guides) and `login` are made of, to mask with `clean`:
+    /// the login and password, each address's host (with or without a scheme), its user part, and its query's values,
+    /// as written and percent-decoded.
+    public static func secrets(addresses: [String], login: [String?] = []) -> [String] {
+        var result = login.compactMap { $0 }
+        func add(_ value: String) {
+            result.append(value)
+            result.append(value.removingPercentEncoding ?? value)
+        }
+        for address in addresses {
+            var text = address.trimmingCharacters(in: .whitespaces)
+            guard !text.isEmpty else { continue }
+            if !text.contains("://") { text = "http://" + text }
+            guard let scheme = text.range(of: "://") else { continue }
+            let rest = text[scheme.upperBound...]
+            let authority = rest.prefix { $0 != "/" && $0 != "?" && $0 != "#" }
+            var hostPort = authority[...]
+            if let at = authority.lastIndex(of: "@") {
+                authority[..<at].split(separator: ":").forEach { add(String($0)) }
+                hostPort = authority[authority.index(after: at)...]
+            }
+            result.append(hostPort.hasPrefix("[") ? String(hostPort.dropFirst().prefix { $0 != "]" }) : String(hostPort.prefix { $0 != ":" }))
+            if let mark = rest.firstIndex(of: "?") {
+                for pair in rest[rest.index(after: mark)...].prefix(while: { $0 != "#" }).split(separator: "&", omittingEmptySubsequences: false) {
+                    if let equals = pair.firstIndex(of: "=") { add(String(pair[pair.index(after: equals)...])) }
+                }
+            }
+        }
+        var seen = Set<String>()
+        return result.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty && seen.insert($0).inserted }
     }
 
     private static func replace(_ regex: NSRegularExpression, in text: String, with template: String) -> String {

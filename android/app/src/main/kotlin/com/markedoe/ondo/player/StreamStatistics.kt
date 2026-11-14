@@ -209,7 +209,7 @@ fun TitleDataVersion(
         )
         Text(version.name, color = Color.White, style = style, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(
-            listOfNotNull(version.category, "id ${version.id}", version.container, version.tags).joinToString("  ·  "),
+            listOfNotNull(version.category, version.shownId?.let { "id $it" }, version.container, version.tags).joinToString("  ·  "),
             color = Color.White.copy(alpha = 0.7f),
             style = style,
             maxLines = 2,

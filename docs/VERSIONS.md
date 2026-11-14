@@ -55,9 +55,14 @@ Only movies, and only within one playlist (live channels and series are never gr
     H.265, x265);
   - language: Multilingual (MULTI, DUAL), French (France) (VFF, TRUEFRENCH), French (Quebec) (VFQ), French
     (international) (VFI), French (VF, FRENCH), Original language (VO), English, Spanish, German, Italian, Portuguese,
-    Arabic (the word, or a code in capitals at either end of the name or the category: "FR - …", "|EN| Movies");
+    Arabic (the word, or a code in capitals at either end of the name or the category, set apart by a provider's
+    delimiter: "FR - …", "|EN| Movies", "[IT] …", "… (DE)"; the first word of "IT WAITS BELOW" is no code);
   - subtitles: Original, French subtitles (VOSTFR, STFR, SUBFR, ST FR, FR SUB), Original, subtitled (VOST, VOSTA,
     SUBBED).
+
+  A tag word that is also a word of titles (English, French, Spanish, German, Italian, Portuguese, Arabic, Dual, VO, SD)
+  is a tag only outside the words every version's name shares: "The English Orchard" and "The English Orchard MULTI"
+  read "Standard" and "Multilingual". A no-break space separates words as a space does.
 
   A chip names only what differs between the versions, in that order ("4K Dolby Vision", "HD · Original, French
   subtitles"): a tag every version has is left out. Two versions that would read the same add the words of their names
@@ -69,7 +74,8 @@ Only movies, and only within one playlist (live channels and series are never gr
   Dolby Vision". The version picked plays; Play, the progress and the format badge are its own.
 - **Title data**: what the app read from the provider for a title, to photograph when a chip reads wrong. In the
   player, More, Stream Statistics shows it next to the statistics (both apps): the title shown, the provider's name,
-  ids, category (name and id), year, the tags read, the TMDb ids (the provider's list, its details, and on Android the
+  ids (a provider's number only, never an M3U playlist's, which is a hash of the stream's address), category (name and
+  id), year, the tags read, the TMDb ids (the provider's list, its details, and on Android the
   title matched), the container; for a film's versions (four at most, the one playing first), each one's chip, name,
   category, id, container and tags, the one playing, the one played first and why; for an episode, its raw title and
   its series' name. On a TV, OK held on a version's chip of a film's page shows the same for every version, each a stop

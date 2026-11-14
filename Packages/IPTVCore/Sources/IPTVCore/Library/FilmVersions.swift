@@ -556,12 +556,34 @@ public struct FilmVersions: Sendable {
 
     private static let nameSeparators = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "|[](){}:·_,/"))
 
+    /// Tag words that are also ordinary words of titles ("The English Orchard", "French Lantern", "Dual Harbor"): in a
+    /// version's name, tags only outside the title its versions share (`labelTags` of a film's versions).
+    private static let titleLike: Set<String> = [
+        "english", "french", "spanish", "espanol", "castellano", "german", "deutsch", "italian", "italiano", "portuguese",
+        "portugues", "arabic", "dual", "vo", "sd",
+    ]
+
+    /// A language's code before a name, set apart by a provider's delimiter: "FR - …", "|EN| …", "[IT] …", "DE: …"; not a
+    /// title's first word ("IT WAITS BELOW").
+    // swiftlint:disable:next force_try
+    private static let prefixCode = try! NSRegularExpression(pattern: #"^\s*[\[(|]?\s*([A-Z]{2,3})\s*[\])|:\-–·]"#)
+    /// A language's code after a name, set apart the same way: "… (DE)", "… - EN", "… |FR|".
+    // swiftlint:disable:next force_try
+    private static let suffixCode = try! NSRegularExpression(pattern: #"[\[(|\-–:·]\s*([A-Z]{2,3})\s*[\])|]?\s*$"#)
+
     /// The tags of a version, from its name and its category's name, in `VersionTag`'s order; 4K leaves HD out.
     public static func tags(name: String, categoryName: String?) -> [VersionTag] {
+        tags(name: name, categoryName: categoryName, titleWords: [])
+    }
+
+    /// `tags`, the words of `titleWords` that are also title words (`titleLike`) not read as tags in the name.
+    private static func tags(name: String, categoryName: String?, titleWords: Set<String>) -> [VersionTag] {
         var found = Set<VersionTag>()
-        for text in [name, categoryName].compactMap({ $0 }) {
+        for (which, text) in [name, categoryName].enumerated() {
+            guard let text else { continue }
             let words = TextNormalizer.normalize(text).split(separator: " ").map(String.init)
             for (index, word) in words.enumerated() {
+                if which == 0 && titleWords.contains(word) && titleLike.contains(word) { continue }
                 if let tag = tagWords[word] { found.insert(tag) }
                 let next = index + 1 < words.count ? words[index + 1] : nil
                 if word == "dolby" && next == "vision" { found.insert(.dolbyVision) }
@@ -590,18 +612,29 @@ public struct FilmVersions: Sendable {
         return text.components(separatedBy: nameSeparators).map { $0.trimmingCharacters(in: edges) }.filter { !$0.isEmpty }
     }
 
-    /// `tags`, with a language's code at either end of the name or the category (`edgeCodes`): a chip's tags.
-    public static func labelTags(name: String, categoryName: String?) -> [VersionTag] {
-        var found = Set(tags(name: name, categoryName: categoryName))
+    /// `tags`, with a language's code in capitals at either end of the name or the category, set apart by a provider's
+    /// delimiter (`prefixCode`, `suffixCode`, `edgeCodes`): a chip's tags. `titleWords`: see `tags`.
+    public static func labelTags(name: String, categoryName: String?, titleWords: Set<String> = []) -> [VersionTag] {
+        var found = Set(tags(name: name, categoryName: categoryName, titleWords: titleWords))
         for text in [name, categoryName].compactMap({ $0 }) {
-            let words = nameWords(text, trimming: "-.")
-            for word in [words.first, words.last].compactMap({ $0 }) {
-                if (2...3).contains(word.count), word.allSatisfy({ $0.isASCII && $0.isUppercase }), let tag = edgeCodes[word.lowercased()] {
-                    found.insert(tag)
-                }
+            for pattern in [prefixCode, suffixCode] {
+                guard let match = pattern.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+                      let range = Range(match.range(at: 1), in: text),
+                      let tag = edgeCodes[text[range].lowercased()] else { continue }
+                found.insert(tag)
             }
         }
         return tidy(found)
+    }
+
+    /// The chip tags of a film's `versions`, in their order: a title word that is also a tag ("English", "French",
+    /// "Dual") counts only outside the words every version's name shares ("The English Orchard" and "The English
+    /// Orchard MULTI" differ by Multilingual only).
+    public static func labelTags(_ versions: [Movie], categoryName: (String) -> String?) -> [[VersionTag]] {
+        let shared: Set<String> = versions.count < 2 ? [] : versions
+            .map { Set(TextNormalizer.normalize($0.name).split(separator: " ").map(String.init)) }
+            .reduce(nil as Set<String>?) { $0?.intersection($1) ?? $1 } ?? []
+        return versions.map { labelTags(name: $0.name, categoryName: categoryName($0.categoryID), titleWords: shared) }
     }
 
     /// What a film's `versions` say on their chips, in their order, in `words`. Each names what sets it apart from the
@@ -612,7 +645,7 @@ public struct FilmVersions: Sendable {
     /// have no word for ("DUB"); labels still the same are numbered ("4K 1", "4K 2"; "Version 1", "Version 2"): no two
     /// versions read the same. `categoryName` names a stream's category. The same rules as Android's.
     public static func labels(_ versions: [Movie], categoryName: (String) -> String?, words: VersionWords = VersionWords()) -> [String] {
-        let tags = versions.map { labelTags(name: $0.name, categoryName: categoryName($0.categoryID)) }
+        let tags = labelTags(versions, categoryName: categoryName)
         // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
         let differing = Set(VersionAspect.allCases.filter { aspect in Set(tags.map { $0.filter { $0.aspect == aspect } }).count > 1 })
         var texts = tags.map { list -> String in

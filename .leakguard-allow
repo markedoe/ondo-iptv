@@ -16,3 +16,5 @@
 # The made-up login of the title data redaction tests (RedactionTest, TitleDataTest, fixtures/title-data): what must be masked.
 \bs3cret-pass\b
 \bdemo:hunter22@panel\.example\.com\b
+\bpa%2Bss99\b
+\bvipname:pw-9871@list\.example\.com\b

@@ -18,13 +18,31 @@ import org.junit.Rule
 class RedactionTest {
     @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
 
+    private val table = Json.parseToJsonElement(File("../../fixtures/title-data/redaction.json").readText()).jsonObject
+
     @Test
     fun everyCaseReadsAsWritten() {
-        val cases = Json.parseToJsonElement(File("../../fixtures/title-data/redaction.json").readText()).jsonObject["cases"]!!.jsonArray
+        val cases = table["cases"]!!.jsonArray
         assertTrue(cases.isNotEmpty())
         for (case in cases.map { it.jsonObject }) {
-            val secrets = case["secrets"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
+            val playlist = case["playlist"]?.jsonObject
+            val secrets = case["secrets"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty() + Redaction.secretsOf(
+                playlist?.get("addresses")?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
+                playlist?.get("login")?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
+            )
             assertEquals(case["out"]!!.jsonPrimitive.content, Redaction.clean(case["in"]!!.jsonPrimitive.content, secrets), case["name"]!!.jsonPrimitive.content)
+        }
+    }
+
+    /** A provider's number shows; the M3U reader's hash of an address (its login and password in it) never does. */
+    @Test
+    fun onlyAProvidersIdShows() {
+        val ids = table["ids"]!!.jsonArray.map { it.jsonObject }
+        assertTrue(ids.isNotEmpty())
+        for (row in ids) {
+            val id = row["id"]!!.jsonPrimitive.content
+            val shown = row["shown"]!!.jsonPrimitive.content.toBoolean()
+            assertEquals(if (shown) id else null, Redaction.shownId(id), id)
         }
     }
 

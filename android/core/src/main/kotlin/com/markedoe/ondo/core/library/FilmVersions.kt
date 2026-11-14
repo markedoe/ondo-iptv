@@ -585,14 +585,38 @@ class FilmVersions private constructor(
         /** Words of a provider's tag in two words ("Dolby Vision", "H 265", "ST FR"): never a word of a version's own. */
         private val TAG_PARTS = setOf("dolby", "vision", "h", "265", "st", "sub", "fr")
 
-        private val NAME_SEPARATORS = Regex("""[\s|\[\](){}:·_,/]+""")
+        /** Unicode whitespace (a no-break space too), as Apple's `CharacterSet.whitespacesAndNewlines`. */
+        private val NAME_SEPARATORS = Regex("""(?U)[\s|\[\](){}:·_,/]+""")
+
+        /**
+         * Tag words that are also ordinary words of titles ("The English Orchard", "French Lantern", "Dual Harbor"): in a
+         * version's name, tags only outside the title its versions share ([labelTags] of a film's versions).
+         */
+        private val TITLE_LIKE = setOf(
+            "english", "french", "spanish", "espanol", "castellano", "german", "deutsch", "italian", "italiano", "portuguese",
+            "portugues", "arabic", "dual", "vo", "sd",
+        )
+
+        /**
+         * A language's code before a name, set apart by a provider's delimiter: "FR - …", "|EN| …", "[IT] …", "DE: …";
+         * not a title's first word ("IT WAITS BELOW").
+         */
+        private val PREFIX_CODE = Regex("""(?U)^\s*[\[(|]?\s*([A-Z]{2,3})\s*[\])|:\-–·]""")
+
+        /** A language's code after a name, set apart the same way: "… (DE)", "… - EN", "… |FR|". */
+        private val SUFFIX_CODE = Regex("""(?U)[\[(|\-–:·]\s*([A-Z]{2,3})\s*[\])|]?\s*$""")
 
         /** The tags of a version, from its name and its category's name, in [VersionTag]'s order; 4K leaves HD out. */
-        fun tags(name: String, categoryName: String?): List<VersionTag> {
+        fun tags(name: String, categoryName: String?): List<VersionTag> = tags(name, categoryName, emptySet())
+
+        /** [tags], the words of [titleWords] that are also title words ([TITLE_LIKE]) not read as tags in the name. */
+        private fun tags(name: String, categoryName: String?, titleWords: Set<String>): List<VersionTag> {
             val found = java.util.EnumSet.noneOf(VersionTag::class.java)
-            for (text in listOfNotNull(name, categoryName)) {
+            for ((which, text) in listOf(name, categoryName).withIndex()) {
+                if (text == null) continue
                 val words = TextNormalizer.normalize(text).split(' ')
                 for ((index, word) in words.withIndex()) {
+                    if (which == 0 && word in titleWords && word in TITLE_LIKE) continue
                     TAG_WORDS[word]?.let(found::add)
                     val next = words.getOrNull(index + 1)
                     if (word == "dolby" && next == "vision") found.add(VersionTag.DOLBY_VISION)
@@ -615,17 +639,30 @@ class FilmVersions private constructor(
             return found.toList()
         }
 
-        /** [tags], with a language's code at either end of the name or the category ([EDGE_CODES]): a chip's tags. */
-        fun labelTags(name: String, categoryName: String?): List<VersionTag> {
+        /**
+         * [tags], with a language's code in capitals at either end of the name or the category, set apart by a provider's
+         * delimiter ([PREFIX_CODE], [SUFFIX_CODE], [EDGE_CODES]): a chip's tags. [titleWords]: see [tags].
+         */
+        fun labelTags(name: String, categoryName: String?, titleWords: Set<String> = emptySet()): List<VersionTag> {
             val found = java.util.EnumSet.noneOf(VersionTag::class.java)
-            found.addAll(tags(name, categoryName))
+            found.addAll(tags(name, categoryName, titleWords))
             for (text in listOfNotNull(name, categoryName)) {
-                val words = text.split(NAME_SEPARATORS).map { it.trim('-', '.') }.filter { it.isNotEmpty() }
-                for (word in listOfNotNull(words.firstOrNull(), words.lastOrNull())) {
-                    if (word.length in 2..3 && word.all { it in 'A'..'Z' }) EDGE_CODES[word.lowercase()]?.let(found::add)
+                for (pattern in listOf(PREFIX_CODE, SUFFIX_CODE)) {
+                    pattern.find(text)?.groupValues?.get(1)?.let { EDGE_CODES[it.lowercase()] }?.let(found::add)
                 }
             }
             return tidy(found)
+        }
+
+        /**
+         * The chip tags of a film's [versions], in their order: a title word that is also a tag ("English", "French",
+         * "Dual") counts only outside the words every version's name shares ("The English Orchard" and "The English
+         * Orchard MULTI" differ by Multilingual only).
+         */
+        fun labelTags(versions: List<Movie>, categoryName: (String) -> String?): List<List<VersionTag>> {
+            val shared: Set<String> = if (versions.size < 2) emptySet() else
+                versions.map { TextNormalizer.normalize(it.name).split(' ').toHashSet() }.reduce { a, b -> a.apply { retainAll(b) } }
+            return versions.map { labelTags(it.name, categoryName(it.categoryId), shared) }
         }
 
         /**
@@ -638,7 +675,7 @@ class FilmVersions private constructor(
          * "Version 2"): no two versions read the same. [categoryName] names a stream's category.
          */
         fun labels(versions: List<Movie>, categoryName: (String) -> String?, words: VersionWords = VersionWords()): List<String> {
-            val tags = versions.map { labelTags(it.name, categoryName(it.categoryId)) }
+            val tags = labelTags(versions, categoryName)
             // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
             val differing = VersionAspect.entries.filter { aspect -> tags.map { list -> list.filter { it.aspect == aspect } }.distinct().size > 1 }
             val texts = tags.map { list ->

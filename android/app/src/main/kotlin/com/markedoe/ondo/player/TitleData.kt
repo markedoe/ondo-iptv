@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.DefaultReason
 import com.markedoe.ondo.core.library.FilmVersions
+import com.markedoe.ondo.core.library.VersionTag
 import com.markedoe.ondo.core.library.VersionWords
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.playback.MediaFormat
@@ -35,7 +36,10 @@ data class TitleData(
         val name: String,
         /** "Films 4K (12)": the category's name and id. */
         val category: String,
+        /** Its stream's id in the catalogue, for the app only (a hash of its address in an M3U playlist). */
         val id: String,
+        /** [id] when the panel may show it: a provider's number, never the M3U reader's hash ([Redaction.shownId]). */
+        val shownId: String?,
         /** "MKV", "MP4", "HLS"…; the provider's extension as given when the app does not know it. */
         val container: String?,
         /** The tags the version rules read ("UHD, DOLBY_VISION"); empty for none. */
@@ -83,18 +87,21 @@ data class TitleData(
         ): TitleData {
             val categoryName = FilmVersions.categoryNames(state.content.movieCategories)
             val category = categoryName(movie.categoryId)
+            val all = UiMappers.films(state).versions(movie).distinctBy { it.id }
+            // The tags as the chips read them: a title word shared by every version ("The English Orchard") is no tag.
+            val tagsOf: Map<String, List<VersionTag>> = if (all.size < 2) emptyMap() else all.map { it.id }.zip(FilmVersions.labelTags(all, categoryName)).toMap()
             val lines = listOfNotNull(
                 Line("", clean(shownTitle), R.string.title_data_shown),
                 Line("name", clean(movie.name)),
-                Line("id", clean(movie.id)),
+                // Never the M3U reader's ids: a hash of the stream's address, its login and password included.
+                Redaction.shownId(movie.id)?.let { Line("id", it) },
                 movie.xtreamStreamId?.let { Line("stream_id", it.toString()) },
                 Line("category", clean(categoryText(category, movie.categoryId))),
                 movie.year?.let { Line("year", it.toString()) },
-                Line("", tagText(movie.name, category), R.string.title_data_tags),
+                Line("", tagText(tagsOf[movie.id] ?: FilmVersions.labelTags(movie.name, category)), R.string.title_data_tags),
                 Line("tmdb", tmdbText(movie.tmdbId?.toString(), state.movieDetails[movie.id]?.tmdbId, matchedTmdb, clean)),
                 Line("container_extension", clean(containerText(movie))),
             )
-            val all = UiMappers.films(state).versions(movie).distinctBy { it.id }
             if (all.size < 2) return TitleData(lines)
             val visible = UiMappers.visibleVersions(state, movie)
             val chips = if (visible.size > 1) FilmVersions.labels(visible, categoryName, words) else emptyList()
@@ -106,9 +113,10 @@ data class TitleData(
                     chip = chipOf[version.id]?.let(clean),
                     name = clean(version.name),
                     category = clean(categoryText(name, version.categoryId)),
-                    id = clean(version.id),
+                    id = version.id,
+                    shownId = Redaction.shownId(version.id),
                     container = containerText(version).let(clean).ifEmpty { null },
-                    tags = tagText(version.name, name),
+                    tags = tagText(tagsOf[version.id] ?: FilmVersions.labelTags(version.name, name)),
                     playing = version.id == movie.id,
                     first = version.id == first.id,
                 )
@@ -133,12 +141,12 @@ data class TitleData(
                 listOfNotNull(
                     Line("", clean(shownTitle), R.string.title_data_shown),
                     Line("series_name", clean(series.name)),
-                    Line("series_id", clean(series.id)),
+                    Redaction.shownId(series.id)?.let { Line("series_id", it) },
                     Line("category", clean(categoryText(category, series.categoryId))),
                     series.year?.let { Line("year", it.toString()) },
                     Line("tmdb", tmdbText(null, details?.info?.tmdbId, matchedTmdb, clean)),
                     episode?.let { Line("episode_title", clean(it.title)) },
-                    Line("episode_id", clean(episodeId)),
+                    Redaction.shownId(episodeId)?.let { Line("episode_id", it) },
                     episode?.let { Line("episode", it.code) },
                     episode?.let { Line("container_extension", MediaFormat.label(it.streamUrl) ?: "–") },
                 ),
@@ -147,8 +155,7 @@ data class TitleData(
 
         private fun categoryText(name: String?, id: String) = "${name ?: "–"} ($id)"
 
-        private fun tagText(name: String, category: String?) =
-            FilmVersions.labelTags(name, category).joinToString(", ") { it.name }.ifEmpty { "–" }
+        private fun tagText(tags: List<VersionTag>) = tags.joinToString(", ") { it.name }.ifEmpty { "–" }
 
         /** The provider's list's id, its details' id, the app's match: "550 · 550 · 550", "–" for each one missing. */
         private fun tmdbText(list: String?, details: String?, matched: Int?, clean: (String) -> String) =
@@ -166,22 +173,12 @@ data class TitleData(
         }
 
         /**
-         * What the active playlist's login is made of: its login, password and server, and the values of its address's
-         * query (an M3U link's `username=…&password=…`): masked wherever they appear.
+         * What the active playlist's login is made of: its login, password and server (with or without a scheme), the
+         * user part and the query values of its addresses, as written and percent-decoded (`Redaction.secretsOf`).
          */
         fun secrets(state: OndoState): List<String> {
             val playlist = state.activePlaylist ?: return emptyList()
-            val result = ArrayList<String>()
-            playlist.username?.let(result::add)
-            playlist.password?.let(result::add)
-            for (address in listOfNotNull(playlist.url, playlist.epgUrl)) {
-                runCatching { java.net.URI(address.trim()) }.getOrNull()?.let { uri ->
-                    uri.host?.let(result::add)
-                    uri.rawQuery?.split('&')?.mapNotNullTo(result) { it.substringAfter('=', "").takeIf { v -> v.isNotEmpty() } }
-                    uri.rawUserInfo?.split(':')?.let(result::addAll)
-                }
-            }
-            return result
+            return Redaction.secretsOf(listOfNotNull(playlist.url, playlist.epgUrl), listOf(playlist.username, playlist.password))
         }
     }
 }

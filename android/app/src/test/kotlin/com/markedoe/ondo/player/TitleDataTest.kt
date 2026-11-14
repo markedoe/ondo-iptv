@@ -61,7 +61,7 @@ class TitleDataTest {
     }
 
     private fun everyText(data: TitleData): List<String> =
-        data.lines.map { it.value } + data.versions.flatMap { listOfNotNull(it.chip, it.name, it.category, it.id, it.container, it.tags) }
+        data.lines.map { it.value } + data.versions.flatMap { listOfNotNull(it.chip, it.name, it.category, it.shownId, it.container, it.tags) }
 
     @Test
     fun aFilmShowsItsVersionsAndTheirChips() {
@@ -106,10 +106,35 @@ class TitleDataTest {
         val lines = data.lines.associate { it.key to it.value }
         assertEquals("Harbor Lights", lines["series_name"])
         assertEquals(episode.title, lines["episode_title"])
-        assertEquals(episode.id, lines["episode_id"])
+        assertNull("not a provider's number: never shown", lines["episode_id"])
         assertEquals("S01E01", lines["episode"])
         assertEquals("MP4", lines["container_extension"])
         assertTrue(data.versions.isEmpty())
+    }
+
+    /**
+     * An M3U playlist's ids are a hash of each stream's address, its login and password included: no text of the panel
+     * holds one, nor any part of one longer than 4 characters.
+     */
+    @Test
+    fun anM3uPlaylistsIdsNeverShow() {
+        val m3u = SavedPlaylist(id = Fixtures.PLAYLIST_ID, name = "List", url = "http://list.example.com/get.php?username=demouser&password=s3cret-pass")
+        val hashed = listOf(
+            plain.copy(id = "m3fa9c01b2e44d7a1", xtreamStreamId = null),
+            dv.copy(id = "m0b1c2d3e4f5a6b7c", xtreamStreamId = null),
+            other.copy(id = "m3fa9c01b2e44d7a1-2", xtreamStreamId = null),
+        )
+        val state = state().let { it.copy(playlists = listOf(m3u), content = it.content.copy(movies = Fixtures.content.movies + hashed)) }
+        for (version in hashed) {
+            val data = TitleData.of(state, "${Fixtures.PLAYLIST_ID}|MOVIE|${version.id}|", shownTitle = "Copper Valley")!!
+            assertEquals(3, data.versions.size)
+            for (text in everyText(data)) {
+                for (id in hashed.map { it.id }) {
+                    for (start in 0..id.length - 5) assertFalse("${id.substring(start, start + 5)} in $text", id.substring(start, start + 5) in text)
+                }
+            }
+            assertTrue(data.lines.none { it.key == "id" })
+        }
     }
 
     @Test

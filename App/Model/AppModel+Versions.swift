@@ -51,10 +51,19 @@ extension AppModel {
 
     /// What the chips of a film's versions say, in their order, in the app's language (`FilmVersions.labels`): what sets
     /// each apart ("4K Dolby Vision", "Original, French subtitles", "Standard").
+    /// Worked out once per catalogue and set of versions (`versionLabelsCache`, emptied with each catalogue), in words
+    /// read once (`versionWords`): a film's page and its Continue Watching card ask on every pass of their body.
     func versionLabels(_ versions: [Movie]) -> [String] {
+        let key = versions.map(\.id).joined(separator: "\u{1F}")
+        if let known = versionLabelsCache[key], known.count == versions.count { return known }
         let names = categoryNames
-        return FilmVersions.labels(versions, categoryName: { names[$0] }, words: .app())
+        let labels = FilmVersions.labels(versions, categoryName: { names[$0] }, words: Self.versionWords)
+        versionLabelsCache[key] = labels
+        return labels
     }
+
+    /// The words of the chips in the app's language, read once.
+    static let versionWords = VersionWords.app()
 
     var categoryNames: [String: String] {
         Dictionary(content.movieCategories.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })

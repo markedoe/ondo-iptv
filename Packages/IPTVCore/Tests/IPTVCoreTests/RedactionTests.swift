@@ -10,24 +10,48 @@ final class RedactionTests: XCTestCase {
             var input: String
             var out: String
             var secrets: [String]?
+            var playlist: PlaylistParts?
 
             enum CodingKeys: String, CodingKey {
-                case name, out, secrets
+                case name, out, secrets, playlist
                 case input = "in"
             }
         }
+        struct PlaylistParts: Decodable {
+            var addresses: [String]?
+            var login: [String]?
+        }
+        struct IDRow: Decodable {
+            var id: String
+            var shown: Bool
+        }
         var cases: [Case]
+        var ids: [IDRow]
     }
 
-    func testEveryCaseReadsAsWritten() throws {
+    private func loadTable() throws -> Table {
         let file = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("fixtures/title-data/redaction.json")
-        let table = try JSONDecoder().decode(Table.self, from: Data(contentsOf: file))
+        return try JSONDecoder().decode(Table.self, from: Data(contentsOf: file))
+    }
+
+    func testEveryCaseReadsAsWritten() throws {
+        let table = try loadTable()
         XCTAssertFalse(table.cases.isEmpty)
         for test in table.cases {
-            XCTAssertEqual(Redaction.clean(test.input, secrets: test.secrets ?? []), test.out, test.name)
+            let secrets = (test.secrets ?? []) + Redaction.secrets(addresses: test.playlist?.addresses ?? [], login: test.playlist?.login ?? [])
+            XCTAssertEqual(Redaction.clean(test.input, secrets: secrets), test.out, test.name)
+        }
+    }
+
+    /// A provider's number shows; the M3U reader's hash of an address (its login and password in it) never does.
+    func testOnlyAProvidersIDShows() throws {
+        let ids = try loadTable().ids
+        XCTAssertFalse(ids.isEmpty)
+        for row in ids {
+            XCTAssertEqual(Redaction.shownID(row.id), row.shown ? row.id : nil, row.id)
         }
     }
 

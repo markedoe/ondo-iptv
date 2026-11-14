@@ -1,5 +1,5 @@
 {
-  "about": "What the player's title data shows of a provider's text: no address, login, password, query value, IP address or host:port, and the playlist's own login, password and server masked wherever they appear. The same file for Android's RedactionTest and Apple's RedactionTests. Invented values only.",
+  "about": "What the player's title data shows of a provider's text: no address, login, password, query value, IP address or host:port, and the playlist's own login, password and server masked wherever they appear (a case's \"playlist\": its addresses and login, read by Redaction.secretsOf). \"ids\": which ids the panel may show (a provider's number, never the M3U reader's hash of an address). The same file for Android's RedactionTest and Apple's RedactionTests. Invented values only.",
   "cases": [
     {"name": "a title stays as it is", "in": "Copper Valley 4K DV (2026)", "out": "Copper Valley 4K DV (2026)"},
     {"name": "a title's own colon and at sign stay", "in": "Copper Valley: Night @ Sea", "out": "Copper Valley: Night @ Sea"},
@@ -10,6 +10,35 @@
     {"name": "an IP address and its port", "in": "Copper Valley 203.0.113.7:8080", "out": "Copper Valley •••"},
     {"name": "a host and its port", "in": "server panel.example.com:8080 down", "out": "server ••• down"},
     {"name": "the playlist's login and password", "in": "VIP-demouser Copper Valley Pa55word", "out": "VIP-••• Copper Valley •••", "secrets": ["demouser", "pa55word"]},
-    {"name": "a secret too short to mask", "in": "Copper Valley ab", "out": "Copper Valley ab", "secrets": ["ab"]}
+    {"name": "a secret too short to mask", "in": "Copper Valley ab", "out": "Copper Valley ab", "secrets": ["ab"]},
+    {
+      "name": "a server written without a scheme",
+      "in": "Copper Valley panel.example.com",
+      "playlist": {"addresses": ["panel.example.com:8080"], "login": ["demouser", "s3cret-pass"]},
+      "out": "Copper Valley •••"
+    },
+    {
+      "name": "percent-encoded query values, masked decoded too",
+      "in": "VIP demo user pa+ss99 Copper Valley demo%20user",
+      "playlist": {"addresses": ["http://list.example.com/get.php?username=demo%20user&password=pa%2Bss99&type=m3u"]},
+      "out": "VIP ••• ••• Copper Valley •••"
+    },
+    {
+      "name": "a user part in the address",
+      "in": "Copper Valley vipname",
+      "playlist": {"addresses": ["https://vipname:pw-9871@list.example.com/x.m3u"]},
+      "out": "Copper Valley •••"
+    },
+    {"name": "an address ends at a no-break space", "in": "http://panel.example.com/x Copper Valley", "out": "••• Copper Valley"}
+  ],
+  "ids": [
+    {"id": "x12345", "shown": true},
+    {"id": "s4321", "shown": true},
+    {"id": "98765", "shown": true},
+    {"id": "x12345-2", "shown": true},
+    {"id": "m3fa9c01b2e44d7a1", "shown": false},
+    {"id": "e9b0c1d2e3f4a5b6c", "shown": false},
+    {"id": "m1234567890123456", "shown": false},
+    {"id": "m3fa9c01b2e44d7a1-2", "shown": false}
   ]
 }

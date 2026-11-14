@@ -66,10 +66,11 @@ struct PlayerStatsView: View {
     }
 }
 
-/// When the title data is worked out again: the statistics shown or hidden, another title played.
+/// When the title data is worked out again: the statistics shown or hidden, another title played, the catalogue read.
 struct TitleDataKey: Equatable {
     var shown: Bool
     var item: String?
+    var catalogue: Int
 }
 
 /// Next to the statistics (More, Stream Statistics): what the provider calls the title and its versions (`TitleData`):
@@ -142,7 +143,7 @@ struct TitleDataView: View {
             .fontWeight(.semibold)
             .foregroundStyle(version.playing ? Color.green : Color.white)
             Text(verbatim: version.name).lineLimit(2)
-            Text(verbatim: [version.category, "id \(version.id)", version.container, version.tags].compactMap { $0 }.joined(separator: "  ·  "))
+            Text(verbatim: [version.category, version.shownID.map { "id \($0)" }, version.container, version.tags].compactMap { $0 }.joined(separator: "  ·  "))
                 .lineLimit(2)
                 .foregroundStyle(.white.opacity(0.7))
         }

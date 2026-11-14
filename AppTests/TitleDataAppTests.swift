@@ -41,7 +41,8 @@ final class TitleDataAppTests: XCTestCase {
         let model = try await model()
         let dv = try XCTUnwrap(model.content.movies.first { $0.name == "Copper Valley 4K DV" })
         let item = try XCTUnwrap(model.downloadItem(for: dv))
-        let data = try XCTUnwrap(model.titleData(for: item))
+        let maybe = await model.titleData(for: item)
+        let data = try XCTUnwrap(maybe)
         XCTAssertEqual(data.lines.first { $0.label == .raw("name") }?.value, "Copper Valley 4K DV")
         XCTAssertEqual(data.lines.first { $0.label == .raw("year") }?.value, "2026")
         XCTAssertEqual(data.lines.first { $0.label == .raw("container_extension") }?.value, "mkv → MKV")
@@ -52,7 +53,33 @@ final class TitleDataAppTests: XCTestCase {
         XCTAssertEqual(data.versions.filter(\.first).count, 1)
         XCTAssertNotNil(data.reason)
         // Never an address.
-        let texts = data.lines.map(\.value) + data.versions.flatMap { [$0.chip, $0.name, $0.category, $0.id, $0.container, $0.tags].compactMap { $0 } }
+        let texts = shownTexts(data)
         XCTAssertFalse(texts.contains { $0.contains("http") || $0.contains("example.com") }, "\(texts)")
+    }
+
+    /// An M3U playlist's ids are a hash of each stream's address, its login and password included: no text of the panel
+    /// holds one, nor any part of one longer than 4 characters.
+    func testAnM3UPlaylistsIDsNeverShow() async throws {
+        let model = try await model()
+        for movie in model.content.movies {
+            let item = try XCTUnwrap(model.downloadItem(for: movie))
+            let maybe = await model.titleData(for: item)
+            let data = try XCTUnwrap(maybe)
+            XCTAssertFalse(data.lines.contains { $0.label == .raw("id") })
+            for text in shownTexts(data) {
+                for id in model.content.movies.map(\.id) {
+                    let characters = Array(id)
+                    for start in 0...max(0, characters.count - 5) where characters.count >= 5 {
+                        let part = String(characters[start..<start + 5])
+                        XCTAssertFalse(text.contains(part), "\(part) in \(text)")
+                    }
+                }
+            }
+        }
+    }
+
+    /// Every text the panel shows.
+    private func shownTexts(_ data: TitleData) -> [String] {
+        data.lines.map(\.value) + data.versions.flatMap { [$0.chip, $0.name, $0.category, $0.shownID, $0.container, $0.tags].compactMap { $0 } }
     }
 }

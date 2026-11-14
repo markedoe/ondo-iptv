@@ -60,9 +60,16 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
     H.265, x265) ;
   - langue : Multilingue (MULTI, DUAL), Français (France) (VFF, TRUEFRENCH), Français (Québec) (VFQ), Français
     (international) (VFI), Français (VF, FRENCH), Version originale (VO), Anglais, Espagnol, Allemand, Italien,
-    Portugais, Arabe (le mot, ou un code en capitales à un bout du nom ou de la catégorie : « FR - … », « |EN| Movies ») ;
+    Portugais, Arabe (le mot, ou un code en capitales à un bout du nom ou de la catégorie, séparé par un délimiteur du
+    fournisseur : « FR - … », « |EN| Movies », « [IT] … », « … (DE) » ; le premier mot de « IT WAITS BELOW » n'est pas
+    un code) ;
   - sous-titres : VO, sous-titres français (VOSTFR, STFR, SUBFR, ST FR, FR SUB), VO sous-titrée (VOST, VOSTA,
     SUBBED).
+
+  Un mot de tag qui est aussi un mot de titre (English, French, Spanish, German, Italian, Portuguese, Arabic, Dual, VO,
+  SD) n'est un tag qu'en dehors des mots que partagent les noms de toutes les versions : « The English Orchard » et
+  « The English Orchard MULTI » se lisent « Standard » et « Multilingue ». Une espace insécable sépare les mots comme une
+  espace.
 
   Une pastille ne nomme que ce qui diffère entre les versions, dans cet ordre (« 4K Dolby Vision », « HD · VO,
   sous-titres français ») : un tag que toutes les versions ont est omis. Deux versions qui se liraient pareil ajoutent
@@ -76,7 +83,8 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   lue ; Lecture, la progression et le badge du format sont les siens.
 - **Données du titre** : ce que l'app a lu chez le fournisseur pour un titre, à photographier quand une pastille se lit
   mal. Dans le lecteur, Plus, Statistiques du flux les montre à côté des statistiques (les deux apps) : le titre
-  affiché, le nom du fournisseur, les identifiants, la catégorie (nom et identifiant), l'année, les tags lus, les
+  affiché, le nom du fournisseur, les identifiants (un numéro du fournisseur seulement, jamais ceux d'une playlist M3U,
+  qui sont un hachage de l'adresse du flux), la catégorie (nom et identifiant), l'année, les tags lus, les
   identifiants TMDb (la liste du fournisseur, sa fiche, et sur Android le titre reconnu), le conteneur ; pour les
   versions d'un film (quatre au plus, celle en lecture d'abord), la pastille, le nom, la catégorie, l'identifiant, le
   conteneur et les tags de chacune, celle en lecture, celle lue en premier et pourquoi ; pour un épisode, son titre brut

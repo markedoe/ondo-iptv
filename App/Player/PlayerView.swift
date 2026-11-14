@@ -171,8 +171,14 @@ struct PlayerView: View {
         .task(id: channel?.id) {
             if let channel { await model.ensureGuide(for: channel) }
         }
-        .task(id: TitleDataKey(shown: controller.showsStatistics, item: item?.id)) {
-            titleData = controller.showsStatistics ? item.flatMap(model.titleData(for:)) : nil
+        // Again once the catalogue is read (the player can open before it is).
+        .task(id: TitleDataKey(shown: controller.showsStatistics, item: item?.id, catalogue: model.index.moviesByID.count &+ model.index.seriesByID.count)) {
+            guard controller.showsStatistics, let item else {
+                titleData = nil
+                return
+            }
+            let data = await model.titleData(for: item)
+            if !Task.isCancelled { titleData = data }
         }
         .onChange(of: cast.isConnected) { _, connected in
             // Stopping from the player resumes here (stopCasting); a cast ended elsewhere leaves the player paused.
