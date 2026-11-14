@@ -10,7 +10,13 @@ public enum MediaFormat {
     ]
 
     public static func label(for url: URL) -> String? {
-        let ext = url.pathExtension.lowercased()
+        label(forExtension: url.pathExtension)
+    }
+
+    /// The format an extension names ("mkv", ".MKV"), as `label(for:)` says it; nil for one it does not know.
+    public static func label(forExtension given: String) -> String? {
+        var ext = given.trimmingCharacters(in: .whitespaces).lowercased()
+        while ext.hasPrefix(".") { ext.removeFirst() }
         switch ext {
         case "m3u8": return "HLS"
         case "mpd": return "DASH"

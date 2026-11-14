@@ -179,7 +179,7 @@ struct MovieDetailView: View {
             }
         } content: { metrics in
             if versions.count > 1 {
-                VersionChips(versions: versions, badges: model.versionBadges(versions), selected: version.id) { chosen in
+                VersionChips(versions: versions, labels: model.versionLabels(versions), selected: version.id) { chosen in
                     picked = chosen.id
                     model.rememberVersion(chosen)
                 }
@@ -364,11 +364,11 @@ struct AwardsList: View {
     }
 }
 
-/// A film's versions as badges (4K DV, HD, VOSTFR…): the one selected plays; a tap, a click or the remote picks another.
-/// Two versions of the same tags are two badges ("4K", "4K 2").
+/// A film's versions as chips, each saying what sets it apart ("4K Dolby Vision", "Original, French subtitles",
+/// "Standard": `FilmVersions.labels`): the one selected plays; a tap, a click or the remote picks another.
 struct VersionChips: View {
     let versions: [Movie]
-    let badges: [VersionBadge]
+    let labels: [String]
     let selected: String
     let onPick: (Movie) -> Void
 
@@ -377,12 +377,12 @@ struct VersionChips: View {
             HStack(spacing: 8) {
                 ForEach(versions.indices, id: \.self) { index in
                     let movie = versions[index]
-                    let badge = index < badges.count ? badges[index] : VersionBadge(tags: [], ordinal: index + 1)
+                    let label = index < labels.count ? labels[index] : String(localized: "Version \(index + 1)")
                     let isSelected = movie.id == selected
                     Button {
                         onPick(movie)
                     } label: {
-                        Text(Self.label(badge))
+                        Text(label)
                             .font(.subheadline.weight(isSelected ? .bold : .medium))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
@@ -391,18 +391,13 @@ struct VersionChips: View {
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    // A screen reader hears what the row is: the film's versions.
+                    .accessibilityLabel(String(localized: "Version: \(label)"))
                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                     .accessibilityIdentifier("version-\(movie.id)")
                 }
             }
         }
         .accessibilityIdentifier("versions")
-    }
-
-    /// Its tags ("4K DV"), else "Version" in the viewer's language, with its number from the second on.
-    static func label(_ badge: VersionBadge) -> String {
-        if let label = badge.label { return label }
-        let word = String(localized: "Version")
-        return badge.ordinal > 1 ? "\(word) \(badge.ordinal)" : word
     }
 }

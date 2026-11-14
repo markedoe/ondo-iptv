@@ -51,11 +51,48 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
 - **Les listes** (rangées, grilles, recherche, pages d'une personne, d'un genre, d'une année ou d'une récompense,
   Accueil, Ma liste, Titres similaires) : chaque film une fois. Dans une catégorie, la première de ses versions dans
   cette catégorie le représente : un film est donc dans chaque catégorie où se trouve l'une de ses versions.
-- **La fiche d'un film** : ses versions en badges (des pastilles qu'atteint la télécommande sur une TV), lus dans le nom
-  du flux et dans sa catégorie : 4K (4K, UHD, 2160p), HDR (HDR, HDR10), DV (DV, Dolby Vision), HD (HD, FHD, 1080p,
-  720p), HEVC (HEVC, H.265, x265), TRUEFRENCH, VFF, VFQ, VF, VOSTFR (VOSTFR, STFR, SUBFR, ST FR, FR SUB), MULTI. Une version sans aucun d'eux s'appelle
-  « Version ». Deux versions au même badge font deux badges (« 4K », « 4K 2 »). La version choisie est celle qui est
+- **La fiche d'un film** : ses versions en pastilles (qu'atteint la télécommande sur une TV). Chaque pastille dit en
+  toutes lettres, dans la langue de l'app, ce qui distingue sa version des autres (`FilmVersions.labels`, les mêmes
+  règles et la même table dans les deux apps : `fixtures/film-versions/labels.json`). Les tags sont lus dans le nom du
+  flux et dans celui de sa catégorie :
+  - qualité : 4K (4K, UHD, 2160p), Full HD (FHD, 1080p), HD (HD, 720p), SD (SD, 480p, 576p) ;
+  - image : Dolby Vision (DV, DoVi, Dolby Vision), HDR (HDR, HDR10, HDR10+), 3D (3D, SBS, HSBS), IMAX, HEVC (HEVC,
+    H.265, x265) ;
+  - langue : Multilingue (MULTI, DUAL), Français (France) (VFF, TRUEFRENCH), Français (Québec) (VFQ), Français
+    (international) (VFI), Français (VF, FRENCH), Version originale (VO), Anglais, Espagnol, Allemand, Italien,
+    Portugais, Arabe (le mot, ou un code en capitales à un bout du nom ou de la catégorie, séparé par un délimiteur du
+    fournisseur : « FR - … », « |EN| Movies », « [IT] … », « … (DE) » ; le premier mot de « IT WAITS BELOW » n'est pas
+    un code) ;
+  - sous-titres : VO, sous-titres français (VOSTFR, STFR, SUBFR, ST FR, FR SUB), VO sous-titrée (VOST, VOSTA,
+    SUBBED).
+
+  Un mot de tag qui est aussi un mot de titre (English, French, Spanish, German, Italian, Portuguese, Arabic, Dual, VO,
+  SD) n'est un tag qu'en dehors des mots que partagent les noms de toutes les versions : « The English Orchard » et
+  « The English Orchard MULTI » se lisent « Standard » et « Multilingue ». Une espace insécable sépare les mots comme une
+  espace.
+
+  Une pastille ne nomme que ce qui diffère entre les versions, dans cet ordre (« 4K Dolby Vision », « HD · VO,
+  sous-titres français ») : un tag que toutes les versions ont est omis. Deux versions qui se liraient pareil ajoutent
+  les mots de leur nom que les autres n'ont pas (« Extended Cut ») ; une version sans aucun tag, à côté de versions qui
+  en ont, s'appelle « Standard ». Des pastilles encore identiques ajoutent, dans cet ordre, les mots du nom de leur
+  catégorie que les autres n'ont pas (« Standard · Recently added »), leur conteneur (« Standard · MKV »,
+  « Standard · MP4 »), puis les mots du fournisseur que les pastilles ne savent pas nommer, tels que le nom les écrit
+  (« DUB »). Des pastilles encore identiques sont numérotées (« 4K 1 », « 4K 2 » ; « Version 1 », « Version 2 » quand
+  rien ne les distingue : une année seule ou la ponctuation ne sont pas une différence). Deux pastilles d'un même film
+  ne se lisent jamais pareil. Un lecteur d'écran dit « Version : 4K Dolby Vision ». La version choisie est celle qui est
   lue ; Lecture, la progression et le badge du format sont les siens.
+- **Données du titre** : ce que l'app a lu chez le fournisseur pour un titre, à photographier quand une pastille se lit
+  mal. Dans le lecteur, Plus, Statistiques du flux les montre à côté des statistiques (les deux apps) : le titre
+  affiché, le nom du fournisseur, les identifiants (un numéro du fournisseur seulement, jamais ceux d'une playlist M3U,
+  qui sont un hachage de l'adresse du flux), la catégorie (nom et identifiant), l'année, les tags lus, les
+  identifiants TMDb (la liste du fournisseur, sa fiche, et sur Android le titre reconnu), le conteneur ; pour les
+  versions d'un film (quatre au plus, celle en lecture d'abord), la pastille, le nom, la catégorie, l'identifiant, le
+  conteneur et les tags de chacune, celle en lecture, celle lue en premier et pourquoi ; pour un épisode, son titre brut
+  et le nom de sa série. Sur une TV, OK maintenu sur la pastille d'une version, sur la page d'un film, montre la même
+  chose pour toutes les versions, chacune une étape de la télécommande. Jamais d'adresse, d'identifiant, de mot de passe
+  ni de serveur : ceux de la playlist sont masqués partout où ils apparaissent, comme les adresses, `user:password@`,
+  les valeurs de requête, les adresses IP et `hôte:port` (`Redaction`, les mêmes règles et la même table sur les deux
+  apps : `fixtures/title-data/redaction.json`). Elles ne sont pas dans le rapport de problème.
 - **La version montrée d'abord** (et lue depuis une affiche) : celle en cours ; sinon la dernière choisie sur cet
   appareil ; sinon celle qui convient le mieux à l'écran (la 4K sur un écran 4K, le HDR ou le Dolby Vision seulement là
   où l'écran les affiche, selon l'écran d'Android et AVFoundation chez Apple) ; sinon la première.
@@ -63,7 +100,7 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   rien de nouveau n'est synchronisé. Un film est vu (et écarté par « Masquer les films déjà vus ») quand l'une de ses
   versions est terminée, et dans Ma liste quand l'une de ses versions y est ; ajouter un film depuis son affiche ajoute
   sa version montrée d'abord, le retirer retire toutes les versions gardées. « Continuer à regarder » garde chaque flux,
-  avec le badge de sa version. La dernière version choisie reste sur l'appareil.
+  avec la pastille de sa version. La dernière version choisie reste sur l'appareil.
 
 ## Limites connues
 
