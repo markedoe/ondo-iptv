@@ -3,12 +3,14 @@ package com.markedoe.ondo.core.xtream
 import com.markedoe.ondo.core.HtmlEntities
 import com.markedoe.ondo.core.isNewline
 import com.markedoe.ondo.core.library.FilmVersions
+import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.core.nilIfBlank
 import com.markedoe.ondo.core.net.Urls
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 // Raw payloads of `player_api.php`. Every field is decoded leniently; `from` returns null when a required
 // field is missing (the Swift initialisers throw), so lossy lists drop the element.
@@ -193,6 +195,8 @@ internal data class XtreamInfoDto(
     val backdrops: List<String> = emptyList(),
     val youtubeTrailer: String? = null,
     val tmdbId: String? = null,
+    /** `video`, `audio` and `bitrate`: what the panel's ffprobe read of the stream (`get_vod_info`, when it gives them). */
+    val streamSpecs: StreamSpecs? = null,
 ) {
     companion object {
         /** `null` when the key is missing or `null`; an empty info for `info: []`. */
@@ -217,7 +221,32 @@ internal data class XtreamInfoDto(
                 backdrops = o["backdrop_path"].lenientStringArray().filter { it.isNotEmpty() },
                 youtubeTrailer = o["youtube_trailer"].lenientString()?.nilIfBlank(),
                 tmdbId = (o["tmdb_id"].lenientString() ?: o["tmdb"].lenientString())?.nilIfBlank(),
+                streamSpecs = StreamSpecs.fromProbe(probeBlock(o["video"]), probeBlock(o["audio"]), o["bitrate"].lenientString()),
             )
+        }
+
+        /**
+         * A block of ffprobe's answer (`info.video`, `info.audio`): its scalar fields by name in lower case, and every
+         * scalar value in it, nested ones too ([StreamSpecs.ProbeBlock]). Null for anything but an object (`[]`, `""`).
+         */
+        internal fun probeBlock(json: JsonElement?): StreamSpecs.ProbeBlock? {
+            val o = json as? JsonObject ?: return null
+            val fields = HashMap<String, String>()
+            for ((key, value) in o) {
+                if (value is JsonPrimitive && value !is JsonNull) value.lenientString()?.let { fields[key.lowercase()] = it }
+            }
+            val text = StringBuilder()
+            fun collect(element: JsonElement, depth: Int) {
+                if (depth > 8) return
+                when (element) {
+                    is JsonObject -> element.values.forEach { collect(it, depth + 1) }
+                    is JsonArray -> element.forEach { collect(it, depth + 1) }
+                    is JsonNull -> Unit
+                    is JsonPrimitive -> text.append(element.content.lowercase()).append(' ')
+                }
+            }
+            collect(o, 0)
+            return StreamSpecs.ProbeBlock(fields, text.toString().trim())
         }
     }
 }

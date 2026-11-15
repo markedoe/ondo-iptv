@@ -9,9 +9,11 @@ final class FilmVersionsLabelTests: XCTestCase {
             var name: String
             var category: String?
             var ext: String?
+            /// What is known of its stream (measured or the provider's), when the case says.
+            var specs: StreamSpecs?
 
             enum CodingKeys: String, CodingKey {
-                case name, category
+                case name, category, specs
                 case ext = "extension"
             }
         }
@@ -60,7 +62,9 @@ final class FilmVersionsLabelTests: XCTestCase {
         let table = try JSONDecoder().decode(Table.self, from: Data(contentsOf: file))
         XCTAssertFalse(table.cases.isEmpty)
         for test in table.cases {
-            let result = choices(test.rows.map(\.name), categories: test.rows.map(\.category), extensions: test.rows.map(\.ext))
+            let (movies, categoryName) = versions(test.rows.map(\.name), categories: test.rows.map(\.category), extensions: test.rows.map(\.ext))
+            let specs = Dictionary(uniqueKeysWithValues: test.rows.indices.map { ("v\($0)", test.rows[$0].specs) })
+            let result = FilmVersions.choices(movies, categoryName: categoryName, specs: { specs[$0] ?? nil })
             XCTAssertEqual(result.map(\.label), test.chips, test.name)
             let members = (test.members ?? test.rows.indices.map { [$0] }).map { $0.map { "v\($0)" } }
             XCTAssertEqual(result.map { $0.members.map(\.id) }, members, test.name)
@@ -121,6 +125,45 @@ final class FilmVersionsLabelTests: XCTestCase {
                         XCTAssertEqual(Set(labels).count, labels.count, "\(names) -> \(labels)")
                         XCTAssertFalse(labels.contains { $0.trimmingCharacters(in: .whitespaces).isEmpty }, "\(names) -> \(labels)")
                         XCTAssertEqual(result.flatMap { $0.members.map(\.id) }.sorted(), names.indices.map { "v\($0)" }.sorted(), "\(names)")
+                    }
+                }
+            }
+        }
+    }
+
+    /// With what is known of their streams too (measured, the provider's, or nothing): no two chips read the same, none is
+    /// empty or "Standard" when its specs are known, every version is on one, and versions whose known specs differ are
+    /// never one chip.
+    func testTwoChipsNeverReadTheSameWithSpecs() {
+        let names = ["Copper Valley", "Copper Valley", "Copper Valley 4K", "Copper Valley HDR", "Copper Valley VOSTFR", "Copper Valley Extended"]
+        let known: [StreamSpecs?] = [
+            nil,
+            StreamSpecs(width: 1920, height: 1080, videoCodec: "H.264", audioCodec: "AAC", channels: 2),
+            StreamSpecs(width: 1920, height: 1080, videoCodec: "HEVC", audioCodec: "AAC", channels: 2),
+            StreamSpecs(width: 1920, height: 802, range: .sdr, audioCodec: "AC-3", channels: 6),
+            StreamSpecs(width: 3840, height: 2160, range: .dolbyVision, videoCodec: "HEVC", audioCodec: "E-AC-3", channels: 6, atmos: true),
+            StreamSpecs(height: 2160, range: .hdr10),
+        ]
+        let pool: [(String, StreamSpecs?)] = names.flatMap { name in known.map { (name, $0) } }
+        let thirds: [(String, StreamSpecs?)?] = [nil] + pool.enumerated().filter { $0.offset % 5 == 0 }.map { Optional($0.element) }
+        for a in pool {
+            for b in pool {
+                for c in thirds {
+                    let rows = [a, b] + (c.map { [$0] } ?? [])
+                    let (movies, categoryName) = versions(rows.map(\.0))
+                    let specs = Dictionary(uniqueKeysWithValues: rows.indices.map { ("v\($0)", rows[$0].1) })
+                    let result = FilmVersions.choices(movies, categoryName: categoryName, specs: { specs[$0] ?? nil })
+                    let labels = result.map(\.label)
+                    XCTAssertEqual(Set(labels).count, labels.count, "\(rows) -> \(labels)")
+                    XCTAssertFalse(labels.contains { $0.trimmingCharacters(in: .whitespaces).isEmpty }, "\(rows) -> \(labels)")
+                    XCTAssertEqual(result.flatMap { $0.members.map(\.id) }.sorted(), movies.map(\.id).sorted(), "\(rows)")
+                    for chip in result {
+                        var keys: [[String?]] = []
+                        for member in chip.members {
+                            if let key = FilmVersions.specKey(specs[member.id] ?? nil), !keys.contains(key) { keys.append(key) }
+                        }
+                        XCTAssertLessThan(keys.count, 2, "\(rows) -> one chip for \(keys)")
+                        if result.count > 1, !keys.isEmpty { XCTAssertNotEqual(chip.label, "Standard", "\(rows) -> \(labels)") }
                     }
                 }
             }

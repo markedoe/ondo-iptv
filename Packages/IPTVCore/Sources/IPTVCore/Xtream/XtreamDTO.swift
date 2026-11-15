@@ -253,9 +253,11 @@ struct XtreamInfoDTO: Decodable {
     var backdrops: [String]
     var youtubeTrailer: String?
     var tmdbID: String?
+    /// `video`, `audio` and `bitrate`: what the panel's ffprobe read of the stream (`get_vod_info`, when it gives them).
+    var streamSpecs: StreamSpecs?
 
     enum CodingKeys: String, CodingKey {
-        case name, plot, description, cast, actors, director, genre, rating, cover
+        case name, plot, description, cast, actors, director, genre, rating, cover, video, audio, bitrate
         case originalName = "o_name"
         case releaseDate = "releasedate"
         case releaseDateCamel = "releaseDate"
@@ -289,6 +291,89 @@ struct XtreamInfoDTO: Decodable {
         backdrops = c.lenientStringArray(.backdropPath).filter { !$0.isEmpty }
         youtubeTrailer = c.lenientString(.youtubeTrailer)?.nilIfBlank
         tmdbID = (c.lenientString(.tmdbID) ?? c.lenientString(.tmdb))?.nilIfBlank
+        let video = (try? c.decodeIfPresent(XtreamProbe.self, forKey: .video))?.block
+        let audio = (try? c.decodeIfPresent(XtreamProbe.self, forKey: .audio))?.block
+        streamSpecs = StreamSpecs.fromProbe(video: video, audio: audio, bitrate: c.lenientString(.bitrate))
+    }
+}
+
+/// Any JSON value of a panel's answer, kept as text (`XtreamProbe`).
+private indirect enum XtreamProbeValue: Decodable {
+    case object([String: XtreamProbeValue])
+    case array([XtreamProbeValue])
+    case scalar(String)
+    case null
+
+    struct AnyKey: CodingKey {
+        var stringValue: String
+        var intValue: Int?
+        init?(stringValue: String) { self.stringValue = stringValue }
+        init?(intValue: Int) {
+            stringValue = String(intValue)
+            self.intValue = intValue
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        if let c = try? decoder.container(keyedBy: AnyKey.self) {
+            var values: [String: XtreamProbeValue] = [:]
+            for key in c.allKeys { values[key.stringValue] = (try? c.decode(XtreamProbeValue.self, forKey: key)) ?? .null }
+            self = .object(values)
+        } else if var u = try? decoder.unkeyedContainer() {
+            var values: [XtreamProbeValue] = []
+            while !u.isAtEnd {
+                guard let value = try? u.decode(XtreamProbeValue.self) else { break }
+                values.append(value)
+            }
+            self = .array(values)
+        } else {
+            let c = try decoder.singleValueContainer()
+            if c.decodeNil() {
+                self = .null
+            } else if let text = try? c.decode(String.self) {
+                self = .scalar(text)
+            } else if let int = try? c.decode(Int.self) {
+                self = .scalar(String(int))
+            } else if let double = try? c.decode(Double.self) {
+                self = .scalar(Int(exactly: double).map(String.init) ?? String(double))
+            } else if let bool = try? c.decode(Bool.self) {
+                self = .scalar(bool ? "1" : "0")
+            } else {
+                self = .null
+            }
+        }
+    }
+
+    /// Every scalar value in it, nested ones too, in lower case.
+    func collect(into text: inout [String], depth: Int = 0) {
+        guard depth <= 8 else { return }
+        switch self {
+        case .object(let values): for value in values.values { value.collect(into: &text, depth: depth + 1) }
+        case .array(let values): for value in values { value.collect(into: &text, depth: depth + 1) }
+        case .scalar(let value): text.append(value.lowercased())
+        case .null: break
+        }
+    }
+}
+
+/// A block of ffprobe's answer (`info.video`, `info.audio`): its scalar fields by name in lower case, and every scalar
+/// value in it, nested ones too (`StreamSpecs.ProbeBlock`). Nil for anything but an object (`[]`, `""`). The same as
+/// Android's `XtreamInfoDto.probeBlock`.
+struct XtreamProbe: Decodable {
+    var block: StreamSpecs.ProbeBlock?
+
+    init(from decoder: Decoder) throws {
+        guard case .object(let values) = try XtreamProbeValue(from: decoder) else {
+            block = nil
+            return
+        }
+        var fields: [String: String] = [:]
+        for (key, value) in values {
+            if case .scalar(let text) = value { fields[key.lowercased()] = text }
+        }
+        var text: [String] = []
+        XtreamProbeValue.object(values).collect(into: &text)
+        block = StreamSpecs.ProbeBlock(fields: fields, text: text.joined(separator: " "))
     }
 }
 

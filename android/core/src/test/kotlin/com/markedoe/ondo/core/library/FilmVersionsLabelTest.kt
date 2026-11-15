@@ -1,7 +1,10 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.CoreJson
 import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.PictureRange
+import com.markedoe.ondo.core.model.StreamSpecs
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,7 +51,9 @@ class FilmVersionsLabelTest {
             val expected = case["chips"]!!.jsonArray.map { it.jsonPrimitive.content }
             val members = case["members"]?.jsonArray?.map { chip -> chip.jsonArray.map { "v" + it.jsonPrimitive.content } }
                 ?: movies.map { listOf(it.id) }
-            val choices = FilmVersions.choices(movies, categoryName)
+            // What is known of each row's stream (measured or the provider's), when the case says.
+            val specs = rows.mapIndexed { index, row -> "v$index" to row["specs"]?.let { CoreJson.decodeFromJsonElement(StreamSpecs.serializer(), it) } }.toMap()
+            val choices = FilmVersions.choices(movies, categoryName, specs = { specs[it] })
             assertEquals(expected, choices.map { it.label }, name)
             assertEquals(members, choices.map { chip -> chip.members.map { it.id } }, name)
         }
@@ -111,6 +116,57 @@ class FilmVersionsLabelTest {
                 assertEquals(movies.map { it.id }.sorted(), choices.flatMap { chip -> chip.members.map { it.id } }.sorted(), "$names")
             }
         }
+    }
+
+    /**
+     * With what is known of their streams too (measured, the provider's, or nothing): no two chips read the same, none is
+     * empty or "Standard" when its specs are known, every version is on one, and versions whose known specs differ are
+     * never one chip.
+     */
+    @Test
+    fun twoChipsNeverReadTheSameWithSpecs() {
+        val names = listOf("Copper Valley", "Copper Valley", "Copper Valley 4K", "Copper Valley HDR", "Copper Valley VOSTFR", "Copper Valley Extended")
+        val known = listOf(
+            null,
+            StreamSpecs(width = 1920, height = 1080, videoCodec = "H.264", audioCodec = "AAC", channels = 2),
+            StreamSpecs(width = 1920, height = 1080, videoCodec = "HEVC", audioCodec = "AAC", channels = 2),
+            StreamSpecs(width = 1920, height = 802, range = PictureRange.SDR, audioCodec = "AC-3", channels = 6),
+            StreamSpecs(width = 3840, height = 2160, range = PictureRange.DOLBY_VISION, videoCodec = "HEVC", audioCodec = "E-AC-3", channels = 6, atmos = true),
+            StreamSpecs(height = 2160, range = PictureRange.HDR10),
+        )
+        val pool = names.flatMap { name -> known.map { name to it } }
+        for (a in pool) for (b in pool) for (c in listOf(null) + pool.filterIndexed { i, _ -> i % 5 == 0 }) {
+            val rows = listOfNotNull(a, b, c)
+            val (movies, categoryName) = versions(rows.map { it.first })
+            val specs = movies.indices.associate { "v$it" to rows[it].second }
+            val choices = FilmVersions.choices(movies, categoryName, specs = { specs[it] })
+            val labels = choices.map { it.label }
+            assertEquals(labels.size, labels.distinct().size, "$rows -> $labels")
+            assertTrue(labels.none { it.isBlank() }, "$rows -> $labels")
+            assertEquals(movies.map { it.id }.sorted(), choices.flatMap { chip -> chip.members.map { it.id } }.sorted(), "$rows")
+            for (chip in choices) {
+                val keys = chip.members.mapNotNull { FilmVersions.specKey(specs[it.id]) }.distinct()
+                assertTrue(keys.size < 2, "$rows -> one chip for $keys")
+                if (choices.size > 1 && keys.isNotEmpty()) assertTrue(chip.label != "Standard", "$rows -> $labels")
+            }
+        }
+    }
+
+    /**
+     * A film's page works its chips out on each change (details, specs arriving): with specs on every version of a film
+     * a panel lists 60 times, it stays a few milliseconds (generous limit for CI machines).
+     */
+    @Test
+    fun chipsWithSpecsStayQuick() {
+        val names = (0 until 60).map { i -> listOf("Copper Valley", "Copper Valley 4K", "Copper Valley VOSTFR", "Copper Valley HDR")[i % 4] }
+        val (movies, categoryName) = versions(names, extensions = names.indices.map { if (it % 2 == 0) "mkv" else "mp4" })
+        val specs = movies.indices.associate { "v$it" to StreamSpecs(width = 1920 * (1 + it % 2), height = 1080 * (1 + it % 2), audioCodec = "AAC", channels = 2 + it % 7) }
+        repeat(5) { FilmVersions.choices(movies, categoryName, specs = { specs[it] }) }
+        val start = System.nanoTime()
+        repeat(20) { FilmVersions.choices(movies, categoryName, specs = { specs[it] }) }
+        val each = (System.nanoTime() - start) / 20 / 1e6
+        println("60 versions' chips with specs: ${each}ms")
+        assertTrue(each < 50, "took ${each}ms")
     }
 
     /** A provider's word the chips have no name for, a tag, a language's code: never collapsed with the plain version. */

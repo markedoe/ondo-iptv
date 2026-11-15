@@ -1,0 +1,183 @@
+{
+  "about": "What a stream is made of (StreamSpecs) and how the apps say it, written by hand: the same file for Android's StreamSpecsTest and Apple's StreamSpecsTests. `resolution`: a picture's size and its class (null: unknown). `audio`: a sound's codec, channels and Atmos, as the facts line and a chip say it. `codecs`: the names ffprobe, a FourCC or a MIME subtype give a codec, and the conventional name. `badges`: a version's name and specs, its facts line's badges and what a screen reader says (English). `provider`: the `info` object of a panel's get_vod_info and the specs read from it (null: nothing). A field of `specs` left out is unknown. Invented values only.",
+  "resolution": [
+    {"width": 1920, "height": 1080, "class": "1080p"},
+    {"width": 1920, "height": 802, "class": "1080p"},
+    {"width": 1998, "height": 1080, "class": "1080p"},
+    {"width": 1440, "height": 1080, "class": "1080p"},
+    {"width": 2560, "height": 1440, "class": "1080p"},
+    {"width": 3840, "height": 2160, "class": "4K"},
+    {"width": 3840, "height": 1600, "class": "4K"},
+    {"width": 4096, "height": 1716, "class": "4K"},
+    {"width": 3200, "height": 1350, "class": "4K"},
+    {"width": 1280, "height": 720, "class": "720p"},
+    {"width": 1280, "height": 536, "class": "720p"},
+    {"width": 960, "height": 720, "class": "720p"},
+    {"width": 720, "height": 576, "class": "SD"},
+    {"width": 640, "height": 360, "class": "SD"},
+    {"width": null, "height": 2160, "class": "4K"},
+    {"width": 1920, "height": null, "class": "1080p"},
+    {"width": 0, "height": 0, "class": null},
+    {"width": null, "height": null, "class": null}
+  ],
+  "audio": [
+    {"codec": "AAC", "channels": 2, "atmos": false, "facts": "2.0 AAC", "chip": "2.0"},
+    {"codec": "AC-3", "channels": 6, "atmos": false, "facts": "5.1 AC-3", "chip": "5.1"},
+    {"codec": "E-AC-3", "channels": 6, "atmos": true, "facts": "Atmos", "chip": "Atmos"},
+    {"codec": null, "channels": 8, "atmos": false, "facts": "7.1", "chip": "7.1"},
+    {"codec": "DTS", "channels": null, "atmos": false, "facts": "DTS", "chip": "DTS"},
+    {"codec": "TrueHD", "channels": 8, "atmos": false, "facts": "7.1 TrueHD", "chip": "7.1"},
+    {"codec": "AAC", "channels": 1, "atmos": false, "facts": "1.0 AAC", "chip": "1.0"},
+    {"codec": "Opus", "channels": 12, "atmos": false, "facts": "12 ch Opus", "chip": "12 ch"},
+    {"codec": null, "channels": null, "atmos": false, "facts": null, "chip": null}
+  ],
+  "codecs": {
+    "video": [
+      ["h264", "H.264"], ["avc1", "H.264"], ["HEVC", "HEVC"], ["hvc1", "HEVC"], ["hev1", "HEVC"], ["dvh1", "HEVC"],
+      ["av1", "AV1"], ["av01", "AV1"], ["vp9", "VP9"], ["vp09", "VP9"], ["mpeg2video", "MPEG-2"], ["mpeg4", "MPEG-4"],
+      ["vc1", "VC-1"], ["wmv3", null], ["", null]
+    ],
+    "audio": [
+      ["aac", "AAC"], ["mp4a", "AAC"], ["ac3", "AC-3"], ["ac-3", "AC-3"], ["eac3", "E-AC-3"], ["ec-3", "E-AC-3"],
+      ["dts", "DTS"], ["truehd", "TrueHD"], ["pcm_s16le", "PCM"], ["lpcm", "PCM"], ["mp3", "MP3"], ["opus", "Opus"],
+      ["flac", "FLAC"], ["wmav2", null], ["", null]
+    ],
+    "layouts": [
+      ["stereo", 2], ["mono", 1], ["5.1", 6], ["5.1(side)", 6], ["7.1", 8], ["7.1(wide)", 8], ["6.1(back)", 7], ["quad", 4],
+      ["unknown", null], ["", null]
+    ]
+  },
+  "badges": [
+    {
+      "name": "Copper Valley 4K DV",
+      "specs": null,
+      "badges": ["4K", "Dolby Vision"],
+      "description": "4K, Dolby Vision"
+    },
+    {
+      "name": "Copper Valley",
+      "specs": {"width": 1920, "height": 802, "range": "SDR", "videoCodec": "H.264", "audioCodec": "AAC", "channels": 6},
+      "badges": ["1080p", "H.264", "5.1 AAC"],
+      "description": "1080p, H.264, 5.1 surround sound, AAC"
+    },
+    {
+      "name": "Copper Valley 4K HDR",
+      "specs": {"width": 1920, "height": 1080, "range": "SDR", "videoCodec": "HEVC", "audioCodec": "AAC", "channels": 2, "source": "MEASURED"},
+      "badges": ["1080p", "HEVC", "2.0 AAC"],
+      "description": "1080p, HEVC, Stereo sound, AAC"
+    },
+    {
+      "name": "Copper Valley HEVC",
+      "specs": {"audioCodec": "E-AC-3", "channels": 6, "atmos": true},
+      "badges": ["HEVC", "Atmos"],
+      "description": "HEVC, Dolby Atmos sound, E-AC-3"
+    },
+    {
+      "name": "Copper Valley 1080p",
+      "specs": {"height": 2160, "range": "DOLBY_VISION", "videoCodec": "HEVC", "audioCodec": "TrueHD", "channels": 8, "atmos": true},
+      "badges": ["4K", "Dolby Vision", "HEVC", "Atmos"],
+      "description": "4K, Dolby Vision, HEVC, Dolby Atmos sound, TrueHD"
+    },
+    {
+      "name": "Copper Valley",
+      "specs": {"audioCodec": "MP3", "channels": 1},
+      "badges": ["1.0 MP3"],
+      "description": "Mono sound, MP3"
+    },
+    {
+      "name": "Copper Valley",
+      "specs": null,
+      "badges": [],
+      "description": ""
+    }
+  ],
+  "provider": [
+    {
+      "about": "ffprobe's whole answer: HEVC in scope, HDR10, E-AC-3 with Atmos",
+      "info": {
+        "name": "Sand Harbor",
+        "bitrate": 18342,
+        "video": {
+          "index": 0, "codec_name": "hevc", "codec_long_name": "H.265 / HEVC (High Efficiency Video Coding)", "profile": "Main 10",
+          "codec_type": "video", "codec_tag_string": "[0][0][0][0]", "width": 3840, "height": 1608, "coded_width": 3840,
+          "coded_height": 1608, "pix_fmt": "yuv420p10le", "color_space": "bt2020nc", "color_transfer": "smpte2084",
+          "color_primaries": "bt2020", "disposition": {"default": 1}, "tags": {"language": "eng"}
+        },
+        "audio": {
+          "index": 1, "codec_name": "eac3", "profile": "Dolby Digital Plus + Dolby Atmos", "codec_type": "audio",
+          "sample_rate": "48000", "channels": 6, "channel_layout": "5.1(side)", "tags": {"language": "eng"}
+        }
+      },
+      "specs": {"width": 3840, "height": 1608, "range": "HDR10", "videoCodec": "HEVC", "audioCodec": "E-AC-3", "channels": 6, "atmos": true, "bitrate": 18342}
+    },
+    {
+      "about": "Dolby Vision from its configuration record, numbers as text, TrueHD with Atmos",
+      "info": {
+        "video": {
+          "codec_name": "hevc", "width": "3840", "height": "2160", "color_transfer": "smpte2084",
+          "side_data_list": [{"side_data_type": "DOVI configuration record", "dv_profile": 8}]
+        },
+        "audio": {"codec_name": "truehd", "channels": "8", "channel_layout": "7.1", "profile": "Dolby TrueHD + Dolby Atmos"}
+      },
+      "specs": {"width": 3840, "height": 2160, "range": "DOLBY_VISION", "videoCodec": "HEVC", "audioCodec": "TrueHD", "channels": 8, "atmos": true}
+    },
+    {
+      "about": "H.264 in scope, SDR, the sound's channels from its layout only, the bitrate as text",
+      "info": {
+        "bitrate": "4521",
+        "video": {"codec_name": "h264", "width": "1920", "height": "802", "color_transfer": "bt709", "bit_rate": "0"},
+        "audio": {"codec_name": "aac", "channel_layout": "stereo"}
+      },
+      "specs": {"width": 1920, "height": 802, "range": "SDR", "videoCodec": "H.264", "audioCodec": "AAC", "channels": 2, "bitrate": 4521}
+    },
+    {
+      "about": "empty blocks as some panels send them: nothing known",
+      "info": {"name": "Sand Harbor", "video": [], "audio": "", "bitrate": 0},
+      "specs": null
+    },
+    {
+      "about": "no blocks at all",
+      "info": {"name": "Sand Harbor", "plot": "A harbour."},
+      "specs": null
+    },
+    {
+      "about": "a size of zero and an unknown transfer are unknown",
+      "info": {
+        "video": {"codec_name": "mpeg4", "width": 0, "height": 0, "color_transfer": "unknown"},
+        "audio": {"codec_name": "ac3", "channels": 6}
+      },
+      "specs": {"videoCodec": "MPEG-4", "audioCodec": "AC-3", "channels": 6}
+    },
+    {
+      "about": "HLG, a height alone, DTS-HD Master Audio",
+      "info": {
+        "video": {"codec_name": "vp9", "height": 2160, "color_transfer": "arib-std-b67"},
+        "audio": {"codec_name": "dts", "profile": "DTS-HD MA", "channels": 8}
+      },
+      "specs": {"height": 2160, "range": "HLG", "videoCodec": "VP9", "audioCodec": "DTS-HD", "channels": 8}
+    },
+    {
+      "about": "HDR10+ only from its SMPTE ST 2094 metadata",
+      "info": {
+        "video": {
+          "codec_name": "hevc", "width": 3840, "height": 2160, "color_transfer": "smpte2084",
+          "side_data_list": [{"side_data_type": "HDR Dynamic Metadata SMPTE2094-40 (HDR10+)"}]
+        }
+      },
+      "specs": {"width": 3840, "height": 2160, "range": "HDR10_PLUS", "videoCodec": "HEVC"}
+    },
+    {
+      "about": "a 10-bit profile alone is no HDR; decimals, a codec in capitals",
+      "info": {
+        "video": {"codec_name": "hevc", "profile": "Main 10", "pix_fmt": "yuv420p10le", "width": 1280.0, "height": 720.0},
+        "audio": {"codec_name": "AAC", "channels": "2"}
+      },
+      "specs": {"width": 1280, "height": 720, "videoCodec": "HEVC", "audioCodec": "AAC", "channels": 2}
+    },
+    {
+      "about": "a bitrate alone",
+      "info": {"bitrate": "3000"},
+      "specs": {"bitrate": 3000}
+    }
+  ]
+}

@@ -277,6 +277,7 @@ class XtreamClient(
             backdropUrl = backdropUrl(info?.backdrops.orEmpty()),
             trailerYouTubeId = info?.youtubeTrailer,
             tmdbId = info?.tmdbId,
+            streamSpecs = info?.streamSpecs,
         )
     }
 

@@ -18,6 +18,8 @@ data class MediaDetails(
     val trailerYouTubeId: String? = null,
     val originalTitle: String? = null,
     val tmdbId: String? = null,
+    /** What the provider's `get_vod_info` says of the stream's picture and sound (a movie's only); null when nothing. */
+    val streamSpecs: StreamSpecs? = null,
 )
 
 /** Series metadata with its seasons and episodes. */

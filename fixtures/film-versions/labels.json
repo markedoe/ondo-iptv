@@ -1,5 +1,5 @@
 {
-  "about": "The chips of a film's page (FilmVersions.choices) and what each says, in English (VersionWords' defaults), written by hand: the same file for Android's FilmVersionsLabelTest and Apple's FilmVersionsLabelTests. A row's category is its category's name. Versions with the same chip tags, the same container and the same name once normalised are one chip: `members` lists each chip's rows (each row alone when it is left out). Invented titles only.",
+  "about": "The chips of a film's page (FilmVersions.choices) and what each says, in English (VersionWords' defaults), written by hand: the same file for Android's FilmVersionsLabelTest and Apple's FilmVersionsLabelTests. A row's category is its category's name. Versions with the same chip tags, the same container and the same name once normalised are one chip, unless their known specs differ: `members` lists each chip's rows (each row alone when it is left out). A row's `specs` are what is known of its stream (StreamSpecs: measured by the player or given by the provider; a field left out is unknown): a chip says them where they are known, the tags of its name elsewhere. Invented titles only.",
   "cases": [
     {
       "name": "a copy filmed in a cinema, by its category: two chips, the proper copy first",
@@ -282,6 +282,75 @@
       "rows": [{"name": "Copper Valley (2026)"}, {"name": "Copper Valley"}],
       "chips": ["Standard"],
       "members": [[0, 1]]
+    },
+    {
+      "name": "specs: two versions the names call the same, measured 1080p and 4K Dolby Vision, are two chips",
+      "rows": [
+        {"name": "Sand Harbor", "extension": "mkv", "specs": {"width": 1920, "height": 1080, "range": "SDR", "videoCodec": "H.264", "audioCodec": "AAC", "channels": 6, "source": "MEASURED"}},
+        {"name": "Sand Harbor", "extension": "mkv", "specs": {"width": 3840, "height": 2160, "range": "DOLBY_VISION", "videoCodec": "HEVC", "audioCodec": "E-AC-3", "channels": 6, "atmos": true, "source": "MEASURED"}}
+      ],
+      "chips": ["1080p · 5.1", "4K Dolby Vision · Atmos"]
+    },
+    {
+      "name": "specs: Standard stays only for the version nothing is known of",
+      "rows": [
+        {"name": "Copper Valley"},
+        {"name": "Copper Valley 4K DV"},
+        {"name": "Copper Valley MULTI", "specs": {"height": 1080, "audioCodec": "AC-3", "channels": 6}}
+      ],
+      "chips": ["Standard", "4K Dolby Vision", "1080p · 5.1 · Multilingual"]
+    },
+    {
+      "name": "specs: a version measured that tells nothing else apart says its specs, not Standard",
+      "rows": [
+        {"name": "Sand Harbor", "specs": {"width": 1920, "height": 800, "videoCodec": "H.264", "audioCodec": "AAC", "channels": 2, "source": "MEASURED"}},
+        {"name": "Sand Harbor VOSTFR", "specs": {"width": 1920, "height": 800, "videoCodec": "H.264", "audioCodec": "AAC", "channels": 2, "source": "MEASURED"}}
+      ],
+      "chips": ["1080p · 2.0", "Original, French subtitles"]
+    },
+    {
+      "name": "specs: SDR measured leaves out the name's HDR; the video codec sets apart chips that read the same",
+      "rows": [
+        {"name": "Copper Valley HDR", "specs": {"width": 1920, "height": 1080, "range": "SDR", "videoCodec": "HEVC", "source": "MEASURED"}},
+        {"name": "Copper Valley", "specs": {"width": 1920, "height": 1080, "range": "SDR", "videoCodec": "H.264", "source": "MEASURED"}}
+      ],
+      "chips": ["1080p · HEVC", "1080p · H.264"]
+    },
+    {
+      "name": "specs: a version of unknown specs stays with the first chip of its name",
+      "rows": [
+        {"name": "Sand Harbor", "extension": "mkv", "specs": {"height": 2160, "range": "HDR10"}},
+        {"name": "Sand Harbor", "extension": "mkv"},
+        {"name": "Sand Harbor", "extension": "mkv", "specs": {"height": 1080, "range": "SDR"}}
+      ],
+      "chips": ["4K HDR10", "1080p"],
+      "members": [[0, 1], [2]]
+    },
+    {
+      "name": "specs: the same specs measured on one and given by the provider on the other are one chip",
+      "rows": [
+        {"name": "Copper Valley", "category": "Movies", "specs": {"width": 1920, "height": 1080, "videoCodec": "H.264", "audioCodec": "AAC", "channels": 2, "source": "MEASURED"}},
+        {"name": "Copper Valley", "category": "New", "specs": {"width": 1920, "height": 1080, "videoCodec": "H.264", "audioCodec": "AAC", "channels": 2}},
+        {"name": "Copper Valley 4K"}
+      ],
+      "chips": ["1080p · 2.0", "4K"],
+      "members": [[0, 1], [2]]
+    },
+    {
+      "name": "specs: two versions measured alike, set apart by their container",
+      "rows": [
+        {"name": "Copper Valley", "extension": "mkv", "specs": {"width": 1920, "height": 1080}},
+        {"name": "Copper Valley", "extension": "mp4", "specs": {"width": 1920, "height": 1080}}
+      ],
+      "chips": ["1080p · MKV", "1080p · MP4"]
+    },
+    {
+      "name": "specs: a film in scope is 1080p by its width; the same sound with two codecs, set apart by them",
+      "rows": [
+        {"name": "Sand Harbor", "extension": "mkv", "specs": {"width": 1920, "height": 802, "audioCodec": "AC-3", "channels": 6}},
+        {"name": "Sand Harbor", "extension": "mkv", "specs": {"width": 1920, "height": 1080, "audioCodec": "AAC", "channels": 6}}
+      ],
+      "chips": ["1080p · 5.1 · AC-3", "1080p · 5.1 · AAC"]
     }
   ]
 }

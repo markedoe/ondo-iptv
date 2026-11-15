@@ -292,7 +292,8 @@ public struct XtreamClient: Sendable {
             posterURL: URL.lenient(info?.movieImage ?? info?.cover),
             backdropURL: Self.backdropURL(in: info?.backdrops ?? []),
             trailerYouTubeID: info?.youtubeTrailer,
-            tmdbID: info?.tmdbID
+            tmdbID: info?.tmdbID,
+            streamSpecs: info?.streamSpecs
         )
     }
 

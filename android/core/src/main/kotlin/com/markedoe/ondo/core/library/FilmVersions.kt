@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.PortableRegex
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.core.playback.MediaFormat
 import java.util.BitSet
 
@@ -830,6 +831,11 @@ class FilmVersions private constructor(
          * in the order of its first member; a category's name never sets versions apart. Each plays its [preferred]
          * member ([inProgress], [chosen]); the others are its fallbacks ([VersionChoice.playOrder]). One choice alone
          * reads "Standard". Empty without versions.
+         *
+         * [specs] gives what is known of a stream's picture and sound ([StreamSpecs]: measured by the player, else the
+         * provider's): a chip says them ("1080p · 5.1", "4K Dolby Vision · Atmos"), and versions the rules above make one
+         * stay apart when their known specs differ ([specKey]); a version whose specs are unknown stays with the first of
+         * them. Without specs, the chips are the same as before.
          */
         fun choices(
             versions: List<Movie>,
@@ -837,14 +843,20 @@ class FilmVersions private constructor(
             words: VersionWords = VersionWords(),
             inProgress: List<String> = emptyList(),
             chosen: List<String> = emptyList(),
+            specs: (String) -> StreamSpecs? = { null },
         ): List<VersionChoice> {
             if (versions.isEmpty()) return emptyList()
             val tags = labelTags(versions, categoryName)
+            val known = versions.map { movie -> specs(movie.id)?.takeUnless { it.isEmpty } }
             val groups = LinkedHashMap<Triple<List<VersionTag>, String?, String>, MutableList<Int>>()
             for (i in versions.indices) groups.getOrPut(Triple(tags[i], container(versions[i]), nameKey(versions[i].name))) { ArrayList() }.add(i)
+            // Versions whose known specs differ (4K measured, 1080p measured) are two chips, whatever their names.
+            val split = groups.values.flatMap { group -> splitBySpecs(group, known) }.sortedBy { it.first() }
             // A proper copy's chips before those of a copy filmed or leaked before release, each in catalogue order.
-            val members = groups.values.sortedBy { group -> isEarlyCopy(tags[group.first()]) }
-            val texts = if (members.size < 2) listOf(words.standard) else labels(members.map { versions[it.first()] }, members.map { tags[it.first()] }, words)
+            val members = split.sortedBy { group -> isEarlyCopy(tags[group.first()]) }
+            // A chip's specs: those of its first member that has some.
+            val chipSpecs = members.map { group -> group.firstNotNullOfOrNull { known[it] } }
+            val texts = if (members.size < 2) listOf(words.standard) else labels(members.map { versions[it.first()] }, members.map { tags[it.first()] }, chipSpecs, words)
             return members.mapIndexed { k, group ->
                 val movies = group.map { versions[it] }
                 VersionChoice(texts[k], movies, preferred(movies, inProgress, chosen))
@@ -861,17 +873,90 @@ class FilmVersions private constructor(
          * name is never one of those words (only its tags count). [categoryName] names a stream's category. The page's
          * chips are [choices]: versions that play the same thing are one.
          */
-        fun labels(versions: List<Movie>, categoryName: (String) -> String?, words: VersionWords = VersionWords()): List<String> =
-            labels(versions, labelTags(versions, categoryName), words)
+        fun labels(
+            versions: List<Movie>,
+            categoryName: (String) -> String?,
+            words: VersionWords = VersionWords(),
+            specs: (String) -> StreamSpecs? = { null },
+        ): List<String> =
+            labels(versions, labelTags(versions, categoryName), versions.map { movie -> specs(movie.id)?.takeUnless { it.isEmpty } }, words)
 
-        private fun labels(versions: List<Movie>, tags: List<List<VersionTag>>, words: VersionWords): List<String> {
-            // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
-            val differing = VersionAspect.entries.filter { aspect -> tags.map { list -> list.filter { it.aspect == aspect } }.distinct().size > 1 }
-            val texts = tags.map { list ->
-                val shown = list.filter { it.aspect in differing }
-                val picture = shown.filter { it.isPicture }.joinToString(" ") { words.word(it) }
-                (listOf(picture).filter { it.isNotEmpty() } + shown.filter { !it.isPicture }.map { words.word(it) }).joinToString(" · ")
-            }.toMutableList()
+        /** Where a chip's sound goes: after its picture's words, before its language. */
+        private val SOUND_SLOT = VersionAspect.CODEC.ordinal * 2 + 1
+
+        /** The last place a chip's word can take. */
+        private val LAST_SLOT = VersionAspect.entries.last().ordinal * 2
+
+        private fun slotOf(aspect: VersionAspect): Int = aspect.ordinal * 2
+
+        /**
+         * A chip's words, place by place ([VersionAspect]'s order, its sound after its picture): its specs' where they are
+         * known ("1080p" for the tag "4K" of a stream measured 1080p, nothing for "HDR" in the name of one measured SDR),
+         * its tags' elsewhere. Its video codec only sets apart chips that read the same ([labels]).
+         */
+        private fun chipParts(tags: List<VersionTag>, specs: StreamSpecs?, words: VersionWords): List<Pair<Int, String>> {
+            val resolution = specs?.resolution
+            val parts = ArrayList<Pair<Int, String>>()
+            for (slot in 0..LAST_SLOT) {
+                for (tag in tags) {
+                    if (slotOf(tag.aspect) != slot) continue
+                    val known = when (tag.aspect) {
+                        VersionAspect.QUALITY -> resolution != null
+                        VersionAspect.RANGE -> specs?.range != null
+                        VersionAspect.CODEC -> specs?.videoCodec != null
+                        else -> false
+                    }
+                    if (!known) parts.add(slot to words.word(tag))
+                }
+                when (slot) {
+                    slotOf(VersionAspect.QUALITY) -> resolution?.let { parts.add(slot to it) }
+                    slotOf(VersionAspect.RANGE) -> specs?.rangeLabel?.let { parts.add(slot to it) }
+                    SOUND_SLOT -> specs?.chipAudio?.let { parts.add(slot to it) }
+                }
+            }
+            return parts
+        }
+
+        /** Picture words with a space between them, the others after them with a dot: "4K Dolby Vision · Atmos · English". */
+        private fun joined(parts: List<Pair<Int, String>>): String {
+            val picture = parts.filter { it.first < SOUND_SLOT }.joinToString(" ") { it.second }
+            return (listOf(picture).filter { it.isNotEmpty() } + parts.filter { it.first >= SOUND_SLOT }.map { it.second }).joinToString(" · ")
+        }
+
+        /** What a chip says of its specs alone ("1080p · 5.1"), when it would say nothing else; null when none are known. */
+        private fun specText(specs: StreamSpecs?): String? {
+            specs ?: return null
+            return joined(listOfNotNull(specs.resolution?.let { 0 to it }, specs.rangeLabel?.let { slotOf(VersionAspect.RANGE) to it }, specs.chipAudio?.let { SOUND_SLOT to it }))
+                .ifEmpty { null }
+        }
+
+        /**
+         * What [choices] compares of two versions' specs: their picture's class, range and codec, their sound. Null when
+         * none is known.
+         */
+        internal fun specKey(specs: StreamSpecs?): List<String?>? =
+            specs?.takeUnless { it.isEmpty }?.let { listOf(it.resolution, it.rangeLabel, it.videoCodec, it.audioLabel) }
+
+        /**
+         * [group]'s versions (catalogue order) apart by their known specs ([specKey]), in the order of each one's first
+         * version; the versions whose specs are unknown stay with the first. One group when the known ones agree.
+         */
+        private fun splitBySpecs(group: List<Int>, known: List<StreamSpecs?>): List<List<Int>> {
+            val keys = group.mapNotNull { specKey(known[it]) }.distinct()
+            if (keys.size < 2) return listOf(group)
+            val parts = keys.map { ArrayList<Int>() }
+            for (i in group) {
+                val key = specKey(known[i])
+                parts[if (key == null) 0 else keys.indexOf(key)].add(i)
+            }
+            return parts.map { part -> part.sorted() }
+        }
+
+        private fun labels(versions: List<Movie>, tags: List<List<VersionTag>>, specs: List<StreamSpecs?>, words: VersionWords): List<String> {
+            val parts = tags.indices.map { chipParts(tags[it], specs[it], words) }
+            // The places the versions differ in: a word all of them have, or none, tells none apart.
+            val differing = (0..LAST_SLOT).filter { slot -> parts.map { list -> list.filter { it.first == slot }.map { it.second } }.distinct().size > 1 }.toSet()
+            val texts = parts.map { list -> joined(list.filter { it.first in differing }) }.toMutableList()
             // Versions that would read the same: the words of their names the others lack.
             val extras = extraWords(versions)
             for (same in texts.indices.groupBy { texts[it] }.values) {
@@ -879,13 +964,22 @@ class FilmVersions private constructor(
                 for (i in same) if (extras[i].isNotEmpty()) texts[i] = listOf(texts[i], extras[i]).filter { it.isNotEmpty() }.joinToString(" · ")
             }
             val anyTagged = texts.any { it.isNotEmpty() }
-            val labels = texts.mapTo(ArrayList(texts.size)) { if (it.isEmpty() && anyTagged) words.standard else it }
-            // Still the same: what else sets them apart, in this order: their container ("MKV", "MP4"), then the
-            // provider's words the chips have no name for ("DUB"). Never their categories' names: viewers see no category
-            // on a film's page, and a panel files one stream under several.
+            // "Standard" only for a version nothing is known of: one with specs says them ("1080p · 5.1").
+            fun plain(i: Int): String = specText(specs[i]) ?: words.standard
+            val labels = texts.indices.mapTo(ArrayList(texts.size)) { i ->
+                when {
+                    texts[i].isNotEmpty() -> texts[i]
+                    else -> specText(specs[i]) ?: if (anyTagged) words.standard else ""
+                }
+            }
+            // Still the same: what else sets them apart, in this order: their video codec, their sound's codec ("HEVC",
+            // "AAC"), their container ("MKV", "MP4"), then the provider's words the chips have no name for ("DUB"). Never
+            // their categories' names: viewers see no category on a film's page, and a panel files one stream under several.
+            setApart(labels) { same -> same.map { specs[it]?.videoCodec.orEmpty() } }
+            setApart(labels) { same -> same.map { specs[it]?.audioCodec.orEmpty() } }
             setApart(labels) { same -> same.map { container(versions[it]).orEmpty() } }
             setApart(labels) { same -> differingWords(same.map { versions[it].name }, tagsOnly = true) }
-            if (labels.any { it.isNotEmpty() }) for (i in labels.indices) if (labels[i].isEmpty()) labels[i] = words.standard
+            if (labels.any { it.isNotEmpty() }) for (i in labels.indices) if (labels[i].isEmpty()) labels[i] = plain(i)
             // Still the same: numbered, each of them.
             val counts = labels.groupingBy { it }.eachCount()
             val seen = HashMap<String, Int>()

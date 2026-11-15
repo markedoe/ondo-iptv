@@ -259,6 +259,8 @@ public struct MediaDetails: Codable, Hashable, Sendable {
     public var backdropURL: URL?
     public var trailerYouTubeID: String?
     public var tmdbID: String?
+    /// What the provider's `get_vod_info` says of the stream's picture and sound (a movie's only); nil when nothing.
+    public var streamSpecs: StreamSpecs?
 
     public init(
         title: String,
@@ -273,8 +275,10 @@ public struct MediaDetails: Codable, Hashable, Sendable {
         posterURL: URL? = nil,
         backdropURL: URL? = nil,
         trailerYouTubeID: String? = nil,
-        tmdbID: String? = nil
+        tmdbID: String? = nil,
+        streamSpecs: StreamSpecs? = nil
     ) {
+        self.streamSpecs = streamSpecs
         self.title = title
         self.originalTitle = originalTitle
         self.plot = plot

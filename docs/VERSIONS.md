@@ -111,6 +111,39 @@ Only movies, and only within one playlist (live channels and series are never gr
   version kept. Continue Watching keeps each stream, with its version's chip. The version chosen last is kept on the
   device only.
 
+## What a version is made of
+
+A version's chip and its page say what its stream is made of, as far as it is known, never more (`StreamSpecs`, the
+same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three sources, best first, field by field:
+
+1. **What the player measured** while the stream played: the picture's size, range (HDR10, HLG, Dolby Vision, or SDR)
+   and codec, the sound's codec, channels and Atmos (E-AC-3 JOC), from Media3's tracks on Android and AVFoundation's
+   format descriptions on Apple (an adaptive stream's highest rendition). Kept on the device for the 2,000 films played
+   last, by playlist and stream (`MeasuredSpecs`, `measured-specs.json`), read the first time a film's page or the
+   player needs it, never at launch. A measured SDR picture is no HDR picture, whatever its name says.
+2. **The provider's details** (`get_vod_info`'s `info.video`, `info.audio` and `info.bitrate`, what the panel's ffprobe
+   read), kept with the details. A field missing, empty, zero or unknown stays unknown; Dolby Vision from its
+   configuration record, HDR10+ only from SMPTE ST 2094 metadata, HDR10 and HLG from `color_transfer` (never from a
+   10-bit profile alone). The film's page already asks for its own version's details; once it is open and idle a
+   moment, it asks for its other versions' details, one at a time, cancelled when it closes. Browsing (rows, headers,
+   search) asks for none of them.
+3. **The tags of the name** ("4K", "DV", "HEVC"), as before.
+
+- **Resolution classes**: 4K, 1080p, 720p or SD, from the height or the width, whichever reaches a class: a film in
+  scope (1920×802) is 1080p, 3840×1600 is 4K, an anamorphic 1440×1080 is 1080p.
+- **The facts line**, after the format ("MKV"), for the version that would play: its class, its range (HDR10, HDR10+,
+  HLG, Dolby Vision), its video codec (H.264, HEVC, AV1) and its sound ("5.1 AAC", "2.0 AC-3", "Atmos"). Screen readers
+  say them in a sentence of the viewer's language ("4K, Dolby Vision, HEVC, 5.1 surround sound, AAC").
+- **The chips** say a version's class, range and sound where they are known ("1080p · 5.1", "4K Dolby Vision · Atmos"),
+  its name's tags elsewhere; "Standard" only for a version nothing is known of. Two versions the rules above make one
+  chip stay apart when their known specs differ; one whose specs are unknown stays with the first. Chips that would read
+  the same are set apart by their video codec, then their sound's codec, then as before. Without specs, the chips are
+  those of before (`fixtures/film-versions/labels.json`).
+- **The title data** lists each version's specs and where they come from (measured by the player, from the provider,
+  from the name).
+- Details kept before this change have no specs until they are asked again (once they are old, `DetailsArchive`), or
+  until the version plays.
+
 ## Known limits
 
 These keep two versions apart that are one film (an extra card, never a film hidden):

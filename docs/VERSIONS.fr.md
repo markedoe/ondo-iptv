@@ -123,6 +123,43 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   sa version montrée d'abord, le retirer retire toutes les versions gardées. « Continuer à regarder » garde chaque flux,
   avec la pastille de sa version. La dernière version choisie reste sur l'appareil.
 
+## De quoi une version est faite
+
+La pastille d'une version et sa page disent de quoi son flux est fait, autant qu'on le sait, jamais plus
+(`StreamSpecs`, les mêmes règles et les mêmes mots sur les deux apps : `fixtures/stream-specs/specs.json`). Trois
+sources, la meilleure d'abord, champ par champ :
+
+1. **Ce que le lecteur a mesuré** pendant la lecture : la taille, la plage (HDR10, HLG, Dolby Vision, ou SDR) et le
+   codec de l'image, le codec, les canaux et l'Atmos (E-AC-3 JOC) du son, d'après les pistes de Media3 sur Android et
+   les descriptions de format d'AVFoundation chez Apple (le rendu le plus haut d'un flux adaptatif). Gardé sur l'appareil
+   pour les 2 000 derniers films lus, par playlist et par flux (`MeasuredSpecs`, `measured-specs.json`), lu la première
+   fois que la page d'un film ou le lecteur en a besoin, jamais au lancement. Une image mesurée SDR n'est pas une image
+   HDR, quoi que dise son nom.
+2. **Les détails du fournisseur** (`info.video`, `info.audio` et `info.bitrate` de `get_vod_info`, ce qu'a lu le ffprobe
+   du panneau), gardés avec les détails. Un champ absent, vide, nul ou inconnu reste inconnu ; le Dolby Vision d'après
+   son enregistrement de configuration, le HDR10+ seulement d'après des métadonnées SMPTE ST 2094, le HDR10 et le HLG
+   d'après `color_transfer` (jamais d'après un seul profil 10 bits). La page du film demande déjà les détails de sa
+   propre version ; une fois ouverte et au repos un moment, elle demande ceux de ses autres versions, un à la fois,
+   annulés quand elle se ferme. La navigation (rangées, en-têtes, recherche) n'en demande aucun.
+3. **Les étiquettes du nom** (« 4K », « DV », « HEVC »), comme avant.
+
+- **Classes de définition** : 4K, 1080p, 720p ou SD, d'après la hauteur ou la largeur, la première qui atteint une
+  classe : un film en scope (1920×802) est en 1080p, 3840×1600 en 4K, un 1440×1080 anamorphosé en 1080p.
+- **La ligne d'informations**, après le format (« MKV »), pour la version qui serait lue : sa classe, sa plage (HDR10,
+  HDR10+, HLG, Dolby Vision), son codec vidéo (H.264, HEVC, AV1) et son son (« 5.1 AAC », « 2.0 AC-3 », « Atmos »). Les
+  lecteurs d'écran les disent en une phrase dans la langue de l'utilisateur (« 4K, Dolby Vision, HEVC, Son surround
+  5.1, AAC »).
+- **Les pastilles** disent la classe, la plage et le son d'une version là où on les connaît (« 1080p · 5.1 », « 4K
+  Dolby Vision · Atmos »), les étiquettes de son nom ailleurs ; « Standard » seulement pour une version dont on ne sait
+  rien. Deux versions que les règles ci-dessus réunissent en une pastille restent séparées quand leurs caractéristiques
+  connues diffèrent ; celle dont on ne sait rien reste avec la première. Des pastilles qui se liraient pareil sont
+  départagées par leur codec vidéo, puis le codec de leur son, puis comme avant. Sans caractéristiques, les pastilles
+  sont celles d'avant (`fixtures/film-versions/labels.json`).
+- **Les données du titre** listent les caractéristiques de chaque version et leur source (mesurées par le lecteur,
+  selon le fournisseur, d'après le nom).
+- Les détails gardés avant ce changement n'ont pas de caractéristiques jusqu'à ce qu'ils soient redemandés (une fois
+  anciens, `DetailsArchive`), ou que la version soit lue.
+
 ## Limites connues
 
 Elles gardent séparées deux versions d'un même film (une affiche de plus, jamais un film caché) :

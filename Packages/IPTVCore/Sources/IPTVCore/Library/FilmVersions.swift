@@ -749,15 +749,22 @@ public struct FilmVersions: Sendable {
     /// in the order of its first member; a category's name never sets versions apart. Each plays its `preferred` member
     /// (`inProgress`, `chosen`); the others are its fallbacks (`VersionChoice.playOrder`). One choice alone reads
     /// "Standard". Empty without versions. The same rules as Android's.
+    ///
+    /// `specs` gives what is known of a stream's picture and sound (`StreamSpecs`: measured by the player, else the
+    /// provider's): a chip says them ("1080p · 5.1", "4K Dolby Vision · Atmos"), and versions the rules above make one
+    /// stay apart when their known specs differ (`specKey`); a version whose specs are unknown stays with the first of
+    /// them. Without specs, the chips are the same as before.
     public static func choices(
         _ versions: [Movie],
         categoryName: (String) -> String?,
         words: VersionWords = VersionWords(),
         inProgress: [String] = [],
-        chosen: [String] = []
+        chosen: [String] = [],
+        specs: (String) -> StreamSpecs? = { _ in nil }
     ) -> [VersionChoice] {
         guard !versions.isEmpty else { return [] }
         let tags = labelTags(versions, categoryName: categoryName)
+        let known: [StreamSpecs?] = versions.map { movie in specs(movie.id).flatMap { $0.isEmpty ? nil : $0 } }
         struct Key: Hashable {
             var tags: [VersionTag]
             var container: String?
@@ -770,12 +777,15 @@ public struct FilmVersions: Sendable {
             if groups[key] == nil { order.append(key) }
             groups[key, default: []].append(i)
         }
+        // Versions whose known specs differ (4K measured, 1080p measured) are two chips, whatever their names.
+        let all = order.flatMap { splitBySpecs(groups[$0] ?? [], known: known) }.sorted { $0[0] < $1[0] }
         // A proper copy's chips before those of a copy filmed or leaked before release, each in catalogue order.
-        let all = order.map { groups[$0] ?? [] }
         let members = all.filter { !isEarlyCopy(tags[$0[0]]) } + all.filter { isEarlyCopy(tags[$0[0]]) }
+        // A chip's specs: those of its first member that has some.
+        let chipSpecs: [StreamSpecs?] = members.map { group in group.lazy.compactMap { known[$0] }.first }
         let texts = members.count < 2
             ? [words.standard]
-            : labels(members.map { versions[$0[0]] }, tags: members.map { tags[$0[0]] }, words: words)
+            : labels(members.map { versions[$0[0]] }, tags: members.map { tags[$0[0]] }, specs: chipSpecs, words: words)
         return members.enumerated().map { k, group in
             let movies = group.map { versions[$0] }
             return VersionChoice(label: texts[k], members: movies, preferred: preferred(movies, inProgress: inProgress, chosen: chosen) ?? movies[0])
@@ -790,18 +800,106 @@ public struct FilmVersions: Sendable {
     /// numbered ("4K 1", "4K 2"; "Version 1", "Version 2"): no two versions read the same. A category's name is never one
     /// of those words (only its tags count). `categoryName` names a stream's category. The page's chips are `choices`:
     /// versions that play the same thing are one. The same rules as Android's.
-    public static func labels(_ versions: [Movie], categoryName: (String) -> String?, words: VersionWords = VersionWords()) -> [String] {
-        labels(versions, tags: labelTags(versions, categoryName: categoryName), words: words)
+    public static func labels(
+        _ versions: [Movie],
+        categoryName: (String) -> String?,
+        words: VersionWords = VersionWords(),
+        specs: (String) -> StreamSpecs? = { _ in nil }
+    ) -> [String] {
+        labels(
+            versions,
+            tags: labelTags(versions, categoryName: categoryName),
+            specs: versions.map { movie in specs(movie.id).flatMap { $0.isEmpty ? nil : $0 } },
+            words: words
+        )
     }
 
-    private static func labels(_ versions: [Movie], tags: [[VersionTag]], words: VersionWords) -> [String] {
-        // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
-        let differing = Set(VersionAspect.allCases.filter { aspect in Set(tags.map { $0.filter { $0.aspect == aspect } }).count > 1 })
-        var texts = tags.map { list -> String in
-            let shown = list.filter { differing.contains($0.aspect) }
-            let picture = shown.filter(\.isPicture).map(words.word).joined(separator: " ")
-            return ([picture].filter { !$0.isEmpty } + shown.filter { !$0.isPicture }.map(words.word)).joined(separator: " · ")
+    /// A word of a chip and its place: `VersionAspect`'s order, its sound after its picture (`soundSlot`).
+    private struct Part: Hashable {
+        var slot: Int
+        var word: String
+    }
+
+    /// Where a chip's sound goes: after its picture's words, before its language.
+    private static let soundSlot = VersionAspect.codec.rawValue * 2 + 1
+
+    /// The last place a chip's word can take.
+    private static let lastSlot = (VersionAspect.allCases.last?.rawValue ?? 0) * 2
+
+    private static func slot(of aspect: VersionAspect) -> Int { aspect.rawValue * 2 }
+
+    /// A chip's words, place by place (`VersionAspect`'s order, its sound after its picture): its specs' where they are
+    /// known ("1080p" for the tag "4K" of a stream measured 1080p, nothing for "HDR" in the name of one measured SDR), its
+    /// tags' elsewhere. Its video codec only sets apart chips that read the same (`labels`).
+    private static func chipParts(_ tags: [VersionTag], specs: StreamSpecs?, words: VersionWords) -> [Part] {
+        let resolution = specs?.resolution
+        var parts: [Part] = []
+        for place in 0...lastSlot {
+            for tag in tags where slot(of: tag.aspect) == place {
+                let known: Bool
+                switch tag.aspect {
+                case .quality: known = resolution != nil
+                case .range: known = specs?.range != nil
+                case .codec: known = specs?.videoCodec != nil
+                default: known = false
+                }
+                if !known { parts.append(Part(slot: place, word: words.word(tag))) }
+            }
+            if place == slot(of: .quality), let resolution { parts.append(Part(slot: place, word: resolution)) }
+            if place == slot(of: .range), let range = specs?.rangeLabel { parts.append(Part(slot: place, word: range)) }
+            if place == soundSlot, let sound = specs?.chipAudio { parts.append(Part(slot: place, word: sound)) }
         }
+        return parts
+    }
+
+    /// Picture words with a space between them, the others after them with a dot: "4K Dolby Vision · Atmos · English".
+    private static func joined(_ parts: [Part]) -> String {
+        let picture = parts.filter { $0.slot < soundSlot }.map(\.word).joined(separator: " ")
+        return ([picture].filter { !$0.isEmpty } + parts.filter { $0.slot >= soundSlot }.map(\.word)).joined(separator: " · ")
+    }
+
+    /// What a chip says of its specs alone ("1080p · 5.1"), when it would say nothing else; nil when none are known.
+    private static func specText(_ specs: StreamSpecs?) -> String? {
+        guard let specs else { return nil }
+        let parts = [
+            specs.resolution.map { Part(slot: 0, word: $0) },
+            specs.rangeLabel.map { Part(slot: slot(of: .range), word: $0) },
+            specs.chipAudio.map { Part(slot: soundSlot, word: $0) },
+        ].compactMap { $0 }
+        let text = joined(parts)
+        return text.isEmpty ? nil : text
+    }
+
+    /// What `choices` compares of two versions' specs: their picture's class, range and codec, their sound. Nil when none
+    /// is known.
+    public static func specKey(_ specs: StreamSpecs?) -> [String?]? {
+        guard let specs, !specs.isEmpty else { return nil }
+        return [specs.resolution, specs.rangeLabel, specs.videoCodec, specs.audioLabel]
+    }
+
+    /// `group`'s versions (catalogue order) apart by their known specs (`specKey`), in the order of each one's first
+    /// version; the versions whose specs are unknown stay with the first. One group when the known ones agree.
+    private static func splitBySpecs(_ group: [Int], known: [StreamSpecs?]) -> [[Int]] {
+        var keys: [[String?]] = []
+        for i in group {
+            if let key = specKey(known[i]), !keys.contains(key) { keys.append(key) }
+        }
+        guard keys.count > 1 else { return [group] }
+        var parts = Array(repeating: [Int](), count: keys.count)
+        for i in group {
+            let index = specKey(known[i]).flatMap { keys.firstIndex(of: $0) } ?? 0
+            parts[index].append(i)
+        }
+        return parts.map { $0.sorted() }
+    }
+
+    private static func labels(_ versions: [Movie], tags: [[VersionTag]], specs: [StreamSpecs?], words: VersionWords) -> [String] {
+        let parts = tags.indices.map { chipParts(tags[$0], specs: specs[$0], words: words) }
+        // The places the versions differ in: a word all of them have, or none, tells none apart.
+        let differing = Set((0...lastSlot).filter { place in
+            Set(parts.map { list in list.filter { $0.slot == place }.map(\.word) }).count > 1
+        })
+        var texts = parts.map { list in joined(list.filter { differing.contains($0.slot) }) }
         // Versions that would read the same: the words of their names the others lack.
         let extras = extraWords(versions)
         for same in Dictionary(grouping: texts.indices, by: { texts[$0] }).values {
@@ -811,14 +909,20 @@ public struct FilmVersions: Sendable {
             }
         }
         let anyTagged = texts.contains { !$0.isEmpty }
-        var labels = texts.map { $0.isEmpty && anyTagged ? words.standard : $0 }
-        // Still the same: what else sets them apart, in this order: their container ("MKV", "MP4"), then the provider's
-        // words the chips have no name for ("DUB"). Never their categories' names: viewers see no category on a film's
-        // page, and a panel files one stream under several.
+        // "Standard" only for a version nothing is known of: one with specs says them ("1080p · 5.1").
+        var labels = texts.indices.map { i -> String in
+            if !texts[i].isEmpty { return texts[i] }
+            return specText(specs[i]) ?? (anyTagged ? words.standard : "")
+        }
+        // Still the same: what else sets them apart, in this order: their video codec, their sound's codec ("HEVC",
+        // "AAC"), their container ("MKV", "MP4"), then the provider's words the chips have no name for ("DUB"). Never
+        // their categories' names: viewers see no category on a film's page, and a panel files one stream under several.
+        setApart(&labels) { same in same.map { specs[$0]?.videoCodec ?? "" } }
+        setApart(&labels) { same in same.map { specs[$0]?.audioCodec ?? "" } }
         setApart(&labels) { same in same.map { container(of: versions[$0]) ?? "" } }
         setApart(&labels) { same in differingWords(same.map { versions[$0].name }, tagsOnly: true) }
         if labels.contains(where: { !$0.isEmpty }) {
-            labels = labels.map { $0.isEmpty ? words.standard : $0 }
+            labels = labels.indices.map { labels[$0].isEmpty ? (specText(specs[$0]) ?? words.standard) : labels[$0] }
         }
         // Still the same: numbered, each of them.
         let counts = labels.reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
