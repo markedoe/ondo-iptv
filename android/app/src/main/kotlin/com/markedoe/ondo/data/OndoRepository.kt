@@ -451,6 +451,7 @@ class OndoRepository(
                     storedKeys = keyStore?.syncKeys().orEmpty(),
                 )
             }
+            LaunchMarks.mark("ready")
             if (pending.isNotEmpty() || (movedRows != null && opened.isMain) || opening !== saved) opened.libraryDocumentName.let { document -> persist { saveLibrary(library, document) } }
             datedOthers.forEach { (id, dated) -> unstamped.firstOrNull { it.id == id }?.let { profile -> persist { saveLibrary(dated, profile.libraryDocumentName) } } }
             if (movedRows != null && !opened.isMain) otherLibraries[Profile.DEFAULT_ID]?.let { main -> persist { saveLibrary(main, AppStore.MAIN_LIBRARY) } }
@@ -517,8 +518,9 @@ class OndoRepository(
             updatedAt = time,
         )
         _state.update { it.copy(isLoading = true, error = null) }
+        val started = System.nanoTime()
         return try {
-            add(saved)
+            add(saved, started)
         } catch (cancelled: CancellationException) {
             // Left before it loaded (Back on Welcome closes the screen and its scope): the buttons come back.
             _state.update { it.copy(isLoading = false) }
@@ -526,10 +528,13 @@ class OndoRepository(
         }
     }
 
-    private suspend fun add(saved: SavedPlaylist): Result<Unit> =
+    /** [started]: when Add was pressed ([System.nanoTime]), for the measurements ([LaunchMarks]). */
+    private suspend fun add(saved: SavedPlaylist, started: Long): Result<Unit> =
         loadCatching { withContext(io) { loader().load(saved.toCorePlaylist()) } }
             .map { content ->
+                LaunchMarks.timed("add: downloaded and parsed", started)
                 withContext(writer) { runCatching { store.saveContent(saved.id, content) } }
+                LaunchMarks.timed("add: catalogue saved", started)
                 startDetails(saved.id)
                 val shown = shown(content)
                 // The playlists and settings as they are once saved: a playlist synced or added meanwhile stays.
@@ -539,6 +544,7 @@ class OndoRepository(
                         isLoading = false, isRestoring = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(),
                     )
                 }
+                LaunchMarks.timed("add: catalogue shown", started)
                 val state = _state.value
                 persist {
                     savePlaylists(state.playlists)
@@ -1350,6 +1356,7 @@ class OndoRepository(
             if (cached != null) {
                 val shown = shown(cached)
                 _state.update { it.copy(content = shown, isRestoring = false) }
+                LaunchMarks.mark("catalogue read")
                 loadGuide(playlist, cached)
                 loadTrending()
             }
@@ -2008,6 +2015,9 @@ class OndoRepository(
     /** The catalogue's titles by their words, for the people the store knows ([MetadataTitles]). */
     @Volatile private var metadataTitles: Pair<PlaylistContent, MetadataTitles>? = null
 
+    /** How many times that index was built (it reads every title of the catalogue): ColdStartTimingTest. */
+    internal val titleIndexBuilds = java.util.concurrent.atomic.AtomicInteger()
+
     private fun tmdbClient(): TmdbClient? =
         _state.value.settings.tmdbToken?.takeUnless { _state.value.tmdbRefused }?.let { TmdbClient(it, http, Locale.getDefault().toLanguageTag()) }
 
@@ -2403,6 +2413,7 @@ class OndoRepository(
         val content = _state.value.content
         if (content.movies.isEmpty() && content.series.isEmpty()) return null
         metadataTitles?.let { (known, titles) -> if (known === content) return titles }
+        titleIndexBuilds.incrementAndGet()
         return withContext(matching) { MetadataTitles(content.movies, content.series) }
             .also { if (_state.value.content === content) metadataTitles = content to it }
     }

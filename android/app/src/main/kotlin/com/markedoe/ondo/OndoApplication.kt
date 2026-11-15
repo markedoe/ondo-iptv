@@ -26,6 +26,7 @@ import com.markedoe.ondo.core.net.OkHttpClientAdapter
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.AwardsDownload
 import com.markedoe.ondo.data.CrashLog
+import com.markedoe.ondo.data.LaunchMarks
 import com.markedoe.ondo.data.LocalSync
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.PlayTipBilling
@@ -64,6 +65,9 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             PlayingNow.recordRestart(crashFile, about, it, bootAt = now - SystemClock.elapsedRealtime(), bootCount = bootCount())
         }
         CrashLog.install(crashFile, about)
+        // The launch's moments in the system log, counted from the process's start (durations only).
+        LaunchMarks.sink = { android.util.Log.i(LaunchMarks.TAG, it) }
+        LaunchMarks.begin(agoMs = SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis())
     }
 
     /**

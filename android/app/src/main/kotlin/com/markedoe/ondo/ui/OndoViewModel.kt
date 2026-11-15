@@ -22,6 +22,7 @@ import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.HomeSnapshot
 import com.markedoe.ondo.data.ItemKind
+import com.markedoe.ondo.data.LaunchMarks
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
@@ -222,6 +223,7 @@ class OndoViewModel(
             return null
         }
         savedHomesShown.incrementAndGet()
+        LaunchMarks.mark("home kept shown")
         return HomeSnapshots.home(snapshot, state, input.now)
     }
 
@@ -238,10 +240,12 @@ class OndoViewModel(
         homeNanos.addAndGet(System.nanoTime() - start)
         homeComputations.incrementAndGet()
         withoutCatalogue = if (state.content.isEmpty) input to home else null
+        if (!state.content.isEmpty) LaunchMarks.mark("home rows")
         // With its catalogue and what the device kept of it: Home whole, kept for the next start, and the tabs worked out.
         if (!state.isRestoring && !state.content.isEmpty && input.kept.content === state.content) {
             if (home.hero.isNotEmpty()) {
                 workedOutWhole.compareAndSet(0L, System.nanoTime())
+                LaunchMarks.mark("home whole")
                 keepHome(home, state, input.labels, input.kept.facts)
             }
             homeWorkedOut.value = TabsFor(state.content, state.activeProfile.id)
@@ -346,6 +350,7 @@ class OndoViewModel(
             if (input.kept.content === state.content) {
                 val whole = TabsFor(state.content, state.activeProfile.id)
                 workedOut.value = whole
+                if (!state.content.isEmpty) LaunchMarks.mark(if (series) "series tab" else "movies tab")
                 // The catalogue in use, read: the other tab is worked out after this one, Home on screen or not.
                 if (state.isReady && !state.isRestoring && !state.content.isEmpty && this@OndoViewModel.state.value.content === state.content) {
                     homeWorkedOut.value = whole

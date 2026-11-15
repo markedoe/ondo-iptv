@@ -21,11 +21,13 @@ import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.ItemKind
+import com.markedoe.ondo.data.LaunchMarks
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.SavedPlaylist
 import com.markedoe.ondo.data.WatchEntry
+import com.markedoe.ondo.ui.screens.PlaylistForm
 import com.markedoe.ondo.ui.screens.VodUiState
 import java.io.File
 import java.io.FileDescriptor
@@ -36,6 +38,7 @@ import java.time.ZoneId
 import java.util.Collections
 import java.util.Locale
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineDispatcher
@@ -69,8 +72,10 @@ import org.junit.runners.MethodSorters
  * line starting with `COLDSTART:` (the CI log, the test's output, and `build/reports/coldstart/coldstart.txt`): the
  * first call (cold: the JVM's first, and the catalogue's caches empty where the stage says so), then the median of three
  * more. The stages' limits are only there to keep a hang from passing; the view model's cold open (stage 7) checks its
- * counts always and its time targets in the night's run (see there). It runs on its own (`./gradlew :app:coldStartTest`,
- * a 2 GB heap).
+ * counts always and its time targets in the night's run (see there); it also opens with the main thread busy for a
+ * second, as it is while the first screen is drawn. Stage 8 adds a playlist of that size to an empty app, as a first
+ * launch does. The lines `COLDSTART: mark` are the moments the app times itself ([LaunchMarks]). It runs on its own
+ * (`./gradlew :app:coldStartTest`, a 2 GB heap).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -125,10 +130,13 @@ class ColdStartTimingTest {
             runCatching { report.parentFile?.mkdirs(); report.delete() }
             val runtime = Runtime.getRuntime()
             say("env maxHeap=${runtime.maxMemory() / 1_048_576} MB cores=${runtime.availableProcessors()} java=${System.getProperty("java.version")}")
+            // What the repository and the view model time themselves (the app writes it to the system log).
+            LaunchMarks.sink = { say("mark $it") }
         }
 
         @AfterClass @JvmStatic
         fun dropTheCatalogue() {
+            LaunchMarks.sink = null
             built = null
             UiMappers.forgetCatalogue()
         }
@@ -507,7 +515,18 @@ class ColdStartTimingTest {
         val moviesTab: Long,
         /** The same for the Series tab, opened after it. */
         val seriesTab: Long,
+        /** When the saved playlists and settings were read, and when the saved catalogue was in the state. */
+        val ready: Long,
+        val catalogue: Long,
     )
+
+    /** The main thread kept busy for [ms] right after the view model is made, as it is while the first screen is drawn. */
+    private class Busy(val ms: Long) {
+        val over = AtomicBoolean(false)
+
+        /** Whether the saved catalogue's file was opened before the main thread was free again (null: never opened). */
+        @Volatile var catalogueOpenedMeanwhile: Boolean? = null
+    }
 
     /**
      * The app's cold start: a repository and a view model on the saved catalogue, as a launch makes them, with Home
@@ -545,6 +564,21 @@ class ColdStartTimingTest {
         UiMappers.forgetCatalogue()
         System.gc()
         val second = coldOpen(store, metadata, awardsText, "7.vm.kept", waitForKeptHome = null)
+        UiMappers.forgetCatalogue()
+        System.gc()
+        // The main thread busy for a second from the start (the first screen being drawn): what the start reads from the
+        // device meanwhile, and when the catalogue comes after it.
+        val busy = Busy(1_000)
+        val watched = AppStore(directory, open = { file ->
+            if (file.name.startsWith("content-") && busy.catalogueOpenedMeanwhile == null) busy.catalogueOpenedMeanwhile = !busy.over.get()
+            file.inputStream()
+        })
+        val third = coldOpen(watched, metadata, awardsText, "7.vm.busy", waitForKeptHome = null, busy = busy)
+        say(
+            "7.vm.busy mainBusy=${busy.ms} ms ready=${third.ready} ms catalogue=${third.catalogue} ms " +
+                "catalogueOpenedWhileBusy=${busy.catalogueOpenedMeanwhile} (not busy: ready=${second.ready} ms catalogue=${second.catalogue} ms)",
+        )
+        assertTrue("the main thread busy, the catalogue came", third.catalogue >= 0)
 
         // Counts, always. What reaches Home in a cold open: the state before the saved playlists are read (S1), then read
         // with the catalogue being read (S2), the awards (S3), the catalogue (S4); what the device kept of TMDb, empty at
@@ -569,6 +603,114 @@ class ColdStartTimingTest {
         within("the Series tab, from its opening, Home kept", second.seriesTab, 100)
     }
 
+    /**
+     * A first launch: an app without a playlist, and one of a large panel's size added to it (an M3U list of 20,000
+     * channels and 100,000 movies, answered at once: no network). From Add: when the list was downloaded and read, when
+     * its catalogue was in the state, when Home showed its rows, when the catalogue was written to the device, and
+     * whether it was written before it showed. Nothing was kept of TMDb: how many times the index of the catalogue's
+     * titles was built for it. Limits only to catch a hang.
+     */
+    @Test
+    fun stage8AddingAPlaylist() {
+        built = null
+        UiMappers.forgetCatalogue()
+        System.gc()
+        val directory = folder.newFolder("add")
+        val store = AppStore(directory)
+        val address = "http://panel.example.com/list.m3u"
+        val list = playlistText()
+        say("8.add list chars=${list.length} MB=%.1f".format(Locale.ROOT, list.length / 1_048_576.0))
+        val awardsText = File("src/main/assets/awards.json").takeIf { it.isFile }?.readText()
+        fun saved(): Boolean = directory.listFiles { file -> file.name.startsWith("content-") && file.name.endsWith(".json") }?.isNotEmpty() == true
+
+        val mainExecutor = Executors.newSingleThreadExecutor { Thread(it, "main").apply { isDaemon = true } }
+        val main = mainExecutor.asCoroutineDispatcher()
+        Dispatchers.setMain(main)
+        val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        val watching = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        var model: OndoViewModel? = null
+        try {
+            LaunchMarks.begin()
+            val repository = OndoRepository(store, FakeHttp(mapOf(address to list)), repositoryScope, metadata = InMemoryMetadataStore(), awardsSource = { awardsText })
+            val viewModel = runBlocking(main) { OndoViewModel(repository, Labels(), minutes = flowOf(NOW)) }
+            model = viewModel
+            val readyDeadline = System.currentTimeMillis() + 30_000
+            while (!viewModel.state.value.isReady && System.currentTimeMillis() < readyDeadline) Thread.sleep(5)
+            assertTrue("the app without a playlist is ready", viewModel.state.value.isReady && viewModel.state.value.playlists.isEmpty())
+
+            val start = System.nanoTime()
+            fun at(): Long = (System.nanoTime() - start) / 1_000_000
+            val shown = AtomicLong(-1L)
+            val savedWhenShown = AtomicBoolean(false)
+            val rows = AtomicLong(-1L)
+            val added = AtomicLong(-1L)
+            watching.launch {
+                viewModel.state.collect { state ->
+                    // As the state changes, on the thread that changed it: before anything after it runs.
+                    if (state.content.movies.isNotEmpty() && shown.compareAndSet(-1L, at())) savedWhenShown.set(saved())
+                }
+            }
+            watching.launch(main) {
+                viewModel.home.collect { home -> if (home != null && home.hasVod) rows.compareAndSet(-1L, at()) }
+            }
+            runBlocking(main) { viewModel.addPlaylist(PlaylistForm.M3u("Panel", address, "")) { added.compareAndSet(-1L, at()) } }
+
+            var savedAt = -1L
+            val deadline = System.currentTimeMillis() + 120_000
+            while (System.currentTimeMillis() < deadline) {
+                if (savedAt < 0 && saved()) savedAt = at()
+                if (savedAt >= 0 && rows.get() >= 0 && added.get() >= 0) break
+                Thread.sleep(5)
+            }
+            // The tabs worked out after Home, as in a cold open: nothing of this start still runs once it is stopped.
+            val tabsDeadline = System.currentTimeMillis() + 120_000
+            while (viewModel.seriesComputations.get() + viewModel.moviesComputations.get() < 2 && System.currentTimeMillis() < tabsDeadline) Thread.sleep(20)
+            Thread.sleep(1_000)
+            val state = viewModel.state.value
+            say("8.add catalogue movies=${state.content.movies.size} series=${state.content.series.size} channels=${state.content.channels.size} movieCategories=${state.content.movieCategories.size}")
+            say("8.add fromAdd catalogueInState=${shown.get()} ms homeRows=${rows.get()} ms catalogueSaved=$savedAt ms addReturned=${added.get()} ms savedBeforeShown=${savedWhenShown.get()}")
+            say(
+                "8.add home started=${viewModel.homeStarted.get()} computations=${viewModel.homeComputations.get()} totalComputeTime=${viewModel.homeNanos.get() / 1_000_000} ms " +
+                    "titleIndexBuilds=${repository.titleIndexBuilds.get()} awardMatches=${MovieAwards.matches}",
+            )
+            assertEquals("every movie of the list", MOVIES, state.content.movies.size)
+            assertTrue("the catalogue came", shown.get() >= 0)
+            assertTrue("Home showed its rows: ${rows.get()} ms", rows.get() in 0L until 60_000L)
+            assertTrue("the catalogue was saved", savedAt >= 0)
+            assertTrue("the playlist was added", added.get() >= 0)
+        } finally {
+            watching.cancel()
+            model?.let { runBlocking(main) { it.viewModelScope.cancel() } }
+            repositoryScope.cancel()
+            Dispatchers.resetMain()
+            main.close()
+            UiMappers.forgetCatalogue()
+        }
+    }
+
+    /** An M3U list as large panels export them: [CHANNELS] channels and [MOVIES] movies (the fixture's films and categories). */
+    private fun playlistText(): String {
+        val random = java.util.Random(7)
+        val text = StringBuilder(24_000_000)
+        text.append("#EXTM3U\n")
+        for (index in 0 until CHANNELS) {
+            val tag = tags[index % tags.size]
+            text.append("#EXTINF:-1 tvg-id=\"ch").append(10_000 + index).append(".example\" group-title=\"").append(tag).append(" | ").append(liveGenres[index % liveGenres.size]).append("\",")
+            text.append(tag).append(": ").append(nouns[index % nouns.size]).append(' ').append(adjectives[(index / nouns.size) % adjectives.size]).append(" HD\n")
+            text.append("http://panel.example.com/live/viewer/example/").append(10_000 + index).append(".ts\n")
+        }
+        for (index in 0 until MOVIES) {
+            val film = if (index < FILMS) index else random.nextInt(FILMS)
+            val tag = tags[random.nextInt(tags.size)]
+            val genre = movieGenres[random.nextInt(movieGenres.size)]
+            text.append("#EXTINF:-1 tvg-logo=\"https://img.example.com/t/p/w600_and_h900_bestv2/poster").append(200_000 + index).append(".jpg\" group-title=\"")
+                .append(tag).append(" | ").append(genre).append("\",")
+            text.append(tag).append(" - ").append(filmTitle(film)).append(" (").append(2026 - film % 40).append(")\n")
+            text.append("http://panel.example.com/movie/viewer/example/").append(200_000 + index).append(".mp4\n")
+        }
+        return text.toString()
+    }
+
     /** [value] (ms, -1: never) within [targetMs] in the night's strict run, else within ten times it; printed either way. */
     private fun within(what: String, value: Long, targetMs: Long) {
         val strict = System.getProperty("ondo.coldStart.strict") == "true"
@@ -577,7 +719,7 @@ class ColdStartTimingTest {
         assertTrue("$what: $value ms, over ${limit} ms", value in 0 until limit)
     }
 
-    private fun coldOpen(store: AppStore, metadata: InMemoryMetadataStore, awardsText: String?, name: String, waitForKeptHome: File?): ColdOpen {
+    private fun coldOpen(store: AppStore, metadata: InMemoryMetadataStore, awardsText: String?, name: String, waitForKeptHome: File?, busy: Busy? = null): ColdOpen {
         val mainExecutor = Executors.newSingleThreadExecutor { Thread(it, "main").apply { isDaemon = true } }
         val main = mainExecutor.asCoroutineDispatcher()
         Dispatchers.setMain(main)
@@ -586,12 +728,22 @@ class ColdStartTimingTest {
         var model: OndoViewModel? = null
         try {
             val start = System.nanoTime()
+            LaunchMarks.begin()
             fun at(): Long = (System.nanoTime() - start) / 1_000_000
             val events = Collections.synchronizedList(mutableListOf<String>())
             val lastActivity = AtomicLong(0L)
             val repository = OndoRepository(store, FakeHttp(emptyMap()), repositoryScope, metadata = metadata, awardsSource = { awardsText })
             val viewModel = runBlocking(main) { OndoViewModel(repository, Labels(), minutes = flowOf(NOW)) }
             model = viewModel
+            // Busy right after what the view model started (the start's first read is on its way), as in the app.
+            if (busy != null) {
+                mainExecutor.execute {
+                    Thread.sleep(busy.ms)
+                    busy.over.set(true)
+                }
+            }
+            val firstReady = AtomicLong(-1L)
+            val firstCatalogue = AtomicLong(-1L)
 
             var previous: OndoState? = null
             val stateEmissions = AtomicInteger()
@@ -599,6 +751,8 @@ class ColdStartTimingTest {
                 viewModel.state.collect { state ->
                     val number = stateEmissions.incrementAndGet()
                     lastActivity.set(at())
+                    if (state.isReady) firstReady.compareAndSet(-1L, at())
+                    if (state.content.movies.isNotEmpty()) firstCatalogue.compareAndSet(-1L, at())
                     events += "$name.state #$number t=${at()} ms changed=${changes(previous, state)} movies=${state.content.movies.size} restoring=${state.isRestoring} loading=${state.isLoading}"
                     previous = state
                 }
@@ -650,7 +804,8 @@ class ColdStartTimingTest {
             )
             say("$name.home started=${viewModel.homeStarted.get()} computations=${viewModel.homeComputations.get()} totalComputeTime=$homeTotal ms stateEmissions=${stateEmissions.get()} homeEmissions=${homeEmissions.get()}")
             val keptAtEnd = runBlocking(main) { repository.keptPosterFacts().size }
-            say("$name.keptPosterFacts size=$keptAtEnd")
+            say("$name.keptPosterFacts size=$keptAtEnd titleIndexBuilds=${repository.titleIndexBuilds.get()}")
+            say("$name.state firstReady=${firstReady.get()} ms firstCatalogue=${firstCatalogue.get()} ms (from the view model's creation)")
 
             // The Movies tab, then the Series tab, worked out in the background once Home was ready, then opened: the same
             // way, the same target.
@@ -664,7 +819,10 @@ class ColdStartTimingTest {
             assertTrue("Home came", firstHome.get() >= 0)
             assertTrue("the Movies tab came", moviesTab >= 0)
             assertTrue("the Series tab came", seriesTab >= 0)
-            return ColdOpen(firstHome.get(), firstHero.get(), firstWorkedOutHero(), viewModel.homeComputations.get(), viewModel.savedHomesShown.get(), moviesTab, seriesTab)
+            return ColdOpen(
+                firstHome.get(), firstHero.get(), firstWorkedOutHero(), viewModel.homeComputations.get(), viewModel.savedHomesShown.get(), moviesTab, seriesTab,
+                ready = firstReady.get(), catalogue = firstCatalogue.get(),
+            )
         } finally {
             watching.cancel()
             model?.let { runBlocking(main) { it.viewModelScope.cancel() } }

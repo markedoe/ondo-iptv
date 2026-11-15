@@ -39,6 +39,8 @@ class Tv:
         self.pid = None
         # The TV's keyboards, turned off for the walks (text comes as key presses) and on again for the keyboard path.
         self.imes = []
+        # The app's own timings already printed (launch_marks).
+        self.marks = set()
         self.log = open(os.path.join(out, "steps.log"), "a", buffering=1)
 
     def say(self, text):
@@ -54,6 +56,17 @@ class Tv:
 
     def shell(self, command, timeout=60):
         return self.adb("shell", command, timeout=timeout)
+
+    def launch_marks(self, where):
+        """What the app timed itself, each line once (its `OndoLaunch` lines in the system log, in ms since its process
+        started): the saved playlists read, the catalogue, Home's rows, Home whole, the tabs worked out; for a playlist
+        added, its download, its catalogue shown and saved. A build without them prints nothing."""
+        log = self.adb("logcat", "-d", "-v", "brief", "-s", "OndoLaunch:I", timeout=120)
+        for line in log.splitlines():
+            if "OndoLaunch" not in line or line in self.marks:
+                continue
+            self.marks.add(line)
+            self.say(f"  timed by the app ({where}): {line.split('): ', 1)[-1].strip()}")
 
     def current_pid(self):
         return self.shell(f"pidof {PACKAGE}").strip() or None
@@ -228,6 +241,7 @@ class Tv:
             self.say("  no title of the catalogue on screen 90 s after the restart")
         time.sleep(3)
         self.check_alive("home after a restart")
+        self.launch_marks("restart")
 
     @staticmethod
     def top_edge(node):
@@ -1701,6 +1715,7 @@ def main():
             time.sleep(3)
             tv.check_alive("home, guide loading")
         tv.say(f"still running {time.time() - start:.0f} s after Add")
+        tv.launch_marks("first launch")
         tv.key("DOWN", 2)
         tv.key("RIGHT", 3)
         tv.screenshot("home-moved")
@@ -1735,6 +1750,7 @@ def main():
             try:
                 tv.restart()
                 PATHS[name](tv, args)
+                tv.launch_marks(name)
                 tv.say(f"path {name}: done")
             except TimeoutError as problem:
                 missed.append(name)
