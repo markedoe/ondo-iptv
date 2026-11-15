@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -22,6 +23,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.SqliteMetadataStore
+import com.markedoe.ondo.ui.OndoViewModel
 import java.io.File
 import java.time.Duration
 import org.junit.After
@@ -115,6 +117,22 @@ class TvLauncherOpensHomeTest {
         leaveOnATitlesPageAndOpen(TvLauncherActivity.homeIntent(app))
         waitFor("Home") { !exists("detailPlay") && exists("heroPlay") }
         waitFor("Play focused") { focusedTag() == "heroPlay" }
+    }
+
+    /** Once Home shows from the stored catalogue, the app settles: Home is not worked out again and again. */
+    @Test
+    fun launchSettles() {
+        start()
+        lateinit var model: OndoViewModel
+        scenario!!.onActivity { model = ViewModelProvider(it)[OndoViewModel::class.java] }
+        settle(2_000)
+        val computed = model.homeComputations.get() + model.savedHomesShown.get()
+        settle(3_000)
+        // A minute's tick or a background refresh may work it out a few times more; a loop, hundreds of times. Wide
+        // bounds: this guards against a loop, not a count.
+        val again = model.homeComputations.get() + model.savedHomesShown.get() - computed
+        assertTrue("Home worked out $again more times with nothing changed", again <= 10)
+        assertTrue("Home worked out ${model.homeComputations.get()} times at launch", model.homeComputations.get() <= 30)
     }
 
     @Test

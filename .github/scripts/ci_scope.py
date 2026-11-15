@@ -9,8 +9,8 @@
 
 Each workflow has short jobs, which run in every run (ci.yml: lint, configuration checks and the Swift core tests on
 Linux; android.yml: the Kotlin core tests, lint, the debug APK and the release bundle, the listing limits), and long
-jobs (HEAVY_JOBS: ci.yml's macOS jobs, android.yml's unit, Compose and screenshot tests), which run at night and by hand
-only. A push or a pull request never runs the long jobs: the testers' builds leave after the short jobs.
+jobs (HEAVY_JOBS: ci.yml's macOS jobs, android.yml's unit, Compose and screenshot tests and its TV launch), which run
+at night and by hand only. A push or a pull request never runs the long jobs: the testers' builds leave after the short jobs.
 
 The rule is "when unsure, run everything": any error, a missing main, an empty difference or an unknown path runs
 the long jobs of a night or of a run by hand. They are skipped there in two cases only:
@@ -44,7 +44,7 @@ WORKFLOW_FILES = {"ci": "ci.yml", "android": "android.yml"}
 # to prove a commit.
 HEAVY_JOBS = {
     "ci": ["Build iOS + macOS (Debug, App Store edition)", "App tests — unit + UI (iPhone simulator)"],
-    "android": ["App — unit, Compose and screenshot tests"],
+    "android": ["App — unit, Compose and screenshot tests", "App — release APK launched on an Android TV emulator"],
 }
 # Jobs that mark a run that did not compare what it should (a run that recorded the reference screenshots).
 NOT_RUN_JOBS = {"ci": [], "android": ["Commit the reference screenshots to the branch"]}

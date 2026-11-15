@@ -83,7 +83,10 @@ class MainActivity : ComponentActivity() {
             val series = stringResource(R.string.kind_series)
             val newEpisode = stringResource(R.string.hero_new_episode)
             val locale = LocalConfiguration.current.locales[0]
-            val versionWords = LocalContext.current.resources.versionWords()
+            // Read once per configuration, not at each recomposition (equal by value all the same).
+            val res = LocalContext.current.resources
+            val configuration = LocalConfiguration.current
+            val versionWords = remember(res, configuration) { res.versionWords() }
             LaunchedEffect(movie, series, newEpisode, locale, versionWords) {
                 viewModel.setLabels(appLabels(movie, series, newEpisode, locale, versionWords))
             }

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.PortableRegex
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
@@ -585,8 +586,11 @@ class FilmVersions private constructor(
         /** Words of a provider's tag in two words ("Dolby Vision", "H 265", "ST FR"): never a word of a version's own. */
         private val TAG_PARTS = setOf("dolby", "vision", "h", "265", "st", "sub", "fr")
 
+        /** Unicode whitespace, in a class ([PortableRegex]: the same on Android and in the unit tests). */
+        private const val SPACE = PortableRegex.SPACE
+
         /** Unicode whitespace (a no-break space too), as Apple's `CharacterSet.whitespacesAndNewlines`. */
-        private val NAME_SEPARATORS = Regex("""(?U)[\s|\[\](){}:·_,/]+""")
+        private val NAME_SEPARATORS = Regex("""[$SPACE|\[\](){}:·_,/]+""")
 
         /**
          * Tag words that are also ordinary words of titles ("The English Orchard", "French Lantern", "Dual Harbor"): in a
@@ -601,10 +605,10 @@ class FilmVersions private constructor(
          * A language's code before a name, set apart by a provider's delimiter: "FR - …", "|EN| …", "[IT] …", "DE: …";
          * not a title's first word ("IT WAITS BELOW").
          */
-        private val PREFIX_CODE = Regex("""(?U)^\s*[\[(|]?\s*([A-Z]{2,3})\s*[\])|:\-–·]""")
+        private val PREFIX_CODE = Regex("""^[$SPACE]*[\[(|]?[$SPACE]*([A-Z]{2,3})[$SPACE]*[\])|:\-–·]""")
 
         /** A language's code after a name, set apart the same way: "… (DE)", "… - EN", "… |FR|". */
-        private val SUFFIX_CODE = Regex("""(?U)[\[(|\-–:·]\s*([A-Z]{2,3})\s*[\])|]?\s*$""")
+        private val SUFFIX_CODE = Regex("""[\[(|\-–:·][$SPACE]*([A-Z]{2,3})[$SPACE]*[\])|]?[$SPACE]*$""")
 
         /** The tags of a version, from its name and its category's name, in [VersionTag]'s order; 4K leaves HD out. */
         fun tags(name: String, categoryName: String?): List<VersionTag> = tags(name, categoryName, emptySet())
