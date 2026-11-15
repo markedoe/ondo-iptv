@@ -39,6 +39,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -47,6 +48,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.components.BlurredPoster
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.model.TitleHeader
 import java.time.Instant
@@ -245,7 +248,15 @@ fun TvPageBackdrop(item: ShowcaseItem?, backdropUrl: String?, modifier: Modifier
     Box(modifier.clipToBounds().testTag("pageBackdrop")) {
         if (item != null) {
             Crossfade(HeaderArt(item, backdropUrl), label = "pageBackdrop", modifier = Modifier.fillMaxSize()) { art ->
-                TvArtwork(art.backdropUrl, art.item.posterUrl, art.item.title, Modifier.fillMaxSize()) { url -> onFailed(art.item, url) }
+                if (art.backdropUrl.isNullOrBlank()) {
+                    // No backdrop known (yet): the poster blurred, edge to edge, never a framed poster card over the
+                    // header (that is a title's page's layout, [TvArtwork]).
+                    Box(Modifier.fillMaxSize().semantics { this[ArtworkAlignment] = TvArtworkAlignment }.testTag("tvArtwork")) {
+                        BlurredPoster(art.item.posterUrl, art.item.title, Modifier.fillMaxSize().alpha(0.55f))
+                    }
+                } else {
+                    TvArtwork(art.backdropUrl, art.item.posterUrl, art.item.title, Modifier.fillMaxSize()) { url -> onFailed(art.item, url) }
+                }
             }
         }
         Box(Modifier.matchParentSize().background(startToEndGradient(0f to ground.copy(alpha = 0.9f), 0.35f to ground.copy(alpha = 0.6f), 0.75f to Color.Transparent)))

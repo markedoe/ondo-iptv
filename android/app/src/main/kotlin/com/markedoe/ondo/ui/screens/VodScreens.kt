@@ -130,6 +130,8 @@ data class VodUiState(
      * its backdrop): whole at once, as Home's carousel is. Null: the header works it out as it shows it.
      */
     val header: TitleHeader? = null,
+    /** The catalogue is being read (or fetched): the tab is not known to be empty, so it never says so. */
+    val reading: Boolean = false,
 ) {
     /** The rows shown, in their order: those with titles. */
     val shownRows: List<String>
@@ -356,12 +358,13 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                 }
             }
         }
-        if (state.rows.isEmpty()) {
-            item {
+        // Only once the catalogue is read: while it is, nothing below the rows (they arrive there).
+        if (state.rows.isEmpty() && !state.reading) {
+            item(key = "vod:empty") {
                 Text(
                     stringResource(R.string.nothing_here),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = metrics.gutter),
+                    modifier = Modifier.padding(horizontal = metrics.gutter).testTag("vodEmpty"),
                 )
             }
         }
