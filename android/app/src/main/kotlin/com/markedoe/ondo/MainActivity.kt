@@ -57,6 +57,9 @@ class MainActivity : ComponentActivity() {
         val repository = (application as OndoApplication).repository
         // Another app language (Settings, App language) recreates the activity, not the repository.
         repository.setPlaceholderNames(resources.placeholderNames())
+        // The saved playlists, settings and catalogue are read from here on, off the main thread, while the first screen
+        // is put together (the view model, made with it, asks again: once only).
+        repository.bootstrap()
         // The version of a film shown first suits this screen (4K, HDR, Dolby Vision).
         UiMappers.pictureSupport = PictureSupportProbe.of(this)
         (application as OndoApplication).localSync.start()

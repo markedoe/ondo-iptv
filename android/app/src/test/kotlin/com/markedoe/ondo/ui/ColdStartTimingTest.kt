@@ -581,6 +581,9 @@ class ColdStartTimingTest {
                 "catalogueOpenedWhileBusy=${busy.catalogueOpenedMeanwhile} (not busy: ready=${second.ready} ms catalogue=${second.catalogue} ms)",
         )
         assertTrue("the main thread busy, the catalogue came", third.catalogue >= 0)
+        // The start's documents are read in one go and the catalogue's read starts with them: none of it waits for the
+        // main thread to be free.
+        assertEquals("the saved catalogue's read started while the main thread was busy", true, busy.catalogueOpenedMeanwhile)
 
         // Counts, always. What reaches Home in a cold open: the state before the saved playlists are read (S1), then read
         // with the catalogue being read (S2), the awards (S3), the catalogue (S4); what the device kept of TMDb, empty at

@@ -175,6 +175,31 @@ class OndoRepositoryTest {
     }
 
     /**
+     * A start reads its documents in one step off the main thread, and that step itself asks for the saved catalogue:
+     * its read does not wait for the main thread, which draws the first screen meanwhile.
+     */
+    @Test
+    fun aStartReadsItsDocumentsInOneStepAndTheCatalogueWithoutTheMainThread() = runTest {
+        val seeded = AppStore(folder.root)
+        seeded.savePlaylists(listOf(SavedPlaylist("p1", "Home", list, addedAt = clock)))
+        seeded.saveSettings(AppSettings(activePlaylistId = "p1"))
+        val news = com.markedoe.ondo.core.model.Channel(id = "c1", name = "Test News", categoryId = "live-1", streamUrl = "http://provider.example.com/news.m3u8")
+        seeded.saveContent("p1", com.markedoe.ondo.core.model.PlaylistContent(channels = listOf(news), fetchedAt = clock))
+        val io = StepDispatcher()
+        val repository = OndoRepository(AppStore(folder.root), FakeHttp(emptyMap()), backgroundScope, now = { clock }, io = io, parsing = ParseEndsFirst)
+        repository.bootstrap()
+        testScheduler.runCurrent() // the start asks for its documents
+        assertEquals("one step reads every document", 1, io.queued)
+        io.runNext()
+        // Nothing has run on the main thread since: the catalogue's read is asked for already.
+        assertFalse("ready before the main thread ran", repository.state.value.isReady)
+        assertEquals("the catalogue's read is asked for by the step that read the playlists", 1, io.queued)
+        runSteps(io) { !repository.state.value.content.isEmpty }
+        assertTrue(repository.state.value.isReady)
+        assertEquals(listOf("Test News"), repository.state.value.content.channels.map { it.name })
+    }
+
+    /**
      * A playlist that arrives by sync while an added one is being shown and saved stays, in memory and on disk. The parse may end
      * after the download step let go ([parseEndsFirst] false: its result comes back as a step) or before (true: the step
      * goes on at once); on a real thread either happens.

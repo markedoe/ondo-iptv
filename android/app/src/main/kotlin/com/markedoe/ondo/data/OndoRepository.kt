@@ -67,9 +67,11 @@ import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -382,21 +384,19 @@ class OndoRepository(
         if (_state.value.isReady || bootstrapping) return
         bootstrapping = true
         scope.launch {
-            val storedSettings = withContext(io) { store.loadSettings() }
-            val playlists = withContext(io) { store.loadPlaylists() }
-            // Before profiles, the library was the main profile's: it keeps its document, and the profiles document is
-            // written once a profile is added (docs/PROFILES.md, "Migration").
-            val storedProfiles = withContext(io) { store.loadProfiles() }
-            val unstamped = storedProfiles.ifEmpty { listOf(Profile.main(mainProfileName)) }
-            val launch = unstamped.firstOrNull { it.id == storedSettings.launchProfileId }
-            val opened = launch ?: unstamped.firstOrNull { it.id == storedSettings.activeProfileId } ?: unstamped.firstOrNull { it.isMain } ?: unstamped.first()
+            // Every document in one go off the main thread, which is drawing the first screen meanwhile: each read on
+            // its own came back through it before the next one started.
+            val read = withContext(io) { readStored() }
+            val storedSettings = read.settings
+            val playlists = read.playlists
+            val unstamped = read.profiles
+            val launch = read.launch
+            val opened = read.opened
             // "Always open this profile" opens that one; otherwise the one open last (none saved: the main one).
             val savedSettings = if (launch != null) storedSettings.copy(activeProfileId = launch.id) else storedSettings
-            val stored = withContext(io) { store.loadLibrary(opened.libraryDocumentName) }
+            val stored = read.library
             // Every profile's library travels (docs/SYNC.md, "Profiles"): the ones not open are kept at hand.
-            val storedOthers = unstamped.filter { it.id != opened.id }.associate { profile ->
-                profile.id to withContext(io) { store.loadLibrary(profile.libraryDocumentName) }
-            }
+            val storedOthers = read.others
             // The order of the rows was the device's before it was each profile's: it becomes the main profile's, with its
             // time (docs/PROFILES.md, "Migration").
             val movedRows = storedSettings.rowOrders.takeIf { it.isNotEmpty() }
@@ -406,16 +406,11 @@ class OndoRepository(
             } ?: library
             val saved = if (opened.isMain) withRows(stored) else stored
             otherLibraries = storedOthers.mapValues { (id, library) -> if (id == Profile.DEFAULT_ID) withRows(library) else library }
-            val lastCrash = withContext(io) {
-                // Downloads left half-read by a stop, and copies of files chosen for a playlist that was not saved.
-                downloadFolder?.listFiles()?.forEach { it.delete() }
-                store.forgetUnusedImports(playlists)
-                store.loadLastCrash()
-            }
+            val lastCrash = read.lastCrash
             // The sync clock starts after every time this device holds: after a restart with its clock back at 1970,
             // a change is still dated after the ones it made or received before.
             syncClock.advance(savedSettings.syncClock)
-            val household = withContext(io) { store.loadLibrary(AppStore.HOUSEHOLD) }
+            val household = read.household
             val dated = OndoState(settings = savedSettings, playlists = playlists, library = saved, profiles = unstamped, household = household)
             syncClock.advance(SyncData.latestTime(dated, SyncData.allLibraries(dated, otherLibraries)))
             // The store's keys too; those saved before sync carried them are dated now, once.
@@ -457,7 +452,10 @@ class OndoRepository(
             if (movedRows != null && !opened.isMain) otherLibraries[Profile.DEFAULT_ID]?.let { main -> persist { saveLibrary(main, AppStore.MAIN_LIBRARY) } }
             if (profiles != unstamped) persist { saveProfiles(profiles) }
             if (pendingSettings.isNotEmpty() || movedRows != null || relayedKeys.isNotEmpty()) persist { saveSettings(settings) }
-            _state.value.activePlaylist?.let { open(it) }
+            // The saved catalogue of the playlist in use is being read already ([readStored]): opened with it.
+            val reading = read.takeCatalogue()
+            val active = _state.value.activePlaylist
+            if (active != null) open(active, reading) else reading?.second?.cancel()
             awardsSource?.let { source ->
                 val awards = withContext(io) { runCatching { source()?.let(AwardsCatalogue::parse) }.getOrNull() }
                 if (awards != null) _state.update { it.copy(awards = awards) }
@@ -465,6 +463,55 @@ class OndoRepository(
             awardsDownload?.let { updateAwards(it) }
             loadDeadImages()
         }
+    }
+
+    /** What a start reads from the device before anything shows ([readStored]). */
+    private class Stored(
+        val settings: AppSettings,
+        val playlists: List<SavedPlaylist>,
+        /** The saved profiles; the main one, made now, when none was saved. */
+        val profiles: List<Profile>,
+        /** The profile ticked "Always open this profile", if any, and the one this start opens. */
+        val launch: Profile?,
+        val opened: Profile,
+        /** The library of the profile opened, and the other profiles' by their id. */
+        val library: LibraryState,
+        val others: Map<String, LibraryState>,
+        val lastCrash: LastCrash?,
+        val household: LibraryState,
+        private var catalogue: Pair<String, Deferred<PlaylistContent?>>?,
+    ) {
+        /**
+         * The saved catalogue of the playlist in use (by the playlist's id), being read; null without a playlist. Handed
+         * over once: what read it does not keep it (a large one is most of a TV's memory).
+         */
+        fun takeCatalogue(): Pair<String, Deferred<PlaylistContent?>>? = catalogue.also { catalogue = null }
+    }
+
+    /**
+     * Reads what a start needs before anything shows, one document after the other, then starts reading the saved
+     * catalogue of the playlist in use without waiting for the main thread to ask for it: on a TV the first screen is
+     * being drawn there, and a large catalogue takes seconds to read. Called off the main thread ([io]).
+     */
+    private fun readStored(): Stored {
+        val settings = store.loadSettings()
+        val playlists = store.loadPlaylists()
+        // Before profiles, the library was the main profile's: it keeps its document, and the profiles document is
+        // written once a profile is added (docs/PROFILES.md, "Migration").
+        val profiles = store.loadProfiles().ifEmpty { listOf(Profile.main(mainProfileName)) }
+        val launch = profiles.firstOrNull { it.id == settings.launchProfileId }
+        val opened = launch ?: profiles.firstOrNull { it.id == settings.activeProfileId } ?: profiles.firstOrNull { it.isMain } ?: profiles.first()
+        val library = store.loadLibrary(opened.libraryDocumentName)
+        val others = profiles.filter { it.id != opened.id }.associate { profile -> profile.id to store.loadLibrary(profile.libraryDocumentName) }
+        // Downloads left half-read by a stop, and copies of files chosen for a playlist that was not saved.
+        downloadFolder?.listFiles()?.forEach { it.delete() }
+        store.forgetUnusedImports(playlists)
+        val lastCrash = store.loadLastCrash()
+        val household = store.loadLibrary(AppStore.HOUSEHOLD)
+        // Last, once every other document is read: the store reads one document at a time, and the catalogue is the long one.
+        val active = (playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull())?.id
+        val catalogue = active?.let { id -> id to scope.async(io) { store.loadContent(id) } }
+        return Stored(settings, playlists, profiles, launch, opened, library, others, lastCrash, household, catalogue)
     }
 
     /** The last download when it is newer than the bundled awards; then, once a week unless turned off, a newer file. */
@@ -1345,14 +1392,21 @@ class OndoRepository(
 
     /**
      * Cached catalogue at once, then a refresh when it is a day old or missing. [OndoState.isRestoring] is on while the
-     * cached catalogue is read; without one, the download takes over ([OndoState.isLoading]).
+     * cached catalogue is read; without one, the download takes over ([OndoState.isLoading]). [reading]: a catalogue
+     * being read already, and the id of the playlist it is read for.
      */
-    private fun open(playlist: SavedPlaylist) {
+    private fun open(playlist: SavedPlaylist, reading: Pair<String, Deferred<PlaylistContent?>>? = null) {
         openJob?.cancel()
         _state.update { it.copy(isRestoring = true) }
         loadStoredDetails(playlist)
         openJob = scope.launch {
-            val cached = withContext(io) { store.loadContent(playlist.id) }
+            // At a start, the one being read since the playlists were ([readStored]), when it is this playlist's.
+            val cached = if (reading != null && reading.first == playlist.id) {
+                reading.second.await()
+            } else {
+                reading?.second?.cancel()
+                withContext(io) { store.loadContent(playlist.id) }
+            }
             // Another playlist was opened while this one was read: its catalogue must not replace that one (and that
             // one's opening ends the restoring).
             if (_state.value.activePlaylistId != playlist.id) return@launch
