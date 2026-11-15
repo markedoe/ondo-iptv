@@ -400,6 +400,8 @@
     <string name="title_data_uhd_modes">sim (modos)</string>
     <string name="title_data_uhd_display_size">sim (tamanho da tela)</string>
     <string name="title_data_uhd_decoder">sim (tela HDR, decodificador 4K)</string>
+    <string name="title_data_screen_audio">Saída de som: até %1$s · como está: %2$s</string>
+    <string name="title_data_none">nenhum</string>
     <string name="title_data_screen_chosen">Versões escolhidas para: %1$s</string>
     <string name="title_data_app">App %1$s</string>
     <string name="title_data_yes">sim</string>

@@ -442,6 +442,8 @@
     <string name="title_data_uhd_modes">نعم (الأوضاع)</string>
     <string name="title_data_uhd_display_size">نعم (حجم العرض)</string>
     <string name="title_data_uhd_decoder">نعم (شاشة HDR، فك ترميز 4K)</string>
+    <string name="title_data_screen_audio">إخراج الصوت: حتى %1$s · كما هو: %2$s</string>
+    <string name="title_data_none">لا شيء</string>
     <string name="title_data_screen_chosen">النسخ مختارة لـ: %1$s</string>
     <string name="title_data_app">التطبيق %1$s</string>
     <string name="title_data_yes">نعم</string>

@@ -397,6 +397,8 @@
     <string name="title_data_uhd_modes">yes (modes)</string>
     <string name="title_data_uhd_display_size">yes (display size)</string>
     <string name="title_data_uhd_decoder">yes (HDR screen, 4K decoder)</string>
+    <string name="title_data_screen_audio">Sound output: up to %1$s · as is: %2$s</string>
+    <string name="title_data_none">none</string>
     <string name="title_data_screen_chosen">Versions chosen for: %1$s</string>
     <string name="title_data_app">App %1$s</string>
     <string name="title_data_yes">yes</string>

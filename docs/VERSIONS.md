@@ -144,7 +144,9 @@ same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three so
    Kept on the device for the 2,000 films played last, by the playlist the film plays from and its stream
    (`MeasuredSpecs`, `measured-specs.json`), read the first time a film's page or the player needs it, never at launch.
    A measured SDR picture is no HDR picture, whatever its name says; a measurement never takes the provider's Atmos
-   away (AVFoundation names none, Media3 none on TrueHD).
+   away (AVFoundation names none, Media3 none on TrueHD nor in an MKV's E-AC-3). Media3's E-AC-3 JOC, or an HLS
+   playlist's `ec+3`, is Atmos; its DTS Express is DTS-HD and its DTS UHD (profile 2) DTS:X, as ffprobe's "DTS:X"
+   profiles are.
 2. **The provider's details** (`get_vod_info`'s `info.video`, `info.audio` and `info.bitrate`, what the panel's ffprobe
    read), kept with the details. A field missing, empty, zero or unknown stays unknown. Only the fields that say it are
    read, never free text such as a stream's title: Dolby Vision from `codec_tag_string`, the video's `profile` or a
@@ -179,7 +181,9 @@ same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three so
     supported by this screen: profile unknown, not played first", "HDR not supported by this screen", "4K above this
     screen's largest mode");
   - for the screen, after the versions: the mode of the moment and the largest mode (Android), HDR10, HDR10+, HLG and
-    Dolby Vision yes or no, the Dolby Vision and HEVC Main 10 decoders, whether it is 4K and why (its modes, its display
+    Dolby Vision yes or no, the Dolby Vision and HEVC Main 10 decoders, what the sound output takes (Android: its
+    channels at most and the encodings it passes as they are to the TV or amplifier, from Media3's `AudioCapabilities`,
+    read again each time the panel is worked out; iPhone and iPad: its channels and Spatial Audio), whether it is 4K and why (its modes, its display
     size, an HDR screen with a 4K decoder) with the display size Media3 reads (Android), what the versions are chosen
     for ("4K · HDR"), and the app's version and build, so a photo says which build it was.
 

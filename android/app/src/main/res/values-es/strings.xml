@@ -400,6 +400,8 @@
     <string name="title_data_uhd_modes">sí (modos)</string>
     <string name="title_data_uhd_display_size">sí (tamaño de pantalla)</string>
     <string name="title_data_uhd_decoder">sí (pantalla HDR, decodificador 4K)</string>
+    <string name="title_data_screen_audio">Salida de sonido: hasta %1$s · tal cual: %2$s</string>
+    <string name="title_data_none">ninguno</string>
     <string name="title_data_screen_chosen">Versiones elegidas para: %1$s</string>
     <string name="title_data_app">App %1$s</string>
     <string name="title_data_yes">sí</string>

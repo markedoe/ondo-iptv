@@ -239,6 +239,12 @@ struct TitleDataView: View {
                 Text("Largest mode \(screen.width > 0 ? "\(screen.width)×\(screen.height)" : String(localized: "unknown"))")
                 Text("HDR10 \(word(screen.hdr10)) · HDR10+ \(word(screen.hdr10Plus)) · HLG \(word(screen.hlg)) · Dolby Vision \(word(screen.dolbyVision))")
                 Text("Decoders: Dolby Vision \(word(screen.dolbyVisionDecoder))")
+                if let channels = screen.outputChannels {
+                    Text("Sound output: up to \(StreamSpecs.layout(channels))")
+                }
+                if let spatial = screen.spatialAudio {
+                    Text("Spatial Audio \(word(spatial))")
+                }
                 Text("Versions chosen for: \(chosenText)")
                 Text("App \(data.app)")
             }

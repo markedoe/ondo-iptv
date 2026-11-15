@@ -90,6 +90,10 @@ struct TitleData: Equatable, Sendable {
         var hlg: Bool?
         var dolbyVision: Bool?
         var dolbyVisionDecoder: Bool?
+        /// The channels the sound output of the moment plays at most (`AVAudioSession`, iPhone and iPad); nil when not read.
+        var outputChannels: Int?
+        /// Whether that output has Spatial Audio on; nil when not read.
+        var spatialAudio: Bool?
     }
 
     var lines: [Line]
@@ -317,7 +321,7 @@ extension AppModel {
                 ),
                 shownTitle: item.title, categoryNames: categoryNames, secrets: secrets, specs: specs, specSources: sources,
                 details: details, failures: failures, hasProviderDetails: activePlaylist?.source.xtreamCredentials != nil,
-                screen: Self.screen, support: Self.pictureSupport, app: Self.appVersion
+                screen: Self.screenWithSound(), support: Self.pictureSupport, app: Self.appVersion
             )
         case .series:
             guard let series = index.seriesByID[item.reference.itemID], let episodeID = item.reference.episodeID else { return nil }

@@ -335,10 +335,11 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
     private static let audioCodecs: [String: String] = [
         "aac": "AAC", "mp4a": "AAC", "aac_latm": "AAC", "mp4a-latm": "AAC",
         "ac3": "AC-3", "ac-3": "AC-3",
-        "eac3": "E-AC-3", "ec-3": "E-AC-3", "ec3": "E-AC-3", "eac3-joc": "E-AC-3",
+        "eac3": "E-AC-3", "ec-3": "E-AC-3", "ec3": "E-AC-3", "eac3-joc": "E-AC-3", "ec+3": "E-AC-3",
         "ac4": "AC-4", "ac-4": "AC-4",
         "dts": "DTS", "dca": "DTS", "vnd.dts": "DTS", "dtsc": "DTS",
-        "vnd.dts.hd": "DTS-HD", "dtsh": "DTS-HD", "dtsl": "DTS-HD",
+        "vnd.dts.hd": "DTS-HD", "dtsh": "DTS-HD", "dtsl": "DTS-HD", "dtse": "DTS-HD",
+        "vnd.dts.uhd": "DTS:X", "dtsx": "DTS:X",
         "truehd": "TrueHD", "true-hd": "TrueHD", "mlp": "TrueHD", "mlpa": "TrueHD",
         "mp3": "MP3", "mpeg": "MP3", ".mp3": "MP3", "mp2": "MP2", "mpeg-l2": "MP2",
         "opus": "Opus", "flac": "FLAC", "vorbis": "Vorbis", "alac": "ALAC", "raw": "PCM", "lpcm": "PCM",
@@ -443,7 +444,12 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         }
         let audioProfile = a["profile"]?.lowercased() ?? ""
         var codec = audioCodec(a["codec_name"]) ?? audioCodec(a["codec_tag_string"])
-        if codec == "DTS", audioProfile.contains("dts-hd") { codec = "DTS-HD" }
+        // ffprobe's DTS profiles: "DTS-HD MA", "DTS-HD MA + DTS:X", "DTS:X".
+        if codec == "DTS", audioProfile.contains("dts:x") {
+            codec = "DTS:X"
+        } else if codec == "DTS", audioProfile.contains("dts-hd") {
+            codec = "DTS-HD"
+        }
         let channelCount = positive(a["channels"]).flatMap { $0 <= 32 ? $0 : nil } ?? channels(ofLayout: a["channel_layout"])
         let specs = StreamSpecs(
             width: positive(v["width"]) ?? positive(v["coded_width"]),

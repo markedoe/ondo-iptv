@@ -82,7 +82,7 @@ internal object MeasuredTracks {
             videoCodec = video?.let { StreamSpecs.videoCodecOfMime(it.sampleMimeType, it.codecs) },
             audioCodec = audio?.let { StreamSpecs.audioCodecOfMime(it.sampleMimeType, it.codecs) },
             channels = audio?.channelCount?.takeIf { it > 0 },
-            atmos = audio != null && StreamSpecs.isAtmosMime(audio.sampleMimeType),
+            atmos = audio != null && StreamSpecs.isAtmos(audio.sampleMimeType, audio.codecs),
             source = SpecSource.MEASURED,
             // Its codec string's ("dvhe.08.06": 8); Media3 gives no base layer's compatibility.
             dolbyVisionProfile = video?.codecs?.let(StreamSpecs::dolbyVisionProfileOf)?.takeIf { range == PictureRange.DOLBY_VISION },

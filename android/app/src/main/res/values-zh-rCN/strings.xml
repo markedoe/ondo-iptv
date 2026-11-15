@@ -372,6 +372,8 @@
     <string name="title_data_uhd_modes">是（模式）</string>
     <string name="title_data_uhd_display_size">是（显示尺寸）</string>
     <string name="title_data_uhd_decoder">是（HDR 屏幕、4K 解码器）</string>
+    <string name="title_data_screen_audio">声音输出：最多 %1$s · 原样输出：%2$s</string>
+    <string name="title_data_none">无</string>
     <string name="title_data_screen_chosen">版本选择依据：%1$s</string>
     <string name="title_data_app">应用 %1$s</string>
     <string name="title_data_yes">是</string>

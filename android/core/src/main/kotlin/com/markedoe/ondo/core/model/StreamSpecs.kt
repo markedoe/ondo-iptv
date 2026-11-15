@@ -225,10 +225,11 @@ data class StreamSpecs(
         private val AUDIO_CODECS: Map<String, String> = mapOf(
             "aac" to "AAC", "mp4a" to "AAC", "aac_latm" to "AAC", "mp4a-latm" to "AAC",
             "ac3" to "AC-3", "ac-3" to "AC-3",
-            "eac3" to "E-AC-3", "ec-3" to "E-AC-3", "ec3" to "E-AC-3", "eac3-joc" to "E-AC-3",
+            "eac3" to "E-AC-3", "ec-3" to "E-AC-3", "ec3" to "E-AC-3", "eac3-joc" to "E-AC-3", "ec+3" to "E-AC-3",
             "ac4" to "AC-4", "ac-4" to "AC-4",
             "dts" to "DTS", "dca" to "DTS", "vnd.dts" to "DTS", "dtsc" to "DTS",
-            "vnd.dts.hd" to "DTS-HD", "dtsh" to "DTS-HD", "dtsl" to "DTS-HD",
+            "vnd.dts.hd" to "DTS-HD", "dtsh" to "DTS-HD", "dtsl" to "DTS-HD", "dtse" to "DTS-HD",
+            "vnd.dts.uhd" to "DTS:X", "dtsx" to "DTS:X",
             "truehd" to "TrueHD", "true-hd" to "TrueHD", "mlp" to "TrueHD", "mlpa" to "TrueHD",
             "mp3" to "MP3", "mpeg" to "MP3", ".mp3" to "MP3", "mp2" to "MP2", "mpeg-l2" to "MP2",
             "opus" to "Opus", "flac" to "FLAC", "vorbis" to "Vorbis", "alac" to "ALAC", "raw" to "PCM", "lpcm" to "PCM",
@@ -272,12 +273,18 @@ data class StreamSpecs(
         fun isDolbyVision(mime: String?, codecs: String?): Boolean =
             mime?.trim()?.lowercase() == "video/dolby-vision" || fourCC(codecs) in DOLBY_VISION_CODECS
 
-        /** An audio track's codec from its MIME type ("audio/eac3-joc" is E-AC-3, [isAtmosMime] says Atmos). */
+        /**
+         * An audio track's codec from its MIME type ("audio/eac3-joc" is E-AC-3, [isAtmos] says Atmos), without its
+         * parameters (Media3's DTS Express is "audio/vnd.dts.hd;profile=lbr", DTS:X "audio/vnd.dts.uhd;profile=p2").
+         */
         fun audioCodecOfMime(mime: String?, codecs: String?): String? =
-            audioCodec(mime?.substringAfter('/')?.trim()?.lowercase()) ?: audioCodec(fourCC(codecs))
+            audioCodec(mime?.substringAfter('/')?.substringBefore(';')?.trim()?.lowercase()) ?: audioCodec(fourCC(codecs))
 
         /** E-AC-3 with Dolby Atmos (JOC), as the player names it. */
         fun isAtmosMime(mime: String?): Boolean = mime?.trim()?.lowercase() == "audio/eac3-joc"
+
+        /** The same from a track's MIME type or its `codecs` ("ec+3", an HLS playlist's word for E-AC-3 JOC). */
+        fun isAtmos(mime: String?, codecs: String?): Boolean = isAtmosMime(mime) || fourCC(codecs) == "ec+3"
 
         /**
          * The provider's layout as the apps say it: "5.1(side)" is "5.1", "4.1" and "3.0" stay, "stereo" is "2.0", "mono"
@@ -375,7 +382,13 @@ data class StreamSpecs(
                 height = positive(v["height"]) ?: positive(v["coded_height"]),
                 range = range,
                 videoCodec = videoCodec(v["codec_name"]) ?: videoCodec(tag),
-                audioCodec = if (audioCodec == "DTS" && "dts-hd" in audioProfile) "DTS-HD" else audioCodec,
+                // ffprobe's DTS profiles: "DTS-HD MA", "DTS-HD MA + DTS:X", "DTS:X".
+                audioCodec = when {
+                    audioCodec != "DTS" -> audioCodec
+                    "dts:x" in audioProfile -> "DTS:X"
+                    "dts-hd" in audioProfile -> "DTS-HD"
+                    else -> audioCodec
+                },
                 channels = positive(a["channels"])?.takeIf { it <= 32 } ?: channelsOfLayout(a["channel_layout"]),
                 channelLayout = layoutOf(a["channel_layout"]),
                 atmos = "atmos" in audioProfile || "joc" in audioProfile,

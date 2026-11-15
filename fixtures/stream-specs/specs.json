@@ -297,6 +297,22 @@
         "FLAC"
       ],
       [
+        "ec+3",
+        "E-AC-3"
+      ],
+      [
+        "dtse",
+        "DTS-HD"
+      ],
+      [
+        "dtsx",
+        "DTS:X"
+      ],
+      [
+        "vnd.dts.uhd",
+        "DTS:X"
+      ],
+      [
         "wmav2",
         null
       ],
@@ -849,6 +865,39 @@
         "videoCodec": "HEVC",
         "dolbyVisionProfile": 5,
         "dolbyVisionCompatibility": 0
+      }
+    },
+    {
+      "about": "DTS:X over a DTS-HD Master Audio core is DTS:X",
+      "info": {
+        "audio": {
+          "codec_name": "dts",
+          "profile": "DTS-HD MA + DTS:X",
+          "channels": 8,
+          "channel_layout": "7.1"
+        }
+      },
+      "specs": {
+        "audioCodec": "DTS:X",
+        "channels": 8,
+        "channelLayout": "7.1"
+      }
+    },
+    {
+      "about": "TrueHD with Atmos named by its profile, a layout of 5.1(side)",
+      "info": {
+        "audio": {
+          "codec_name": "truehd",
+          "profile": "Dolby TrueHD + Dolby Atmos",
+          "channels": 6,
+          "channel_layout": "5.1(side)"
+        }
+      },
+      "specs": {
+        "audioCodec": "TrueHD",
+        "channels": 6,
+        "channelLayout": "5.1",
+        "atmos": true
       }
     }
   ],

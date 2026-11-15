@@ -400,6 +400,8 @@
     <string name="title_data_uhd_modes">oui (modes)</string>
     <string name="title_data_uhd_display_size">oui (taille d’affichage)</string>
     <string name="title_data_uhd_decoder">oui (écran HDR, décodeur 4K)</string>
+    <string name="title_data_screen_audio">Sortie son : jusqu’à %1$s · transmis tels quels : %2$s</string>
+    <string name="title_data_none">aucun</string>
     <string name="title_data_screen_chosen">Versions choisies pour : %1$s</string>
     <string name="title_data_app">Appli %1$s</string>
     <string name="title_data_yes">oui</string>

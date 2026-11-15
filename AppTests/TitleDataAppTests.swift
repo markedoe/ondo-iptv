@@ -104,6 +104,18 @@ final class TitleDataAppTests: XCTestCase {
         XCTAssertLessThanOrEqual(fitted.height, room.height + 0.5)
     }
 
+    /// The screen block says what the sound output plays at most on iPhone and iPad (`AVAudioSession`); the Mac reads none.
+    func testTheScreenReadsTheSoundOutput() {
+        let screen = AppModel.screenWithSound()
+        #if os(iOS)
+        XCTAssertGreaterThanOrEqual(screen.outputChannels ?? 0, 1)
+        XCTAssertNotNil(screen.spatialAudio)
+        #else
+        XCTAssertNil(screen.outputChannels)
+        XCTAssertNil(screen.spatialAudio)
+        #endif
+    }
+
     /// Every text the panel shows.
     private func shownTexts(_ data: TitleData) -> [String] {
         data.lines.map(\.value) + data.versions.flatMap { [$0.chip, $0.name, $0.category, $0.shownID, $0.container, $0.tags].compactMap { $0 } }

@@ -185,6 +185,18 @@ extension AppModel {
         return TitleData.Screen(width: long, height: short, hdr10: hdr, hdr10Plus: nil, hlg: hdr, dolbyVision: hdr && decoder, dolbyVisionDecoder: decoder)
     }()
 
+    /// `screen` with the sound output of the moment (headphones, AirPlay, a receiver over HDMI): its channels at most
+    /// and Spatial Audio, read from `AVAudioSession` (cheap property reads) on iPhone and iPad; the Mac has none.
+    static func screenWithSound() -> TitleData.Screen {
+        var screen = Self.screen
+        #if os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        screen.outputChannels = session.maximumOutputNumberOfChannels
+        screen.spatialAudio = session.currentRoute.outputs.contains { $0.isSpatialAudioEnabled }
+        #endif
+        return screen
+    }
+
     /// This build's version and number: "2.0.0 (1086)".
     static let appVersion: String = {
         let info = Bundle.main.infoDictionary

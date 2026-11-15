@@ -109,6 +109,18 @@ class DisplayFactsTest {
         assertFalse(DisplayFacts.hardware("OMX.amlogic.hevc.decoder.awesome2", hardwareAccelerated = false))
     }
 
+    /** What the sound output takes as it is, named in a set order, and its channels. */
+    @Test
+    fun theSoundOutputNamesWhatItTakesAsItIs() {
+        val taken = setOf(androidx.media3.common.C.ENCODING_E_AC3_JOC, androidx.media3.common.C.ENCODING_AC3, androidx.media3.common.C.ENCODING_E_AC3)
+        assertEquals(AudioOutput(listOf("AC-3", "E-AC-3", "Atmos (E-AC-3 JOC)"), 8), AudioOutput.of({ it in taken }, 8))
+        assertEquals(AudioOutput(emptyList(), 2), AudioOutput.of({ false }, 2))
+        // Kept from the first reading when a later one has none.
+        val output = AudioOutput(listOf("AC-3"), 6)
+        val read = DisplayFacts(audioOutput = output).with(DisplayFacts.Background(false, false, false, 0 to 0, true, audioOutput = null))
+        assertEquals(output, read.audioOutput)
+    }
+
     @Test
     fun theDecodersAreReadFromTheirTypesAndProfiles() {
         val main10 = MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10

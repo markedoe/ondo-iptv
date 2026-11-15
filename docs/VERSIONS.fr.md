@@ -159,7 +159,9 @@ sources, la meilleure d'abord, champ par champ :
    que si son image a grandi. Gardé sur l'appareil pour les 2 000 derniers films lus, par la playlist d'où le film est
    lu et par flux (`MeasuredSpecs`, `measured-specs.json`), lu la première fois que la page d'un film ou le lecteur en
    a besoin, jamais au lancement. Une image mesurée SDR n'est pas une image HDR, quoi que dise son nom ; une mesure
-   n'enlève jamais l'Atmos du fournisseur (AVFoundation n'en nomme aucun, Media3 aucun en TrueHD).
+   n'enlève jamais l'Atmos du fournisseur (AVFoundation n'en nomme aucun, Media3 aucun en TrueHD ni dans l'E-AC-3
+   d'un MKV). L'E-AC-3 JOC de Media3, ou le `ec+3` d'une playlist HLS, est de l'Atmos ; son DTS Express est du DTS-HD
+   et son DTS UHD (profil 2) du DTS:X, comme les profils « DTS:X » de ffprobe.
 2. **Les détails du fournisseur** (`info.video`, `info.audio` et `info.bitrate` de `get_vod_info`, ce qu'a lu le ffprobe
    du panneau), gardés avec les détails. Un champ absent, vide, nul ou inconnu reste inconnu. Seuls les champs qui le
    disent sont lus, jamais un texte libre comme le titre d'un flux : le Dolby Vision d'après `codec_tag_string`, le
@@ -199,7 +201,9 @@ sources, la meilleure d'abord, champ par champ :
     non pris en charge par cet écran : profil inconnu, pas lu en premier », « HDR non pris en charge par cet écran »,
     « 4K au-delà du plus grand mode de cet écran ») ;
   - pour l'écran, après les versions : le mode du moment et le plus grand mode (Android), HDR10, HDR10+, HLG et Dolby
-    Vision oui ou non, les décodeurs Dolby Vision et HEVC Main 10, s'il est 4K et pourquoi (ses modes, sa taille
+    Vision oui ou non, les décodeurs Dolby Vision et HEVC Main 10, ce que prend la sortie son (Android : ses canaux au
+    plus et les encodages qu'elle transmet tels quels à la TV ou à l'ampli, d'après `AudioCapabilities` de Media3, relu
+    chaque fois que le panneau est recalculé ; iPhone et iPad : ses canaux et l'audio spatial), s'il est 4K et pourquoi (ses modes, sa taille
     d'affichage, un écran HDR avec un décodeur 4K) avec la taille d'affichage que lit Media3 (Android), ce pour quoi les
     versions sont choisies (« 4K · HDR »), et la version et le build de l'app, pour qu'une photo dise de quel build il
     s'agit.

@@ -1434,7 +1434,9 @@ class PlayerActivity : ComponentActivity() {
         val words = resources.versionWords()
         return withContext(Dispatchers.Default) {
             val matched = runCatching { repository.keptPosterFacts()[key]?.tmdbId }.getOrNull()
-            TitleData.of(state, played.progressKey, played.title, words, matched)
+            // The sound output of the moment (an amplifier switched on, another HDMI route), read here, off the main thread.
+            val display = PictureSupportProbe.facts?.let { facts -> AudioOutput.read(applicationContext)?.let { facts.copy(audioOutput = it) } ?: facts }
+            TitleData.of(state, played.progressKey, played.title, words, matched, display = display)
         }
     }
 

@@ -386,6 +386,8 @@
     <string name="title_data_uhd_modes">हाँ (मोड)</string>
     <string name="title_data_uhd_display_size">हाँ (डिस्प्ले आकार)</string>
     <string name="title_data_uhd_decoder">हाँ (HDR स्क्रीन, 4K डिकोडर)</string>
+    <string name="title_data_screen_audio">ध्वनि आउटपुट: अधिकतम %1$s · जैसा है: %2$s</string>
+    <string name="title_data_none">कोई नहीं</string>
     <string name="title_data_screen_chosen">संस्करण इसके लिए चुने गए: %1$s</string>
     <string name="title_data_app">ऐप %1$s</string>
     <string name="title_data_yes">हाँ</string>

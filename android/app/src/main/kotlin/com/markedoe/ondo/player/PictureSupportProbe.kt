@@ -7,8 +7,11 @@ import android.media.MediaCodecList
 import android.os.Build
 import android.view.Display
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
+import androidx.media3.exoplayer.audio.AudioCapabilities
 import com.markedoe.ondo.core.library.PictureSupport
 import java.util.concurrent.Executors
 
@@ -41,6 +44,8 @@ data class DisplayFacts(
     val television: Boolean? = null,
     /** Whether a hardware HEVC or Dolby Vision decoder takes 3840×2160 (`VideoCapabilities.isSizeSupported`); null until checked. */
     val uhdDecoder: Boolean? = null,
+    /** What the sound output takes ([AudioOutput]); null until read, off the main thread. */
+    val audioOutput: AudioOutput? = null,
 ) {
     val hdr10: Boolean get() = Display.HdrCapabilities.HDR_TYPE_HDR10 in hdrTypes
     val hdr10Plus: Boolean get() = Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS in hdrTypes
@@ -99,6 +104,7 @@ data class DisplayFacts(
         displaySizeHeight = found.displaySize.second,
         television = found.television,
         uhdDecoder = found.uhdDecoder,
+        audioOutput = found.audioOutput ?: audioOutput,
     )
 
     /** What is read once per process, in the background: the decoders, the size Media3 reads of the display, a TV or not. */
@@ -108,6 +114,7 @@ data class DisplayFacts(
         val uhdDecoder: Boolean,
         val displaySize: Pair<Int, Int>,
         val television: Boolean,
+        val audioOutput: AudioOutput? = null,
     )
 
     /** A decoder as [decoderFacts] reads it: its MIME types and, by type, its profiles; hardware or not; the types it takes at 3840×2160. */
@@ -166,6 +173,38 @@ data class DisplayFacts(
         const val DOLBY_VISION_MIME = "video/dolby-vision"
         const val HEVC_MIME = "video/hevc"
         const val HEVC_MAIN10 = MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10
+    }
+}
+
+/**
+ * What the sound output takes, as Media3 reads it (`AudioCapabilities`: the HDMI or default route of the moment): the
+ * surround encodings it takes as they are, for the TV or amplifier to decode ([passthrough], in the order of
+ * [ENCODINGS]), and the channels it plays at most ([maxChannels]: 2 for a stereo output, 8 for 7.1).
+ */
+data class AudioOutput(val passthrough: List<String>, val maxChannels: Int) {
+    companion object {
+        /** The encodings the panel names, as it names them. */
+        val ENCODINGS: List<Pair<Int, String>> = listOf(
+            C.ENCODING_AC3 to "AC-3",
+            C.ENCODING_E_AC3 to "E-AC-3",
+            C.ENCODING_E_AC3_JOC to "Atmos (E-AC-3 JOC)",
+            C.ENCODING_DOLBY_TRUEHD to "TrueHD",
+            C.ENCODING_DTS to "DTS",
+            C.ENCODING_DTS_HD to "DTS-HD",
+            C.ENCODING_DTS_UHD_P2 to "DTS:X",
+        )
+
+        /** The output of [supports] (an encoding taken as it is) and [maxChannels]. */
+        fun of(supports: (Int) -> Boolean, maxChannels: Int): AudioOutput =
+            AudioOutput(ENCODINGS.filter { supports(it.first) }.map { it.second }, maxChannels)
+
+        /** The output of the moment, for a film's sound; off the main thread (it asks the system); null when it cannot be read. */
+        @OptIn(UnstableApi::class)
+        fun read(context: Context): AudioOutput? = runCatching {
+            val attributes = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
+            val capabilities = AudioCapabilities.getCapabilities(context.applicationContext, attributes, null, emptyList())
+            of(capabilities::supportsEncoding, capabilities.maxChannelCount)
+        }.getOrNull()
     }
 }
 
@@ -252,6 +291,7 @@ object PictureSupportProbe {
             uhdDecoder = uhd,
             displaySize = (size?.x ?: 0) to (size?.y ?: 0),
             television = television,
+            audioOutput = AudioOutput.read(context),
         )
     }
 

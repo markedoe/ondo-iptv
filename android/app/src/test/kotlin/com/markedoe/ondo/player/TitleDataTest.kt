@@ -254,4 +254,16 @@ class TitleDataTest {
         val screen = compose.onNodeWithTag("titleDataScreen", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top
         assertTrue("versions at $versions, screen at $screen", versions < screen)
     }
+
+    /** The screen block says where 4K came from and what the sound output takes as it is. */
+    @Test
+    fun theScreenSaysWhere4kComesFromAndWhatTheSoundOutputTakes() {
+        val box = DisplayFacts.of(current = 1920 to 1080, modes = listOf(1920 to 1080), hdrTypes = listOf(android.view.Display.HdrCapabilities.HDR_TYPE_HDR10))
+            .with(DisplayFacts.Background(false, true, false, 3840 to 2160, true, AudioOutput(listOf("AC-3", "E-AC-3"), 8)))
+        val data = TitleData.of(state(), "${Fixtures.PLAYLIST_ID}|MOVIE|${dv.id}|", shownTitle = "Copper Valley", display = box)!!
+        assertTrue(box.pictureSupport().uhd)
+        compose.setContent { OndoTheme { TitleDataPanel(data, television = true) } }
+        compose.onNodeWithTag("titleDataUhd", useUnmergedTree = true).assert(hasText("4K: yes (display size) · display size 3840×2160"))
+        compose.onNodeWithTag("titleDataAudioOutput", useUnmergedTree = true).assert(hasText("Sound output: up to 7.1 · as is: AC-3, E-AC-3"))
+    }
 }

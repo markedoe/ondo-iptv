@@ -155,6 +155,14 @@ class StreamSpecsTest {
         assertEquals("TrueHD", StreamSpecs.audioCodecOfMime("audio/true-hd", null))
         assertEquals("PCM", StreamSpecs.audioCodecOfMime("audio/raw", null))
         assertNull(StreamSpecs.audioCodecOfMime("audio/x-unknown", null))
+        // Media3's DTS Express and DTS:X carry a profile: they had no codec.
+        assertEquals("DTS-HD", StreamSpecs.audioCodecOfMime("audio/vnd.dts.hd;profile=lbr", null))
+        assertEquals("DTS:X", StreamSpecs.audioCodecOfMime("audio/vnd.dts.uhd;profile=p2", null))
+        // E-AC-3 JOC named by an HLS playlist's codecs only.
+        assertEquals("E-AC-3", StreamSpecs.audioCodecOfMime(null, "ec+3"))
+        assertTrue(StreamSpecs.isAtmos(null, "ec+3"))
+        assertTrue(StreamSpecs.isAtmos("audio/eac3-joc", null))
+        assertTrue(!StreamSpecs.isAtmos("audio/eac3", "ec-3"))
     }
 
     /** Measured first, the provider's where the player read nothing; nothing known is empty. */

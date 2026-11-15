@@ -347,8 +347,8 @@ private fun TitleDataDiagnosis(version: TitleData.Version, style: TextStyle) {
 
 /**
  * What the app read of this screen ([TitleData.display]): its mode of the moment and its largest mode, the HDR formats it
- * takes, the decoders, whether it is 4K and why (with the display size Media3 reads), what the versions are chosen for,
- * and the app's build. Nothing before the screen was read.
+ * takes, the decoders, whether it is 4K and why (with the display size Media3 reads), what the sound output takes (its
+ * channels, the encodings it passes as they are), what the versions are chosen for, and the app's build. Nothing before the screen was read.
  */
 @Composable
 fun TitleDataScreen(data: TitleData, style: TextStyle) {
@@ -382,6 +382,19 @@ fun TitleDataScreen(data: TitleData, style: TextStyle) {
                 style = style,
                 modifier = Modifier.testTag("titleDataUhd"),
             )
+            // Whether the box hands 5.1 or Atmos to the TV or amplifier as it is.
+            facts.audioOutput?.let { output ->
+                Text(
+                    stringResource(
+                        R.string.title_data_screen_audio,
+                        com.markedoe.ondo.core.model.StreamSpecs.layout(output.maxChannels),
+                        output.passthrough.joinToString(", ").ifEmpty { stringResource(R.string.title_data_none) },
+                    ),
+                    color = dim,
+                    style = style,
+                    modifier = Modifier.testTag("titleDataAudioOutput"),
+                )
+            }
         }
         val chosen = listOfNotNull("4K".takeIf { data.support.uhd }, "HDR".takeIf { data.support.hdr }, "Dolby Vision".takeIf { data.support.dolbyVision })
         Text(stringResource(R.string.title_data_screen_chosen, chosen.joinToString(" · ").ifEmpty { "–" }), color = dim, style = style, modifier = Modifier.testTag("titleDataChosen"))
