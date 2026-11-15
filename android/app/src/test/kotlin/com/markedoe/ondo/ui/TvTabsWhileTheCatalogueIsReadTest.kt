@@ -18,7 +18,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.requestFocus
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.R
@@ -31,7 +30,6 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.model.TitleHeader
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
-import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
 import com.markedoe.ondo.ui.tv.LocalTitleHeaders
@@ -119,9 +117,9 @@ class TvTabsWhileTheCatalogueIsReadTest {
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
         advance(500)
-        val cards = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("shelfResume")))
-        cards[0].requestFocus()
+        // The focus lands on the first card by itself, as on a cold start (the tab's first row: Continue watching).
         advance(1_000)
+        val cards = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("shelfResume")))
         cards[0].assert(isFocused())
 
         assertPageBackdropOnly("$name, being read")
