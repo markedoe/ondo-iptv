@@ -1,5 +1,7 @@
 package com.markedoe.ondo.core.playback
 
+import com.markedoe.ondo.core.PortableRegex
+
 /**
  * What the player's title data leaves out of a provider's text before showing it: addresses, logins and passwords,
  * query values, IP addresses and `host:port`, and the playlist's own login, password and server wherever they appear.
@@ -9,11 +11,16 @@ package com.markedoe.ondo.core.playback
 object Redaction {
     const val MASK = "•••"
 
-    private val ADDRESS = Regex("""(?U)[A-Za-z][A-Za-z0-9+.\-]*://\S+""")
-    private val LOGIN = Regex("""(?U)[^\s/:@]+:[^\s/@]+@""")
-    private val QUERY = Regex("""(?U)([?&;][A-Za-z0-9_.\-]+=)[^&;#\s]+""")
-    private val IP = Regex("""(?U)\b\d{1,3}(?:\.\d{1,3}){3}(?::\d{1,5})?\b""")
-    private val HOST_PORT = Regex("""(?U)\b[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+:\d{2,5}\b""")
+    // Unicode whitespace, digits and word boundaries spelled out: the same on Android (ICU) and in the unit tests (PortableRegex).
+    private const val SPACE = PortableRegex.SPACE
+    private const val D = PortableRegex.DIGIT
+    private const val B = PortableRegex.BOUNDARY
+
+    private val ADDRESS = Regex("""[A-Za-z][A-Za-z0-9+.\-]*://[^$SPACE]+""")
+    private val LOGIN = Regex("""[^$SPACE/:@]+:[^$SPACE/@]+@""")
+    private val QUERY = Regex("""([?&;][A-Za-z0-9_.\-]+=)[^&;#$SPACE]+""")
+    private val IP = Regex("""$B$D{1,3}(?:\.$D{1,3}){3}(?::$D{1,5})?$B""")
+    private val HOST_PORT = Regex("""$B[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)+:$D{2,5}$B""")
 
     /**
      * An id the panel may show: a provider's number ("x1234", "98765"). The M3U reader's ids are a hash of
