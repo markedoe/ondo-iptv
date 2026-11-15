@@ -153,6 +153,7 @@
     <string name="version_arabic">Arabe</string>
     <string name="version_french_subtitles">VO, sous-titres français</string>
     <string name="version_subtitled">VO sous-titrée</string>
+    <string name="version_cinema_copy">Copie cinéma (%1$s)</string>
     <string name="version_chip_description">Version : %1$s</string>
     <string name="kind_movie">Film</string>
     <string name="kind_series">Série</string>

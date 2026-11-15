@@ -143,6 +143,7 @@
     <string name="version_arabic">阿拉伯语</string>
     <string name="version_french_subtitles">原声，法语字幕</string>
     <string name="version_subtitled">原声，带字幕</string>
+    <string name="version_cinema_copy">影院翻录 (%1$s)</string>
     <string name="version_chip_description">版本：%1$s</string>
     <string name="kind_movie">电影</string>
     <string name="kind_series">剧集</string>

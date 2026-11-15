@@ -73,6 +73,26 @@ class FilmVersionsLabelTest {
         assertEquals(listOf("v1"), FilmVersions.choices(movies, categoryName, inProgress = listOf("v2")).last().playOrder.map { it.id })
     }
 
+    /**
+     * A copy filmed in a cinema (its category "Cinema CAM", no tag in its name) was one chip with the proper copy once
+     * categories stopped counting, and could play first: its own chip now, after the proper one, and never played first.
+     */
+    @Test
+    fun aCinemaCopyIsItsOwnChipAndNeverPlaysFirst() {
+        val (movies, categoryName) = versions(listOf("Sand Harbor", "Sand Harbor"), listOf("Cinema CAM", "Movies"), listOf("mkv", "mkv"))
+        assertEquals(listOf("Standard", "Cinema copy (CAM)"), FilmVersions.choices(movies, categoryName).map { it.label })
+        for (support in listOf(PictureSupport(), PictureSupport(hdr = true, dolbyVision = true, uhd = true))) {
+            val (first, reason) = FilmVersions.defaultChoice(movies, null, emptyList(), support, categoryName)!!
+            assertEquals("v1", first.id)
+            assertEquals(DefaultReason.BEST_FOR_SCREEN, reason)
+        }
+        // Even next to a 4K Dolby Vision copy filmed in a cinema.
+        val (others, names) = versions(listOf("Sand Harbor 4K DV HDCAM", "Sand Harbor"))
+        assertEquals("v1", FilmVersions.defaultVersion(others, null, emptyList(), PictureSupport(true, true, true), names)?.id)
+        assertEquals(listOf(VersionTag.CAM), FilmVersions.tags("Sand Harbor", "Cinema CAM"))
+        assertEquals(emptyList<VersionTag>(), FilmVersions.tags("The Night Cam", "Cam Corner"), "a word of a title, not a tag")
+    }
+
     /** Whatever a film's versions are, no two chips read the same, none is empty, and every version is on one. */
     @Test
     fun twoChipsNeverReadTheSame() {

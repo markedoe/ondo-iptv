@@ -185,6 +185,7 @@ extension VersionWords {
         words.arabic = String(localized: "Arabic", bundle: bundle)
         words.frenchSubtitles = String(localized: "Original, French subtitles", bundle: bundle)
         words.subtitled = String(localized: "Original, subtitled", bundle: bundle)
+        words.cinemaCopy = { marker in String(localized: "Cinema copy (\(marker))", bundle: bundle) }
         return words
     }
 }

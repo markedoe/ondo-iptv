@@ -151,6 +151,7 @@
     <string name="version_arabic">Arabic</string>
     <string name="version_french_subtitles">Original, French subtitles</string>
     <string name="version_subtitled">Original, subtitled</string>
+    <string name="version_cinema_copy">Cinema copy (%1$s)</string>
     <string name="version_chip_description">Version: %1$s</string>
     <string name="kind_movie">Movie</string>
     <string name="kind_series">Series</string>

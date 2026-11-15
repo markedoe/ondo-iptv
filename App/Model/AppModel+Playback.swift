@@ -128,6 +128,9 @@ extension AppModel {
             let next = factory.item(for: other)
             item.fallbackURLs += [next.streamURL] + next.fallbackURLs
         }
+        // Each address once, its own first (as Android's request): a panel can give two rows one address.
+        var seen: Set<URL> = [item.streamURL]
+        item.fallbackURLs = item.fallbackURLs.filter { seen.insert($0).inserted }
         return item
     }
 

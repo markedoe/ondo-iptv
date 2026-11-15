@@ -85,6 +85,26 @@ final class FilmVersionsLabelTests: XCTestCase {
         XCTAssertEqual(FilmVersions.choices(movies, categoryName: categoryName, inProgress: ["v2"]).last?.playOrder.map(\.id), ["v1"])
     }
 
+    /// A copy filmed in a cinema (its category "Cinema CAM", no tag in its name) was one chip with the proper copy once
+    /// categories stopped counting, and could play first: its own chip now, after the proper one, and never played first.
+    func testACinemaCopyIsItsOwnChipAndNeverPlaysFirst() throws {
+        let (movies, categoryName) = versions(["Sand Harbor", "Sand Harbor"], categories: ["Cinema CAM", "Movies"], extensions: ["mkv", "mkv"])
+        XCTAssertEqual(FilmVersions.choices(movies, categoryName: categoryName).map(\.label), ["Standard", "Cinema copy (CAM)"])
+        for support in [PictureSupport(), PictureSupport(hdr: true, dolbyVision: true, uhd: true)] {
+            let choice = try XCTUnwrap(FilmVersions.defaultChoice(movies, inProgress: nil, chosen: [], support: support, categoryName: categoryName))
+            XCTAssertEqual(choice.movie.id, "v1")
+            XCTAssertEqual(choice.reason, .bestForScreen)
+        }
+        // Even next to a 4K Dolby Vision copy filmed in a cinema.
+        let (others, names) = versions(["Sand Harbor 4K DV HDCAM", "Sand Harbor"])
+        let best = FilmVersions.defaultVersion(
+            others, inProgress: nil, chosen: [], support: PictureSupport(hdr: true, dolbyVision: true, uhd: true), categoryName: names
+        )
+        XCTAssertEqual(best?.id, "v1")
+        XCTAssertEqual(FilmVersions.tags(name: "Sand Harbor", categoryName: "Cinema CAM"), [.cam])
+        XCTAssertEqual(FilmVersions.tags(name: "The Night Cam", categoryName: "Cam Corner"), [], "a word of a title, not a tag")
+    }
+
     /// Whatever a film's versions are, no two chips read the same, none is empty, and every version is on one.
     func testTwoChipsNeverReadTheSame() {
         let pool = [

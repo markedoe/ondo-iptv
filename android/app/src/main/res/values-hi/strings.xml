@@ -148,6 +148,7 @@
     <string name="version_arabic">अरबी</string>
     <string name="version_french_subtitles">मूल, फ़्रेंच सबटाइटल</string>
     <string name="version_subtitled">मूल, सबटाइटल के साथ</string>
+    <string name="version_cinema_copy">सिनेमा कॉपी (%1$s)</string>
     <string name="version_chip_description">संस्करण: %1$s</string>
     <string name="kind_movie">फ़िल्म</string>
     <string name="kind_series">सीरीज़</string>

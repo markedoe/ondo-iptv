@@ -2,6 +2,39 @@
   "about": "The chips of a film's page (FilmVersions.choices) and what each says, in English (VersionWords' defaults), written by hand: the same file for Android's FilmVersionsLabelTest and Apple's FilmVersionsLabelTests. A row's category is its category's name. Versions with the same chip tags, the same container and the same name once normalised are one chip: `members` lists each chip's rows (each row alone when it is left out). Invented titles only.",
   "cases": [
     {
+      "name": "a copy filmed in a cinema, by its category: two chips, the proper copy first",
+      "rows": [
+        {"name": "Sand Harbor", "category": "Cinema CAM", "extension": "mkv"},
+        {"name": "Sand Harbor", "category": "Movies", "extension": "mkv"}
+      ],
+      "chips": ["Standard", "Cinema copy (CAM)"],
+      "members": [[1], [0]]
+    },
+    {
+      "name": "a section's words still tell nothing apart, a cinema copy does",
+      "rows": [
+        {"name": "Sand Harbor", "category": "Movies | New releases", "extension": "mkv"},
+        {"name": "Sand Harbor", "category": "Movies | Thriller", "extension": "mkv"},
+        {"name": "Sand Harbor", "category": "Cinema CAM", "extension": "mkv"}
+      ],
+      "chips": ["Standard", "Cinema copy (CAM)"],
+      "members": [[0, 1], [2]]
+    },
+    {
+      "name": "the markers of copies made before release, in the name",
+      "rows": [
+        {"name": "Sand Harbor HDTS"}, {"name": "Sand Harbor TELECINE"}, {"name": "Sand Harbor"},
+        {"name": "Sand Harbor DVDScr"}, {"name": "Sand Harbor R5"}, {"name": "Sand Harbor WORKPRINT"}
+      ],
+      "chips": ["Standard", "Cinema copy (TS)", "Cinema copy (TC)", "Cinema copy (SCR)", "Cinema copy (R5)", "Cinema copy (Workprint)"],
+      "members": [[2], [0], [1], [3], [4], [5]]
+    },
+    {
+      "name": "a short marker only in capitals: \"Cam\" is a word of the title",
+      "rows": [{"name": "The Night Cam"}, {"name": "The Night Cam 4K"}],
+      "chips": ["Standard", "4K"]
+    },
+    {
       "name": "one film filed under two categories by a panel, a prefix and another letter case, next to a 4K Dolby Vision one",
       "rows": [
         {"name": "|FR| COPPER VALLÉE", "category": "|FR| DRAME | THRILLER", "extension": "mkv"},

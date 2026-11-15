@@ -64,7 +64,12 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
     fournisseur : « FR - … », « |EN| Movies », « [IT] … », « … (DE) » ; le premier mot de « IT WAITS BELOW » n'est pas
     un code) ;
   - sous-titres : VO, sous-titres français (VOSTFR, STFR, SUBFR, ST FR, FR SUB), VO sous-titrée (VOST, VOSTA,
-    SUBBED).
+    SUBBED) ;
+  - une copie filmée ou sortie avant la sortie du film : Copie cinéma (CAM) (CAM, HDCAM), (TS) (TS, HDTS, TELESYNC),
+    (TC) (TC, TELECINE), (SCR) (SCREENER, SCR, DVDSCR), (R5), (Workprint) (WORKPRINT), lue dans le nom ou la catégorie
+    (« Cinema CAM ») ; les courts et « Screener » seulement en capitales, pour que « The Night Cam » garde son mot. Une
+    telle copie n'est jamais une même pastille avec une vraie copie, sa pastille vient après les leurs, et elle n'est
+    jamais lue en premier (elle passe après toutes les autres versions, quel que soit l'écran).
 
   Un mot de tag qui est aussi un mot de titre (English, French, Spanish, German, Italian, Portuguese, Arabic, Dual, VO,
   SD) n'est un tag qu'en dehors des mots que partagent les noms de toutes les versions : « The English Orchard » et
@@ -88,7 +93,8 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   en ont, s'appelle « Standard ». Des pastilles encore identiques ajoutent, dans cet ordre, leur conteneur
   (« Standard · MKV », « Standard · MP4 »), puis les mots du fournisseur que les pastilles ne savent pas nommer, tels
   que le nom les écrit (« DUB »). Le nom d'une catégorie ne distingue jamais des pastilles : la fiche d'un film ne montre
-  aucune catégorie (seuls les tags qu'on y lit comptent, « FILMS 4K » est de la 4K). Des pastilles encore identiques
+  aucune catégorie (seuls les tags qu'on y lit comptent : « FILMS 4K » est de la 4K, « Cinema CAM » une copie
+  cinéma). Des pastilles encore identiques
   sont numérotées (« 4K 1 », « 4K 2 » ; « Version 1 », « Version 2 »), en dernier recours. Deux pastilles d'un même film
   ne se lisent jamais pareil, et un film dont toutes les versions lisent la même chose n'a pas de pastille. Un lecteur
   d'écran dit « Version : 4K Dolby Vision ». La version choisie est celle qui est lue ; Lecture, la progression et le
@@ -101,15 +107,15 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   versions d'un film (quatre au plus, celle en lecture d'abord), la pastille, le nom, la catégorie, l'identifiant, le
   conteneur et les tags de chacune, celle en lecture, celle lue en premier et pourquoi ; chaque flux reste listé, ceux
   qu'une même pastille réunit marqués « identique à » celui que lit leur pastille ; pour un épisode, son titre brut et
-  le nom de sa série. Sur Android, le titre affiché est celui de l'app, sans les tags du fournisseur autour du nom
-  (`CatalogueMatcher.displayTitle`), comme le montrent le lecteur et la fiche du film ; le lecteur d'Apple montre encore
-  le nom du fournisseur tel quel, et ses données du titre aussi. Sur une TV, OK maintenu sur la pastille d'une version, sur la page d'un film, montre la même
+  le nom de sa série. Le titre affiché est celui de l'app dans les deux apps, sans les tags du fournisseur autour du
+  nom (`CatalogueMatcher.displayTitle`), comme le montre la fiche du film (la barre du lecteur d'Apple montre encore le
+  nom du fournisseur tel quel). Sur une TV, OK maintenu sur la pastille d'une version, sur la page d'un film, montre la même
   chose pour toutes les versions, chacune une étape de la télécommande. Jamais d'adresse, d'identifiant, de mot de passe
   ni de serveur : ceux de la playlist sont masqués partout où ils apparaissent, comme les adresses, `user:password@`,
   les valeurs de requête, les adresses IP et `hôte:port` (`Redaction`, les mêmes règles et la même table sur les deux
   apps : `fixtures/title-data/redaction.json`). Elles ne sont pas dans le rapport de problème.
 - **La version montrée d'abord** (et lue depuis une affiche) : celle en cours ; sinon la dernière choisie sur cet
-  appareil ; sinon celle qui convient le mieux à l'écran (la 4K sur un écran 4K, le HDR ou le Dolby Vision seulement là
+  appareil ; sinon celle qui convient le mieux à l'écran (une copie cinéma en dernier) (la 4K sur un écran 4K, le HDR ou le Dolby Vision seulement là
   où l'écran les affiche, selon l'écran d'Android et AVFoundation chez Apple) ; sinon la première.
 - **Les données gardées restent par flux** : favoris, historique, progression et synchronisation ne changent pas, et
   rien de nouveau n'est synchronisé. Un film est vu (et écarté par « Masquer les films déjà vus ») quand l'une de ses

@@ -170,6 +170,25 @@ final class FilmVersionsAppTests: XCTestCase {
         XCTAssertEqual(data.versions.map(\.name), ["|FR| COPPER VALLÉE", "|FR| Copper Vallée 4K DV", "|FR| Copper Vallee"])
         XCTAssertEqual(data.versions.map(\.chip), ["Standard", "4K Dolby Vision", "Standard"])
         XCTAssertEqual(data.versions.map { $0.sameAs != nil }, [true, false, false])
+        // Its displayed title is the app's, without the provider's prefix, as on Android.
+        XCTAssertEqual(data.lines.first { $0.label == .shown }?.value, "Copper Vallee")
+    }
+
+    /// A panel giving two rows of one chip the same address: each address is tried once, its own first, as on Android.
+    func testAnAddressListedTwiceIsTriedOnce() async throws {
+        let model = try await model(with: """
+        #EXTM3U
+        #EXTINF:6000 group-title="|FR| DRAME",|FR| COPPER VALLÉE (2024)
+        http://stream.example.com/movie/cv-801.mkv
+        #EXTINF:6000 group-title="|FR| AJOUTÉS",|FR| Copper Vallee (2024)
+        http://stream.example.com/movie/cv-801.mkv
+        #EXTINF:6000 group-title="|FR| AJOUTÉS",|FR| Copper Vallée (2024)
+        http://stream.example.com/movie/cv-803.mkv
+        """)
+        let first = try movie("|FR| COPPER VALLÉE", in: model)
+        XCTAssertEqual(model.fallbacks(for: first).count, 2)
+        let item = try XCTUnwrap(model.playbackItem(for: first))
+        XCTAssertEqual(([item.streamURL] + item.fallbackURLs).map(\.lastPathComponent), ["cv-801.mkv", "cv-803.mkv"])
     }
 
     /// A film whose versions all play the same thing has no chips: Continue Watching names no version.

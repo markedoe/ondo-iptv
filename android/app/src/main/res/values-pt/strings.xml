@@ -153,6 +153,7 @@
     <string name="version_arabic">Árabe</string>
     <string name="version_french_subtitles">Original, legendas em francês</string>
     <string name="version_subtitled">Original legendado</string>
+    <string name="version_cinema_copy">Cópia de cinema (%1$s)</string>
     <string name="version_chip_description">Versão: %1$s</string>
     <string name="kind_movie">Filme</string>
     <string name="kind_series">Série</string>

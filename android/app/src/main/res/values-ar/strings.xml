@@ -168,6 +168,7 @@
     <string name="version_arabic">العربية</string>
     <string name="version_french_subtitles">الأصلية، ترجمة فرنسية</string>
     <string name="version_subtitled">الأصلية مع ترجمة</string>
+    <string name="version_cinema_copy">نسخة سينما (%1$s)</string>
     <string name="version_chip_description">النسخة: %1$s</string>
     <string name="kind_movie">فيلم</string>
     <string name="kind_series">مسلسل</string>

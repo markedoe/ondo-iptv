@@ -8,7 +8,7 @@ import IPTVCore
 /// M3U reader's ids hash the stream's address, its login and password included). The same data as Android's `TitleData`.
 struct TitleData: Equatable, Sendable {
     enum Label: Equatable, Sendable {
-        /// The title the player shows.
+        /// The title as the app shows it: without the provider's tags around the name (`CatalogueMatcher.displayTitle`).
         case shown
         /// The tags the version rules read.
         case tags
@@ -73,7 +73,7 @@ struct TitleData: Equatable, Sendable {
             return film(movie, all: all, chips: chips, sameAs: sameAs, first: first, reason: reason, detailsTMDb: detailsTMDb, input: input, clean: clean)
         case let .episode(series, episodeID, episode, detailsTMDb, category):
             var lines = [
-                Line(label: .shown, value: clean(input.shownTitle)),
+                Line(label: .shown, value: clean(CatalogueMatcher.displayTitle(clean(input.shownTitle)))),
                 Line(label: .raw("series_name"), value: clean(series.name)),
             ]
             if let id = Redaction.shownID(series.id) { lines.append(.init(label: .raw("series_id"), value: id)) }
@@ -112,7 +112,7 @@ struct TitleData: Equatable, Sendable {
             tagText(groupTags[version.id] ?? FilmVersions.labelTags(name: version.name, categoryName: names[version.categoryID]))
         }
         var lines = [
-            Line(label: .shown, value: clean(input.shownTitle)),
+            Line(label: .shown, value: clean(CatalogueMatcher.displayTitle(clean(input.shownTitle)))),
             Line(label: .raw("name"), value: clean(movie.name)),
         ]
         // Never the M3U reader's ids: a hash of the stream's address, its login and password included.
