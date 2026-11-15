@@ -41,6 +41,8 @@ class Tv:
         self.imes = []
         # The app's own timings already printed (launch_marks).
         self.marks = set()
+        # When the last key went (key, keys): the player's controls go CONTROLS_TIMEOUT after it while the video plays.
+        self.last_key = 0.0
         self.log = open(os.path.join(out, "steps.log"), "a", buffering=1)
 
     def say(self, text):
@@ -135,7 +137,14 @@ class Tv:
         code = f"DPAD_{name}" if name in ("UP", "DOWN", "LEFT", "RIGHT") else name
         for _ in range(times):
             self.shell(f"input keyevent KEYCODE_{code}")
+            self.last_key = time.time()
             time.sleep(pause)
+
+    def keys(self, *names):
+        """Several keys in one go, one `input` command: no screen dump, no wait between them."""
+        codes = [f"KEYCODE_DPAD_{n}" if n in ("UP", "DOWN", "LEFT", "RIGHT") else f"KEYCODE_{n}" for n in names]
+        self.shell("input keyevent " + " ".join(codes))
+        self.last_key = time.time()
 
     def wait_for(self, what, condition, timeout, every=2.0):
         deadline = time.time() + timeout
@@ -616,26 +625,103 @@ def path_player(tv, args):
     tv.note_screen("player-movie-closed")
 
 
-def player_panel(tv, button, name, expect=None, close=True):
-    """Right through the player's buttons to [button] (its description), OK: its side panel, noted as [name], [expect]
-    checked, closed with Back unless [close] is false. The controls go away 5 s after a key while the video plays: Info
-    shows them again, the focus on Play/Pause (an arrow with the controls hidden would skip or change channel)."""
-    # From Play/Pause: Info hides the controls when they show, and shows them again.
-    if tv.visible("Subtitles"):
-        tv.key("INFO", pause=1)
-    tv.key("INFO", pause=1)
+# The player's controls go away this long after the last key while the video plays (PlayerControls.TIMEOUT_MS).
+CONTROLS_TIMEOUT = 5.0
+
+
+def node_bounds(node):
+    """A node's [left, top, right, bottom], None when it has none."""
+    found = [int(v) for v in re.findall(r"\d+", node.get("bounds", ""))]
+    return found if len(found) == 4 else None
+
+
+def player_row(tv, root):
+    """The player's button row, left to right (each button its words): the focusable nodes level with Play/Pause; None
+    when its controls are hidden."""
+    if root is None:
+        return None
+    nodes = [(node_bounds(n), tv.texts(n)) for n in root.iter("node") if n.get("focusable") == "true"]
+    nodes = [(b, words) for b, words in nodes if b is not None]
+    play = next((b for b, words in nodes if "Pause" in words or "Play" in words), None)
+    if play is None:
+        return None
+    return [words for b, words in sorted(nodes, key=lambda item: item[0][0]) if b[1] < play[3] and b[3] > play[1]]
+
+
+def player_steps(row, button):
+    """Right presses from Play/Pause (where the focus goes as the controls show) to [button]; None when unknown."""
+    if not row:
+        return None
+    play = next((i for i, words in enumerate(row) if "Pause" in words or "Play" in words), None)
+    target = next((i for i, words in enumerate(row) if button in words), None)
+    if play is None or target is None or target <= play:
+        return None
+    return target - play
+
+
+def panel_title(root, button):
+    """The side panel of [button] open: its title (the button's name) in the top half of the screen, the button row
+    staying at the bottom."""
+    if root is None:
+        return False
+    nodes = [(n, node_bounds(n)) for n in root.iter("node")]
+    height = max((b[3] for _, b in nodes if b is not None), default=0)
+    return any(button in (n.get("text"), n.get("content-desc")) and b is not None and b[1] < height / 2 for n, b in nodes)
+
+
+def controls_gone(tv):
+    """Waits until the player's controls are gone; Info where they stay (paused, a panel open)."""
     for _ in range(12):
         root = tv.screen()
-        node, texts = tv.focused(root)
-        if node is not None and button in " | ".join(texts):
+        if root is None:
+            # No dump: nothing known, nothing pressed.
+            time.sleep(1)
+            continue
+        if player_row(tv, root) is None:
+            return
+        if time.time() - tv.last_key > CONTROLS_TIMEOUT + 3:
+            tv.key("INFO", pause=1)
+        else:
+            time.sleep(1)
+    raise TimeoutError("the player's controls never went away")
+
+
+def player_panel(tv, button, name, expect=None, close=True):
+    """The player's [button] (its description) pressed: its side panel, noted as [name], [expect] checked, closed with
+    Back unless [close] is false.
+    The controls go away CONTROLS_TIMEOUT after a key while the video plays, then Right skips and OK pauses, and a
+    screen dump can take that long on an emulator: no dump between the key that shows them and OK. The row is read with
+    the remote's subtitles key (its panel keeps the controls), they go, Info shows them again (the focus on Play/Pause),
+    the Right presses and OK go in one command, and the panel's title on screen says it was the right button."""
+    for _ in range(4):
+        tv.key("CAPTIONS", pause=1.5)
+        root = tv.screen()
+        steps = player_steps(player_row(tv, root), button)
+        # Back only from the open panel: with the controls hidden, it would leave the player.
+        if panel_title(root, "Subtitles"):
+            tv.key("BACK", pause=1)
+        controls_gone(tv)
+        if steps is None:
+            # No panel from the subtitles key: the row as Info shows it.
+            tv.key("INFO", pause=0.5)
+            steps = player_steps(player_row(tv, tv.screen()), button)
+            controls_gone(tv)
+        if steps is None:
+            tv.say(f"  {button}: not in the player's button row; again")
+            continue
+        tv.key("INFO", pause=1.5)
+        tv.keys(*(["RIGHT"] * steps), "DPAD_CENTER")
+        time.sleep(2)
+        root = tv.screen()
+        if panel_title(root, button):
             break
-        shown = root is not None and "Subtitles" in tv.texts(root)
-        tv.key("RIGHT" if shown else "INFO", pause=0.6)
+        tv.say(f"  {button}: not open after {steps} Right presses from Play/Pause; again")
+        # Another panel (it keeps the controls) closes.
+        if any(panel_title(root, " | ".join(words)) for words in player_row(tv, root) or []):
+            tv.key("BACK", pause=1)
     else:
-        tv.screenshot(f"never-focused-{button}")
-        raise TimeoutError(f"the focus never reached the player's {button} button")
-    tv.key("DPAD_CENTER")
-    time.sleep(2)
+        tv.screenshot(f"never-opened-{button}")
+        raise TimeoutError(f"the player's {button} panel never opened")
     tv.check_alive(f"{button} pressed in the player")
     tv.note_screen(name)
     if expect and not tv.visible(expect):
