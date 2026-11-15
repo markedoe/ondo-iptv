@@ -67,6 +67,18 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   in the night's run and are reported otherwise. `HomeSnapshotTest` checks what the snapshot is kept for,
   `TabsWorkedOutAheadTest` that a tab is never watched for nothing, `TabsOpenedWhileTheCatalogueIsReadTest` and
   `TvTabsOpenWithTheirHeaderTest` that Movies and Series open alike, their rows and their header at once.
+- **A first load that does not wait** (`data/OndoRepository.kt`): a start reads its saved documents (settings,
+  playlists, profiles, libraries) in one go off the main thread, and the saved catalogue's read starts with them,
+  before the first screen is drawn (`MainActivity.onCreate` asks for it): none of it waits for the main thread. A
+  playlist added or refreshed is shown first and written to the device after (tens of megabytes on a large panel);
+  adding still ends once it is written. With nothing kept of TMDb (a first playlist, no token), the index of the
+  catalogue's titles is not built to match nothing. The app times these moments itself (`data/LaunchMarks.kt`:
+  durations only, in the system log under `OndoLaunch`, from the process's start): `ready`, `catalogue read`,
+  `home kept shown`, `home rows`, `home whole`, `movies tab`, `series tab`, and for a playlist added
+  `add: downloaded and parsed`, `add: catalogue shown`, `add: catalogue saved`; the TV release check prints them
+  ("timed by the app"). `ColdStartTimingTest` prints the same marks, opens once more with the main thread busy for a
+  second (the saved catalogue's read must have started meanwhile) and adds a playlist of 100,000 movies to an empty app
+  (stage 8: its catalogue in the state before its file is written, no index of its titles built).
 - **TV header** (`ui/tv/TvFocusHeader.kt`): on Home, the Movies and Series tabs and a category's, genre's, year's or
   award's titles, a header of fixed height pinned above the posters shows the one with the focus: its backdrop (else
   its poster, blurred) behind the whole page, edge to edge and down to the screen's bottom, the rows drawn over it

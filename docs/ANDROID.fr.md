@@ -74,6 +74,20 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   nuit et rapportés sinon. `HomeSnapshotTest` vérifie pour quoi l'instantané est gardé, `TabsWorkedOutAheadTest` qu'un
   onglet n'est jamais observé pour rien, `TabsOpenedWhileTheCatalogueIsReadTest` et `TvTabsOpenWithTheirHeaderTest` que
   Films et Séries s'ouvrent de la même façon, leurs rangées et leur en-tête aussitôt.
+- **Un premier chargement qui n'attend pas** (`data/OndoRepository.kt`) : un démarrage lit ses documents enregistrés
+  (réglages, playlists, profils, bibliothèques) en une fois hors du thread principal, et la lecture du catalogue
+  enregistré commence avec eux, avant que le premier écran soit dessiné (`MainActivity.onCreate` la demande) : rien de
+  tout cela n'attend le thread principal. Une playlist ajoutée ou actualisée s'affiche d'abord et s'écrit sur
+  l'appareil ensuite (des dizaines de mégaoctets sur un gros panel) ; l'ajout ne se termine toujours qu'une fois
+  écrite. Sans rien gardé de TMDb (une première playlist, pas de jeton), l'index des titres du catalogue n'est pas
+  construit pour ne rien rapprocher. L'app chronomètre elle-même ces moments (`data/LaunchMarks.kt` : des durées
+  seulement, dans le journal système sous `OndoLaunch`, depuis le démarrage du processus) : `ready`, `catalogue read`,
+  `home kept shown`, `home rows`, `home whole`, `movies tab`, `series tab`, et pour une playlist ajoutée
+  `add: downloaded and parsed`, `add: catalogue shown`, `add: catalogue saved` ; le TV release check les affiche
+  (« timed by the app »). `ColdStartTimingTest` affiche les mêmes repères, ouvre une fois de plus avec le thread
+  principal occupé pendant une seconde (la lecture du catalogue enregistré doit avoir commencé entre-temps) et ajoute
+  une playlist de 100 000 films à une app vide (étape 8 : son catalogue dans l'état avant que son fichier soit écrit,
+  aucun index de ses titres construit).
 - **En-tête sur TV** (`ui/tv/TvFocusHeader.kt`) : sur l'accueil, les onglets Films et Séries et les titres d'une
   catégorie, d'un genre, d'une année ou d'une récompense, un en-tête de hauteur fixe au-dessus des affiches montre
   celle qui a le focus : son image de fond (sinon son affiche floutée) derrière toute la page, bord à bord et jusqu'en
