@@ -571,7 +571,8 @@
         "audioCodec": "TrueHD",
         "channels": 8,
         "atmos": true,
-        "channelLayout": "7.1"
+        "channelLayout": "7.1",
+        "dolbyVisionProfile": 8
       }
     },
     {
