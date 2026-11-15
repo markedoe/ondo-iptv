@@ -52,10 +52,12 @@ final class DolbyVisionChoiceTests: XCTestCase {
         XCTAssertEqual(dolbyVision(10, 1).dolbyVisionFallback, .baseLayer)
         XCTAssertEqual(StreamSpecs(range: .hdr10).dolbyVisionFallback, .none)
         XCTAssertEqual(dolbyVision(8, 1).summary(), "3840×2160 · 4K · Dolby Vision P8.1 · HEVC")
-        // The name's tag says Dolby Vision; measured SDR, it is none.
+        // The name's tag says Dolby Vision; measured SDR, it is none; the provider's HDR10 alone does not overrule it.
         let tags = FilmVersions.labelTags(name: "Sand Harbor 4K DV", categoryName: nil)
         XCTAssertEqual(FilmVersions.dolbyVisionFallback(tags, specs: nil), .unknown)
-        XCTAssertEqual(FilmVersions.dolbyVisionFallback(tags, specs: StreamSpecs(width: 3840, height: 2160, range: .sdr)), .none)
+        XCTAssertEqual(FilmVersions.dolbyVisionFallback(tags, specs: StreamSpecs(width: 3840, height: 2160, range: .sdr, source: .measured)), .none)
+        XCTAssertEqual(FilmVersions.dolbyVisionFallback(tags, specs: StreamSpecs(width: 3840, height: 2160, range: .hdr10)), .unknown)
+        XCTAssertEqual(FilmVersions.dolbyVisionFallback(FilmVersions.labelTags(name: "Sand Harbor 4K", categoryName: nil), specs: StreamSpecs(range: .hdr10)), .none)
     }
 
     /// A 4K screen with HDR10 and no Dolby Vision: 4K first; Dolby Vision first only when its base layer shows right.

@@ -712,7 +712,6 @@ object UiMappers {
             order = order,
             selections = selections,
             series = series,
-            reading = state.isRestoring || state.isLoading,
         )
     }
 

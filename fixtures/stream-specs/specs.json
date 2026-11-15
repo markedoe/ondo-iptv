@@ -1,5 +1,5 @@
 {
-  "about": "What a stream is made of (StreamSpecs) and how the apps say it, written by hand: the same file for Android's StreamSpecsTest and Apple's StreamSpecsTests. `resolution`: a picture's size and its class (null: unknown). `audio`: a sound's codec, channels and Atmos, as the facts line and a chip say it. `codecs`: the names ffprobe, a FourCC or a MIME subtype give a codec, and the conventional name. `badges`: a version's name and specs, its facts line's badges and what a screen reader says (English). `audio` rows may give the provider's `layout` (channel_layout), said before the count. `layoutNames`: a provider's channel_layout and how the apps say it. `merge`: what the player measured over the provider's, field by field (Atmos only ever added, a layout kept only where it agrees with the channels). `measured`: readings of one stream in turn, whether each is kept and what is kept at the end (the first stays unless the picture grew; a same-size reading only adds what the first did not know, its Dolby Vision profile). `audioPick`: the sound the player measures among a stream's tracks (the default, else the most channels). `provider`: the `info` object of a panel's get_vod_info and the specs read from it (null: nothing), a Dolby Vision profile and base layer from its configuration record. A field of `specs` left out is unknown. Invented values only.",
+  "about": "What a stream is made of (StreamSpecs) and how the apps say it, written by hand: the same file for Android's StreamSpecsTest and Apple's StreamSpecsTests. `resolution`: a picture's size and its class (null: unknown). `audio`: a sound's codec, channels and Atmos, as the facts line and a chip say it. `codecs`: the names ffprobe, a FourCC or a MIME subtype give a codec, and the conventional name. `badges`: a version's name and specs, its facts line's badges and what a screen reader says (English). `audio` rows may give the provider's `layout` (channel_layout), said before the count. `layoutNames`: a provider's channel_layout and how the apps say it. `merge`: what the player measured over the provider's, field by field (Atmos only ever added, a layout kept only where it agrees with the channels). `measured`: readings of one stream in turn, whether each is kept and what is kept at the end (the first stays unless the picture grew; a same-size reading only adds what the first did not know, its Dolby Vision profile). `audioPick`: the sound the player measures among a stream's tracks (the default, else the most channels). `provider`: the `info` object of a panel's get_vod_info and the specs read from it (null: nothing), a Dolby Vision profile and base layer from its configuration record. A field of `specs` left out is unknown. Invented values only. `playsFirst`: a film's versions (a name, and what is known of its stream), the screen (`support`: HDR, Dolby Vision, 4K) and the version played first (`first`, its index).",
   "resolution": [
     {
       "width": 1920,
@@ -1069,6 +1069,137 @@
       "defaults": [],
       "channels": [],
       "index": -1
+    }
+  ],
+  "playsFirst": [
+    {
+      "about": "a name saying DV, the provider's HDR10 and no Dolby Vision record: profile unknown, not first on a screen without Dolby Vision",
+      "support": {
+        "hdr": true,
+        "dolbyVision": false,
+        "uhd": true
+      },
+      "versions": [
+        {
+          "name": "Glass Meridian"
+        },
+        {
+          "name": "Glass Meridian 4K DV",
+          "specs": {
+            "width": 3840,
+            "height": 2160,
+            "range": "HDR10",
+            "videoCodec": "HEVC"
+          }
+        }
+      ],
+      "first": 0
+    },
+    {
+      "about": "a name saying DV, the player measured HDR10 and no Dolby Vision: the 4K HDR10 picture first",
+      "support": {
+        "hdr": true,
+        "dolbyVision": false,
+        "uhd": true
+      },
+      "versions": [
+        {
+          "name": "Glass Meridian"
+        },
+        {
+          "name": "Glass Meridian 4K DV",
+          "specs": {
+            "width": 3840,
+            "height": 2160,
+            "range": "HDR10",
+            "videoCodec": "HEVC",
+            "source": "MEASURED"
+          }
+        }
+      ],
+      "first": 1
+    },
+    {
+      "about": "a name saying DV only: profile unknown, not first on a screen without Dolby Vision",
+      "support": {
+        "hdr": true,
+        "dolbyVision": false,
+        "uhd": true
+      },
+      "versions": [
+        {
+          "name": "Glass Meridian"
+        },
+        {
+          "name": "Glass Meridian 4K DV"
+        }
+      ],
+      "first": 0
+    },
+    {
+      "about": "Dolby Vision profile 8.1 from the provider: its HDR10 base layer, first on a 4K HDR10 screen",
+      "support": {
+        "hdr": true,
+        "dolbyVision": false,
+        "uhd": true
+      },
+      "versions": [
+        {
+          "name": "Glass Meridian"
+        },
+        {
+          "name": "Glass Meridian 4K DV",
+          "specs": {
+            "width": 3840,
+            "height": 2160,
+            "range": "DOLBY_VISION",
+            "dolbyVisionProfile": 8,
+            "dolbyVisionCompatibility": 1
+          }
+        }
+      ],
+      "first": 1
+    },
+    {
+      "about": "Dolby Vision profile 5 from the provider: wrong colours, never first on a screen without Dolby Vision",
+      "support": {
+        "hdr": true,
+        "dolbyVision": false,
+        "uhd": true
+      },
+      "versions": [
+        {
+          "name": "Glass Meridian"
+        },
+        {
+          "name": "Glass Meridian 4K DV",
+          "specs": {
+            "width": 3840,
+            "height": 2160,
+            "range": "DOLBY_VISION",
+            "dolbyVisionProfile": 5,
+            "dolbyVisionCompatibility": 0
+          }
+        }
+      ],
+      "first": 0
+    },
+    {
+      "about": "a screen with Dolby Vision: the Dolby Vision version, whatever is known of it",
+      "support": {
+        "hdr": true,
+        "dolbyVision": true,
+        "uhd": true
+      },
+      "versions": [
+        {
+          "name": "Glass Meridian"
+        },
+        {
+          "name": "Glass Meridian 4K DV"
+        }
+      ],
+      "first": 1
     }
   ]
 }

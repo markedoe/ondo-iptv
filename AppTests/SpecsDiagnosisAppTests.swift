@@ -57,12 +57,20 @@ final class SpecsDiagnosisAppTests: XCTestCase {
         await second.storedDetailsLoaded()
         XCTAssertNotNil(second.movieDetailsCache[plain.id], "the kept details are read back")
         XCTAssertNil(second.movieDetailsCache[plain.id]?.streamSpecs)
-        _ = await second.details(for: plain)
-        XCTAssertEqual(panel.asked, ["700101"], "asked again")
-        XCTAssertEqual(second.movieDetailsCache[plain.id]?.streamSpecs?.resolution, "1080p")
+        // The other version asked again and saved: the page's own old details stay on disk, never lost.
         let asked = await second.loadVersionDetails([dv], gap: .milliseconds(1))
         XCTAssertEqual(asked, 1)
-        XCTAssertEqual(panel.asked, ["700101", "700102"])
+        XCTAssertEqual(panel.asked, ["700102"])
+        second.flush()
+        await second.storedDetailsWrite?.value
+        let kept = try XCTUnwrap(second.cacheStore.load(DetailsArchive.self, name: DetailsArchive.documentName(for: playlist.id)))
+        XCTAssertEqual(kept.movies[plain.id]?.value.plot, "A lake.")
+        XCTAssertNil(kept.movies[plain.id]?.value.providerInfo)
+        XCTAssertNotNil(kept.versions[dv.id]?.value.providerInfo)
+
+        _ = await second.details(for: plain)
+        XCTAssertEqual(panel.asked, ["700102", "700101"], "asked again")
+        XCTAssertEqual(second.movieDetailsCache[plain.id]?.streamSpecs?.resolution, "1080p")
         // Read by this version: not asked again.
         let again = await second.loadVersionDetails([dv], gap: .milliseconds(1))
         XCTAssertEqual(again, 0)

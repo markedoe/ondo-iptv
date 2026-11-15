@@ -121,14 +121,16 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   - **la 4K** sur un écran dont le plus grand mode est 4K, quel que soit son mode du moment : sur Android le plus grand
     de `Display.supportedModes` en taille physique (un boîtier qui dessine une interface 1080p, ou qui lit 1080p en
     « auto » tant qu'aucun film ne joue, reste un écran 4K) ; chez Apple la taille native de l'écran ;
-  - **le HDR** (HDR10, HDR10+, HLG) seulement là où l'écran l'annonce (`Display.getHdrCapabilities`, et celui de chaque
-    mode à partir d'Android 14 ; AVFoundation chez Apple) ;
+  - **le HDR** (HDR10, HDR10+, HLG) seulement là où l'écran l'annonce (`Display.getHdrCapabilities`, sans les types que
+    l'utilisateur a désactivés ; AVFoundation chez Apple) ;
   - **le Dolby Vision** en premier seulement là où l'écran lui-même annonce le Dolby Vision et qu'un décodeur existe
-    (sur Android `MediaCodecList`, lu une fois en arrière-plan ; le décodeur d'un boîtier ne fait pas afficher le Dolby
+    (sur Android `MediaCodecList`, lu une fois en arrière-plan à la plus basse priorité, après le premier accueil ; le décodeur d'un boîtier ne fait pas afficher le Dolby
     Vision à un téléviseur). Sur un écran qui ne l'a pas, le profil Dolby Vision de la version décide : 8 et 9 (un 10
     avec une couche de base compatible) lisent leur couche de base HDR10, SDR ou HLG et comptent comme elle ; 5 (un 10
     sans couche de base) donne de fausses couleurs et n'est jamais lu en premier ; un profil inconnu (un nom qui dit
-    seulement « DV », le profil 7) est pris comme un 5. Une telle version reste sur sa pastille, à choisir. Le profil
+    seulement « DV », le profil 7) est pris comme un 5, tout comme un nom qui dit « DV » quand les caractéristiques du
+    fournisseur ne montrent pas de Dolby Vision (le ffprobe d'un panel peut ne lire que la couche de base HDR10 d'un
+    fichier profil 5) : seule la mesure du lecteur l'emporte sur le nom. Une telle version reste sur sa pastille, à choisir. Le profil
     vient de l'enregistrement de configuration du fournisseur (`dv_profile`, `dv_bl_signal_compatibility_id`), de la
     chaîne de codec de Media3 (« dvhe.08.06 » : le profil seul) ou de l'enregistrement `dvcC` d'AVFoundation.
 - **Les données gardées restent par flux** : favoris, historique, progression et synchronisation ne changent pas, et

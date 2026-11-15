@@ -20,7 +20,7 @@ data class DisplayFacts(
     val currentHeight: Int = 0,
     val largestWidth: Int = 0,
     val largestHeight: Int = 0,
-    /** `Display.HdrCapabilities.HDR_TYPE_*` the display takes (with each mode's, Android 14 and later). */
+    /** `Display.HdrCapabilities.HDR_TYPE_*` the display takes, as `Display.getHdrCapabilities` says (without the types the viewer turned off). */
     val hdrTypes: Set<Int> = emptySet(),
     val dolbyVisionDecoder: Boolean? = null,
     val hevcMain10Decoder: Boolean? = null,
@@ -49,7 +49,7 @@ data class DisplayFacts(
 
         /**
          * The facts of a display: its mode of the moment ([current], physical width and height), its supported modes
-         * ([modes]), the HDR types it reports ([hdrTypes]: its capabilities', and each mode's on Android 14 and later).
+         * ([modes]), the HDR types it reports ([hdrTypes]: its capabilities').
          */
         fun of(
             current: Pair<Int, Int>,
@@ -87,25 +87,39 @@ data class DisplayFacts(
 
 /** Reads [DisplayFacts] of the screen the app shows on: the display at once, the decoders once, in the background. */
 object PictureSupportProbe {
+    /** How long after the screen is read the decoders are, so the first Home is drawn before. */
+    private const val DECODERS_DELAY_MS = 3_000L
+
     /** What was read last; null before an activity read it. */
     @Volatile var facts: DisplayFacts? = null
         private set
 
     /** The decoders, read once per process. */
     @Volatile private var decoders: Pair<Boolean, Boolean>? = null
-    private val background = Executors.newSingleThreadExecutor { Thread(it, "decoders").apply { isDaemon = true } }
+    /** The decoders are read at the lowest priority: never in the way of the launch, the first Home or a stream. */
+    private val background = Executors.newSingleThreadExecutor { task ->
+        Thread({
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_LOWEST)
+            task.run()
+        }, "decoders").apply {
+            isDaemon = true
+            priority = Thread.MIN_PRIORITY
+        }
+    }
 
     /**
      * The facts of [activity]'s display (cheap: no decoder list on the main thread); the decoders are read once, in the
      * background, then [onDecoders] gets the facts with them.
      */
     fun of(activity: Activity, onDecoders: (DisplayFacts) -> Unit = {}): DisplayFacts {
+        // A short wait first: the first Home is drawn before the decoder list is read.
         val read = runCatching { read(activity) }.getOrDefault(DisplayFacts())
         val known = decoders
         val facts = if (known != null) read.copy(dolbyVisionDecoder = known.first, hevcMain10Decoder = known.second) else read
         this.facts = facts
         if (known == null) {
             background.execute {
+                runCatching { Thread.sleep(DECODERS_DELAY_MS) }
                 val found = runCatching { listDecoders() }.getOrNull() ?: return@execute
                 decoders = found
                 val withDecoders = (this.facts ?: facts).copy(dolbyVisionDecoder = found.first, hevcMain10Decoder = found.second)
@@ -121,11 +135,10 @@ object PictureSupportProbe {
         val display = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) activity.display else null) ?: activity.windowManager.defaultDisplay
         val mode = display.mode
         val modes = display.supportedModes.orEmpty()
+        // The display's capabilities, which leave out the HDR types the viewer turned off (Android 14 and later); never
+        // each mode's own list, which does not.
         val types = HashSet<Int>()
         display.hdrCapabilities?.supportedHdrTypes?.forEach { types.add(it) }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            for (each in modes) each.supportedHdrTypes.forEach { types.add(it) }
-        }
         return DisplayFacts.of(
             current = mode.physicalWidth to mode.physicalHeight,
             modes = modes.map { it.physicalWidth to it.physicalHeight },

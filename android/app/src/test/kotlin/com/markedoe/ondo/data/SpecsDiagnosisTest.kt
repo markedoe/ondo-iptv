@@ -152,15 +152,28 @@ class SpecsDiagnosisTest {
         // The kept details are read back, as they were.
         second.state.first { it.isReady && plain.id in it.movieDetails && dv.id in it.movieDetails }
         assertEquals(null, second.state.value.movieDetails[plain.id]?.streamSpecs)
-        val opened = second.details(plain)
-        assertEquals("asked again", listOf("700101"), panel.asked)
-        assertEquals(StreamSpecs(1920, 1080, null, "H.264", "AC-3", 6), opened?.streamSpecs)
+        // The other version asked again and saved: the page's own old details stay on disk, never lost.
         assertEquals(1, second.versionDetails(listOf(dv)))
-        assertEquals(listOf("700101", "700102"), panel.asked)
+        assertEquals(listOf("700102"), panel.asked)
+        saved()
+        val kept = AppStore(folder.root).loadDetails(playlistId)!!
+        assertEquals("A lake.", kept.movies[plain.id]?.value?.plot)
+        assertEquals(null, kept.movies[plain.id]?.value?.providerInfo)
+        assertTrue(kept.versions[dv.id]?.value?.providerInfo != null)
+        val third = repository(panel)
+        third.bootstrap()
+        third.state.first { it.isReady && plain.id in it.movieDetails }
+        assertEquals("A lake.", third.state.value.movieDetails[plain.id]?.plot)
+
+        val opened = second.details(plain)
+        assertEquals("asked again", listOf("700102", "700101"), panel.asked)
+        assertEquals(StreamSpecs(1920, 1080, null, "H.264", "AC-3", 6), opened?.streamSpecs)
         // Read by this version: not asked again.
         assertEquals(0, second.versionDetails(listOf(dv)))
         second.details(plain)
         assertEquals(2, panel.asked.size)
+        // The next start read the version's details back too.
+        assertTrue(third.state.value.movieDetails[dv.id] != null)
     }
 
     /** The title data says what each version's details held, how they failed, which are kept; field names only. */

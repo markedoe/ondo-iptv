@@ -200,10 +200,37 @@ class StreamSpecsTest {
             "3840×2160 · 4K · Dolby Vision P8.1 · HEVC",
             dv.copy(width = 3840, height = 2160, videoCodec = "HEVC", dolbyVisionProfile = 8, dolbyVisionCompatibility = 1).summary(),
         )
-        // The name's tag says Dolby Vision; measured SDR, it is none.
+        // The name's tag says Dolby Vision; measured SDR, it is none; the provider's HDR10 alone does not overrule it.
         val tags = FilmVersions.labelTags("Sand Harbor 4K DV", null)
         assertEquals(DolbyVisionFallback.UNKNOWN, FilmVersions.dolbyVisionFallback(tags, null))
-        assertEquals(DolbyVisionFallback.NONE, FilmVersions.dolbyVisionFallback(tags, StreamSpecs(width = 3840, height = 2160, range = PictureRange.SDR)))
+        val measuredSdr = StreamSpecs(width = 3840, height = 2160, range = PictureRange.SDR, source = com.markedoe.ondo.core.model.SpecSource.MEASURED)
+        assertEquals(DolbyVisionFallback.NONE, FilmVersions.dolbyVisionFallback(tags, measuredSdr))
+        assertEquals(DolbyVisionFallback.UNKNOWN, FilmVersions.dolbyVisionFallback(tags, StreamSpecs(width = 3840, height = 2160, range = PictureRange.HDR10)))
+        assertEquals(DolbyVisionFallback.NONE, FilmVersions.dolbyVisionFallback(FilmVersions.labelTags("Sand Harbor 4K", null), StreamSpecs(range = PictureRange.HDR10)))
+    }
+
+    /** The version played first, for a film's versions and a screen (`playsFirst`): what is known of each, then its name. */
+    @Test
+    fun theVersionPlayedFirst() {
+        val cases = table["playsFirst"]!!.jsonArray.map { it.jsonObject }
+        assertTrue(cases.size >= 6)
+        for (case in cases) {
+            val about = case["about"]!!.jsonPrimitive.content
+            val support = case["support"]!!.jsonObject.let { s ->
+                com.markedoe.ondo.core.library.PictureSupport(
+                    hdr = s["hdr"]!!.jsonPrimitive.content == "true",
+                    dolbyVision = s["dolbyVision"]!!.jsonPrimitive.content == "true",
+                    uhd = s["uhd"]!!.jsonPrimitive.content == "true",
+                )
+            }
+            val rows = case["versions"]!!.jsonArray.map { it.jsonObject }
+            val movies = rows.mapIndexed { i, row ->
+                com.markedoe.ondo.core.model.Movie(id = "v$i", name = row["name"]!!.jsonPrimitive.content, categoryId = "c", streamUrl = "http://stream.example.com/$i.mkv")
+            }
+            val specs = rows.mapIndexed { i, row -> "v$i" to specs(row["specs"]) }.toMap()
+            val first = FilmVersions.defaultChoice(movies, null, emptyList(), support, { null }) { specs[it] }?.first
+            assertEquals(movies[case["first"].int()!!], first, about)
+        }
     }
 
     /** The provider's names of `info`'s fields: plain names only, never a value nor an address. */

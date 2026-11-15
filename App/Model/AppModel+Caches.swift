@@ -60,18 +60,16 @@ extension AppModel {
             let archive = await Task.detached(priority: .userInitiated) { store.load(DetailsArchive.self, name: name) }.value
             guard let archive, !Task.isCancelled, detailsPlaylistID == playlist.id else { return }
             // A title fetched while the document was read has the newer details. Details kept before the app read the
-            // provider's technical blocks (no `providerInfo`) are shown, and asked again as if they were old: their
-            // stream's specs were never read.
+            // provider's technical blocks (no `providerInfo`) keep their date, so they are saved again as they are;
+            // `details(for:)` and `loadVersionDetails` ask for them again.
             for (id, entry) in archive.movies where movieDetailsCache[id] == nil {
                 movieDetailsCache[id] = entry.value
-                if entry.value.providerInfo != nil { movieDetailsFetchedAt[id] = entry.fetchedAt }
+                movieDetailsFetchedAt[id] = entry.fetchedAt
             }
             for (id, entry) in archive.versions where movieDetailsCache[id] == nil {
                 movieDetailsCache[id] = entry.value
-                if entry.value.providerInfo != nil {
-                    movieDetailsFetchedAt[id] = entry.fetchedAt
-                    versionFetchedIDs.insert(id)
-                }
+                movieDetailsFetchedAt[id] = entry.fetchedAt
+                versionFetchedIDs.insert(id)
             }
             for (id, entry) in archive.series where seriesDetailsCache[id] == nil {
                 seriesDetailsCache[id] = entry.value

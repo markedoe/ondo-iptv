@@ -179,7 +179,8 @@ extension AppModel {
     func details(for movie: Movie) async -> MediaDetails? {
         await storedDetailsLoaded()
         let kept = movieDetailsCache[movie.id]
-        if let kept, DetailsArchive.isFresh(movieDetailsFetchedAt[movie.id], maxAge: DetailsArchive.movieMaxAge) { return kept }
+        // Kept before the app read the provider's technical blocks (no `providerInfo`): asked again, still shown meanwhile.
+        if let kept, kept.providerInfo != nil, DetailsArchive.isFresh(movieDetailsFetchedAt[movie.id], maxAge: DetailsArchive.movieMaxAge) { return kept }
         // The Home prefetch and the page may ask at the same time: one request.
         if let running = movieDetailsInFlight[movie.id] { return await running.value ?? kept }
         guard let streamID = movie.xtreamStreamID, let playlist = activePlaylist,
@@ -192,7 +193,7 @@ extension AppModel {
                 return try await client.movieDetails(streamID: streamID)
             } catch {
                 // How it failed, for the title data panel (not a page closed meanwhile).
-                if !(error is CancellationError), activePlaylist?.id == playlist.id { detailsFailures[id] = Self.detailsFailureCode(error) }
+                if !Self.isCancellation(error), activePlaylist?.id == playlist.id { detailsFailures[id] = Self.detailsFailureCode(error) }
                 return nil
             }
         }

@@ -6,6 +6,7 @@ import com.markedoe.ondo.core.model.DolbyVisionFallback
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PictureRange
+import com.markedoe.ondo.core.model.SpecSource
 import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.core.playback.MediaFormat
 import java.util.BitSet
@@ -1115,11 +1116,18 @@ class FilmVersions private constructor(
 
         /**
          * What a screen without Dolby Vision shows of a version: from its [specs] where they know its range, else from its
-         * name (a "DV" tag says no profile: [DolbyVisionFallback.UNKNOWN]).
+         * name (a "DV" tag says no profile: [DolbyVisionFallback.UNKNOWN]). A name saying "DV" over the provider's
+         * specs that show no Dolby Vision stays [DolbyVisionFallback.UNKNOWN]: a panel's ffprobe can read only the HDR10
+         * base layer of a profile 5 file (no configuration record); only what the player measured overrules the name.
          */
         fun dolbyVisionFallback(tags: List<VersionTag>, specs: StreamSpecs?): DolbyVisionFallback {
-            if (specs != null && (specs.range != null || specs.dolbyVisionProfile != null)) return specs.dolbyVisionFallback
-            return if (VersionTag.DOLBY_VISION in tags) DolbyVisionFallback.UNKNOWN else DolbyVisionFallback.NONE
+            val named = VersionTag.DOLBY_VISION in tags
+            if (specs != null && (specs.range != null || specs.dolbyVisionProfile != null)) {
+                val fallback = specs.dolbyVisionFallback
+                if (fallback == DolbyVisionFallback.NONE && named && specs.source != SpecSource.MEASURED) return DolbyVisionFallback.UNKNOWN
+                return fallback
+            }
+            return if (named) DolbyVisionFallback.UNKNOWN else DolbyVisionFallback.NONE
         }
 
         /** What a version's picture asks of this screen and does not get ([ScreenNote]); empty when the screen shows it all. */

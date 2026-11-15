@@ -1011,10 +1011,17 @@ public struct FilmVersions: Sendable {
     }
 
     /// What a screen without Dolby Vision shows of a version: from its `specs` where they know its range, else from its
-    /// name (a "DV" tag says no profile: `.unknown`).
+    /// name (a "DV" tag says no profile: `.unknown`). A name saying "DV" over the provider's specs that show no Dolby
+    /// Vision stays `.unknown`: a panel's ffprobe can read only the HDR10 base layer of a profile 5 file (no configuration
+    /// record); only what the player measured overrules the name.
     public static func dolbyVisionFallback(_ tags: [VersionTag], specs: StreamSpecs?) -> DolbyVisionFallback {
-        if let specs, specs.range != nil || specs.dolbyVisionProfile != nil { return specs.dolbyVisionFallback }
-        return tags.contains(.dolbyVision) ? .unknown : .none
+        let named = tags.contains(.dolbyVision)
+        if let specs, specs.range != nil || specs.dolbyVisionProfile != nil {
+            let fallback = specs.dolbyVisionFallback
+            if fallback == .none, named, specs.source != .measured { return .unknown }
+            return fallback
+        }
+        return named ? .unknown : .none
     }
 
     /// What a version's picture asks of this screen and does not get (`ScreenNote`); empty when the screen shows it all.

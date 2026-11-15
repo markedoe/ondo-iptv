@@ -62,6 +62,7 @@ extension AppModel {
     /// answer that could not be read), else "NETWORK" or "APP". Never a message: it can hold an address. The same as
     /// Android's `LoadError.code`.
     nonisolated static func detailsFailureCode(_ error: Error) -> String {
+        if isCancellation(error) { return "cancelled" }
         if case HTTPClientError.badStatus(let code) = error { return "HTTP \(code)" }
         if error is XtreamError || error is DecodingError { return "JSON" }
         if let url = error as? URLError {
@@ -74,6 +75,11 @@ extension AppModel {
             }
         }
         return "APP"
+    }
+
+    /// A request cancelled (a page closed meanwhile), by Swift or by URLSession: no failure.
+    nonisolated static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 
     /// The words VoiceOver says of a version's sound, in the app's language, read once.

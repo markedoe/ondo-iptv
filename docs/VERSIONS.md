@@ -108,13 +108,15 @@ Only movies, and only within one playlist (live channels and series are never gr
   - **4K** on a screen whose largest mode is 4K, whatever its mode of the moment: on Android the largest of
     `Display.supportedModes` by physical size (a box drawing a 1080p interface, or reading 1080p in "auto" until a film
     plays, is still a 4K screen); on Apple the screen's native size.
-  - **HDR** (HDR10, HDR10+, HLG) only where the display reports it (`Display.getHdrCapabilities`, and each mode's on
-    Android 14 and later; AVFoundation on Apple).
+  - **HDR** (HDR10, HDR10+, HLG) only where the display reports it (`Display.getHdrCapabilities`, without the types
+    the viewer turned off; AVFoundation on Apple).
   - **Dolby Vision** first only where the display itself reports Dolby Vision and a decoder for it exists (on Android
-    `MediaCodecList`, read once in the background; a box's decoder alone does not make a TV show it). On a screen
+    `MediaCodecList`, read once in the background at the lowest priority, after the first Home; a box's decoder alone does not make a TV show it). On a screen
     without it, a version's Dolby Vision profile decides: 8 and 9 (a 10 with a compatible base layer) play their HDR10,
     SDR or HLG base layer and count as that; 5 (a 10 without a base layer) shows wrong colours and never plays first;
-    an unknown profile (a name saying "DV" only, profile 7) is taken as 5. Such a version stays on its chip, to be
+    an unknown profile (a name saying "DV" only, profile 7) is taken as 5, and so is a name saying "DV" over the
+    provider's specs that show no Dolby Vision (a panel's ffprobe can read only a profile 5 file's HDR10 base layer):
+    only what the player measured overrules the name. Such a version stays on its chip, to be
     picked. The profile comes from the provider's configuration record (`dv_profile`,
     `dv_bl_signal_compatibility_id`), Media3's codec string ("dvhe.08.06": the profile only) or AVFoundation's `dvcC`
     record.

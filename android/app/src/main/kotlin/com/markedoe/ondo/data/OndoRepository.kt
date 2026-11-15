@@ -1819,7 +1819,8 @@ class OndoRepository(
     suspend fun details(movie: Movie): MediaDetails? {
         storedDetailsJob?.join()
         val kept = _state.value.movieDetails[movie.id]
-        if (kept != null && DetailsArchive.isFresh(movieFetchedAt[movie.id], DetailsArchive.MOVIE_MAX_AGE_MS, now())) return kept
+        // Kept before the app read the provider's technical blocks (no providerInfo): asked again, still shown meanwhile.
+        if (kept?.providerInfo != null && DetailsArchive.isFresh(movieFetchedAt[movie.id], DetailsArchive.MOVIE_MAX_AGE_MS, now())) return kept
         return fetchDetails(movie, asVersion = false)?.getOrNull() ?: kept
     }
 
@@ -1988,11 +1989,11 @@ class OndoRepository(
             if (detailsPlaylistId != playlist.id) return@launch
             // A title fetched while the document was read has the newer details.
             val current = _state.value
-            // Details kept before the app read the provider's technical blocks (no [MediaDetails.providerInfo]) are shown,
-            // and asked again as if they were old: their stream's specs were never read.
-            archive.movies.forEach { (id, entry) -> if (id !in current.movieDetails && entry.value.providerInfo != null) movieFetchedAt[id] = entry.fetchedAt }
+            // Details kept before the app read the provider's technical blocks (no [MediaDetails.providerInfo]) keep their
+            // date, so they are saved again as they are; [details] and [versionDetails] ask for them again.
+            archive.movies.forEach { (id, entry) -> if (id !in current.movieDetails) movieFetchedAt[id] = entry.fetchedAt }
             archive.versions.forEach { (id, entry) ->
-                if (id !in current.movieDetails && id !in archive.movies && entry.value.providerInfo != null) {
+                if (id !in current.movieDetails && id !in archive.movies) {
                     movieFetchedAt[id] = entry.fetchedAt
                     versionFetchedIds += id
                 }
