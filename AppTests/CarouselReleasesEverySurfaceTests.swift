@@ -93,8 +93,8 @@ final class CarouselReleasesEverySurfaceTests: XCTestCase {
 
         // No carousel shows a title watched (as its poster's check mark): a movie, a series to its last episode; the next
         // ones come first. Android: `noCarouselShowsATitleWatched`.
-        guard case .movie(let signal) = try item("The Last Signal"), case .series(let horizon) = try item("Blue Horizon") else { return XCTFail("titles") }
-        model.setWatched(true, movie: signal)
+        guard case .movie(let lastSignal) = try item("The Last Signal"), case .series(let horizon) = try item("Blue Horizon") else { return XCTFail("titles") }
+        model.setWatched(true, movie: lastSignal)
         model.setWatched(true, episodes: horizon.episodes, in: horizon)
         let watchedSurfaces: [String: [ShowcaseItem]] = [
             "Home": model.heroItems(),
