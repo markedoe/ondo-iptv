@@ -18,3 +18,5 @@
 \bdemo:hunter22@panel\.example\.com\b
 \bpa%2Bss99\b
 \bvipname:pw-9871@list\.example\.com\b
+# Kotlin's labelled `this` (this@OndoViewModel.state), not an email address.
+\bthis@[A-Z]\w*\.\w+
