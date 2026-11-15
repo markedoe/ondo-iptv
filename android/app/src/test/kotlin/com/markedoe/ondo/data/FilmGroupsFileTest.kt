@@ -64,6 +64,19 @@ class FilmGroupsFileTest {
         assertNull("no file", file().read(movies))
     }
 
+    /**
+     * Two changes in one refresh that a sum of hash codes would cancel out: the stream id's hash one more ("m1" to "m2"),
+     * the name's 31 less (its last but one letter one less). The groups kept must not be taken for these movies.
+     */
+    @Test
+    fun twoChangesThatWouldCancelOutAreAnotherCatalogue() {
+        val groups = requireNotNull(FilmVersions.of(movies).groups())
+        file().write(movies, groups)
+        val changed = movies.mapIndexed { index, movie -> if (index == 0) movie.copy(id = "m2", name = "FR - Quiet Watdr") else movie }
+        assertEquals("the sum of hash codes is the same", "m1".hashCode() * 31L + "FR - Quiet Water".hashCode(), "m2".hashCode() * 31L + "FR - Quiet Watdr".hashCode())
+        assertNull("another stream and another name", file().read(changed))
+    }
+
     @Test
     fun nothingIsKeptWithoutGroupsOrWithoutTheAppsFolder() {
         file().write(movies, null)

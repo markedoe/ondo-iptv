@@ -73,18 +73,33 @@ class FilmGroupsFile(private val file: File, private val build: Int) {
     companion object {
         const val FILE_NAME = "film-groups.bin"
 
-        private const val MAGIC = 0x4F46_4731 // "OFG1"
+        private const val MAGIC = 0x4F46_4732 // "OFG2": the digest is SHA-256 since this one
 
-        /** What the grouping reads of each movie, in the catalogue's order: another movie, name, year or id is another digest. */
+        /**
+         * What the grouping reads of each movie, in the catalogue's order: another movie, name, year or id is another
+         * digest. SHA-256 over every field, each with its length, so two changes never cancel out as a sum of hash codes
+         * can; its first 64 bits are kept.
+         */
         internal fun digest(movies: List<Movie>): Long {
-            var digest = 1125899906842597L
-            for (movie in movies) {
-                digest = digest * 31 + movie.id.hashCode()
-                digest = digest * 31 + movie.name.hashCode()
-                digest = digest * 31 + (movie.year ?: -1)
-                digest = digest * 31 + (movie.tmdbId ?: -1)
+            val sha = java.security.MessageDigest.getInstance("SHA-256")
+            val buffer = java.nio.ByteBuffer.allocate(8)
+            fun number(value: Long) {
+                buffer.clear()
+                buffer.putLong(value)
+                sha.update(buffer.array(), 0, 8)
             }
-            return digest
+            fun text(value: String) {
+                val bytes = value.toByteArray(Charsets.UTF_8)
+                number(bytes.size.toLong())
+                sha.update(bytes)
+            }
+            for (movie in movies) {
+                text(movie.id)
+                text(movie.name)
+                number((movie.year ?: -1).toLong())
+                number((movie.tmdbId ?: -1).toLong())
+            }
+            return java.nio.ByteBuffer.wrap(sha.digest(), 0, 8).long
         }
     }
 }
