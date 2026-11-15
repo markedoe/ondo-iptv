@@ -80,12 +80,12 @@ class CarouselReleasesEverySurfaceTest {
     }
 
     /** Every screen that shows Home's carousel, with the tag of its frame. */
-    private fun surfaces(home: HomeUiState): List<Pair<String, @Composable () -> Unit>> = listOf(
+    private fun surfacesOf(home: HomeUiState): List<Pair<String, @Composable () -> Unit>> = listOf(
         "hero" to { OndoTheme { HomeScreen(home, HomeActions(), autoAdvance = false) } },
         "heroFrame" to { OndoTvTheme { TvHomeScreen(home, HomeActions(), autoAdvance = false) } },
     )
 
-    private val surfaces by lazy { surfaces(home) }
+    private val surfaces: List<Pair<String, @Composable () -> Unit>> by lazy { surfacesOf(home) }
 
     private fun shows(title: String, frame: String): Boolean =
         compose.onAllNodes((hasText(title, substring = true) or hasContentDescription(title, substring = true)) and hasAnyAncestor(hasTestTag(frame)), useUnmergedTree = true)
@@ -119,7 +119,7 @@ class CarouselReleasesEverySurfaceTest {
     @Test
     fun noCarouselShowsATitleWatched() {
         assertEquals(listOf("Blue Horizon", "Northern Lights", "Silent Harbor", "Glass City"), watchedHome.hero.map { it.item.title })
-        val watchedSurfaces = surfaces(watchedHome)
+        val watchedSurfaces = surfacesOf(watchedHome)
         var shown by mutableIntStateOf(0)
         compose.setContent { CompositionLocalProvider(LocalCarouselAutoAdvance provides false) { watchedSurfaces[shown].second() } }
         for ((index, surface) in watchedSurfaces.withIndex()) {
