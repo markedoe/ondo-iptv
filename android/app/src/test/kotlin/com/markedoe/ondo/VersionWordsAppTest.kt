@@ -35,6 +35,14 @@ class VersionWordsAppTest {
 
     private val languages = listOf("en", "fr", "es", "pt", "zh-CN", "ar", "hi")
 
+    /** The words are a key of MainActivity's labels effect: read twice from the same resources, they are equal. */
+    @Test
+    fun theSameResourcesGiveEqualWords() {
+        assertEquals(app.resources.versionWords(), app.resources.versionWords())
+        assertEquals(app.resources.versionWords().hashCode(), app.resources.versionWords().hashCode())
+        assertEquals(words("fr"), words("fr"))
+    }
+
     @Test
     fun everyTagReadsDifferentlyInEveryLanguage() {
         for (tag in languages) {
