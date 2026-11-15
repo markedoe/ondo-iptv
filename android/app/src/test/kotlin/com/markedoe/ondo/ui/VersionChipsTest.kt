@@ -7,7 +7,6 @@ import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToNode
@@ -39,7 +38,7 @@ class VersionChipsTest {
     private val movie = Fixtures.glassCity
     private val state = MovieDetailUiState(
         item = ShowcaseItem.MovieItem(movie),
-        versions = listOf(VersionChip(movie.id, "Standard"), VersionChip("dv", "4K Dolby Vision"), VersionChip("4k", "4K 1"), VersionChip("4k-2", "4K 2")),
+        versions = listOf(VersionChip(movie.id, null, 1), VersionChip("dv", "4K DV", 1), VersionChip("4k", "4K", 1), VersionChip("4k-2", "4K 2", 2)),
         version = movie,
     )
 
@@ -51,10 +50,8 @@ class VersionChipsTest {
         compose.setContent { OndoTheme { MovieDetailScreen(state, DetailActions(onVersion = { picked += it })) } }
         // The page's list (the chips' row scrolls too).
         compose.onAllNodes(hasScrollToNodeAction()).onFirst().performScrollToNode(hasTestTag("versions"))
-        compose.onNodeWithText("Standard").assertExists()
+        compose.onNodeWithText("Version").assertExists()
         compose.onNodeWithText("4K 2").assertExists()
-        // A screen reader hears what the row is: the film's versions.
-        compose.onNodeWithContentDescription("Version: 4K Dolby Vision").assertExists()
         assertEquals(true, selected("version-${movie.id}"))
         compose.onNodeWithTag("version-dv").performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf("dv"), picked)
@@ -67,7 +64,6 @@ class VersionChipsTest {
         compose.setContent { OndoTheme { TelevisionFrame { TvMovieDetailScreen(state, DetailActions(onVersion = { picked += it })) } } }
         compose.onNodeWithTag("detail").performScrollToNode(hasTestTag("versions"))
         assertEquals(true, selected("version-${movie.id}"))
-        compose.onNodeWithContentDescription("Version: 4K Dolby Vision").assertExists()
         compose.onNodeWithTag("version-4k-2").performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf("4k-2"), picked)
     }

@@ -18,7 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.LaunchedEffect
@@ -69,13 +68,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val viewModel: OndoViewModel = viewModel {
-                OndoViewModel(
-                    repository,
-                    appLabels(
-                        getString(R.string.kind_movie), getString(R.string.kind_series), getString(R.string.hero_new_episode),
-                        resources.configuration.locales[0], resources.versionWords(),
-                    ),
-                )
+                OndoViewModel(repository, appLabels(getString(R.string.kind_movie), getString(R.string.kind_series), getString(R.string.hero_new_episode), resources.configuration.locales[0]))
             }
             SideEffect { model = viewModel }
             // Another app language (Settings, App language) recreates the activity, not the view model.
@@ -83,10 +76,7 @@ class MainActivity : ComponentActivity() {
             val series = stringResource(R.string.kind_series)
             val newEpisode = stringResource(R.string.hero_new_episode)
             val locale = LocalConfiguration.current.locales[0]
-            val versionWords = LocalContext.current.resources.versionWords()
-            LaunchedEffect(movie, series, newEpisode, locale, versionWords) {
-                viewModel.setLabels(appLabels(movie, series, newEpisode, locale, versionWords))
-            }
+            LaunchedEffect(movie, series, newEpisode, locale) { viewModel.setLabels(appLabels(movie, series, newEpisode, locale)) }
             // Always dark: light icons on the transparent system bars.
             DisposableEffect(Unit) {
                 val style = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
@@ -130,13 +120,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /** The mappers' words in the app's language, with a day and a month as the viewer's language writes them ("3 Nov", "Nov 3"). */
-internal fun appLabels(
-    movie: String,
-    series: String,
-    newEpisode: String,
-    locale: java.util.Locale,
-    versionWords: com.markedoe.ondo.core.library.VersionWords = com.markedoe.ondo.core.library.VersionWords(),
-) = Labels(
-    movie, series, locale, versionWords = versionWords, newEpisode = newEpisode,
+internal fun appLabels(movie: String, series: String, newEpisode: String, locale: java.util.Locale) = Labels(
+    movie, series, locale, newEpisode = newEpisode,
     dayMonth = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMM"),
 )

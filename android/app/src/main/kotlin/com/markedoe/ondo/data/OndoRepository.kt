@@ -238,12 +238,6 @@ class OndoRepository(
     private val mainProfileName: String = "Me",
     /** The keys sync carries kept outside the settings (the subtitle services'); null: none. */
     private val keyStore: SyncedKeyStore? = null,
-    /**
-     * Where the catalogue's titles are matched with what TMDb said and the device kept ([keptPosterFacts], the genre,
-     * person and recommendation pages). Tests pass their own: a view model's flows read what was kept, and work left on
-     * a thread of their own resumed them after the test had ended, on a main dispatcher already gone.
-     */
-    private val matching: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val _state = MutableStateFlow(OndoState(placeholderNames = placeholderNames))
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -1464,9 +1458,9 @@ class OndoRepository(
         val content = _state.value.content
         genreMatches[wanted]?.takeIf { it.first === content }?.let { return it.second }
         val kept = withContext(io) { metadata.titlesOfGenre(wanted, series = false) + metadata.titlesOfGenre(wanted, series = true) }
-        val local = withContext(matching) { titles.match(kept.map { it.key }) }
+        val local = withContext(Dispatchers.Default) { titles.match(kept.map { it.key }) }
         val online = tmdbGenreItems(wanted, kept)
-        val found = if (online.isEmpty()) emptyList() else withContext(matching) { online.flatMap { titles.match(it.keys) } }
+        val found = if (online.isEmpty()) emptyList() else withContext(Dispatchers.Default) { online.flatMap { titles.match(it.keys) } }
         // Kept only for the catalogue still shown: one replaced meanwhile is not held in memory.
         return (local + found).distinctBy { it.id }.also { if (_state.value.content === content) genreMatches[wanted] = content to it }
     }
@@ -1484,7 +1478,7 @@ class OndoRepository(
         val saved = metadataSaves.get()
         posterFacts?.let { (known, at, facts) -> if (known === content && at == saved) return facts }
         val named = withContext(io) { runCatching { metadata.namedTitles() }.getOrDefault(emptyList()) }
-        val facts = withContext(matching) {
+        val facts = withContext(Dispatchers.Default) {
             val result = HashMap<String, TitleMetadata>()
             for (title in named) {
                 if (title.genres.isNullOrEmpty() && title.rating == null && title.releaseDate.isNullOrEmpty()) continue
@@ -2081,7 +2075,7 @@ class OndoRepository(
                 return@launch
             }
             val content = _state.value.content
-            val matches = withContext(matching) { CatalogueMatcher.match(items, content.movies, content.series) }
+            val matches = withContext(Dispatchers.Default) { CatalogueMatcher.match(items, content.movies, content.series) }
             if (_state.value.activePlaylistId == playlist) _state.update { it.copy(trending = matches) }
         }
     }
@@ -2319,7 +2313,7 @@ class OndoRepository(
         // The titles TMDb recommends with it that the playlist has, in TMDb's order.
         val recommended = title.related.orEmpty()
         val related = if (recommended.isEmpty()) emptyList() else metadataTitles()?.let { titles ->
-            withContext(matching) { recommended.flatMap { titles.match(it.keys) }.distinctBy { it.id } }
+            withContext(Dispatchers.Default) { recommended.flatMap { titles.match(it.keys) }.distinctBy { it.id } }
         }.orEmpty()
         _state.update { state ->
             state.copy(
@@ -2403,7 +2397,7 @@ class OndoRepository(
         val content = _state.value.content
         if (content.movies.isEmpty() && content.series.isEmpty()) return null
         metadataTitles?.let { (known, titles) -> if (known === content) return titles }
-        return withContext(matching) { MetadataTitles(content.movies, content.series) }
+        return withContext(Dispatchers.Default) { MetadataTitles(content.movies, content.series) }
             .also { if (_state.value.content === content) metadataTitles = content to it }
     }
 
@@ -2431,7 +2425,7 @@ class OndoRepository(
             ?: kept?.also { fetchedAt = it.first }?.second
             ?: return null
         // Through the catalogue's index (built once): not the whole catalogue walked for each person.
-        val matches = withContext(matching) { works.flatMap { titles.match(it.keys) }.distinctBy { it.id } }
+        val matches = withContext(Dispatchers.Default) { works.flatMap { titles.match(it.keys) }.distinctBy { it.id } }
         if (_state.value.content === content) {
             if (personMatches.size >= PERSON_CREDITS_KEPT) personMatches.keys.firstOrNull()?.let(personMatches::remove)
             personMatches[personKey] = Triple(content, fetchedAt, matches)

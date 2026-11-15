@@ -30,8 +30,6 @@ struct PlayerView: View {
     @State private var searchingSubtitles = false
     /// The text of the problem report being shown (More, Report a Problem).
     @State private var problemReport: String?
-    /// What the provider calls the title played and its versions, next to the statistics while they show.
-    @State private var titleData: TitleData?
     #if os(macOS)
     @State private var window = PlayerWindowState()
     #endif
@@ -65,12 +63,8 @@ struct PlayerView: View {
 
             if controller.showsStatistics {
                 VStack {
-                    HStack(alignment: .top, spacing: 12) {
+                    HStack {
                         PlayerStatsView(controller: controller)
-                        // What the provider calls the title and its versions, worked out once for each title played.
-                        if let titleData {
-                            TitleDataView(data: titleData)
-                        }
                         Spacer()
                     }
                     Spacer()
@@ -170,15 +164,6 @@ struct PlayerView: View {
         }
         .task(id: channel?.id) {
             if let channel { await model.ensureGuide(for: channel) }
-        }
-        // Again once the catalogue is read (the player can open before it is).
-        .task(id: TitleDataKey(shown: controller.showsStatistics, item: item?.id, catalogue: model.index.moviesByID.count &+ model.index.seriesByID.count)) {
-            guard controller.showsStatistics, let item else {
-                titleData = nil
-                return
-            }
-            let data = await model.titleData(for: item)
-            if !Task.isCancelled { titleData = data }
         }
         .onChange(of: cast.isConnected) { _, connected in
             // Stopping from the player resumes here (stopCasting); a cast ended elsewhere leaves the player paused.

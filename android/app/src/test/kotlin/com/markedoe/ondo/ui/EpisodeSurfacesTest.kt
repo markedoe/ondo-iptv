@@ -106,7 +106,7 @@ class EpisodeSurfacesTest {
         store.saveSettings(AppSettings(activePlaylistId = "x1"))
         val jackRyan = Series(id = "1", name = name, categoryId = shows.id, xtreamSeriesId = 1)
         store.saveContent("x1", PlaylistContent(series = listOf(jackRyan), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
-        val repository = OndoRepository(store, http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(store, http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)).also { models += it }
         val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series.single()
         assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))

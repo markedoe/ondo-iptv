@@ -2,44 +2,27 @@ package com.markedoe.ondo.player
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
-import com.markedoe.ondo.core.library.DefaultReason
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import java.text.NumberFormat
 import java.util.Locale
@@ -132,150 +115,4 @@ private fun StatisticsRow(@StringRes label: Int, value: String, style: TextStyle
         Spacer(Modifier.width(12.dp))
         Text(value, color = Color.White, style = style)
     }
-}
-
-/**
- * The title data next to the statistics (More, Stream Statistics): what the provider calls the title and its versions
- * ([TitleData]). Over the picture, touches going through: at most [TitleData.PANEL_VERSIONS] versions, the one playing
- * first, then a line counting the others (all of them on the film's TV page, OK held on a version's chip).
- */
-@Composable
-fun TitleDataPanel(data: TitleData, television: Boolean, modifier: Modifier = Modifier) {
-    val style = (if (television) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall).copy(fontFeatureSettings = "tnum")
-    val shown = data.versions.sortedByDescending { it.playing }.take(TitleData.PANEL_VERSIONS)
-    Column(
-        modifier
-            .widthIn(max = if (television) 560.dp else 380.dp)
-            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
-            .padding(12.dp)
-            .semantics(mergeDescendants = true) {}
-            .testTag("titleData"),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(stringResource(R.string.title_data), color = Color.White, style = style.copy(fontWeight = FontWeight.SemiBold))
-        TitleDataLines(data, style)
-        if (shown.isNotEmpty()) {
-            Text(
-                stringResource(R.string.title_data_versions),
-                color = Color.White,
-                style = style.copy(fontWeight = FontWeight.SemiBold),
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            for (version in shown) TitleDataVersion(version, style)
-            val more = data.versions.size - shown.size
-            if (more > 0) Text(stringResource(R.string.title_data_more, more), color = Color.White.copy(alpha = 0.7f), style = style)
-            data.reason?.let { TitleDataReason(it, style) }
-        }
-    }
-}
-
-/** The film's or the episode's lines of [data]: the app's name of a field, else the provider's. */
-@Composable
-fun TitleDataLines(data: TitleData, style: TextStyle) {
-    for (line in data.lines) {
-        Row(Modifier.fillMaxWidth()) {
-            Text(
-                if (line.label != 0) stringResource(line.label) else line.key,
-                color = Color.White.copy(alpha = 0.7f),
-                style = style,
-                modifier = Modifier.widthIn(min = 96.dp, max = 160.dp),
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(line.value, color = Color.White, style = style, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-    }
-}
-
-/**
- * A version in three lines: its chip and whether it plays ([current]: "Playing", or on a film's page the chip held);
- * its name as the provider writes it; its category, id, container, tags.
- */
-@Composable
-fun TitleDataVersion(
-    version: TitleData.Version,
-    style: TextStyle,
-    modifier: Modifier = Modifier,
-    @StringRes current: Int = R.string.title_data_playing,
-) {
-    Column(modifier.padding(top = 4.dp).testTag("titleDataVersion-${version.id}")) {
-        val marks = listOfNotNull(
-            if (version.playing) "▶ " + stringResource(current) else null,
-            if (version.first) "★ " + stringResource(R.string.title_data_plays_first) else null,
-        )
-        Text(
-            (listOf(version.chip ?: stringResource(R.string.title_data_hidden)) + marks).joinToString("  ·  "),
-            color = if (version.playing) Color(0xFF81C784) else Color.White,
-            style = style.copy(fontWeight = FontWeight.SemiBold),
-        )
-        Text(version.name, color = Color.White, style = style, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(
-            listOfNotNull(version.category, version.shownId?.let { "id $it" }, version.container, version.tags).joinToString("  ·  "),
-            color = Color.White.copy(alpha = 0.7f),
-            style = style,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/**
- * The title data of a film on its TV page (OK held on a version's chip): every version, each a stop of the remote so
- * Down scrolls through them however many there are; Back closes it.
- */
-@Composable
-fun TitleDataDialog(data: TitleData, onDismiss: () -> Unit) {
-    val style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum")
-    val first = remember { FocusRequester() }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        LazyColumn(
-            Modifier
-                .widthIn(max = 720.dp)
-                .fillMaxHeight(0.9f)
-                .background(Color(0xF0141414), RoundedCornerShape(16.dp))
-                .padding(horizontal = 12.dp, vertical = 16.dp)
-                .testTag("titleDataDialog"),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            item(key = "title") {
-                FocusableBlock(Modifier.focusRequester(first)) {
-                    Text(stringResource(R.string.title_data), color = Color.White, style = style.copy(fontWeight = FontWeight.SemiBold))
-                    TitleDataLines(data, style)
-                }
-            }
-            items(data.versions, key = { "version:" + it.id }) { version ->
-                FocusableBlock { TitleDataVersion(version, style, current = R.string.title_data_this_chip) }
-            }
-            data.reason?.takeIf { data.versions.isNotEmpty() }?.let { reason ->
-                item(key = "reason") { FocusableBlock { TitleDataReason(reason, style) } }
-            }
-        }
-        LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
-    }
-}
-
-/** A stop of the remote in [TitleDataDialog], outlined while it has the focus. */
-@Composable
-private fun FocusableBlock(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    Column(
-        modifier
-            .fillMaxWidth()
-            .onFocusChanged { focused = it.isFocused }
-            .focusable()
-            .border(2.dp, if (focused) Color.White else Color.Transparent, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    ) { content() }
-}
-
-/** Why the version marked first plays first. */
-@Composable
-fun TitleDataReason(reason: DefaultReason, style: TextStyle) {
-    val text = when (reason) {
-        DefaultReason.ONLY -> return
-        DefaultReason.IN_PROGRESS -> R.string.title_data_first_in_progress
-        DefaultReason.CHOSEN -> R.string.title_data_first_chosen
-        DefaultReason.BEST_FOR_SCREEN -> R.string.title_data_first_best
-        DefaultReason.FIRST -> R.string.title_data_first_first
-    }
-    Text(stringResource(text), color = Color.White.copy(alpha = 0.7f), style = style, modifier = Modifier.padding(top = 4.dp).testTag("titleDataReason"))
 }

@@ -37,10 +37,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.OptIn
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -65,7 +63,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -132,13 +129,11 @@ import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
-import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PlayingNow
 import com.markedoe.ondo.data.SubtitleSize
 import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.playingNowFile
-import com.markedoe.ondo.versionWords
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.OndoTvTheme
@@ -149,7 +144,6 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -160,7 +154,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 
@@ -444,20 +437,12 @@ class PlayerActivity : ComponentActivity() {
                             )
                         }
                     }
-                    // What the provider calls the title and its versions, read off the main thread when the statistics
-                    // show, again for each title played.
-                    val titleData by produceState<TitleData?>(null, request, showsStatistics) {
-                        value = if (showsStatistics) titleDataOf(request) else null
-                    }
                     statistics?.takeIf { showsStatistics && !inPictureInPicture }?.let {
-                        Row(
+                        StreamStatisticsPanel(
+                            it,
                             // On a TV, below the title of the controls.
                             Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(start = 16.dp, top = if (television) 96.dp else 64.dp, end = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            StreamStatisticsPanel(it)
-                            titleData?.let { data -> TitleDataPanel(data, television) }
-                        }
+                        )
                     }
                     // The small Picture-in-Picture window shows the video only: the system draws its own controls.
                     if (!television && !inPictureInPicture && shownPlayer != null && errorMessage == null) {
@@ -1342,27 +1327,6 @@ class PlayerActivity : ComponentActivity() {
         video = player?.videoSize?.takeIf { it.width > 0 && it.height > 0 }?.let { "${it.width}×${it.height}" },
         locale = resources.configuration.locales[0],
     )
-
-    /**
-     * What the provider calls [played] and its versions (TitleData), once the catalogue is read; off the main thread.
-     * Never in the problem report, which promises no title.
-     */
-    private suspend fun titleDataOf(played: PlayRequest): TitleData? {
-        // A film or an episode only: a channel has no title data.
-        val key = played.progressKey?.split('|')?.takeIf { it.size == 4 }?.let { parts ->
-            when (parts[1]) {
-                ItemKind.MOVIE.name -> "m-" + parts[2]
-                ItemKind.SERIES.name -> "s-" + parts[2]
-                else -> null
-            }
-        } ?: return null
-        val state = repository.state.value.takeIf(::catalogueRead) ?: repository.state.first { catalogueRead(it) }
-        val words = resources.versionWords()
-        return withContext(Dispatchers.Default) {
-            val matched = runCatching { repository.keptPosterFacts()[key]?.tmdbId }.getOrNull()
-            TitleData.of(state, played.progressKey, played.title, words, matched)
-        }
-    }
 
     /** The report of this playback, as it stands now. */
     private fun problemReport(): String {

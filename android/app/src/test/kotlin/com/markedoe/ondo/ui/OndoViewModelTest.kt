@@ -115,7 +115,7 @@ class OndoViewModelTest {
     /** A view model of the playlist [list] not added yet, once the saved state is read ([readyViewModel]). */
     private suspend fun TestScope.viewModel(): OndoViewModel {
         val http = FakeHttp(mapOf(list to catalogue))
-        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         return track(readyViewModel(repository))
     }
 
@@ -133,7 +133,7 @@ class OndoViewModelTest {
                 fetchedAt = System.currentTimeMillis(),
             ),
         )
-        val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler))
         return track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
     }
 
@@ -157,7 +157,7 @@ class OndoViewModelTest {
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
         }
-        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = track(readyViewModel(repository))
         repository.addPlaylist("Home", list)
         val movie = viewModel.state.first { it.content.movies.isNotEmpty() }.content.movies.single()
@@ -221,7 +221,7 @@ class OndoViewModelTest {
         store.saveSettings(AppSettings(activePlaylistId = "x1"))
         val harbor = Series(id = "1", name = "Harbor", categoryId = shows.id, year = 2025, cast = "José Silva, Ana Lima", xtreamSeriesId = 1)
         store.saveContent("x1", PlaylistContent(series = listOf(harbor), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
-        val repository = OndoRepository(store, http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(store, http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series.single()
         fun faces() = UiMappers.seriesDetail(viewModel.state.value, series, null, null).faces
@@ -273,7 +273,7 @@ class OndoViewModelTest {
             }.encodeToByteArray()
         }
         val kept = InMemoryMetadataStore()
-        val first = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined, metadata = kept)
+        val first = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), metadata = kept)
         val firstModel = track(readyViewModel(first))
         first.addPlaylist("Home", list)
         // The playlist fully read and saved (the next launch reads it from disk).
@@ -286,7 +286,7 @@ class OndoViewModelTest {
 
         // The next launch: the same files, the same store.
         firstModel.viewModelScope.cancel()
-        val next = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined, metadata = kept)
+        val next = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), metadata = kept)
         val nextModel = track(OndoViewModel(next, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         next.bootstrap()
         nextModel.state.first { it.content.movies.isNotEmpty() && !it.isLoading && it.settings.tmdbToken != null }
@@ -320,7 +320,7 @@ class OndoViewModelTest {
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
         }
-        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = track(readyViewModel(repository))
         repository.addPlaylist("Home", list)
         viewModel.state.first { it.content.movies.isNotEmpty() }
@@ -352,7 +352,7 @@ class OndoViewModelTest {
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
         }
-        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = track(readyViewModel(repository))
         repository.addPlaylist("Home", list)
         viewModel.state.first { it.content.movies.isNotEmpty() }
@@ -401,7 +401,7 @@ class OndoViewModelTest {
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
         }
-        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         repository.addPlaylist("Home", list)
         viewModel.state.first { it.content.movies.isNotEmpty() }
@@ -464,32 +464,6 @@ class OndoViewModelTest {
     }
 
     /**
-     * What the device kept is matched with the catalogue on the repository's own dispatcher, never on a thread of its
-     * own: Home's flows read it, and that thread resumed them after the test, once its main dispatcher was reset
-     * (`homeFetchesAFewSeriesAheadOneAtATime` failed so).
-     */
-    @Test
-    fun keptFactsAreMatchedOnTheGivenDispatcher() = runTest {
-        val dispatches = java.util.concurrent.atomic.AtomicInteger()
-        val counting = object : kotlinx.coroutines.CoroutineDispatcher() {
-            override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
-                dispatches.incrementAndGet()
-                block.run()
-            }
-        }
-        val store = AppStore(folder.root)
-        val shows = MediaCategory("s-shows", "Shows", ContentType.SERIES)
-        store.savePlaylists(listOf(SavedPlaylist("x1", "Panel", "http://panel.example.com", username = "viewer", password = "example")))
-        store.saveSettings(AppSettings(activePlaylistId = "x1"))
-        store.saveContent("x1", PlaylistContent(series = listOf(Series(id = "1", name = "Show", categoryId = shows.id, year = 2025, xtreamSeriesId = 1)), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
-        val repository = OndoRepository(store, Panel(), backgroundScope, io = StandardTestDispatcher(testScheduler), matching = counting)
-        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
-        viewModel.state.first { it.content.series.isNotEmpty() }
-        repository.keptPosterFacts()
-        assertTrue("matched on the given dispatcher", dispatches.get() > 0)
-    }
-
-    /**
      * A series page too large for the memory left: the HTTP client hands the OutOfMemoryError to its caller (it would
      * stop the app on OkHttp's thread). Fetching ahead, which Home starts by itself, gives up on that series.
      */
@@ -503,7 +477,7 @@ class OndoViewModelTest {
         store.savePlaylists(listOf(SavedPlaylist("x1", "Panel", "http://panel.example.com", username = "viewer", password = "example")))
         store.saveSettings(AppSettings(activePlaylistId = "x1"))
         store.saveContent("x1", PlaylistContent(series = listOf(Series(id = "1", name = "Show", categoryId = shows.id, year = 2025, xtreamSeriesId = 1)), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
-        val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series
         val home = HomeUiState("Panel", hero = series.map { HeroPage(ShowcaseItem.SeriesItem(it), "", inMyList = false, resumable = false) })
@@ -579,7 +553,7 @@ class OndoViewModelTest {
         val other = "http://other.example.com/list.m3u"
         val otherList = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",Other News\nhttp://other.example.com/news.m3u8\n" +
             "#EXTINF:-1 group-title=\"Sport\",Other Sport\nhttp://other.example.com/sport.m3u8\n"
-        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to otherList)), backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to otherList)), backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = track(readyViewModel(repository))
         assertTrue(repository.addPlaylist("Home", list).isSuccess)
         val home = viewModel.state.value.activePlaylistId
