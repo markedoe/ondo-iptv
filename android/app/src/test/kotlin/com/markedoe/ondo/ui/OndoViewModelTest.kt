@@ -482,11 +482,39 @@ class OndoViewModelTest {
         store.savePlaylists(listOf(SavedPlaylist("x1", "Panel", "http://panel.example.com", username = "viewer", password = "example")))
         store.saveSettings(AppSettings(activePlaylistId = "x1"))
         store.saveContent("x1", PlaylistContent(series = listOf(Series(id = "1", name = "Show", categoryId = shows.id, year = 2025, xtreamSeriesId = 1)), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
-        val repository = OndoRepository(store, Panel(), backgroundScope, io = StandardTestDispatcher(testScheduler), matching = counting)
+        // A title kept of TMDb: with none, nothing is matched (see nothingKeptOfTmdbReadsNoTitleOfTheCatalogue).
+        val kept = InMemoryMetadataStore()
+        kept.save(
+            listOf(
+                com.markedoe.ondo.core.library.TitleMetadata(
+                    key = requireNotNull(com.markedoe.ondo.core.library.MetadataKey.title(true, "Show", 2025)),
+                    kind = com.markedoe.ondo.core.library.MetadataKey.kind(true), fetchedAt = 1L, releaseDate = "2025-01-01",
+                ),
+            ),
+        )
+        val repository = OndoRepository(store, Panel(), backgroundScope, io = StandardTestDispatcher(testScheduler), matching = counting, metadata = kept)
         val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         viewModel.state.first { it.content.series.isNotEmpty() }
-        repository.keptPosterFacts()
+        assertEquals("the kept title is matched with the catalogue's", setOf("s-1"), repository.keptPosterFacts().keys)
         assertTrue("matched on the given dispatcher", dispatches.get() > 0)
+    }
+
+    /**
+     * Nothing kept of TMDb (a first playlist, no token): the index of the catalogue's titles, which reads every one of
+     * them, is not built to match nothing, at a start or as a playlist is added.
+     */
+    @Test
+    fun nothingKeptOfTmdbReadsNoTitleOfTheCatalogue() = runTest {
+        val store = AppStore(folder.root)
+        val shows = MediaCategory("s-shows", "Shows", ContentType.SERIES)
+        store.savePlaylists(listOf(SavedPlaylist("x1", "Panel", "http://panel.example.com", username = "viewer", password = "example")))
+        store.saveSettings(AppSettings(activePlaylistId = "x1"))
+        store.saveContent("x1", PlaylistContent(series = listOf(Series(id = "1", name = "Show", categoryId = shows.id, year = 2025, xtreamSeriesId = 1)), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
+        val repository = OndoRepository(store, Panel(), backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        viewModel.state.first { it.content.series.isNotEmpty() }
+        assertTrue("nothing kept", repository.keptPosterFacts().isEmpty())
+        assertEquals("the index of the catalogue's titles was built", 0, repository.titleIndexBuilds.get())
     }
 
     /**

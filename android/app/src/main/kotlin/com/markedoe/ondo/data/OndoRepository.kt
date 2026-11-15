@@ -1491,18 +1491,25 @@ class OndoRepository(
      * ("m-1", "s-2"): a poster shows it without asking TMDb. Read once per catalogue, again once more was kept.
      */
     suspend fun keptPosterFacts(): Map<String, TitleMetadata> {
-        val titles = metadataTitles() ?: return emptyMap()
         val content = _state.value.content
+        if (content.movies.isEmpty() && content.series.isEmpty()) return emptyMap()
         val saved = metadataSaves.get()
         posterFacts?.let { (known, at, facts) -> if (known === content && at == saved) return facts }
-        val named = withContext(io) { runCatching { metadata.namedTitles() }.getOrDefault(emptyList()) }
-        val facts = withContext(matching) {
-            val result = HashMap<String, TitleMetadata>()
-            for (title in named) {
-                if (title.genres.isNullOrEmpty() && title.rating == null && title.releaseDate.isNullOrEmpty()) continue
-                for (match in titles.match(listOf(title.key))) result.putIfAbsent(match.id, title)
+        val named = withContext(io) {
+            runCatching { metadata.namedTitles() }.getOrDefault(emptyList())
+                .filterNot { it.genres.isNullOrEmpty() && it.rating == null && it.releaseDate.isNullOrEmpty() }
+        }
+        // Nothing kept of TMDb to show (a first playlist, no token): the index of the catalogue's titles, which reads
+        // every one of them, is not built for it; a page that needs it builds it then.
+        val titles = if (named.isEmpty()) null else metadataTitles()
+        val facts: Map<String, TitleMetadata> = if (titles == null) {
+            emptyMap()
+        } else {
+            withContext(matching) {
+                val result = HashMap<String, TitleMetadata>()
+                for (title in named) for (match in titles.match(listOf(title.key))) result.putIfAbsent(match.id, title)
+                result
             }
-            result
         }
         if (_state.value.content === content) posterFacts = Triple(content, saved, facts)
         return facts

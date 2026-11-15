@@ -518,6 +518,8 @@ class ColdStartTimingTest {
         /** When the saved playlists and settings were read, and when the saved catalogue was in the state. */
         val ready: Long,
         val catalogue: Long,
+        /** How many times the index of the catalogue's titles was built (what the device kept of TMDb is matched with it). */
+        val titleIndexBuilds: Int,
     )
 
     /** The main thread kept busy for [ms] right after the view model is made, as it is while the first screen is drawn. */
@@ -594,6 +596,9 @@ class ColdStartTimingTest {
         assertTrue("with Home kept, it is shown: ${second.savedHomesShown}", second.savedHomesShown > 0)
         assertTrue("with Home kept, Home worked out anew with its carousel: ${second.firstWorkedOutHero} ms", second.firstWorkedOutHero >= 0)
         assertTrue("with Home kept, Home worked out once at most: ${second.computations}", second.computations <= 1)
+        // The catalogue's titles are read once to match what the device kept of TMDb, however many screens ask for it.
+        assertTrue("without Home kept, the titles' index built once at most: ${first.titleIndexBuilds}", first.titleIndexBuilds <= 1)
+        assertTrue("with Home kept, the titles' index built once at most: ${second.titleIndexBuilds}", second.titleIndexBuilds <= 1)
         // Times: the targets in the night's run (ONDO_COLDSTART_STRICT); ten times them otherwise, only to catch a hang.
         within("without Home kept, the carousel", first.firstHero, 2_500)
         within("with Home kept, the carousel", second.firstHero, 300)
@@ -679,6 +684,8 @@ class ColdStartTimingTest {
             assertTrue("the catalogue was saved", savedAt >= 0)
             // Home does not wait for the device's storage: the catalogue is in the state before its file is written.
             assertTrue("the catalogue is on screen before it is written", !savedWhenShown.get())
+            // Nothing kept of TMDb on a first launch: no title of the catalogue is read to match nothing.
+            assertEquals("the index of the catalogue's titles was built", 0, repository.titleIndexBuilds.get())
             assertTrue("the playlist was added", added.get() >= 0)
         } finally {
             watching.cancel()
@@ -823,7 +830,7 @@ class ColdStartTimingTest {
             assertTrue("the Series tab came", seriesTab >= 0)
             return ColdOpen(
                 firstHome.get(), firstHero.get(), firstWorkedOutHero(), viewModel.homeComputations.get(), viewModel.savedHomesShown.get(), moviesTab, seriesTab,
-                ready = firstReady.get(), catalogue = firstCatalogue.get(),
+                ready = firstReady.get(), catalogue = firstCatalogue.get(), titleIndexBuilds = repository.titleIndexBuilds.get(),
             )
         } finally {
             watching.cancel()
