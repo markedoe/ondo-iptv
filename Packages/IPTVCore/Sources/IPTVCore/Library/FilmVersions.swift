@@ -1,6 +1,7 @@
 import Foundation
 
-/// What the screen can show, for the version that plays best: high dynamic range, Dolby Vision, 4K.
+/// What the screen can show, for the version that plays best: high dynamic range (HDR10, HDR10+ or HLG), Dolby Vision
+/// (the screen's, not only a decoder's), 4K.
 public struct PictureSupport: Hashable, Sendable {
     public var hdr: Bool
     public var dolbyVision: Bool
@@ -11,6 +12,21 @@ public struct PictureSupport: Hashable, Sendable {
         self.dolbyVision = dolbyVision
         self.uhd = uhd
     }
+}
+
+/// What a version's picture asks of this screen and does not get, for the title data panel (`FilmVersions.screenNotes`):
+/// the reason a version does not play first on it. The same as Android's `ScreenNote`.
+public enum ScreenNote: String, Hashable, Sendable {
+    /// Dolby Vision without the screen for it, its base layer (HDR10, SDR, HLG) shown instead: profile 8, 9.
+    case dolbyVisionBaseLayer = "DOLBY_VISION_BASE_LAYER"
+    /// Dolby Vision without the screen for it, no base layer it shows right (profile 5): wrong colours, never first.
+    case dolbyVisionWrongColours = "DOLBY_VISION_WRONG_COLOURS"
+    /// Dolby Vision without the screen for it, profile unknown (a name saying "DV" only): taken as wrong colours.
+    case dolbyVisionUnknown = "DOLBY_VISION_UNKNOWN"
+    /// HDR without the screen for it.
+    case hdrUnsupported = "HDR_UNSUPPORTED"
+    /// 4K above the screen's largest mode.
+    case uhdUnsupported = "UHD_UNSUPPORTED"
 }
 
 /// Why a film's card plays the version it plays (`FilmVersions.defaultChoice`).
@@ -957,16 +973,72 @@ public struct FilmVersions: Sendable {
             || CatalogueMatcher.isTagWord(word) || isYear(word)
     }
 
-    /// How well a version suits the screen: 4K on a 4K screen, HD; Dolby Vision or HDR only where the screen shows it
-    /// (a Dolby Vision stream elsewhere can show wrong colours).
-    public static func score(_ tags: [VersionTag], support: PictureSupport) -> Int {
+    /// How well a version suits the screen: 4K on a 4K screen, HD; Dolby Vision or HDR only where the screen shows it.
+    /// Its `specs` (measured, else the provider's) before the tags of its name where they know. A Dolby Vision stream on
+    /// a screen without it: its base layer where its profile has one the screen shows (8, 9: HDR10 on an HDR screen),
+    /// else below the others (profile 5, or unknown: wrong colours). The same as Android's.
+    public static func score(_ tags: [VersionTag], support: PictureSupport, specs: StreamSpecs? = nil) -> Int {
         // A copy filmed or leaked before release below every other.
         var score = isEarlyCopy(tags) ? -1_000 : 0
-        if tags.contains(.dolbyVision) { score += support.dolbyVision ? 4 : -40 }
-        if tags.contains(.hdr) { score += support.hdr ? 2 : -20 }
-        if tags.contains(.uhd) { score += support.uhd ? 8 : 1 }
-        if tags.contains(.hd) || tags.contains(.fhd) { score += 4 }
+        let fallback = dolbyVisionFallback(tags, specs: specs)
+        if fallback != .none {
+            if support.dolbyVision {
+                score += 4
+            } else if fallback != .baseLayer {
+                score -= 40
+            } else if specs?.dolbyVisionCompatibility != 2 {
+                // Its HDR10 (or HLG) base layer; profile 8.2's is SDR, neither better nor worse.
+                score += support.hdr ? 2 : -20
+            }
+        }
+        let known = specs.flatMap { $0.isEmpty ? nil : $0 }
+        if isHDR(tags, known) { score += support.hdr ? 2 : -20 }
+        if isUHD(tags, known) { score += support.uhd ? 8 : 1 }
+        let hd: Bool
+        if let resolution = known?.resolution { hd = resolution == "1080p" || resolution == "720p" } else { hd = tags.contains(.hd) || tags.contains(.fhd) }
+        if hd { score += 4 }
         return score
+    }
+
+    private static func isHDR(_ tags: [VersionTag], _ known: StreamSpecs?) -> Bool {
+        if let range = known?.range { return range == .hdr10 || range == .hdr10Plus || range == .hlg }
+        return tags.contains(.hdr)
+    }
+
+    private static func isUHD(_ tags: [VersionTag], _ known: StreamSpecs?) -> Bool {
+        if let resolution = known?.resolution { return resolution == "4K" }
+        return tags.contains(.uhd)
+    }
+
+    /// What a screen without Dolby Vision shows of a version: from its `specs` where they know its range, else from its
+    /// name (a "DV" tag says no profile: `.unknown`). A name saying "DV" over the provider's specs that show no Dolby
+    /// Vision stays `.unknown`: a panel's ffprobe can read only the HDR10 base layer of a profile 5 file (no configuration
+    /// record); only what the player measured overrules the name.
+    public static func dolbyVisionFallback(_ tags: [VersionTag], specs: StreamSpecs?) -> DolbyVisionFallback {
+        let named = tags.contains(.dolbyVision)
+        if let specs, specs.range != nil || specs.dolbyVisionProfile != nil {
+            let fallback = specs.dolbyVisionFallback
+            if fallback == .none, named, specs.source != .measured { return .unknown }
+            return fallback
+        }
+        return named ? .unknown : .none
+    }
+
+    /// What a version's picture asks of this screen and does not get (`ScreenNote`); empty when the screen shows it all.
+    public static func screenNotes(_ tags: [VersionTag], support: PictureSupport, specs: StreamSpecs? = nil) -> [ScreenNote] {
+        var notes: [ScreenNote] = []
+        if !support.dolbyVision {
+            switch dolbyVisionFallback(tags, specs: specs) {
+            case .baseLayer: notes.append(.dolbyVisionBaseLayer)
+            case .wrongColours: notes.append(.dolbyVisionWrongColours)
+            case .unknown: notes.append(.dolbyVisionUnknown)
+            case .none: break
+            }
+        }
+        let known = specs.flatMap { $0.isEmpty ? nil : $0 }
+        if isHDR(tags, known), !support.hdr { notes.append(.hdrUnsupported) }
+        if isUHD(tags, known), !support.uhd { notes.append(.uhdUnsupported) }
+        return notes
     }
 
     /// The version a film's card plays and its page selects first: the one in progress (`inProgress`); else the one
@@ -977,18 +1049,20 @@ public struct FilmVersions: Sendable {
         inProgress: String?,
         chosen: [String],
         support: PictureSupport,
-        categoryName: (String) -> String?
+        categoryName: (String) -> String?,
+        specs: (String) -> StreamSpecs? = { _ in nil }
     ) -> Movie? {
-        defaultChoice(versions, inProgress: inProgress, chosen: chosen, support: support, categoryName: categoryName)?.movie
+        defaultChoice(versions, inProgress: inProgress, chosen: chosen, support: support, categoryName: categoryName, specs: specs)?.movie
     }
 
-    /// `defaultVersion` and why it is that one; nil without versions.
+    /// `defaultVersion` and why it is that one; nil without versions. `specs`: what is known of a stream, by id.
     public static func defaultChoice(
         _ versions: [Movie],
         inProgress: String?,
         chosen: [String],
         support: PictureSupport,
-        categoryName: (String) -> String?
+        categoryName: (String) -> String?,
+        specs: (String) -> StreamSpecs? = { _ in nil }
     ) -> (movie: Movie, reason: DefaultReason)? {
         guard versions.count > 1 else { return versions.first.map { ($0, .only) } }
         if let inProgress, let movie = versions.first(where: { $0.id == inProgress }) { return (movie, .inProgress) }
@@ -1000,7 +1074,7 @@ public struct FilmVersions: Sendable {
         var bestScore = Int.min
         var scores = Set<Int>()
         for movie in versions {
-            let value = score(tags(name: movie.name, categoryName: categoryName(movie.categoryID)), support: support)
+            let value = score(tags(name: movie.name, categoryName: categoryName(movie.categoryID)), support: support, specs: specs(movie.id))
             scores.insert(value)
             if value > bestScore {
                 best = movie

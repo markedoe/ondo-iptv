@@ -66,11 +66,15 @@ struct PlayerStatsView: View {
     }
 }
 
-/// When the title data is worked out again: the statistics shown or hidden, another title played, the catalogue read.
+/// When the title data is worked out again: the statistics shown or hidden, another title played, the catalogue read,
+/// and what is known of the streams (the player's reading of this one, a version's details, a failed request).
 struct TitleDataKey: Equatable {
     var shown: Bool
     var item: String?
     var catalogue: Int
+    var measured = 0
+    var details = 0
+    var failures = 0
 }
 
 /// Next to the statistics (More, Stream Statistics): what the provider calls the title and its versions (`TitleData`):
@@ -90,6 +94,7 @@ struct TitleDataView: View {
                     Text(verbatim: line.value).lineLimit(2)
                 }
             }
+            screenRows
             if !shown.isEmpty {
                 Text("Versions").fontWeight(.semibold).padding(.top, 4)
                 ForEach(shown) { version in
@@ -165,8 +170,81 @@ struct TitleDataView: View {
             (specSourceText(version.specSource) + Text(verbatim: ": " + version.specs))
                 .lineLimit(2)
                 .foregroundStyle(.white.opacity(0.7))
+            // What its provider's details held (or how asking failed), whether they are kept, the names of their fields.
+            (Text("Provider info: \(providerText(version))") + Text(verbatim: "  ·  ")
+                + (version.detailsKept ? Text("details kept on the device") : Text("details not kept")))
+                .lineLimit(2)
+                .foregroundStyle(.white.opacity(0.7))
+            if !version.providerKeys.isEmpty {
+                Text("info fields: \(version.providerKeys.joined(separator: ", "))")
+                    .lineLimit(2)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            if version.dolbyVision || !version.screenNotes.isEmpty {
+                screenNotes(version)
+                    .lineLimit(3)
+                    .foregroundStyle(Color.orange)
+            }
         }
         .padding(.top, 4)
+    }
+
+    private func providerText(_ version: TitleData.Version) -> String {
+        switch version.provider {
+        case .notRequested: String(localized: "not requested")
+        case .notAvailable: String(localized: "none for this playlist")
+        case .failed: String(localized: "failed (\(version.providerFailure ?? "–"))")
+        case .keptBefore: String(localized: "kept by an earlier version, asked again")
+        case .noTechnicalBlock: String(localized: "requested, no technical block")
+        case .videoAndAudio: String(localized: "video + audio")
+        case .videoOnly: String(localized: "video only")
+        case .audioOnly: String(localized: "audio only")
+        }
+    }
+
+    /// Its Dolby Vision profile, and what it asks of this screen and does not get.
+    private func screenNotes(_ version: TitleData.Version) -> Text {
+        var parts: [String] = []
+        if version.dolbyVision { parts.append(String(localized: "Dolby Vision profile: \(version.dolbyVisionProfile ?? String(localized: "unknown"))")) }
+        for note in version.screenNotes {
+            switch note {
+            case .dolbyVisionBaseLayer: parts.append(String(localized: "Dolby Vision not supported by this screen: its base layer plays (HDR10, SDR or HLG)"))
+            case .dolbyVisionWrongColours: parts.append(String(localized: "Dolby Vision not supported by this screen: this profile shows wrong colours, never played first"))
+            case .dolbyVisionUnknown: parts.append(String(localized: "Dolby Vision not supported by this screen: profile unknown, not played first"))
+            case .hdrUnsupported: parts.append(String(localized: "HDR not supported by this screen"))
+            case .uhdUnsupported: parts.append(String(localized: "4K above this screen’s largest mode"))
+            }
+        }
+        return Text(verbatim: parts.joined(separator: "  ·  "))
+    }
+
+    /// What the app read of this screen, what the versions are chosen for, and the app's build.
+    @ViewBuilder
+    private var screenRows: some View {
+        if let screen = data.screen {
+            Text("This screen").fontWeight(.semibold).padding(.top, 4)
+            Group {
+                Text("Largest mode \(screen.width > 0 ? "\(screen.width)×\(screen.height)" : String(localized: "unknown"))")
+                Text("HDR10 \(word(screen.hdr10)) · HDR10+ \(word(screen.hdr10Plus)) · HLG \(word(screen.hlg)) · Dolby Vision \(word(screen.dolbyVision))")
+                Text("Decoders: Dolby Vision \(word(screen.dolbyVisionDecoder))")
+                Text("Versions chosen for: \(chosenText)")
+                Text("App \(data.app)")
+            }
+            .foregroundStyle(.white.opacity(0.7))
+        }
+    }
+
+    private var chosenText: String {
+        let chosen = [data.support.uhd ? "4K" : nil, data.support.hdr ? "HDR" : nil, data.support.dolbyVision ? "Dolby Vision" : nil].compactMap { $0 }
+        return chosen.isEmpty ? "–" : chosen.joined(separator: " · ")
+    }
+
+    private func word(_ value: Bool?) -> String {
+        switch value {
+        case true?: String(localized: "yes")
+        case false?: String(localized: "no")
+        case nil: String(localized: "unknown")
+        }
     }
 
     @ViewBuilder

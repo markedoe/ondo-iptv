@@ -261,6 +261,10 @@ public struct MediaDetails: Codable, Hashable, Sendable {
     public var tmdbID: String?
     /// What the provider's `get_vod_info` says of the stream's picture and sound (a movie's only); nil when nothing.
     public var streamSpecs: StreamSpecs?
+    /// What the provider's `get_vod_info` answer held (a movie's only): the names of the fields of its `info` and whether
+    /// it had a `video` and an `audio` block, for the title data panel. Nil for details read before it was kept, or not
+    /// from a provider's `get_vod_info`.
+    public var providerInfo: ProviderInfo?
 
     public init(
         title: String,
@@ -276,9 +280,11 @@ public struct MediaDetails: Codable, Hashable, Sendable {
         backdropURL: URL? = nil,
         trailerYouTubeID: String? = nil,
         tmdbID: String? = nil,
-        streamSpecs: StreamSpecs? = nil
+        streamSpecs: StreamSpecs? = nil,
+        providerInfo: ProviderInfo? = nil
     ) {
         self.streamSpecs = streamSpecs
+        self.providerInfo = providerInfo
         self.title = title
         self.originalTitle = originalTitle
         self.plot = plot
@@ -292,6 +298,40 @@ public struct MediaDetails: Codable, Hashable, Sendable {
         self.backdropURL = backdropURL
         self.trailerYouTubeID = trailerYouTubeID
         self.tmdbID = tmdbID
+    }
+}
+
+/// What a provider's `get_vod_info` answer held: the names of the fields of its `info` (never their values: a value can
+/// hold an address), sorted, at most `maxKeys`, and whether its `video` and `audio` blocks (ffprobe's) were there. The
+/// same as Android's `ProviderInfo`.
+public struct ProviderInfo: Codable, Hashable, Sendable {
+    public var keys: [String]
+    public var video: Bool
+    public var audio: Bool
+
+    public static let maxKeys = 40
+
+    public init(keys: [String] = [], video: Bool = false, audio: Bool = false) {
+        self.keys = keys
+        self.video = video
+        self.audio = audio
+    }
+
+    enum CodingKeys: String, CodingKey { case keys, video, audio }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        keys = (try? c.decodeIfPresent([String].self, forKey: .keys)) ?? []
+        video = (try? c.decodeIfPresent(Bool.self, forKey: .video)) ?? false
+        audio = (try? c.decodeIfPresent(Bool.self, forKey: .audio)) ?? false
+    }
+
+    /// The names among `names` the panel may show: plain field names only (letters, digits, `_`, `-`, 32 at most),
+    /// sorted, at most `maxKeys`.
+    public static func keys(of names: [String]) -> [String] {
+        let allowed = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
+        let plain = names.filter { name in !name.isEmpty && name.count <= 32 && name.allSatisfy { allowed.contains($0) } }
+        return Array(Set(plain).sorted().prefix(maxKeys))
     }
 }
 

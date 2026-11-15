@@ -2,14 +2,41 @@ package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.PortableRegex
 import com.markedoe.ondo.core.TextNormalizer
+import com.markedoe.ondo.core.model.DolbyVisionFallback
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.PictureRange
+import com.markedoe.ondo.core.model.SpecSource
 import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.core.playback.MediaFormat
 import java.util.BitSet
 
-/** What the screen can show, for the version that plays best: high dynamic range, Dolby Vision, 4K. */
+/**
+ * What the screen can show, for the version that plays best: high dynamic range (HDR10, HDR10+ or HLG), Dolby Vision (the
+ * screen's, not only a decoder's), 4K (its largest mode, whatever the mode of the moment).
+ */
 data class PictureSupport(val hdr: Boolean = false, val dolbyVision: Boolean = false, val uhd: Boolean = false)
+
+/**
+ * What a version's picture asks of this screen and does not get, for the title data panel ([FilmVersions.screenNotes]):
+ * the reason a version does not play first on it.
+ */
+enum class ScreenNote {
+    /** Dolby Vision without the screen for it, its base layer (HDR10, SDR, HLG) shown instead: profile 8, 9. */
+    DOLBY_VISION_BASE_LAYER,
+
+    /** Dolby Vision without the screen for it, no base layer it shows right (profile 5): wrong colours, never first. */
+    DOLBY_VISION_WRONG_COLOURS,
+
+    /** Dolby Vision without the screen for it, profile unknown (a name saying "DV" only): taken as wrong colours. */
+    DOLBY_VISION_UNKNOWN,
+
+    /** HDR without the screen for it. */
+    HDR_UNSUPPORTED,
+
+    /** 4K above the screen's largest mode. */
+    UHD_UNSUPPORTED,
+}
 
 /** Why a film's card plays the version it plays ([FilmVersions.defaultChoice]). */
 enum class DefaultReason {
@@ -1056,16 +1083,72 @@ class FilmVersions private constructor(
 
         /**
          * How well a version suits the screen: 4K on a 4K screen, HD; Dolby Vision or HDR only where the screen shows
-         * it (a Dolby Vision stream elsewhere can show wrong colours). A copy filmed or leaked before release
-         * ([isEarlyCopy]) below every other.
+         * it. Its [specs] (measured, else the provider's) before the tags of its name where they know. A Dolby Vision
+         * stream on a screen without it: its base layer where its profile has one the screen shows (8, 9: HDR10 on an
+         * HDR screen), else below the others (profile 5, or unknown: wrong colours). A copy filmed or leaked before
+         * release ([isEarlyCopy]) below every other.
          */
-        fun score(tags: List<VersionTag>, support: PictureSupport): Int {
+        fun score(tags: List<VersionTag>, support: PictureSupport, specs: StreamSpecs? = null): Int {
             var score = if (isEarlyCopy(tags)) -1_000 else 0
-            if (VersionTag.DOLBY_VISION in tags) score += if (support.dolbyVision) 4 else -40
-            if (VersionTag.HDR in tags) score += if (support.hdr) 2 else -20
-            if (VersionTag.UHD in tags) score += if (support.uhd) 8 else 1
-            if (VersionTag.HD in tags || VersionTag.FHD in tags) score += 4
+            val fallback = dolbyVisionFallback(tags, specs)
+            if (fallback != DolbyVisionFallback.NONE) {
+                score += when {
+                    support.dolbyVision -> 4
+                    fallback != DolbyVisionFallback.BASE_LAYER -> -40
+                    // Profile 8.2: an SDR base layer.
+                    specs?.dolbyVisionCompatibility == 2 -> 0
+                    else -> if (support.hdr) 2 else -20
+                }
+            }
+            val known = specs?.takeUnless { it.isEmpty }
+            val range = known?.range
+            val hdr = if (range != null) range in HDR_RANGES else VersionTag.HDR in tags
+            if (hdr) score += if (support.hdr) 2 else -20
+            val resolution = known?.resolution
+            val uhd = if (resolution != null) resolution == "4K" else VersionTag.UHD in tags
+            if (uhd) score += if (support.uhd) 8 else 1
+            val hd = if (resolution != null) resolution == "1080p" || resolution == "720p" else VersionTag.HD in tags || VersionTag.FHD in tags
+            if (hd) score += 4
             return score
+        }
+
+        private val HDR_RANGES = setOf(PictureRange.HDR10, PictureRange.HDR10_PLUS, PictureRange.HLG)
+
+        /**
+         * What a screen without Dolby Vision shows of a version: from its [specs] where they know its range, else from its
+         * name (a "DV" tag says no profile: [DolbyVisionFallback.UNKNOWN]). A name saying "DV" over the provider's
+         * specs that show no Dolby Vision stays [DolbyVisionFallback.UNKNOWN]: a panel's ffprobe can read only the HDR10
+         * base layer of a profile 5 file (no configuration record); only what the player measured overrules the name.
+         */
+        fun dolbyVisionFallback(tags: List<VersionTag>, specs: StreamSpecs?): DolbyVisionFallback {
+            val named = VersionTag.DOLBY_VISION in tags
+            if (specs != null && (specs.range != null || specs.dolbyVisionProfile != null)) {
+                val fallback = specs.dolbyVisionFallback
+                if (fallback == DolbyVisionFallback.NONE && named && specs.source != SpecSource.MEASURED) return DolbyVisionFallback.UNKNOWN
+                return fallback
+            }
+            return if (named) DolbyVisionFallback.UNKNOWN else DolbyVisionFallback.NONE
+        }
+
+        /** What a version's picture asks of this screen and does not get ([ScreenNote]); empty when the screen shows it all. */
+        fun screenNotes(tags: List<VersionTag>, support: PictureSupport, specs: StreamSpecs? = null): List<ScreenNote> {
+            val notes = ArrayList<ScreenNote>()
+            if (!support.dolbyVision) {
+                when (dolbyVisionFallback(tags, specs)) {
+                    DolbyVisionFallback.BASE_LAYER -> notes.add(ScreenNote.DOLBY_VISION_BASE_LAYER)
+                    DolbyVisionFallback.WRONG_COLOURS -> notes.add(ScreenNote.DOLBY_VISION_WRONG_COLOURS)
+                    DolbyVisionFallback.UNKNOWN -> notes.add(ScreenNote.DOLBY_VISION_UNKNOWN)
+                    DolbyVisionFallback.NONE -> Unit
+                }
+            }
+            val known = specs?.takeUnless { it.isEmpty }
+            val range = known?.range
+            val hdr = if (range != null) range in HDR_RANGES else VersionTag.HDR in tags
+            if (hdr && !support.hdr) notes.add(ScreenNote.HDR_UNSUPPORTED)
+            val resolution = known?.resolution
+            val uhd = if (resolution != null) resolution == "4K" else VersionTag.UHD in tags
+            if (uhd && !support.uhd) notes.add(ScreenNote.UHD_UNSUPPORTED)
+            return notes
         }
 
         /**
@@ -1079,15 +1162,17 @@ class FilmVersions private constructor(
             chosen: List<String>,
             support: PictureSupport,
             categoryName: (String) -> String?,
-        ): Movie? = defaultChoice(versions, inProgress, chosen, support, categoryName)?.first
+            specs: (String) -> StreamSpecs? = { null },
+        ): Movie? = defaultChoice(versions, inProgress, chosen, support, categoryName, specs)?.first
 
-        /** [defaultVersion] and why it is that one; null without versions. */
+        /** [defaultVersion] and why it is that one; null without versions. [specs]: what is known of a stream, by id. */
         fun defaultChoice(
             versions: List<Movie>,
             inProgress: String?,
             chosen: List<String>,
             support: PictureSupport,
             categoryName: (String) -> String?,
+            specs: (String) -> StreamSpecs? = { null },
         ): Pair<Movie, DefaultReason>? {
             if (versions.size < 2) return versions.firstOrNull()?.let { it to DefaultReason.ONLY }
             inProgress?.let { id -> versions.firstOrNull { it.id == id }?.let { return it to DefaultReason.IN_PROGRESS } }
@@ -1099,7 +1184,7 @@ class FilmVersions private constructor(
             var bestScore = Int.MIN_VALUE
             val scores = HashSet<Int>()
             for (movie in versions) {
-                val score = score(tags(movie.name, categoryName(movie.categoryId)), support)
+                val score = score(tags(movie.name, categoryName(movie.categoryId)), support, specs(movie.id))
                 scores.add(score)
                 if (score > bestScore) {
                     best = movie

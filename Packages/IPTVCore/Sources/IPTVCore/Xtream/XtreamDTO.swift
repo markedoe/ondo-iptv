@@ -255,6 +255,16 @@ struct XtreamInfoDTO: Decodable {
     var tmdbID: String?
     /// `video`, `audio` and `bitrate`: what the panel's ffprobe read of the stream (`get_vod_info`, when it gives them).
     var streamSpecs: StreamSpecs?
+    /// The names of the fields of `info`, and whether `video` and `audio` were objects (`ProviderInfo`).
+    var providerInfo = ProviderInfo()
+
+    /// Any field's name, for `providerInfo`.
+    private struct FieldName: CodingKey {
+        var stringValue: String
+        var intValue: Int? { nil }
+        init?(stringValue: String) { self.stringValue = stringValue }
+        init?(intValue: Int) { return nil }
+    }
 
     enum CodingKeys: String, CodingKey {
         case name, plot, description, cast, actors, director, genre, rating, cover, video, audio, bitrate
@@ -294,6 +304,8 @@ struct XtreamInfoDTO: Decodable {
         let video = (try? c.decodeIfPresent(XtreamProbe.self, forKey: .video))?.block
         let audio = (try? c.decodeIfPresent(XtreamProbe.self, forKey: .audio))?.block
         streamSpecs = StreamSpecs.fromProbe(video: video, audio: audio, bitrate: c.lenientString(.bitrate))
+        let names = (try? decoder.container(keyedBy: FieldName.self))?.allKeys.map(\.stringValue) ?? []
+        providerInfo = ProviderInfo(keys: ProviderInfo.keys(of: names), video: video != nil, audio: audio != nil)
     }
 }
 
@@ -361,12 +373,17 @@ struct XtreamProbe: Decodable {
             if case .scalar(let text) = value { fields[key.lowercased()] = text }
         }
         var sideData: [String] = []
+        var sideFields: [String: String] = [:]
         if case .array(let entries)? = values["side_data_list"] {
             for case .object(let entry) in entries {
                 if case .scalar(let type)? = entry["side_data_type"] { sideData.append(type.lowercased()) }
+                // The numbers of the side data (a Dolby Vision record's `dv_profile`), the first of each name.
+                for (key, value) in entry {
+                    if case .scalar(let text) = value, sideFields[key.lowercased()] == nil { sideFields[key.lowercased()] = text }
+                }
             }
         }
-        block = StreamSpecs.ProbeBlock(fields: fields, sideData: sideData)
+        block = StreamSpecs.ProbeBlock(fields: fields, sideData: sideData, sideFields: sideFields)
     }
 }
 

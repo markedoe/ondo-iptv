@@ -10,7 +10,7 @@ extension PlayerController {
     /// A film's item is ready: what its stream is made of goes to `onSpecs`. Its own stream only (the first address, not
     /// a fallback's), AVFoundation's engine only, never a channel.
     func readSpecs(of playerItem: AVPlayerItem) async {
-        guard let item, !item.isLive, item.reference.type == .movie, candidateIndex == 0, activeEngine == .apple else { return }
+        guard let item, Self.recordsSpecs(of: item, candidateIndex: candidateIndex), activeEngine == .apple else { return }
         let asset = playerItem.asset
         var specs = StreamSpecs(source: .measured)
         if let video = try? await asset.loadTracks(withMediaType: .video).first,
@@ -21,7 +21,16 @@ extension PlayerController {
             if dimensions.height > 0 { specs.height = Int(dimensions.height) }
             let type = Self.fourCC(CMFormatDescriptionGetMediaSubType(description))
             specs.videoCodec = StreamSpecs.videoCodec(type)
-            if StreamSpecs.isDolbyVision(fourCC: type) {
+            // Its Dolby Vision configuration record (`dvcC`, `dvvC`), when the sample description has one: the profile,
+            // and its base layer's compatibility (8.1: HDR10).
+            let atoms = CMFormatDescriptionGetExtension(description, extensionKey: kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms) as? [String: Any]
+            let record = (atoms?["dvcC"] ?? atoms?["dvvC"] ?? atoms?["dvwC"]) as? Data
+            let configuration = record.flatMap { StreamSpecs.dolbyVisionConfiguration([UInt8]($0)) }
+            if let configuration {
+                specs.dolbyVisionProfile = configuration.profile
+                specs.dolbyVisionCompatibility = configuration.compatibility
+            }
+            if StreamSpecs.isDolbyVision(fourCC: type) || configuration != nil {
                 specs.range = .dolbyVision
             } else if let transfer = CMFormatDescriptionGetExtension(description, extensionKey: kCMFormatDescriptionExtension_TransferFunction) as? String {
                 if transfer == kCMFormatDescriptionTransferFunction_SMPTE_ST_2084_PQ as String {
@@ -55,6 +64,20 @@ extension PlayerController {
         guard playerItem == player.currentItem, !specs.isEmpty else { return }
         // Read once per stream: the item is ready once; another sound picked later does not read it again.
         onSpecs?(item, specs)
+    }
+
+    /// Whether the player keeps what it reads of `item`'s stream played from its address `candidateIndex`: a film's own
+    /// stream only (the first address, not a fallback's), never a channel nor an episode. The same as Android's
+    /// `MeasuredTracks.recordedFilm`.
+    nonisolated static func recordsSpecs(of item: PlaybackItem, candidateIndex: Int) -> Bool {
+        !item.isLive && item.reference.type == .movie && candidateIndex == 0
+    }
+
+    /// What VLC reads of a film's picture: its size only (VLC names neither its range nor its codec here); nil before it
+    /// knows it.
+    nonisolated static func vlcSpecs(videoSize: CGSize) -> StreamSpecs? {
+        guard videoSize.width > 0, videoSize.height > 0 else { return nil }
+        return StreamSpecs(width: Int(videoSize.width), height: Int(videoSize.height), source: .measured)
     }
 
     /// A FourCC as text ("hvc1", "ec-3", "aac "), spaces trimmed.

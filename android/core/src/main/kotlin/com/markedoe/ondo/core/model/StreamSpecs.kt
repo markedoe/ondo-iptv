@@ -13,6 +13,21 @@ enum class SpecSource {
     PROVIDER,
 }
 
+/** What a screen without Dolby Vision shows of a stream ([StreamSpecs.dolbyVisionFallback]). */
+enum class DolbyVisionFallback {
+    /** No Dolby Vision stream. */
+    NONE,
+
+    /** Its base layer: HDR10, SDR or HLG, right colours (profiles 8, 9, a 10 with a compatible base layer). */
+    BASE_LAYER,
+
+    /** Wrong colours: no base layer such a screen shows (profile 5, a 10 without one). */
+    WRONG_COLOURS,
+
+    /** Unknown: the profile is unknown (a name says "DV" only) or needs its enhancement layer (7). */
+    UNKNOWN,
+}
+
 /** The picture's dynamic range. [SDR] is known too: a measured SDR stream is no HDR stream, whatever its name says. */
 @Serializable
 enum class PictureRange { SDR, HDR10, HDR10_PLUS, HLG, DOLBY_VISION }
@@ -41,6 +56,14 @@ data class StreamSpecs(
     /** The provider's whole bitrate, in kbit/s. */
     val bitrate: Int? = null,
     val source: SpecSource = SpecSource.PROVIDER,
+    /**
+     * Its Dolby Vision profile (5, 7, 8, 9, 10), from its configuration record (ffprobe's `dv_profile`) or its codec
+     * string ("dvhe.08.06"); null when unknown. A profile 5 stream has no base layer a screen without Dolby Vision shows
+     * right; a profile 8 one plays its HDR10 (or SDR, HLG) base layer there ([dolbyVisionFallback]).
+     */
+    val dolbyVisionProfile: Int? = null,
+    /** Its base layer's compatibility (`dv_bl_signal_compatibility_id`: 1 HDR10, 2 SDR, 4 HLG, 0 none); null when unknown. */
+    val dolbyVisionCompatibility: Int? = null,
 ) {
     /** Whether anything at all is known. */
     val isEmpty: Boolean
@@ -83,14 +106,35 @@ data class StreamSpecs(
             channelLayout = channelLayout ?: other.channelLayout?.takeIf { channels == null || channelsOfLayout(it) == channels },
             atmos = atmos || other.atmos,
             bitrate = bitrate ?: other.bitrate,
+            dolbyVisionProfile = dolbyVisionProfile ?: other.dolbyVisionProfile,
+            dolbyVisionCompatibility = dolbyVisionCompatibility ?: other.dolbyVisionCompatibility,
         )
     }
+
+    /** "P8.1", "P5", "P8": its Dolby Vision profile and base layer's compatibility; null when the profile is unknown. */
+    val dolbyVisionProfileLabel: String?
+        get() = dolbyVisionProfile?.let { profile -> dolbyVisionCompatibility?.let { "P$profile.$it" } ?: "P$profile" }
+
+    /**
+     * What a screen without Dolby Vision shows of this stream: [DolbyVisionFallback.NONE] when it is no Dolby Vision
+     * stream, [DolbyVisionFallback.BASE_LAYER] when its profile has a base layer such a screen shows right (8, 9, a 10 with
+     * a compatible base layer), [DolbyVisionFallback.WRONG_COLOURS] when it has none (5, a 10 without one), and
+     * [DolbyVisionFallback.UNKNOWN] when the profile is unknown or needs its enhancement layer (7).
+     */
+    val dolbyVisionFallback: DolbyVisionFallback
+        get() = dolbyVisionFallback(range == PictureRange.DOLBY_VISION || dolbyVisionProfile != null, dolbyVisionProfile, dolbyVisionCompatibility)
 
     /** "1920×802", "HEVC", "Dolby Vision", "5.1 E-AC-3", "Atmos", "8 450 kbit/s": every known field, for the title data panel. */
     fun summary(): String = listOfNotNull(
         if (width != null && height != null) "$width×$height" else height?.let { "${it}p" },
         resolution,
-        range?.let { if (it == PictureRange.SDR) "SDR" else rangeLabel(it) },
+        range?.let { shown ->
+            when (shown) {
+                PictureRange.SDR -> "SDR"
+                PictureRange.DOLBY_VISION -> listOfNotNull(rangeLabel(shown), dolbyVisionProfileLabel).joinToString(" ")
+                else -> rangeLabel(shown)
+            }
+        },
         videoCodec,
         listOfNotNull(soundLayout, audioCodec).joinToString(" ").ifEmpty { null },
         ATMOS.takeIf { atmos },
@@ -102,7 +146,7 @@ data class StreamSpecs(
      * ([fields], numbers as text), and the types of its `side_data_list` in lower case ([sideData]: "dovi configuration
      * record", "hdr dynamic metadata smpte2094-40 (hdr10+)"). Free text (a stream's title) is never read.
      */
-    data class ProbeBlock(val fields: Map<String, String>, val sideData: List<String> = emptyList())
+    data class ProbeBlock(val fields: Map<String, String>, val sideData: List<String> = emptyList(), val sideFields: Map<String, String> = emptyMap())
 
     /** The words a screen reader says for specs, in the viewer's language (the app's strings; English by default). */
     data class Words(
@@ -203,6 +247,27 @@ data class StreamSpecs(
             return videoCodec(subtype) ?: videoCodec(fourCC(codecs))
         }
 
+        /** The Dolby Vision profile a codec string names ("dvhe.08.06" is 8, "dvh1.05.06" 5); null for another codec. */
+        fun dolbyVisionProfileOf(codecs: String?): Int? {
+            val parts = codecs?.trim()?.lowercase()?.split('.') ?: return null
+            if (parts.size < 2 || parts[0] !in DOLBY_VISION_CODECS) return null
+            return parts[1].toIntOrNull()?.takeIf { it in 1..20 }
+        }
+
+        /** [StreamSpecs.dolbyVisionFallback] of a stream: [isDolbyVision], its [profile] and base layer's [compatibility]. */
+        fun dolbyVisionFallback(isDolbyVision: Boolean, profile: Int?, compatibility: Int?): DolbyVisionFallback = when {
+            !isDolbyVision -> DolbyVisionFallback.NONE
+            profile == null -> DolbyVisionFallback.UNKNOWN
+            profile == 8 || profile == 9 -> DolbyVisionFallback.BASE_LAYER
+            profile == 5 -> DolbyVisionFallback.WRONG_COLOURS
+            profile == 10 -> when (compatibility) {
+                null -> DolbyVisionFallback.UNKNOWN
+                0 -> DolbyVisionFallback.WRONG_COLOURS
+                else -> DolbyVisionFallback.BASE_LAYER
+            }
+            else -> DolbyVisionFallback.UNKNOWN
+        }
+
         /** Whether a video track is Dolby Vision, from its MIME type or its `codecs`. */
         fun isDolbyVision(mime: String?, codecs: String?): Boolean =
             mime?.trim()?.lowercase() == "video/dolby-vision" || fourCC(codecs) in DOLBY_VISION_CODECS
@@ -287,9 +352,13 @@ data class StreamSpecs(
             val v = video?.fields.orEmpty()
             val a = audio?.fields.orEmpty()
             val tag = v["codec_tag_string"]?.lowercase()
+            val side = video?.sideFields.orEmpty()
+            val dvProfile = side["dv_profile"]?.trim()?.toIntOrNull()?.takeIf { it in 1..20 }
+            val dvCompatibility = side["dv_bl_signal_compatibility_id"]?.trim()?.toIntOrNull()?.takeIf { it in 0..15 }
             val range = when {
                 video == null -> null
-                tag in DOLBY_VISION_CODECS || "dolby vision" in v["profile"]?.lowercase().orEmpty() ||
+                dvProfile != null ||
+                    tag in DOLBY_VISION_CODECS || "dolby vision" in v["profile"]?.lowercase().orEmpty() ||
                     video.sideData.any { "dovi" in it || "dolby vision" in it } -> PictureRange.DOLBY_VISION
                 video.sideData.any { "smpte2094" in it || "hdr10+" in it } -> PictureRange.HDR10_PLUS
                 else -> when (v["color_transfer"]?.trim()?.lowercase()) {
@@ -312,6 +381,8 @@ data class StreamSpecs(
                 atmos = "atmos" in audioProfile || "joc" in audioProfile,
                 bitrate = positive(bitrate),
                 source = SpecSource.PROVIDER,
+                dolbyVisionProfile = dvProfile?.takeIf { range == PictureRange.DOLBY_VISION },
+                dolbyVisionCompatibility = dvCompatibility?.takeIf { dvProfile != null && range == PictureRange.DOLBY_VISION },
             )
             return specs.takeUnless { it.isEmpty && it.bitrate == null }
         }

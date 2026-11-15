@@ -179,19 +179,30 @@ extension AppModel {
     func details(for movie: Movie) async -> MediaDetails? {
         await storedDetailsLoaded()
         let kept = movieDetailsCache[movie.id]
-        if let kept, DetailsArchive.isFresh(movieDetailsFetchedAt[movie.id], maxAge: DetailsArchive.movieMaxAge) { return kept }
+        // Kept before the app read the provider's technical blocks (no `providerInfo`): asked again, still shown meanwhile.
+        if let kept, kept.providerInfo != nil, DetailsArchive.isFresh(movieDetailsFetchedAt[movie.id], maxAge: DetailsArchive.movieMaxAge) { return kept }
         // The Home prefetch and the page may ask at the same time: one request.
         if let running = movieDetailsInFlight[movie.id] { return await running.value ?? kept }
         guard let streamID = movie.xtreamStreamID, let playlist = activePlaylist,
               let credentials = playlist.source.xtreamCredentials else { return kept }
         let client = XtreamClient(credentials: credentials, http: http, headers: playlist.headers)
         movieDetailRequests += 1
-        let request = Task { try? await client.movieDetails(streamID: streamID) }
+        let id = movie.id
+        let request = Task { () -> MediaDetails? in
+            do {
+                return try await client.movieDetails(streamID: streamID)
+            } catch {
+                // How it failed, for the title data panel (not a page closed meanwhile).
+                if !Self.isCancellation(error), activePlaylist?.id == playlist.id { detailsFailures[id] = Self.detailsFailureCode(error) }
+                return nil
+            }
+        }
         movieDetailsInFlight[movie.id] = request
         let fetched = await request.value
         movieDetailsInFlight[movie.id] = nil
         // Another playlist opened meanwhile: these details are not its own.
         guard let details = fetched, activePlaylist?.id == playlist.id else { return fetched ?? kept }
+        detailsFailures[movie.id] = nil
         movieDetailsCache[movie.id] = details
         movieDetailsFetchedAt[movie.id] = .now
         // Asked by its own page (or Home): kept with the pages viewers opened; a version's loop marks it again.

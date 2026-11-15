@@ -168,6 +168,41 @@ final class StreamSpecsTests: XCTestCase {
         }
     }
 
+    private struct PlaysFirst: Decodable {
+        struct Support: Decodable {
+            var hdr: Bool
+            var dolbyVision: Bool
+            var uhd: Bool
+        }
+        struct Row: Decodable {
+            var name: String
+            var specs: StreamSpecs?
+        }
+        struct Case: Decodable {
+            var about: String
+            var support: Support
+            var versions: [Row]
+            var first: Int
+        }
+        var playsFirst: [Case]
+    }
+
+    /// The version played first, for a film's versions and a screen (`playsFirst`): what is known of each, then its name.
+    func testTheVersionPlayedFirst() throws {
+        let cases = try JSONDecoder().decode(PlaysFirst.self, from: Data(contentsOf: Self.file)).playsFirst
+        XCTAssertGreaterThanOrEqual(cases.count, 6)
+        for test in cases {
+            let support = PictureSupport(hdr: test.support.hdr, dolbyVision: test.support.dolbyVision, uhd: test.support.uhd)
+            let movies = test.versions.enumerated().map { i, row in
+                Movie(id: "v\(i)", name: row.name, categoryID: "c", streamURL: URL(string: "http://stream.example.com/\(i).mkv")!)
+            }
+            var specs: [String: StreamSpecs] = [:]
+            for (i, row) in test.versions.enumerated() { specs["v\(i)"] = row.specs }
+            let first = FilmVersions.defaultChoice(movies, inProgress: nil, chosen: [], support: support, categoryName: { _ in nil }, specs: { specs[$0] })?.movie
+            XCTAssertEqual(first?.id, movies[test.first].id, test.about)
+        }
+    }
+
     /// The details of a film carry the provider's specs, kept with them; details kept before specs existed still read.
     func testMovieDetailsKeepTheSpecs() throws {
         let details = MediaDetails(title: "Sand Harbor", streamSpecs: StreamSpecs(width: 1920, height: 1080, audioCodec: "AAC", channels: 6))

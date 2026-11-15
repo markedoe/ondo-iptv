@@ -162,6 +162,11 @@ data class OndoState(
      * from the device the first time a film's page or the player needs it ([OndoRepository.loadMeasuredSpecs]).
      */
     val measuredSpecs: Map<String, StreamSpecs> = emptyMap(),
+    /**
+     * The movies whose details the provider refused or could not give this session, by id, and how ([LoadError.code]:
+     * "HTTP 404", "timeout"…): for the title data panel. Gone once they come.
+     */
+    val detailsFailures: Map<String, String> = emptyMap(),
 ) {
     /** The collections the open profile sees: its own and those shared with every profile, by name. */
     val collections: List<UserCollection>
@@ -207,6 +212,20 @@ fun OndoState.shownEpisode(series: Series, episode: Episode): Episode {
 data class LoadError(val kind: ErrorAttribution, val status: Int? = null) {
     companion object {
         fun of(error: Throwable) = LoadError(ErrorAttribution.classify(error), (error as? HttpException.BadStatus)?.code)
+
+        /**
+         * A short code of how a request failed, for the title data panel: "HTTP 404", "timeout", "DNS", "TLS", "JSON" (an
+         * answer that could not be read), else its kind ("NETWORK", "PROVIDER", "APP"). Never a message: it can hold an
+         * address.
+         */
+        fun code(error: Throwable): String = when (error) {
+            is HttpException.BadStatus -> "HTTP ${error.code}"
+            is java.net.SocketTimeoutException -> "timeout"
+            is java.net.UnknownHostException -> "DNS"
+            is javax.net.ssl.SSLException -> "TLS"
+            is com.markedoe.ondo.core.xtream.XtreamException, is kotlinx.serialization.SerializationException -> "JSON"
+            else -> ErrorAttribution.classify(error).name
+        }
     }
 }
 
@@ -593,7 +612,7 @@ class OndoRepository(
                 _state.update {
                     it.copy(
                         playlists = it.playlists + saved, settings = it.settings.copy(activePlaylistId = saved.id), content = shown,
-                        isLoading = false, isRestoring = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(),
+                        isLoading = false, isRestoring = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), detailsFailures = emptyMap(),
                     )
                 }
                 LaunchMarks.timed("add: catalogue shown", started)
@@ -620,7 +639,7 @@ class OndoRepository(
         guideJob?.cancel()
         startDetails(playlist.id)
         forgetContent()
-        _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), error = null, isLoading = false, isRestoring = true) }
+        _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), detailsFailures = emptyMap(), error = null, isLoading = false, isRestoring = true) }
         open(playlist)
     }
 
@@ -1800,7 +1819,8 @@ class OndoRepository(
     suspend fun details(movie: Movie): MediaDetails? {
         storedDetailsJob?.join()
         val kept = _state.value.movieDetails[movie.id]
-        if (kept != null && DetailsArchive.isFresh(movieFetchedAt[movie.id], DetailsArchive.MOVIE_MAX_AGE_MS, now())) return kept
+        // Kept before the app read the provider's technical blocks (no providerInfo): asked again, still shown meanwhile.
+        if (kept?.providerInfo != null && DetailsArchive.isFresh(movieFetchedAt[movie.id], DetailsArchive.MOVIE_MAX_AGE_MS, now())) return kept
         return fetchDetails(movie, asVersion = false)?.getOrNull() ?: kept
     }
 
@@ -1816,12 +1836,16 @@ class OndoRepository(
         movieDetailRequests.incrementAndGet()
         // A cancelled call stays one: the caller (a page closed, the remote moved on) does not go on as if it had failed.
         val result = loadCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }
-        val details = result.getOrNull() ?: return result
         // Another playlist opened meanwhile: these details are not its own.
         if (_state.value.activePlaylistId != playlist.id) return result
+        val details = result.getOrNull() ?: run {
+            // How it failed, for the title data panel.
+            result.exceptionOrNull()?.let { error -> _state.update { it.copy(detailsFailures = it.detailsFailures + (movie.id to LoadError.code(error))) } }
+            return result
+        }
         movieFetchedAt[movie.id] = now()
         if (asVersion) versionFetchedIds += movie.id else versionFetchedIds -= movie.id
-        _state.update { it.copy(movieDetails = it.movieDetails + (movie.id to details)) }
+        _state.update { it.copy(movieDetails = it.movieDetails + (movie.id to details), detailsFailures = it.detailsFailures - movie.id) }
         scheduleDetailsSave()
         return result
     }
@@ -1839,7 +1863,8 @@ class OndoRepository(
      * The details of a film's other [versions] whose details are not known yet, for what their streams are made of
      * (`get_vod_info`'s `video` and `audio`): at most [limit], [gapMs] apart, in the caller's coroutine (a film's page,
      * open and idle), cancelled with it; never while browsing, nor while the player is on top ([isPlaying]: the page asks
-     * again when it is back). A version already asked (its details kept, specs or not) is not asked again; the first
+     * again when it is back). A version already asked (its details kept, specs or not, by this version of the app: with
+     * [MediaDetails.providerInfo]) is not asked again; the first
      * failure stops the round, and that version is not asked again this session. Returns how many were asked.
      */
     suspend fun versionDetails(versions: List<Movie>, gapMs: Long = VERSION_GAP_MS, limit: Int = VERSIONS_PER_PAGE): Int {
@@ -1847,7 +1872,8 @@ class OndoRepository(
         var asked = 0
         for (version in versions) {
             if (asked >= limit || inPlayback) break
-            if (version.id in _state.value.movieDetails || version.id in failedVersionIds || version.xtreamStreamId == null) continue
+            // Details kept by a version of the app that did not read the provider's technical blocks are asked again.
+            if (_state.value.movieDetails[version.id]?.providerInfo != null || version.id in failedVersionIds || version.xtreamStreamId == null) continue
             if (asked > 0) delay(gapMs)
             // A stream started meanwhile: nothing is asked while it starts.
             if (inPlayback) break
@@ -1954,7 +1980,7 @@ class OndoRepository(
     private fun loadStoredDetails(playlist: SavedPlaylist) {
         if (detailsPlaylistId != playlist.id) {
             startDetails(playlist.id)
-            _state.update { it.copy(movieDetails = emptyMap(), seriesDetails = emptyMap()) }
+            _state.update { it.copy(movieDetails = emptyMap(), seriesDetails = emptyMap(), detailsFailures = emptyMap()) }
         }
         storedDetailsJob?.cancel()
         storedDetailsJob = scope.launch {
@@ -1963,6 +1989,8 @@ class OndoRepository(
             if (detailsPlaylistId != playlist.id) return@launch
             // A title fetched while the document was read has the newer details.
             val current = _state.value
+            // Details kept before the app read the provider's technical blocks (no [MediaDetails.providerInfo]) keep their
+            // date, so they are saved again as they are; [details] and [versionDetails] ask for them again.
             archive.movies.forEach { (id, entry) -> if (id !in current.movieDetails) movieFetchedAt[id] = entry.fetchedAt }
             archive.versions.forEach { (id, entry) ->
                 if (id !in current.movieDetails && id !in archive.movies) {

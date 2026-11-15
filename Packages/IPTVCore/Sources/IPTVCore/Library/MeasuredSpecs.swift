@@ -43,17 +43,24 @@ public struct MeasuredSpecs: Sendable, Equatable {
     public var keys: [String] { order }
 
     /// Keeps what the player measured of `key`'s stream: false (nothing to save) when nothing is known, or a reading is
-    /// kept already and this one's picture is no larger (the tracks change as an adaptive stream climbs, or the viewer
-    /// picks another sound: the first reading stays). A field the player did not read this time keeps what it read before
-    /// (`StreamSpecs.orElse`).
+    /// kept already, this one's picture is no larger (the tracks change as an adaptive stream climbs, or the viewer picks
+    /// another sound: the first reading stays) and it knows nothing the kept one does not (a field an earlier version of
+    /// the app did not read, its Dolby Vision profile: added). A field the player did not read this time keeps what it
+    /// read before (`StreamSpecs.orElse`).
     @discardableResult
     public mutating func record(_ key: String, _ measured: StreamSpecs) -> Bool {
         guard !measured.isEmpty else { return false }
         var reading = measured
         reading.source = .measured
         let old = specs[key]
-        let merged = reading.orElse(old)
-        if let old, Self.area(measured) <= Self.area(old) || old == merged {
+        let merged: StreamSpecs
+        if let old, Self.area(measured) <= Self.area(old) {
+            // No larger: the kept reading stays, with only what it did not know.
+            merged = old.orElse(reading)
+        } else {
+            merged = reading.orElse(old)
+        }
+        if let old, old == merged {
             // Played again: kept a while longer.
             put(key, old)
             return false

@@ -44,6 +44,7 @@ extension AppModel {
         seriesDetailsFetchedAt = [:]
         versionFetchedIDs = []
         failedVersionIDs = []
+        detailsFailures = [:]
     }
 
     /// Reads the playlist's document in the background when it opens. `details(for:)` waits for it, so Home's
@@ -58,7 +59,9 @@ extension AppModel {
             await write?.value
             let archive = await Task.detached(priority: .userInitiated) { store.load(DetailsArchive.self, name: name) }.value
             guard let archive, !Task.isCancelled, detailsPlaylistID == playlist.id else { return }
-            // A title fetched while the document was read has the newer details.
+            // A title fetched while the document was read has the newer details. Details kept before the app read the
+            // provider's technical blocks (no `providerInfo`) keep their date, so they are saved again as they are;
+            // `details(for:)` and `loadVersionDetails` ask for them again.
             for (id, entry) in archive.movies where movieDetailsCache[id] == nil {
                 movieDetailsCache[id] = entry.value
                 movieDetailsFetchedAt[id] = entry.fetchedAt

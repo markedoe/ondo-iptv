@@ -47,12 +47,61 @@ struct TitleData: Equatable, Sendable {
         var specs = "–"
         /// Where `specs` come from: measured by the player, the provider's details, or (nil) its name's tags.
         var specSource: SpecSource?
+        /// What its `get_vod_info` held, or why there is none.
+        var provider: ProviderStatus = .notRequested
+        /// How the request failed ("HTTP 404", "timeout"), for `.failed`.
+        var providerFailure: String?
+        /// The names of the fields of its `info` (never their values).
+        var providerKeys: [String] = []
+        /// Whether its details are kept on the device.
+        var detailsKept = false
+        /// Whether its picture is Dolby Vision, by its specs or its name.
+        var dolbyVision = false
+        /// Its Dolby Vision profile as measured or given ("P8.1", "P5"); nil when unknown.
+        var dolbyVisionProfile: String?
+        /// What its picture asks of this screen and does not get: why it may not play first (`FilmVersions.screenNotes`).
+        var screenNotes: [ScreenNote] = []
+    }
+
+    /// What a version's `get_vod_info` held (`Version.provider`). The same as Android's `TitleData.ProviderStatus`.
+    enum ProviderStatus: Equatable, Sendable {
+        /// Not asked (yet): its page was not opened, nor asked as another version.
+        case notRequested
+        /// No provider's details for this playlist (an M3U one) or stream (no stream id).
+        case notAvailable
+        /// The provider refused or could not be reached (`Version.providerFailure`).
+        case failed
+        /// Kept by an earlier version of the app, which did not note what they held: asked again.
+        case keptBefore
+        /// Asked: no `video` nor `audio` block.
+        case noTechnicalBlock
+        case videoAndAudio
+        case videoOnly
+        case audioOnly
+    }
+
+    /// What the app reads of this screen: its largest size, HDR (HDR10 and HLG on Apple's screens), a Dolby Vision
+    /// decoder; HDR10+ unknown here (nil).
+    struct Screen: Equatable, Sendable {
+        var width = 0
+        var height = 0
+        var hdr10: Bool?
+        var hdr10Plus: Bool?
+        var hlg: Bool?
+        var dolbyVision: Bool?
+        var dolbyVisionDecoder: Bool?
     }
 
     var lines: [Line]
     var versions: [Version] = []
     /// Why the film's card plays the version marked `first`; nil for an episode or a film alone.
     var reason: DefaultReason?
+    /// What the app read of this screen; nil for an episode.
+    var screen: Screen?
+    /// What the versions are chosen for: 4K, HDR, Dolby Vision.
+    var support = PictureSupport()
+    /// The app's version and build ("2.0.0 (1086)"): the panel's photo says which build it was.
+    var app = ""
 
     /// Versions the statistics list at most, the one playing first.
     static let panelVersions = 4
@@ -72,6 +121,14 @@ struct TitleData: Equatable, Sendable {
         /// What is known of each version's stream, and where it comes from (AppModel+StreamSpecs).
         var specs: [String: StreamSpecs] = [:]
         var specSources: [String: SpecSource] = [:]
+        /// Each version's details as kept (nil: none), and how asking for them failed.
+        var details: [String: MediaDetails] = [:]
+        var failures: [String: String] = [:]
+        /// Whether the playlist has a provider's details at all (an Xtream one).
+        var hasProviderDetails = false
+        var screen: Screen?
+        var support = PictureSupport()
+        var app = ""
     }
 
     /// The title data of `input`, off the main actor.
@@ -140,11 +197,28 @@ struct TitleData: Equatable, Sendable {
             return named.isEmpty ? "–" : named
         }
         lines.append(.init(label: .specs(input.specSources[movie.id]), value: specs(of: movie)))
-        guard all.count > 1 else { return TitleData(lines: lines) }
-        let versions = all.map { version in
+        func version(_ version: Movie, chip: String?, first isFirst: Bool) -> Version {
             let container = clean(containerText(version))
+            let nameTags = groupTags[version.id] ?? FilmVersions.labelTags(name: version.name, categoryName: names[version.categoryID])
+            let details = input.details[version.id]
+            let info = details?.providerInfo
+            let failure = input.failures[version.id]
+            let status: ProviderStatus
+            if failure != nil {
+                status = .failed
+            } else if details != nil, info == nil {
+                status = .keptBefore
+            } else if let info {
+                status = info.video && info.audio ? .videoAndAudio : info.video ? .videoOnly : info.audio ? .audioOnly : .noTechnicalBlock
+            } else if version.xtreamStreamID == nil || !input.hasProviderDetails {
+                status = .notAvailable
+            } else {
+                status = .notRequested
+            }
+            let known = input.specs[version.id]
+            let dolbyVision = FilmVersions.dolbyVisionFallback(nameTags, specs: known) != .none
             return Version(
-                chip: chips[version.id].map(clean),
+                chip: chip.map(clean),
                 name: clean(version.name),
                 category: clean(categoryText(names[version.categoryID], version.categoryID)),
                 id: version.id,
@@ -152,13 +226,26 @@ struct TitleData: Equatable, Sendable {
                 container: container.isEmpty ? nil : container,
                 tags: tags(of: version),
                 playing: version.id == movie.id,
-                first: version.id == first,
+                first: isFirst,
                 sameAs: sameAs[version.id].map(clean),
                 specs: specs(of: version),
-                specSource: input.specSources[version.id]
+                specSource: input.specSources[version.id],
+                provider: status,
+                providerFailure: failure.map(clean),
+                providerKeys: (info?.keys ?? []).map(clean).filter { !$0.isEmpty },
+                detailsKept: details != nil,
+                dolbyVision: dolbyVision,
+                dolbyVisionProfile: dolbyVision ? known?.dolbyVisionProfileLabel : nil,
+                screenNotes: FilmVersions.screenNotes(nameTags, support: input.support, specs: known)
             )
         }
-        return TitleData(lines: lines, versions: versions, reason: reason)
+        guard all.count > 1 else {
+            // A film alone: its own line of what its provider's details held, and what it asks of this screen.
+            let alone = version(movie, chip: String(localized: "Standard"), first: false)
+            return TitleData(lines: lines, versions: [alone], reason: .only, screen: input.screen, support: input.support, app: input.app)
+        }
+        let versions = all.map { version($0, chip: chips[$0.id], first: $0.id == first) }
+        return TitleData(lines: lines, versions: versions, reason: reason, screen: input.screen, support: input.support, app: input.app)
     }
 
     private static func categoryText(_ name: String?, _ id: String) -> String { "\(name ?? "–") (\(id))" }
@@ -215,16 +302,22 @@ extension AppModel {
             }
             var specs: [String: StreamSpecs] = [:]
             var sources: [String: SpecSource] = [:]
+            var details: [String: MediaDetails] = [:]
+            var failures: [String: String] = [:]
             for version in all {
                 if let known = streamSpecs(for: version.id) { specs[version.id] = known }
                 if let source = specSource(for: version.id) { sources[version.id] = source }
+                if let kept = movieDetailsCache[version.id] { details[version.id] = kept }
+                if let failure = detailsFailures[version.id] { failures[version.id] = failure }
             }
             return TitleData.Input(
                 title: .film(
                     movie: movie, versions: all, chips: chips, sameAs: sameAs, first: choice?.movie.id, reason: choice?.reason,
                     detailsTMDb: movieDetailsCache[movie.id]?.tmdbID
                 ),
-                shownTitle: item.title, categoryNames: categoryNames, secrets: secrets, specs: specs, specSources: sources
+                shownTitle: item.title, categoryNames: categoryNames, secrets: secrets, specs: specs, specSources: sources,
+                details: details, failures: failures, hasProviderDetails: activePlaylist?.source.xtreamCredentials != nil,
+                screen: Self.screen, support: Self.pictureSupport, app: Self.appVersion
             )
         case .series:
             guard let series = index.seriesByID[item.reference.itemID], let episodeID = item.reference.episodeID else { return nil }

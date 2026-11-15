@@ -103,8 +103,23 @@ Only movies, and only within one playlist (live channels and series are never gr
   appear, as are addresses, `user:password@`, query values, IP addresses and `host:port` (`Redaction`, the same rules
   and table on both apps: `fixtures/title-data/redaction.json`). It is not in the problem report.
 - **The version shown first** (and played from a card): the one in progress; else the one chosen last on this device;
-  else the one the screen suits best (a cinema copy last) (4K on a 4K screen, HDR or Dolby Vision only where the screen shows them, as
-  Android's display and Apple's AVFoundation report); else the first.
+  else the one the screen suits best (a cinema copy last); else the first. What the screen suits is read from what is
+  known of each version (measured, else the provider's, else the name's tags) and from the screen:
+  - **4K** on a screen whose largest mode is 4K, whatever its mode of the moment: on Android the largest of
+    `Display.supportedModes` by physical size (a box drawing a 1080p interface, or reading 1080p in "auto" until a film
+    plays, is still a 4K screen); on Apple the screen's native size.
+  - **HDR** (HDR10, HDR10+, HLG) only where the display reports it (`Display.getHdrCapabilities`, without the types
+    the viewer turned off; AVFoundation on Apple).
+  - **Dolby Vision** first only where the display itself reports Dolby Vision and a decoder for it exists (on Android
+    `MediaCodecList`, read once in the background at the lowest priority, after the first Home; a box's decoder alone does not make a TV show it). On a screen
+    without it, a version's Dolby Vision profile decides: 8 and 9 (a 10 with a compatible base layer) play their HDR10,
+    SDR or HLG base layer and count as that; 5 (a 10 without a base layer) shows wrong colours and never plays first;
+    an unknown profile (a name saying "DV" only, profile 7) is taken as 5, and so is a name saying "DV" over the
+    provider's specs that show no Dolby Vision (a panel's ffprobe can read only a profile 5 file's HDR10 base layer):
+    only what the player measured overrules the name. Such a version stays on its chip, to be
+    picked. The profile comes from the provider's configuration record (`dv_profile`,
+    `dv_bl_signal_compatibility_id`), Media3's codec string ("dvhe.08.06": the profile only) or AVFoundation's `dvcC`
+    record.
 - **Stored data stays per stream**: favourites, history, progress and sync are unchanged, and nothing new is synced.
   A film is watched (and left out by "Hide watched movies") when one of its versions is finished, and in My List when
   one of its versions is; adding a film from its card adds its version shown first, taking it out removes every
@@ -150,9 +165,25 @@ same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three so
   those of before (`fixtures/film-versions/labels.json`). Each chip is known by its first version's id, so a chip that
   splits as specs arrive moves no other one, and the focus stays on the version the remote was on.
 - **The title data** lists each version's specs and where they come from (measured by the player, from the provider,
-  from the name).
-- Details kept before this change have no specs until they are asked again (once they are old, `DetailsArchive`), or
-  until the version plays.
+  from the name), and, to tell why a version shows no specs or does not play first:
+  - what its provider's details held: not requested, none for this playlist (M3U), failed (an HTTP status or "timeout",
+    "DNS", "TLS", "JSON"), kept by an earlier version (asked again), requested with no technical block, video + audio,
+    video only, audio only; whether they are kept on the device; the names of the fields of `info` (names only, plain
+    ones, sorted, 40 at most, never a value: a value can hold an address);
+  - its Dolby Vision profile ("P8.1", "P5", unknown) and what it asks of the screen and does not get ("Dolby Vision not
+    supported by this screen: profile unknown, not played first", "HDR not supported by this screen", "4K above this
+    screen's largest mode");
+  - for the screen: the mode of the moment and the largest mode (Android), HDR10, HDR10+, HLG and Dolby Vision yes or
+    no, the Dolby Vision and HEVC Main 10 decoders, what the versions are chosen for ("4K · HDR"), and the app's
+    version and build, so a photo says which build it was.
+
+  A film alone lists its own line too. In the player the panel is worked out again when the player's reading, a
+  version's details or a failure arrive.
+- Details kept by a version of the app that did not note what the provider's answer held (before the specs were read)
+  are shown, and asked again as if they were old: the page's own when it opens, the other versions' when it is idle.
+- A same-size reading of a stream measured before adds what the first did not know (its Dolby Vision profile); a
+  smaller one or another sound changes nothing. A film VLC plays (an MKV on a Mac, a stream AVPlayer refused) is
+  measured too, its picture's size only.
 
 ## Known limits
 

@@ -1,12 +1,16 @@
 package com.markedoe.ondo.player
 
 import androidx.annotation.StringRes
+import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.CatalogueMatcher
 import com.markedoe.ondo.core.library.DefaultReason
 import com.markedoe.ondo.core.library.FilmVersions
+import com.markedoe.ondo.core.library.PictureSupport
+import com.markedoe.ondo.core.library.ScreenNote
 import com.markedoe.ondo.core.library.VersionTag
 import com.markedoe.ondo.core.library.VersionWords
+import com.markedoe.ondo.core.model.DolbyVisionFallback
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.SpecSource
 import com.markedoe.ondo.core.model.StreamSpecs
@@ -29,6 +33,12 @@ data class TitleData(
     val versions: List<Version> = emptyList(),
     /** Why the film's card plays the version marked [Version.first]; null for an episode or a film alone. */
     val reason: DefaultReason? = null,
+    /** What the app read of this screen and its decoders ([PictureSupportProbe]); null for an episode, or before it read them. */
+    val display: DisplayFacts? = null,
+    /** What the versions are chosen for ([DisplayFacts.pictureSupport]): 4K, HDR, Dolby Vision. */
+    val support: PictureSupport = PictureSupport(),
+    /** The app's version and build ("2.0.0 (1086)"): the panel's photo says which build it was. */
+    val app: String = APP_VERSION,
 ) {
     /** One line: a field the app names in the viewer's language ([label]), else the provider's own field name ([key]). */
     data class Line(val key: String, val value: String, @StringRes val label: Int = 0)
@@ -59,11 +69,49 @@ data class TitleData(
         val specs: String = "–",
         /** Where [specs] come from: measured by the player, the provider's details, or its name's tags. */
         @StringRes val specSource: Int = R.string.title_data_specs_name,
+        /** What its `get_vod_info` held, or why there is none ([ProviderStatus]). */
+        val provider: ProviderStatus = ProviderStatus.NOT_REQUESTED,
+        /** How the request failed ("HTTP 404", "timeout"), for [ProviderStatus.FAILED]. */
+        val providerFailure: String? = null,
+        /** The names of the fields of its `info` (never their values). */
+        val providerKeys: List<String> = emptyList(),
+        /** Whether its details are kept on the device (in memory now, and saved with the playlist's). */
+        val detailsKept: Boolean = false,
+        /** Whether its picture is Dolby Vision, by its specs or its name. */
+        val dolbyVision: Boolean = false,
+        /** Its Dolby Vision profile as measured or given ("P8.1", "P5"); null when unknown. */
+        val dolbyVisionProfile: String? = null,
+        /** What its picture asks of this screen and does not get: why it may not play first ([FilmVersions.screenNotes]). */
+        val screenNotes: List<ScreenNote> = emptyList(),
     )
+
+    /** What a version's `get_vod_info` held ([Version.provider]). */
+    enum class ProviderStatus {
+        /** Not asked (yet): its page was not opened, nor asked as another version. */
+        NOT_REQUESTED,
+
+        /** No provider's details for this playlist (an M3U one) or stream (no stream id). */
+        NOT_AVAILABLE,
+
+        /** The provider refused or could not be reached ([Version.providerFailure]). */
+        FAILED,
+
+        /** Kept by an earlier version of the app, which did not note what they held: asked again. */
+        KEPT_BEFORE,
+
+        /** Asked: no `video` nor `audio` block. */
+        NO_TECHNICAL_BLOCK,
+        VIDEO_AND_AUDIO,
+        VIDEO_ONLY,
+        AUDIO_ONLY,
+    }
 
     companion object {
         /** Versions the player's panel lists at most; the film's page lists them all. */
         const val PANEL_VERSIONS = 4
+
+        /** This build's version and number: "2.0.0 (1086)". */
+        val APP_VERSION: String = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
 
         /**
          * The data of the title [progressKey] names ("playlist|MOVIE|id|", "playlist|SERIES|id|episode"), shown as
@@ -76,13 +124,15 @@ data class TitleData(
             shownTitle: String,
             words: VersionWords = VersionWords(),
             matchedTmdb: Int? = null,
+            display: DisplayFacts? = PictureSupportProbe.facts,
+            app: String = APP_VERSION,
         ): TitleData? {
             val parts = progressKey?.split('|') ?: return null
             if (parts.size != 4) return null
             val secrets = secrets(state)
             fun clean(text: String) = Redaction.clean(text, secrets)
             return when (parts[1]) {
-                ItemKind.MOVIE.name -> UiMappers.movie(state, parts[2])?.let { film(state, it, shownTitle, words, matchedTmdb, ::clean) }
+                ItemKind.MOVIE.name -> UiMappers.movie(state, parts[2])?.let { film(state, it, shownTitle, words, matchedTmdb, ::clean, display, app) }
                 ItemKind.SERIES.name -> episode(state, parts[2], parts[3], shownTitle, matchedTmdb, ::clean)
                 else -> null
             }
@@ -96,7 +146,10 @@ data class TitleData(
             words: VersionWords = VersionWords(),
             matchedTmdb: Int? = null,
             clean: (String) -> String = { Redaction.clean(it, secrets(state)) },
+            display: DisplayFacts? = PictureSupportProbe.facts,
+            app: String = APP_VERSION,
         ): TitleData {
+            val support = UiMappers.pictureSupport
             val categoryName = FilmVersions.categoryNames(state.content.movieCategories)
             val category = categoryName(movie.categoryId)
             val all = UiMappers.films(state).versions(movie).distinctBy { it.id }
@@ -116,7 +169,8 @@ data class TitleData(
                 Line("container_extension", clean(containerText(movie))),
                 specsLine(state, movie, tagsOf[movie.id] ?: FilmVersions.labelTags(movie.name, category)),
             )
-            if (all.size < 2) return TitleData(lines)
+            val alone = diagnosis(state, movie, tagsOf[movie.id] ?: FilmVersions.labelTags(movie.name, category), support, clean)
+            if (all.size < 2) return TitleData(lines, listOf(alone.copy(chip = clean(words.standard), playing = true)), DefaultReason.ONLY, display, support, app)
             val visible = UiMappers.visibleVersions(state, movie)
             // Every version, those one chip holds together too (marked "same as" the one it plays); one chip for them all
             // ("Standard", not shown on the page) still names each, never "hidden".
@@ -129,22 +183,56 @@ data class TitleData(
             val (first, reason) = UiMappers.defaultChoice(state, movie, visible)
             val versions = all.map { version ->
                 val name = categoryName(version.categoryId)
-                Version(
+                diagnosis(state, version, tagsOf[version.id] ?: FilmVersions.labelTags(version.name, name), support, clean).copy(
                     chip = chipOf[version.id]?.let(clean),
-                    name = clean(version.name),
-                    category = clean(categoryText(name, version.categoryId)),
-                    id = version.id,
-                    shownId = Redaction.shownId(version.id),
-                    container = containerText(version).let(clean).ifEmpty { null },
-                    tags = tagText(tagsOf[version.id] ?: FilmVersions.labelTags(version.name, name)),
                     playing = version.id == movie.id,
                     first = version.id == first.id,
                     sameAs = sameAs[version.id],
-                    specs = specsText(state, version, tagsOf[version.id] ?: FilmVersions.labelTags(version.name, name)),
-                    specSource = specSource(state, version.id),
                 )
             }
-            return TitleData(lines, versions, reason)
+            return TitleData(lines, versions, reason, display, support, app)
+        }
+
+        /**
+         * [version] as the panel lists it, without its chip or marks: its name, category, ids, tags, specs and where they
+         * come from, what its provider's details held, and what it asks of this screen ([support]).
+         */
+        private fun diagnosis(state: OndoState, version: Movie, tags: List<VersionTag>, support: PictureSupport, clean: (String) -> String): Version {
+            val details = state.movieDetails[version.id]
+            val info = details?.providerInfo
+            val failure = state.detailsFailures[version.id]
+            val status = when {
+                failure != null -> ProviderStatus.FAILED
+                details != null && info == null -> ProviderStatus.KEPT_BEFORE
+                info != null && info.video && info.audio -> ProviderStatus.VIDEO_AND_AUDIO
+                info != null && info.video -> ProviderStatus.VIDEO_ONLY
+                info != null && info.audio -> ProviderStatus.AUDIO_ONLY
+                info != null -> ProviderStatus.NO_TECHNICAL_BLOCK
+                version.xtreamStreamId == null || state.activePlaylist?.isXtream != true -> ProviderStatus.NOT_AVAILABLE
+                else -> ProviderStatus.NOT_REQUESTED
+            }
+            val specs = UiMappers.streamSpecs(state, version.id)
+            val dolbyVision = FilmVersions.dolbyVisionFallback(tags, specs) != DolbyVisionFallback.NONE
+            return Version(
+                chip = null,
+                name = clean(version.name),
+                category = clean(categoryText(FilmVersions.categoryNames(state.content.movieCategories)(version.categoryId), version.categoryId)),
+                id = version.id,
+                shownId = Redaction.shownId(version.id),
+                container = containerText(version).let(clean).ifEmpty { null },
+                tags = tagText(tags),
+                playing = false,
+                first = false,
+                specs = specsText(state, version, tags),
+                specSource = specSource(state, version.id),
+                provider = status,
+                providerFailure = failure?.let(clean),
+                providerKeys = info?.keys.orEmpty().map(clean).filter { it.isNotEmpty() },
+                detailsKept = details != null,
+                dolbyVision = dolbyVision,
+                dolbyVisionProfile = specs?.dolbyVisionProfileLabel?.takeIf { dolbyVision },
+                screenNotes = FilmVersions.screenNotes(tags, support, specs),
+            )
         }
 
         private fun episode(

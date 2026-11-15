@@ -155,6 +155,8 @@ final class PlayerController: NSObject {
     #if canImport(VLCKitSPM)
     /// VLC sometimes ignores `:start-time` (servers without byte ranges): one explicit seek follows.
     @ObservationIgnored private var vlcStartSeekSent = false
+    /// What VLC read of this film's picture went to `onSpecs` (`refreshVLCTracks`).
+    @ObservationIgnored private var vlcSpecsSent = false
     #endif
 
     override init() {
@@ -204,6 +206,9 @@ final class PlayerController: NSObject {
         self.item = item
         creditsStart = nil
         vlcChaptersRead = false
+        #if canImport(VLCKitSPM)
+        vlcSpecsSent = false
+        #endif
         candidates = item.candidateURLs
         candidateIndex = 0
         retries = 0
@@ -920,6 +925,11 @@ extension PlayerController {
         let size = backend.videoSize
         let resolution: CGSize? = size == .zero ? nil : size
         if resolution != videoResolution { videoResolution = resolution }
+        // A film VLC plays (an MKV on a Mac, a stream AVPlayer refused): its picture's size, once, for its page.
+        if !vlcSpecsSent, let item, Self.recordsSpecs(of: item, candidateIndex: candidateIndex), let specs = Self.vlcSpecs(videoSize: size) {
+            vlcSpecsSent = true
+            onSpecs?(item, specs)
+        }
     }
 
     private func handleVLCTime(_ current: Double, _ total: Double) {
