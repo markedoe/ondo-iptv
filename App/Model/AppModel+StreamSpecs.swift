@@ -78,9 +78,10 @@ extension AppModel {
             let store = cacheStore
             let name = Self.measuredSpecsDocument
             let previous = measuredSpecsWrite
+            let document = kept
             measuredSpecsWrite = Task.detached(priority: .utility) {
                 await previous?.value
-                try? store.save(kept, name: name, keepingPrevious: false)
+                try? store.save(document, name: name, keepingPrevious: false)
             }
         }
     }
