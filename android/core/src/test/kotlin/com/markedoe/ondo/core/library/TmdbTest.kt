@@ -338,14 +338,12 @@ class TmdbTest {
         assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport (MULTI) (2021)"))
         assertEquals("Le Transport", CatalogueMatcher.displayTitle("|FR-4K DV| Le Transport [VOSTFR]"))
         assertEquals("MobLand", CatalogueMatcher.displayTitle("MobLand |MULTI|"))
-        // The sound's tags: they were kept, and a "5.1" made another film of the same one.
-        assertEquals("Sand Harbor", CatalogueMatcher.displayTitle("Sand Harbor DTS 5.1"))
-        assertEquals("Sand Harbor", CatalogueMatcher.displayTitle("Sand Harbor 4K Atmos 7.1"))
-        assertEquals("Sand Harbor", CatalogueMatcher.displayTitle("Sand Harbor DD+ 5.1"))
-        assertEquals("Sand Harbor", CatalogueMatcher.displayTitle("Sand Harbor (TrueHD Atmos) (2026)"))
+        // The sound's tags, two together, in brackets or after a separator: a "5.1" left in made another film.
+        for ((title, shown) in SOUND_TITLES) assertEquals(shown, CatalogueMatcher.displayTitle(title), title)
         assertEquals(CatalogueMatcher.filmKey("Sand Harbor"), CatalogueMatcher.filmKey("Sand Harbor DTS 5.1"))
-        // A short one only in capitals: "Dts" stays a word.
-        assertEquals("Sand Harbor Dts", CatalogueMatcher.displayTitle("Sand Harbor Dts"))
+        // A one-word title of a sound word groups, and is no tag where versions are told apart.
+        for (title in listOf("Atmos", "DTS", "Into the Atmos")) assertTrue(FilmVersions.groupable(FilmVersions.titleKey(title)), title)
+        assertFalse(CatalogueMatcher.isTagWord("atmos"))
         // Subtitle tags, before a bar, a dash or in brackets, in one word or two.
         for (tag in listOf("STFR| ", "STFR | ", "ST FR - ", "VOSTFR| ", "SUBFR - ", "FR SUB | ", "VOST - ", "[STFR] ", "[ST FR] ")) {
             assertEquals("Le Transport", CatalogueMatcher.displayTitle(tag + "Le Transport"), tag)
@@ -365,5 +363,29 @@ class TmdbTest {
         assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport FRENCH"))
         // Nothing left: the title as it is.
         assertEquals("[MULTI]", CatalogueMatcher.displayTitle("[MULTI]"))
+    }
+
+    companion object {
+        /**
+         * Titles with the sound's words and how they show; the same cases as Apple's `TMDbTests.soundTitles`. A sound
+         * word alone, or a layout alone, is a word of the title.
+         */
+        val SOUND_TITLES = listOf(
+            "Sand Harbor DTS 5.1" to "Sand Harbor",
+            "Sand Harbor DD+ 5.1" to "Sand Harbor",
+            "Sand Harbor 4K Atmos 7.1" to "Sand Harbor",
+            "Sand Harbor (TrueHD Atmos) (2026)" to "Sand Harbor",
+            "Sand Harbor - Atmos" to "Sand Harbor",
+            "Sand Harbor [DTS 5.1]" to "Sand Harbor",
+            "DTS 5.1 Sand Harbor" to "Sand Harbor",
+            "Into the Atmos" to "Into the Atmos",
+            "Atmos Rising" to "Atmos Rising",
+            "Atmos" to "Atmos",
+            "DTS" to "DTS",
+            "Studio 5.1" to "Studio 5.1",
+            "Sand Harbor (5.1)" to "Sand Harbor (5.1)",
+            "Sand Harbor Dts 5.1" to "Sand Harbor Dts 5.1",
+            "Dune: Atmos" to "Dune: Atmos",
+        )
     }
 }

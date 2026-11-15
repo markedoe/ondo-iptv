@@ -558,9 +558,28 @@ public enum CatalogueMatcher {
     /// Words of a copy's quality or edition, never the film's, in a provider's title ("Sandstorm MULTI 4K").
     private static let qualityWords: Set<String> = [
         "multi", "4k", "uhd", "fhd", "hd", "sd", "hdr", "dv", "hevc", "x265", "h265", "1080p", "720p", "2160p", "vfq", "imax",
-        // The sound's: "Sand Harbor Atmos", "Sand Harbor DTS 5.1" are "Sand Harbor" (a "5.1" left in made another film).
-        "atmos", "truehd", "dts", "ddp", "dd+", "eac3", "ac3", "5.1", "7.1",
     ]
+
+    /// The sound's words a provider adds ("DTS 5.1", "DD+ 5.1", "Atmos 7.1", "(TrueHD Atmos)", "- Atmos"). Never tags
+    /// alone: "Into the Atmos" and "Atmos" are titles. Taken out only two together (`isSoundPair`), in brackets or after
+    /// a separator; a short one (three letters at most) only in capitals, like the other tags. As on Android.
+    private static let soundWords: Set<String> = ["atmos", "truehd", "dts", "dts-hd", "dtshd", "dtsx", "ddp", "dd+", "dd", "eac3", "ac3", "aac"]
+
+    /// Channel layouts a provider writes next to a sound word ("DTS 5.1"); never taken out alone ("Studio 5.1").
+    private static let soundLayouts: Set<String> = ["2.0", "5.1", "7.1"]
+
+    /// What sets the provider's sound words apart from a title ("Sand Harbor - Atmos"); not ":", which subtitles use.
+    private static let soundSeparators: Set<Character> = ["-", "|", "·"]
+
+    /// One of `soundWords`, written as a tag.
+    static func isSoundWord(_ word: String) -> Bool {
+        soundWords.contains(word.lowercased()) && (word.utf16.count > 3 || word == word.uppercased())
+    }
+
+    /// Two words of the provider's about the sound: a sound word with another one or with a layout, in either order.
+    static func isSoundPair(_ a: String, _ b: String) -> Bool {
+        (isSoundWord(a) && (isSoundWord(b) || soundLayouts.contains(b))) || (soundLayouts.contains(a) && isSoundWord(b))
+    }
 
     /// A tag of the provider's, not a word of the film's: a language or version, or a quality. A short one (three
     /// letters at most) only in capitals: "FR" and "VF" are tags, "De" in "De Gaulle" is a word.
@@ -604,7 +623,10 @@ public enum CatalogueMatcher {
             let inner = group.trimmingCharacters(in: CharacterSet(charactersIn: "()"))
             let words = inner.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "/" })
                 .map(String.init).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            return !words.isEmpty && words.allSatisfy(isTag) ? " " : group
+            // "(TrueHD Atmos)", "(Atmos 4K)": the sound's words count in brackets; a layout alone does not ("(5.1)").
+            let tags = words.allSatisfy { isTag($0) || isSoundWord($0) || soundLayouts.contains($0) }
+                && words.contains { isTag($0) || isSoundWord($0) }
+            return !words.isEmpty && tags ? " " : group
         } }
         // "FR - ", "FR-4K: ", "EN | ", "STFR| " before the name; "ST FR - ", "FR SUB | " are one tag in two words.
         if ascii ? name.utf8.contains(where: { $0 == 0x2D || $0 == 0x3A || $0 == 0x7C }) : name.contains(where: { "-:|·".contains($0) }),
@@ -613,11 +635,41 @@ public enum CatalogueMatcher {
             let words = name[tagRange].split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "+" }).map(String.init)
             if words.allSatisfy(isTag) || isTag(words.joined()) { name = String(name[whole.upperBound...]) }
         }
-        var words = name.spaceSplit(omittingEmptySubsequences: false)
-            .map { trimmed(String($0)) }
-            .filter { !$0.isEmpty }
-        while words.count > 1, let last = words.last, isTag(last) { words.removeLast() }
-        while words.count > 1, let first = words.first, isTag(first) { words.removeFirst() }
+        var words: [String] = []
+        // Whether a separator stands before each word kept ("Sand Harbor - Atmos", "Sand Harbor |Atmos").
+        var afterSeparator: [Bool] = []
+        var separator = false
+        for token in name.spaceSplit(omittingEmptySubsequences: false).map(String.init) {
+            let word = trimmed(token)
+            if word.isEmpty {
+                if token.contains(where: { soundSeparators.contains($0) }) { separator = true }
+                continue
+            }
+            words.append(word)
+            afterSeparator.append(separator || token.first.map { soundSeparators.contains($0) } == true)
+            separator = token.last.map { soundSeparators.contains($0) } == true
+        }
+        while words.count > 1 {
+            let last = words.count - 1
+            if isTag(words[last]) {
+                words.removeLast(); afterSeparator.removeLast()
+            } else if words.count > 2, isSoundPair(words[last - 1], words[last]) {
+                words.removeLast(2); afterSeparator.removeLast(2)
+            } else if isSoundWord(words[last]), afterSeparator[last] {
+                words.removeLast(); afterSeparator.removeLast()
+            } else {
+                break
+            }
+        }
+        while words.count > 1 {
+            if isTag(words[0]) {
+                words.removeFirst(); afterSeparator.removeFirst()
+            } else if words.count > 2, isSoundPair(words[0], words[1]) {
+                words.removeFirst(2); afterSeparator.removeFirst(2)
+            } else {
+                break
+            }
+        }
         // The separators inside the name stay: only the words' own edges were trimmed above.
         var cleaned = trimmed(rebuild(name, words: words, ascii: ascii))
         let otherSpace = ascii ? cleaned.utf8.contains(where: { (0x09...0x0D).contains($0) }) : cleaned.contains(where: { $0.isWhitespace && $0 != " " })

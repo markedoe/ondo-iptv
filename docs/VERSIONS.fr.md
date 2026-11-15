@@ -124,9 +124,14 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
     (`Util.getCurrentDisplayModeSize` : la propriété `vendor.display-size` qu'écrit un boîtier, `sys.display-size` avant
     Android 9, la dalle 4K d'une Sony BRAVIA), pour un boîtier en « auto » qui ne liste que le mode 1080p de son
     interface ; sinon, sur une TV seulement, un écran qui prend le HDR avec un décodeur matériel HEVC ou Dolby Vision
-    pour 3840×2160 (les TV HDR sont presque toujours 4K ; une TV HDR 1080p derrière un boîtier 4K se lit alors 4K, et
-    ses versions 4K jouent quand même, réduites). Jamais un téléphone ni une tablette pour cette dernière règle, jamais
-    un décodeur logiciel. Lu une fois en arrière-plan avec les décodeurs. Chez Apple la taille native de l'écran ;
+    pour 3840×2160, seulement là où rien d'autre ne peut le dire : l'écran ne liste qu'une taille et Media3 n'a lu
+    aucune taille d'affichage à lui (il rend celle du mode du moment quand une TV n'en écrit pas). Une taille
+    d'affichage lue sous la 4K n'est pas de la 4K, pas plus qu'un écran qui liste plusieurs tailles toutes sous la 4K
+    (une clé ou une TV HDR 1080p, dont le décodeur peut quand même prendre le 2160p). Une TV HDR 1080p derrière un
+    boîtier 4K en « auto » se lit encore 4K : ses versions 4K jouent, réduites. Jamais un téléphone ni une tablette pour
+    cette dernière règle, jamais un décodeur logiciel. La taille d'affichage est lue en arrière-plan aussitôt, à chaque
+    écran ouvert ; les décodeurs une fois, quelques secondes après le lancement ; un film lancé entre-temps joue la
+    version choisie avec ce qu'on sait alors. Chez Apple la taille native de l'écran ;
   - **le HDR** (HDR10, HDR10+, HLG) seulement là où l'écran l'annonce (`Display.getHdrCapabilities`, sans les types que
     l'utilisateur a désactivés ; AVFoundation chez Apple) ;
   - **le Dolby Vision** en premier seulement là où l'écran lui-même annonce le Dolby Vision et qu'un décodeur existe
@@ -201,8 +206,9 @@ sources, la meilleure d'abord, champ par champ :
     non pris en charge par cet écran : profil inconnu, pas lu en premier », « HDR non pris en charge par cet écran »,
     « 4K au-delà du plus grand mode de cet écran ») ;
   - pour l'écran, après les versions : le mode du moment et le plus grand mode (Android), HDR10, HDR10+, HLG et Dolby
-    Vision oui ou non, les décodeurs Dolby Vision et HEVC Main 10, ce que prend la sortie son (Android : les canaux de
-    ses haut-parleurs selon Media3 et les encodages qu'elle transmet tels quels à la TV ou à l'ampli, d'après `AudioCapabilities` de Media3, relu
+    Vision oui ou non, les décodeurs Dolby Vision et HEVC Main 10, ce que prend la sortie son (Android : ses canaux
+    (le plus grand des agencements de haut-parleurs de Media3, ou ce que dit la prise HDMI sur une sortie HDMI, jamais
+    les 10 par défaut de Media3) et les encodages qu'elle transmet tels quels à la TV ou à l'ampli, d'après `AudioCapabilities` de Media3, relu
     chaque fois que le panneau est recalculé ; iPhone et iPad : ses canaux et l'audio spatial), s'il est 4K et pourquoi (ses modes, sa taille
     d'affichage, un écran HDR avec un décodeur 4K) avec la taille d'affichage que lit Media3 (Android), ce pour quoi les
     versions sont choisies (« 4K · HDR »), et la version et le build de l'app, pour qu'une photo dise de quel build il

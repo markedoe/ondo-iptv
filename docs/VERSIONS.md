@@ -110,9 +110,13 @@ Only movies, and only within one playlist (live channels and series are never gr
     plays, is still a 4K screen); else the size Media3 reads of a TV's display (`Util.getCurrentDisplayModeSize`: the
     `vendor.display-size` property a box writes, `sys.display-size` before Android 9, a Sony BRAVIA's 4K panel), for a
     box in "auto" that lists its 1080p interface mode only; else, on a TV only, a display that takes HDR with a
-    hardware HEVC or Dolby Vision decoder for 3840×2160 (HDR TVs are 4K nearly always; a 1080p HDR TV behind a 4K box
-    then reads as 4K, and its 4K versions still play, downscaled). Never a phone or a tablet on that last rule, never a
-    software decoder. Read once in the background with the decoders. On Apple the screen's native size.
+    hardware HEVC or Dolby Vision decoder for 3840×2160, only where nothing else can say: the display lists one size
+    and Media3 read no display size of its own (it gives back the mode of the moment's when a TV writes none). A
+    display size read below 4K is no 4K, and so is a display listing several sizes all below 4K (a 1080p HDR stick or
+    TV, whose decoder may still take 2160p). A 1080p HDR TV behind a 4K box in "auto" still reads as 4K: its 4K
+    versions play, downscaled. Never a phone or a tablet on that last rule, never a software decoder. The display size
+    is read in the background at once, each time a screen opens; the decoders once, a few seconds after launch; a film
+    started then plays the version chosen with what is known by then. On Apple the screen's native size.
   - **HDR** (HDR10, HDR10+, HLG) only where the display reports it (`Display.getHdrCapabilities`, without the types
     the viewer turned off; AVFoundation on Apple).
   - **Dolby Vision** first only where the display itself reports Dolby Vision and a decoder for it exists (on Android
@@ -182,7 +186,8 @@ same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three so
     screen's largest mode");
   - for the screen, after the versions: the mode of the moment and the largest mode (Android), HDR10, HDR10+, HLG and
     Dolby Vision yes or no, the Dolby Vision and HEVC Main 10 decoders, what the sound output takes (Android: its
-    speakers' channels as Media3 guesses them and the encodings it passes as they are to the TV or amplifier, from Media3's `AudioCapabilities`,
+    channels (the most of Media3's speaker layouts, or what the HDMI plug says on an HDMI output, never Media3's
+    default of 10) and the encodings it passes as they are to the TV or amplifier, from Media3's `AudioCapabilities`,
     read again each time the panel is worked out; iPhone and iPad: its channels and Spatial Audio), whether it is 4K and why (its modes, its display
     size, an HDR screen with a 4K decoder) with the display size Media3 reads (Android), what the versions are chosen
     for ("4K · HDR"), and the app's version and build, so a photo says which build it was.

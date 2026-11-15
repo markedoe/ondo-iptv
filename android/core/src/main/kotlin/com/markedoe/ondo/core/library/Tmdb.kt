@@ -439,11 +439,27 @@ object CatalogueMatcher {
     }
 
     /** Words of a copy's quality or edition, never the film's, in a provider's title ("Sandstorm MULTI 4K"). */
-    private val qualityWords = setOf(
-        "multi", "4k", "uhd", "fhd", "hd", "sd", "hdr", "dv", "hevc", "x265", "h265", "1080p", "720p", "2160p", "vfq", "imax",
-        // The sound's: "Sand Harbor Atmos", "Sand Harbor DTS 5.1" are "Sand Harbor" (a "5.1" left in made another film).
-        "atmos", "truehd", "dts", "ddp", "dd+", "eac3", "ac3", "5.1", "7.1",
-    )
+    private val qualityWords = setOf("multi", "4k", "uhd", "fhd", "hd", "sd", "hdr", "dv", "hevc", "x265", "h265", "1080p", "720p", "2160p", "vfq", "imax")
+
+    /**
+     * The sound's words a provider adds ("DTS 5.1", "DD+ 5.1", "Atmos 7.1", "(TrueHD Atmos)", "- Atmos"). Never tags
+     * alone: "Into the Atmos" and "Atmos" are titles. Taken out only two together ([isSoundPair]), in brackets or after
+     * a separator; a short one (three letters at most) only in capitals, like the other tags.
+     */
+    private val soundWords = setOf("atmos", "truehd", "dts", "dts-hd", "dtshd", "dtsx", "ddp", "dd+", "dd", "eac3", "ac3", "aac")
+
+    /** Channel layouts a provider writes next to a sound word ("DTS 5.1"); never taken out alone ("Studio 5.1"). */
+    private val soundLayouts = setOf("2.0", "5.1", "7.1")
+
+    /** One of [soundWords], written as a tag. */
+    internal fun isSoundWord(word: String): Boolean {
+        val lower = word.lowercase()
+        return lower in soundWords && (word.length > 3 || word == word.uppercase())
+    }
+
+    /** Two words of the provider's about the sound: a sound word with another one or with a layout, in either order. */
+    internal fun isSoundPair(a: String, b: String): Boolean =
+        (isSoundWord(a) && (isSoundWord(b) || b in soundLayouts)) || (a in soundLayouts && isSoundWord(b))
 
     /**
      * Tags that are also words of titles ("French Kiss", "Johnny English", "Dual"): tags only in capitals, like the short
@@ -470,6 +486,9 @@ object CatalogueMatcher {
     private val whitespace = Regex("""\s+""")
     private val separators = " -:|·_.,"
 
+    /** What sets the provider's sound words apart from a title ("Sand Harbor - Atmos"); not ":", which subtitles use. */
+    private const val soundSeparators = "-|·"
+
     /**
      * A provider's title as people read it, its case kept: without the provider's tags around the name.
      * `"|FR| Le Transport"`, `"[FR] Le Transport"`, `"FR - Le Transport"`, `"STFR| Le Transport"`, `"Le Transport VFF"`,
@@ -486,7 +505,9 @@ object CatalogueMatcher {
             // "(MULTI)", "(VOSTFR 4K)": a group of tags only.
             name = name.replace(parenthesized) { group ->
                 val words = group.value.trim('(', ')').split(' ', '-', '/').filter { it.isNotBlank() }
-                if (words.isNotEmpty() && words.all(::isTag)) " " else group.value
+                // "(TrueHD Atmos)", "(Atmos 4K)": the sound's words count in brackets; a layout alone does not ("(5.1)").
+                val tags = words.all { isTag(it) || isSoundWord(it) || it in soundLayouts } && words.any { isTag(it) || isSoundWord(it) }
+                if (words.isNotEmpty() && tags) " " else group.value
             }
         }
         // "FR - ", "FR-4K: ", "EN | ", "STFR| " before the name; "ST FR - ", "FR SUB | " are one tag in two words.
@@ -494,13 +515,48 @@ object CatalogueMatcher {
             val words = match.groupValues[1].split(' ', '-', '+').filter { it.isNotBlank() }
             if (words.all(::isTag) || isTag(words.joinToString(""))) name = name.substring(match.range.last + 1)
         }
-        val words = name.split(' ').map { it.trim(*separators.toCharArray()) }.filter { it.isNotEmpty() }.toMutableList()
-        while (words.size > 1 && isTag(words.last())) words.removeAt(words.size - 1)
-        while (words.size > 1 && isTag(words.first())) words.removeAt(0)
+        val raw = name.split(' ')
+        val words = ArrayList<String>(raw.size)
+        // Whether a separator stands before each word kept ("Sand Harbor - Atmos", "Sand Harbor |Atmos").
+        val afterSeparator = ArrayList<Boolean>(raw.size)
+        var separator = false
+        for (token in raw) {
+            val word = token.trim(*separators.toCharArray())
+            if (word.isEmpty()) {
+                if (token.any { it in soundSeparators }) separator = true
+                continue
+            }
+            words.add(word)
+            afterSeparator.add(separator || token.first() in soundSeparators)
+            separator = token.last() in soundSeparators
+        }
+        while (words.size > 1) {
+            val last = words.size - 1
+            when {
+                isTag(words[last]) -> removeLast(words, afterSeparator, 1)
+                words.size > 2 && isSoundPair(words[last - 1], words[last]) -> removeLast(words, afterSeparator, 2)
+                isSoundWord(words[last]) && afterSeparator[last] -> removeLast(words, afterSeparator, 1)
+                else -> break
+            }
+        }
+        while (words.size > 1) {
+            when {
+                isTag(words.first()) -> { words.removeAt(0); afterSeparator.removeAt(0) }
+                words.size > 2 && isSoundPair(words[0], words[1]) -> repeat(2) { words.removeAt(0); afterSeparator.removeAt(0) }
+                else -> break
+            }
+        }
         // The separators inside the name stay: only the words' own edges were trimmed above.
         var cleaned = rebuild(name, words).trim(*separators.toCharArray())
         if ("  " in cleaned || cleaned.any { it in "\t\n\u000B\u000C\r" }) cleaned = cleaned.replace(whitespace, " ")
         return cleaned.ifEmpty { title.trim() }
+    }
+
+    private fun removeLast(words: MutableList<String>, afterSeparator: MutableList<Boolean>, count: Int) {
+        repeat(count) {
+            words.removeAt(words.size - 1)
+            afterSeparator.removeAt(afterSeparator.size - 1)
+        }
     }
 
     /** [name] from its first kept word to its last ([words], in order), with what lies between them as it was. */

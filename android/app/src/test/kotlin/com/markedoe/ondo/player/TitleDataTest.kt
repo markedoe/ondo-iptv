@@ -259,7 +259,8 @@ class TitleDataTest {
     @Test
     fun theScreenSaysWhere4kComesFromAndWhatTheSoundOutputTakes() {
         val box = DisplayFacts.of(current = 1920 to 1080, modes = listOf(1920 to 1080), hdrTypes = listOf(android.view.Display.HdrCapabilities.HDR_TYPE_HDR10))
-            .with(DisplayFacts.Background(false, true, false, 3840 to 2160, true, AudioOutput(listOf("AC-3", "E-AC-3"), 8)))
+            .with(DisplayFacts.Screen(3840 to 2160, true, AudioOutput(listOf("AC-3", "E-AC-3"), 8)))
+            .with(DisplayFacts.Decoders(dolbyVisionDecoder = false, hevcMain10Decoder = true, uhdDecoder = false))
         val data = TitleData.of(state(), "${Fixtures.PLAYLIST_ID}|MOVIE|${dv.id}|", shownTitle = "Copper Valley", display = box)!!
         assertTrue(box.pictureSupport().uhd)
         compose.setContent { OndoTheme { TitleDataPanel(data, television = true) } }

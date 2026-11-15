@@ -2,6 +2,8 @@ package com.markedoe.ondo.player
 
 import android.app.Activity
 import android.content.Context
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
 import android.os.Build
@@ -29,6 +31,8 @@ data class DisplayFacts(
     val currentHeight: Int = 0,
     val largestWidth: Int = 0,
     val largestHeight: Int = 0,
+    /** How many sizes the display lists (the mode of the moment's among them): 1 for a box in "auto" listing its interface's. */
+    val modeSizes: Int = 0,
     /** `Display.HdrCapabilities.HDR_TYPE_*` the display takes, as `Display.getHdrCapabilities` says (without the types the viewer turned off). */
     val hdrTypes: Set<Int> = emptySet(),
     val dolbyVisionDecoder: Boolean? = null,
@@ -62,28 +66,44 @@ data class DisplayFacts(
         /** The size Media3 reads of a TV's display ([displaySizeWidth]: its `display-size` property) is 4K. */
         DISPLAY_SIZE,
 
-        /** A TV whose display takes HDR, with a hardware decoder for 4K ([uhdDecoder]), its modes saying 1080p only. */
+        /**
+         * A TV whose display takes HDR, with a hardware decoder for 4K ([uhdDecoder]), that lists one size only and whose
+         * display size is not read (a box in "auto").
+         */
         HDR_AND_DECODER,
     }
+
+    /**
+     * Whether Media3 read a display size of its own ([displaySizeWidth]): one that is not the mode of the moment's, which
+     * is what it gives back when a TV writes no `display-size` property (it does not say which it was).
+     */
+    val displaySizeRead: Boolean
+        get() = displaySizeWidth > 0 && displaySizeHeight > 0 && (displaySizeWidth != currentWidth || displaySizeHeight != currentHeight)
 
     /**
      * Why this is a 4K screen; null when nothing says so. In this order: the modes (physical sizes) the display lists;
      * else the size Media3 reads of a TV (a box in "auto" may list its 1080p interface mode only, while its
      * `display-size` property says 3840x2160); else, on a TV only, a display that takes HDR (HDR10, HDR10+, HLG, Dolby
-     * Vision) with a hardware decoder for 3840×2160: HDR TVs are 4K nearly always and a box with a 4K decoder drives
-     * them in 4K. A 1080p HDR TV behind a 4K box then reads as 4K: its versions in 4K still play, downscaled. Never a
-     * phone or a tablet on that last rule (an HDR phone with a 4K decoder is not a 4K screen), never a software decoder.
+     * Vision) with a hardware decoder for 3840×2160, only where nothing else can say: one size listed (the box in
+     * "auto") and no display size read. A display size read below 4K is no 4K; a display listing several sizes, all
+     * below 4K (a 1080p HDR stick or TV, whose decoder may still take 2160p), is no 4K. Never a phone or a tablet on that
+     * last rule, never a software decoder. A 1080p HDR TV behind a 4K box in "auto" reads as 4K: its 4K versions still
+     * play, downscaled.
      */
     val uhdSource: UhdSource?
         get() = when {
             maxOf(largestWidth, largestHeight, currentWidth, currentHeight) >= UHD_WIDTH -> UhdSource.MODES
             maxOf(displaySizeWidth, displaySizeHeight) >= UHD_WIDTH -> UhdSource.DISPLAY_SIZE
-            television == true && uhdDecoder == true && (hdr10 || hdr10Plus || hlg || dolbyVisionDisplay) -> UhdSource.HDR_AND_DECODER
+            hdrAndDecoderApplies && uhdDecoder == true -> UhdSource.HDR_AND_DECODER
             else -> null
         }
 
-    /** Whether the background facts ([television], [uhdDecoder]) are read, so a 4K not found yet is a "no". */
-    val uhdChecked: Boolean get() = uhdSource != null || (television != null && uhdDecoder != null)
+    /** Whether the HDR-and-decoder rule may say 4K here, the decoders aside. */
+    private val hdrAndDecoderApplies: Boolean
+        get() = television == true && modeSizes == 1 && !displaySizeRead && (hdr10 || hdr10Plus || hlg || dolbyVisionDisplay)
+
+    /** Whether what decides 4K is read ([television], [uhdDecoder] where the last rule needs it), so a 4K not found is a "no". */
+    val uhdChecked: Boolean get() = uhdSource != null || (television != null && (!hdrAndDecoderApplies || uhdDecoder != null))
 
     /**
      * What the versions are chosen for: HDR when the display takes HDR10, HDR10+ or HLG; Dolby Vision when the display
@@ -96,26 +116,26 @@ data class DisplayFacts(
         uhd = uhdSource != null,
     )
 
-    /** These facts with what the background read ([found]). */
-    fun with(found: Background): DisplayFacts = copy(
+    /** These facts with the decoders ([found]). */
+    fun with(found: Decoders): DisplayFacts = copy(
         dolbyVisionDecoder = found.dolbyVisionDecoder,
         hevcMain10Decoder = found.hevcMain10Decoder,
+        uhdDecoder = found.uhdDecoder,
+    )
+
+    /** These facts with what was read of the screen in the background ([found]). */
+    fun with(found: Screen): DisplayFacts = copy(
         displaySizeWidth = found.displaySize.first,
         displaySizeHeight = found.displaySize.second,
         television = found.television,
-        uhdDecoder = found.uhdDecoder,
         audioOutput = found.audioOutput ?: audioOutput,
     )
 
-    /** What is read once per process, in the background: the decoders, the size Media3 reads of the display, a TV or not. */
-    data class Background(
-        val dolbyVisionDecoder: Boolean,
-        val hevcMain10Decoder: Boolean,
-        val uhdDecoder: Boolean,
-        val displaySize: Pair<Int, Int>,
-        val television: Boolean,
-        val audioOutput: AudioOutput? = null,
-    )
+    /** The decoders, read once per process, a while after launch. */
+    data class Decoders(val dolbyVisionDecoder: Boolean, val hevcMain10Decoder: Boolean, val uhdDecoder: Boolean)
+
+    /** What is read of the screen at once, in the background, each time an activity reads it: cheap system reads. */
+    data class Screen(val displaySize: Pair<Int, Int>, val television: Boolean, val audioOutput: AudioOutput? = null)
 
     /** A decoder as [decoderFacts] reads it: its MIME types and, by type, its profiles; hardware or not; the types it takes at 3840×2160. */
     data class Decoder(val profiles: Map<String, List<Int>>, val hardware: Boolean = true, val uhdTypes: Set<String> = emptySet())
@@ -141,6 +161,7 @@ data class DisplayFacts(
                 currentHeight = current.second,
                 largestWidth = largest.first,
                 largestHeight = largest.second,
+                modeSizes = (modes + current).filter { it.first > 0 && it.second > 0 }.distinct().size,
                 hdrTypes = hdrTypes.toSet(),
                 dolbyVisionDecoder = dolbyVisionDecoder,
                 hevcMain10Decoder = hevcMain10Decoder,
@@ -179,8 +200,7 @@ data class DisplayFacts(
 /**
  * What the sound output takes, as Media3 reads it (`AudioCapabilities`: the HDMI or default route of the moment): the
  * surround encodings it takes as they are, for the TV or amplifier to decode ([passthrough], in the order of
- * [ENCODINGS]), and its speakers' channels ([maxChannels]: Media3's best guess at the speaker layout, its first
- * `speakerLayoutChannelMasks`: 2 for stereo, 6 for 5.1; not `maxChannelCount`, which can be a default of 10).
+ * [ENCODINGS]), and its channels ([maxChannels], [channels]: 2 for stereo, 6 for 5.1, 8 for 7.1).
  */
 @OptIn(UnstableApi::class)
 data class AudioOutput(val passthrough: List<String>, val maxChannels: Int) {
@@ -200,12 +220,31 @@ data class AudioOutput(val passthrough: List<String>, val maxChannels: Int) {
         fun of(supports: (Int) -> Boolean, maxChannels: Int): AudioOutput =
             AudioOutput(ENCODINGS.filter { supports(it.first) }.map { it.second }, maxChannels)
 
+        /** Media3's default channel count, when nothing said one (its `DEFAULT_MAX_CHANNEL_COUNT`): unknown, not 10 speakers. */
+        private const val MEDIA3_DEFAULT_CHANNELS = 10
+
+        /**
+         * The output's channels: the most of Media3's speaker layouts ([speakerLayouts], channel masks in no set order:
+         * ARC and eARC lists vary; a plain HDMI output reads stereo there), or its [maxChannelCount] (what the HDMI plug
+         * says) on an HDMI output ([hdmi]) or wherever it says more; never Media3's default of 10; 2 when nothing says.
+         */
+        fun channels(speakerLayouts: List<Int>, maxChannelCount: Int, hdmi: Boolean): Int {
+            val layout = speakerLayouts.maxOfOrNull(Integer::bitCount) ?: 0
+            val said = maxChannelCount.takeIf { it in 1 until MEDIA3_DEFAULT_CHANNELS } ?: 0
+            val channels = if (hdmi && said > 0) said else maxOf(layout, said)
+            return channels.takeIf { it > 0 } ?: 2
+        }
+
+        private val HDMI_TYPES = setOf(AudioDeviceInfo.TYPE_HDMI, AudioDeviceInfo.TYPE_HDMI_ARC, AudioDeviceInfo.TYPE_HDMI_EARC)
+
         /** The output of the moment, for a film's sound; off the main thread (it asks the system); null when it cannot be read. */
         @OptIn(UnstableApi::class)
         fun read(context: Context): AudioOutput? = runCatching {
             val attributes = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
             val capabilities = AudioCapabilities.getCapabilities(context.applicationContext, attributes, null, emptyList())
-            of(capabilities::supportsEncoding, capabilities.speakerLayoutChannelMasks.firstOrNull()?.let(Integer::bitCount) ?: 2)
+            val audio = context.applicationContext.getSystemService(AudioManager::class.java)
+            val hdmi = audio?.getDevices(AudioManager.GET_DEVICES_OUTPUTS).orEmpty().any { it.type in HDMI_TYPES }
+            of(capabilities::supportsEncoding, channels(capabilities.speakerLayoutChannelMasks, capabilities.maxChannelCount, hdmi))
         }.getOrNull()
     }
 }
@@ -219,9 +258,13 @@ object PictureSupportProbe {
     @Volatile var facts: DisplayFacts? = null
         private set
 
-    /** The decoders and the display's size as Media3 reads it, read once per process. */
-    @Volatile private var decoders: DisplayFacts.Background? = null
-    /** The decoders are read at the lowest priority: never in the way of the launch, the first Home or a stream. */
+    /** The decoders, read once per process. */
+    @Volatile private var decoders: DisplayFacts.Decoders? = null
+
+    /** What was read of the screen in the background last ([readScreen]); read again each time an activity reads it. */
+    @Volatile private var screen: DisplayFacts.Screen? = null
+
+    /** The background reads run at the lowest priority: never in the way of the launch, the first Home or a stream. */
     private val background = Executors.newSingleThreadExecutor { task ->
         Thread({
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_LOWEST)
@@ -233,28 +276,45 @@ object PictureSupportProbe {
     }
 
     /**
-     * The facts of [activity]'s display (cheap: no decoder list and no system property on the main thread); the
-     * decoders, the display's size as Media3 reads it and whether this is a TV are read once, in the background, then
-     * [onDecoders] gets the facts with them.
+     * The facts of [activity]'s display (cheap: no decoder list and no system property on the main thread). In the
+     * background, at once, the display's size as Media3 reads it, whether this is a TV and the sound output (each time:
+     * a box in "auto" changes mode, an amplifier is switched on); the decoders once, a while later. [onDecoders] gets the
+     * facts after each.
      */
     fun of(activity: Activity, onDecoders: (DisplayFacts) -> Unit = {}): DisplayFacts {
-        // A short wait first: the first Home is drawn before the decoder list is read.
         val read = runCatching { read(activity) }.getOrDefault(DisplayFacts())
         val known = decoders
-        val facts = if (known != null) read.with(known) else read
+        val facts = merged(read, screen, known)
         this.facts = facts
+        val context = activity.applicationContext
+        val display = runCatching { display(activity) }.getOrNull()
+        background.execute {
+            val found = runCatching { readScreen(context, display) }.getOrNull() ?: return@execute
+            screen = found
+            val updated = (this.facts ?: facts).with(found)
+            this.facts = updated
+            onDecoders(updated)
+        }
         if (known == null) {
-            val context = activity.applicationContext
-            val display = runCatching { display(activity) }.getOrNull()
             background.execute {
+                // A short wait first: the first Home is drawn before the decoder list is read.
                 runCatching { Thread.sleep(DECODERS_DELAY_MS) }
-                val found = runCatching { readBackground(context, display) }.getOrNull() ?: return@execute
+                if (decoders != null) return@execute
+                val (dolbyVision, main10, uhd) = runCatching { listDecoders() }.getOrNull() ?: return@execute
+                val found = DisplayFacts.Decoders(dolbyVision, main10, uhd)
                 decoders = found
                 val withDecoders = (this.facts ?: facts).with(found)
                 this.facts = withDecoders
                 onDecoders(withDecoders)
             }
         }
+        return facts
+    }
+
+    private fun merged(read: DisplayFacts, screen: DisplayFacts.Screen?, decoders: DisplayFacts.Decoders?): DisplayFacts {
+        var facts = read
+        if (screen != null) facts = facts.with(screen)
+        if (decoders != null) facts = facts.with(decoders)
         return facts
     }
 
@@ -279,19 +339,15 @@ object PictureSupportProbe {
     }
 
     /**
-     * Off the main thread: the decoders, and the display's size as Media3 reads it (its public
-     * `Util.getCurrentDisplayModeSize`, the one its track selector uses: on a TV the `display-size` property a box
-     * writes; Media3 reads it, the app looks up nothing by name).
+     * Off the main thread, cheap: the display's size as Media3 reads it (its public `Util.getCurrentDisplayModeSize`, the
+     * one its track selector uses: on a TV the `display-size` property a box writes; Media3 reads it, the app looks up
+     * nothing by name), whether this is a TV, the sound output.
      */
     @OptIn(UnstableApi::class)
-    private fun readBackground(context: Context, display: Display?): DisplayFacts.Background {
-        val (dolbyVision, main10, uhd) = listDecoders()
+    private fun readScreen(context: Context, display: Display?): DisplayFacts.Screen {
         val television = runCatching { Util.isTv(context) }.getOrDefault(false)
         val size = display?.let { runCatching { Util.getCurrentDisplayModeSize(context, it) }.getOrNull() }
-        return DisplayFacts.Background(
-            dolbyVisionDecoder = dolbyVision,
-            hevcMain10Decoder = main10,
-            uhdDecoder = uhd,
+        return DisplayFacts.Screen(
             displaySize = (size?.x ?: 0) to (size?.y ?: 0),
             television = television,
             audioOutput = AudioOutput.read(context),

@@ -70,26 +70,32 @@ class DisplayFactsTest {
     fun aBoxListingIts1080pModeOnlyIs4kByItsDisplaySize() {
         val box = DisplayFacts.of(current = 1920 to 1080, modes = listOf(1920 to 1080), hdrTypes = listOf(hdr10, hlg), dolbyVisionDecoder = false, hevcMain10Decoder = true)
         assertFalse("the modes alone say 1080p", box.pictureSupport().uhd)
-        val read = box.with(DisplayFacts.Background(dolbyVisionDecoder = false, hevcMain10Decoder = true, uhdDecoder = false, displaySize = 3840 to 2160, television = true))
+        val read = box.with(DisplayFacts.Screen(displaySize = 3840 to 2160, television = true))
+            .with(DisplayFacts.Decoders(dolbyVisionDecoder = false, hevcMain10Decoder = true, uhdDecoder = false))
         assertEquals(DisplayFacts.UhdSource.DISPLAY_SIZE, read.uhdSource)
         assertEquals(PictureSupport(hdr = true, dolbyVision = false, uhd = true), read.pictureSupport())
         assertEquals(1920 to 1920, read.currentWidth to read.largestWidth)
     }
 
     /**
-     * No `display-size` property (Media3 then reads the mode, 1080p): a TV whose display takes HDR with a hardware decoder
-     * for 3840×2160 is 4K; a phone, a software decoder or an SDR screen is not; a plain 1080p screen is not.
+     * No `display-size` property (Media3 then gives back the mode, 1080p) on a box listing one size: a TV whose display
+     * takes HDR with a hardware decoder for 3840×2160 is 4K; a phone, a software decoder or an SDR screen is not; a plain
+     * 1080p screen is not.
      */
     @Test
     fun withoutTheDisplaySizeAnHdrTvWithA4kHardwareDecoderIs4k() {
         val box = DisplayFacts.of(current = 1920 to 1080, modes = listOf(1920 to 1080), hdrTypes = listOf(hdr10, hdr10Plus, hlg))
-        fun facts(television: Boolean, uhdDecoder: Boolean, of: DisplayFacts = box) =
-            of.with(DisplayFacts.Background(dolbyVisionDecoder = true, hevcMain10Decoder = true, uhdDecoder = uhdDecoder, displaySize = 1920 to 1080, television = television))
+        fun facts(television: Boolean, uhdDecoder: Boolean, of: DisplayFacts = box, size: Pair<Int, Int> = 1920 to 1080) =
+            of.with(DisplayFacts.Screen(displaySize = size, television = television))
+                .with(DisplayFacts.Decoders(dolbyVisionDecoder = true, hevcMain10Decoder = true, uhdDecoder = uhdDecoder))
         assertEquals(DisplayFacts.UhdSource.HDR_AND_DECODER, facts(television = true, uhdDecoder = true).uhdSource)
         assertTrue(facts(television = true, uhdDecoder = true).pictureSupport().uhd)
+        assertTrue("no display size at all", facts(television = true, uhdDecoder = true, size = 0 to 0).pictureSupport().uhd)
         assertFalse("a phone with a 4K decoder", facts(television = false, uhdDecoder = true).pictureSupport().uhd)
         assertFalse("no 4K hardware decoder", facts(television = true, uhdDecoder = false).pictureSupport().uhd)
         assertFalse("an SDR TV", facts(television = true, uhdDecoder = true, of = hd).pictureSupport().uhd)
+        // Not read before the decoders, where only they can say.
+        assertFalse(box.with(DisplayFacts.Screen(displaySize = 1920 to 1080, television = true)).uhdChecked)
         // The plain 1080p case: nothing says 4K, and once read it is a "no", not "unknown".
         val plain = facts(television = true, uhdDecoder = false, of = hd)
         assertEquals(null, plain.uhdSource)
@@ -109,6 +115,40 @@ class DisplayFactsTest {
         assertFalse(DisplayFacts.hardware("OMX.amlogic.hevc.decoder.awesome2", hardwareAccelerated = false))
     }
 
+    /**
+     * 1080p HDR screens whose decoder still takes 2160p are no 4K: a stick (or an FHD HDR TV) listing several sizes, and
+     * a display whose size Media3 read below 4K (not the mode of the moment's).
+     */
+    @Test
+    fun a1080pHdrStickWithA4kDecoderIsNo4k() {
+        val decoders = DisplayFacts.Decoders(dolbyVisionDecoder = false, hevcMain10Decoder = true, uhdDecoder = true)
+        val stick = DisplayFacts.of(current = 1920 to 1080, modes = listOf(1920 to 1080, 1280 to 720, 720 to 576), hdrTypes = listOf(hdr10, hlg))
+            .with(DisplayFacts.Screen(displaySize = 1920 to 1080, television = true)).with(decoders)
+        assertEquals(null, stick.uhdSource)
+        assertTrue(stick.uhdChecked)
+        // One size listed (720p), a display size of 1080p read: no 4K.
+        val read = DisplayFacts.of(current = 1280 to 720, modes = listOf(1280 to 720), hdrTypes = listOf(hdr10))
+            .with(DisplayFacts.Screen(displaySize = 1920 to 1080, television = true)).with(decoders)
+        assertTrue(read.displaySizeRead)
+        assertEquals(null, read.uhdSource)
+    }
+
+    /**
+     * The output's channels: an HDMI output whose plug says 8 is 7.1, though Media3's speaker layout reads stereo there;
+     * the most of the layouts in whatever order; never Media3's default of 10.
+     */
+    @Test
+    fun theSoundOutputsChannels() {
+        val stereo = android.media.AudioFormat.CHANNEL_OUT_STEREO
+        val surround = android.media.AudioFormat.CHANNEL_OUT_5POINT1
+        assertEquals("7.1", com.markedoe.ondo.core.model.StreamSpecs.layout(AudioOutput.channels(listOf(stereo), maxChannelCount = 8, hdmi = true)))
+        assertEquals(6, AudioOutput.channels(listOf(stereo, surround), maxChannelCount = 10, hdmi = false))
+        assertEquals(6, AudioOutput.channels(listOf(surround, stereo), maxChannelCount = 10, hdmi = true))
+        assertEquals(2, AudioOutput.channels(listOf(stereo), maxChannelCount = 10, hdmi = true))
+        assertEquals(2, AudioOutput.channels(emptyList(), maxChannelCount = 0, hdmi = false))
+        assertEquals(8, AudioOutput.channels(listOf(stereo), maxChannelCount = 8, hdmi = false))
+    }
+
     /** What the sound output takes as it is, named in a set order, and its channels. */
     @Test
     fun theSoundOutputNamesWhatItTakesAsItIs() {
@@ -117,7 +157,7 @@ class DisplayFactsTest {
         assertEquals(AudioOutput(emptyList(), 2), AudioOutput.of({ false }, 2))
         // Kept from the first reading when a later one has none.
         val output = AudioOutput(listOf("AC-3"), 6)
-        val read = DisplayFacts(audioOutput = output).with(DisplayFacts.Background(false, false, false, 0 to 0, true, audioOutput = null))
+        val read = DisplayFacts(audioOutput = output).with(DisplayFacts.Screen(0 to 0, true, audioOutput = null))
         assertEquals(output, read.audioOutput)
     }
 
