@@ -33,16 +33,22 @@ class MeasuredSpecs(val capacity: Int = CAPACITY, entries: List<Entry> = emptyLi
 
     /**
      * Keeps what the player measured of [key]'s stream: false (nothing to save) when nothing is known, or a reading is kept
-     * already and this one's picture is no larger (the tracks change as an adaptive stream climbs, or the viewer picks
-     * another sound: the first reading stays). A field the player did not read this time keeps what it read before
-     * ([StreamSpecs.orElse]).
+     * already, this one's picture is no larger (the tracks change as an adaptive stream climbs, or the viewer picks
+     * another sound: the first reading stays) and it knows nothing the kept one does not (a field an earlier version of
+     * the app did not read, its Dolby Vision profile: added). A field the player did not read this time keeps what it
+     * read before ([StreamSpecs.orElse]).
      */
     @Synchronized
     fun record(key: String, specs: StreamSpecs): Boolean {
         if (specs.isEmpty) return false
         val old = map[key]
-        val measured = specs.copy(source = SpecSource.MEASURED).orElse(old)
-        if (old != null && (area(specs) <= area(old) || old == measured)) {
+        val reading = specs.copy(source = SpecSource.MEASURED)
+        val measured = when {
+            old == null || area(specs) > area(old) -> reading.orElse(old)
+            // No larger: the kept reading stays, with only what it did not know.
+            else -> old.orElse(reading)
+        }
+        if (old != null && old == measured) {
             // Played again: kept a while longer.
             map.remove(key)
             map[key] = old

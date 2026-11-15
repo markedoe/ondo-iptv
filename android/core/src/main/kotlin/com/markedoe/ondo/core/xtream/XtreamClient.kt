@@ -14,6 +14,7 @@ import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.ProviderInfo
 import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
@@ -278,6 +279,8 @@ class XtreamClient(
             trailerYouTubeId = info?.youtubeTrailer,
             tmdbId = info?.tmdbId,
             streamSpecs = info?.streamSpecs,
+            // Kept even when `info` is missing or empty (`[]`): the details were asked, and held no technical block.
+            providerInfo = info?.providerInfo ?: ProviderInfo(),
         )
     }
 

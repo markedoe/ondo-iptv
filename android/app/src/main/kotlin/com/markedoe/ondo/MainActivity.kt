@@ -60,8 +60,9 @@ class MainActivity : ComponentActivity() {
         // The saved playlists, settings and catalogue are read from here on, off the main thread, while the first screen
         // is put together (the view model, made with it, asks again: once only).
         repository.bootstrap()
-        // The version of a film shown first suits this screen (4K, HDR, Dolby Vision).
-        UiMappers.pictureSupport = PictureSupportProbe.of(this)
+        // The version of a film shown first suits this screen (4K by its largest mode, HDR, Dolby Vision the screen shows);
+        // the decoders are read in the background.
+        UiMappers.pictureSupport = PictureSupportProbe.of(this) { UiMappers.pictureSupport = it.pictureSupport() }.pictureSupport()
         (application as OndoApplication).localSync.start()
         // The splash screen stays until the saved playlists are read (no welcome screen flash), and the saved
         // catalogue too for a moment (Home appears with its content, see keepsSplash).

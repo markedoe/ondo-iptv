@@ -241,6 +241,8 @@ object UiMappers {
         return FilmVersions.defaultChoice(
             versions, inProgress(state, versions).firstOrNull(), state.settings.chosenVersions, pictureSupport,
             FilmVersions.categoryNames(state.content.movieCategories),
+            // What the player measured, else the provider's: a Dolby Vision profile whose base layer this screen shows.
+            specs = { id -> streamSpecs(state, id) },
         ) ?: (movie to DefaultReason.ONLY)
     }
 

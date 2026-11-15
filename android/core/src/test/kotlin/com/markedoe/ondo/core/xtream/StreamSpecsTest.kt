@@ -3,6 +3,8 @@ package com.markedoe.ondo.core.xtream
 import com.markedoe.ondo.core.CoreJson
 import com.markedoe.ondo.core.HangGuard
 import com.markedoe.ondo.core.library.FilmVersions
+import com.markedoe.ondo.core.model.DolbyVisionFallback
+import com.markedoe.ondo.core.model.ProviderInfo
 import com.markedoe.ondo.core.model.PictureRange
 import com.markedoe.ondo.core.model.StreamSpecs
 import java.io.File
@@ -170,5 +172,44 @@ class StreamSpecsTest {
         assertTrue(StreamSpecs(bitrate = 3000).isEmpty)
         assertEquals("1920×802 · 1080p · SDR · H.264 · 5.1 AAC · 4521 kbit/s",
             StreamSpecs(1920, 802, PictureRange.SDR, "H.264", "AAC", 6, bitrate = 4521).summary())
+    }
+
+    /**
+     * A Dolby Vision profile from a codec string (Media3's "dvhe.08.06") and what a screen without Dolby Vision shows of
+     * it: its base layer for 8 and 9 (and a 10 with one), wrong colours for 5 (and a 10 without one), unknown for 7 or no
+     * profile (a name saying "DV" only).
+     */
+    @Test
+    fun dolbyVisionProfiles() {
+        assertEquals(8, StreamSpecs.dolbyVisionProfileOf("dvhe.08.06"))
+        assertEquals(5, StreamSpecs.dolbyVisionProfileOf("dvh1.05.06"))
+        assertEquals(10, StreamSpecs.dolbyVisionProfileOf("dav1.10.09"))
+        assertNull(StreamSpecs.dolbyVisionProfileOf("hvc1.2.4.L153"))
+        assertNull(StreamSpecs.dolbyVisionProfileOf("dvhe"))
+        assertNull(StreamSpecs.dolbyVisionProfileOf(null))
+        val dv = StreamSpecs(range = PictureRange.DOLBY_VISION)
+        assertEquals(DolbyVisionFallback.UNKNOWN, dv.dolbyVisionFallback)
+        assertEquals(DolbyVisionFallback.BASE_LAYER, dv.copy(dolbyVisionProfile = 8).dolbyVisionFallback)
+        assertEquals(DolbyVisionFallback.BASE_LAYER, dv.copy(dolbyVisionProfile = 8, dolbyVisionCompatibility = 1).dolbyVisionFallback)
+        assertEquals(DolbyVisionFallback.WRONG_COLOURS, dv.copy(dolbyVisionProfile = 5).dolbyVisionFallback)
+        assertEquals(DolbyVisionFallback.UNKNOWN, dv.copy(dolbyVisionProfile = 7).dolbyVisionFallback)
+        assertEquals(DolbyVisionFallback.WRONG_COLOURS, dv.copy(dolbyVisionProfile = 10, dolbyVisionCompatibility = 0).dolbyVisionFallback)
+        assertEquals(DolbyVisionFallback.BASE_LAYER, dv.copy(dolbyVisionProfile = 10, dolbyVisionCompatibility = 1).dolbyVisionFallback)
+        assertEquals(DolbyVisionFallback.NONE, StreamSpecs(range = PictureRange.HDR10).dolbyVisionFallback)
+        assertEquals(
+            "3840×2160 · 4K · Dolby Vision P8.1 · HEVC",
+            dv.copy(width = 3840, height = 2160, videoCodec = "HEVC", dolbyVisionProfile = 8, dolbyVisionCompatibility = 1).summary(),
+        )
+        // The name's tag says Dolby Vision; measured SDR, it is none.
+        val tags = FilmVersions.labelTags("Sand Harbor 4K DV", null)
+        assertEquals(DolbyVisionFallback.UNKNOWN, FilmVersions.dolbyVisionFallback(tags, null))
+        assertEquals(DolbyVisionFallback.NONE, FilmVersions.dolbyVisionFallback(tags, StreamSpecs(width = 3840, height = 2160, range = PictureRange.SDR)))
+    }
+
+    /** The provider's names of `info`'s fields: plain names only, never a value nor an address. */
+    @Test
+    fun theProvidersFieldNames() {
+        val info = XtreamInfoDto.from(Json.parseToJsonElement("""{"name":"A","plot":"B","video":{"codec_name":"h264"},"audio":[],"https://panel.example.com/x":1}"""))
+        assertEquals(ProviderInfo(listOf("audio", "name", "plot", "video"), video = true, audio = false), info.providerInfo)
     }
 }

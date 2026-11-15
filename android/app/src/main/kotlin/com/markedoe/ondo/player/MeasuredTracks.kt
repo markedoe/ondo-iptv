@@ -8,6 +8,7 @@ import androidx.media3.common.util.UnstableApi
 import com.markedoe.ondo.core.model.PictureRange
 import com.markedoe.ondo.core.model.SpecSource
 import com.markedoe.ondo.core.model.StreamSpecs
+import com.markedoe.ondo.data.ItemKind
 
 /**
  * What the player reads of a film's stream from its tracks (`MeasuredSpecs`, docs/VERSIONS.md): the picture's size, range
@@ -16,6 +17,18 @@ import com.markedoe.ondo.core.model.StreamSpecs
  */
 @OptIn(UnstableApi::class)
 internal object MeasuredTracks {
+    /**
+     * The playlist and the film whose stream [request] plays from its address [urlIndex], as the film's page reads them
+     * (`MeasuredSpecs.key(playlist, movie id)`: "x5001" in an Xtream catalogue); null for a channel, a replay, an
+     * episode, or another version's address (a fallback past the first).
+     */
+    fun recordedFilm(request: PlayRequest, urlIndex: Int): Pair<String, String>? {
+        if (request.isLive || request.replayStart != null || urlIndex != 0) return null
+        val parts = request.progressKey?.split('|') ?: return null
+        if (parts.size != 4 || parts[1] != ItemKind.MOVIE.name || parts[0].isEmpty() || parts[2].isEmpty()) return null
+        return parts[0] to parts[2]
+    }
+
     /**
      * The specs of [tracks]: the best picture of the selected video group (an adaptive stream's highest rendition, not
      * the one playing now), and the stream's own sound: its default track, else the one of the most channels
@@ -71,6 +84,8 @@ internal object MeasuredTracks {
             channels = audio?.channelCount?.takeIf { it > 0 },
             atmos = audio != null && StreamSpecs.isAtmosMime(audio.sampleMimeType),
             source = SpecSource.MEASURED,
+            // Its codec string's ("dvhe.08.06": 8); Media3 gives no base layer's compatibility.
+            dolbyVisionProfile = video?.codecs?.let(StreamSpecs::dolbyVisionProfileOf)?.takeIf { range == PictureRange.DOLBY_VISION },
         )
         return specs.takeUnless { it.isEmpty }
     }

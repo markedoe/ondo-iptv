@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.DefaultReason
+import com.markedoe.ondo.core.library.ScreenNote
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import java.text.NumberFormat
 import java.util.Locale
@@ -154,6 +155,7 @@ fun TitleDataPanel(data: TitleData, television: Boolean, modifier: Modifier = Mo
     ) {
         Text(stringResource(R.string.title_data), color = Color.White, style = style.copy(fontWeight = FontWeight.SemiBold))
         TitleDataLines(data, style)
+        TitleDataScreen(data, style)
         if (shown.isNotEmpty()) {
             Text(
                 stringResource(R.string.title_data_versions),
@@ -226,6 +228,98 @@ fun TitleDataVersion(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.testTag("titleDataSpecs-${version.id}"),
         )
+        TitleDataDiagnosis(version, style)
+    }
+}
+
+/**
+ * What the app knows of a version besides its specs: what its provider's `get_vod_info` held (or how it failed), whether
+ * its details are kept, the names of its `info` fields, its Dolby Vision profile, and what it asks of this screen.
+ */
+@Composable
+private fun TitleDataDiagnosis(version: TitleData.Version, style: TextStyle) {
+    val dim = Color.White.copy(alpha = 0.7f)
+    val status = when (version.provider) {
+        TitleData.ProviderStatus.NOT_REQUESTED -> stringResource(R.string.title_data_provider_not_requested)
+        TitleData.ProviderStatus.NOT_AVAILABLE -> stringResource(R.string.title_data_provider_not_available)
+        TitleData.ProviderStatus.FAILED -> stringResource(R.string.title_data_provider_failed, version.providerFailure ?: "–")
+        TitleData.ProviderStatus.KEPT_BEFORE -> stringResource(R.string.title_data_provider_kept_before)
+        TitleData.ProviderStatus.NO_TECHNICAL_BLOCK -> stringResource(R.string.title_data_provider_no_block)
+        TitleData.ProviderStatus.VIDEO_AND_AUDIO -> stringResource(R.string.title_data_provider_video_audio)
+        TitleData.ProviderStatus.VIDEO_ONLY -> stringResource(R.string.title_data_provider_video)
+        TitleData.ProviderStatus.AUDIO_ONLY -> stringResource(R.string.title_data_provider_audio)
+    }
+    val kept = stringResource(if (version.detailsKept) R.string.title_data_details_kept else R.string.title_data_details_not_kept)
+    Text(
+        stringResource(R.string.title_data_provider, status) + "  ·  " + kept,
+        color = dim,
+        style = style,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.testTag("titleDataProvider-${version.id}"),
+    )
+    if (version.providerKeys.isNotEmpty()) {
+        Text(
+            stringResource(R.string.title_data_info_keys, version.providerKeys.joinToString(", ")),
+            color = dim,
+            style = style,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.testTag("titleDataKeys-${version.id}"),
+        )
+    }
+    val screen = listOfNotNull(
+        if (version.dolbyVision) stringResource(R.string.title_data_dolby_vision_profile, version.dolbyVisionProfile ?: stringResource(R.string.title_data_unknown)) else null,
+    ) + version.screenNotes.map { note ->
+        stringResource(
+            when (note) {
+                ScreenNote.DOLBY_VISION_BASE_LAYER -> R.string.title_data_screen_dv_base_layer
+                ScreenNote.DOLBY_VISION_WRONG_COLOURS -> R.string.title_data_screen_dv_wrong
+                ScreenNote.DOLBY_VISION_UNKNOWN -> R.string.title_data_screen_dv_unknown
+                ScreenNote.HDR_UNSUPPORTED -> R.string.title_data_screen_hdr_unsupported
+                ScreenNote.UHD_UNSUPPORTED -> R.string.title_data_screen_uhd_unsupported
+            },
+        )
+    }
+    if (screen.isNotEmpty()) {
+        Text(
+            screen.joinToString("  ·  "),
+            color = Color(0xFFFFCC80),
+            style = style,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.testTag("titleDataScreenNotes-${version.id}"),
+        )
+    }
+}
+
+/**
+ * What the app read of this screen ([TitleData.display]): its mode of the moment and its largest mode, the HDR formats it
+ * takes, the decoders, what the versions are chosen for, and the app's build. Nothing before the screen was read.
+ */
+@Composable
+fun TitleDataScreen(data: TitleData, style: TextStyle) {
+    val facts = data.display
+    val dim = Color.White.copy(alpha = 0.7f)
+    Column(Modifier.padding(top = 4.dp).testTag("titleDataScreen")) {
+        Text(stringResource(R.string.title_data_screen), color = Color.White, style = style.copy(fontWeight = FontWeight.SemiBold))
+        if (facts != null) {
+            val yes = stringResource(R.string.title_data_yes)
+            val no = stringResource(R.string.title_data_no)
+            val unknown = stringResource(R.string.title_data_unknown)
+            fun word(value: Boolean?) = when (value) {
+                true -> yes
+                false -> no
+                null -> unknown
+            }
+            fun size(width: Int, height: Int) = if (width > 0 && height > 0) "$width×$height" else unknown
+            Text(stringResource(R.string.title_data_screen_modes, size(facts.currentWidth, facts.currentHeight), size(facts.largestWidth, facts.largestHeight)), color = dim, style = style)
+            Text(stringResource(R.string.title_data_screen_hdr, word(facts.hdr10), word(facts.hdr10Plus), word(facts.hlg), word(facts.dolbyVisionDisplay)), color = dim, style = style)
+            Text(stringResource(R.string.title_data_screen_decoders, word(facts.dolbyVisionDecoder), word(facts.hevcMain10Decoder)), color = dim, style = style)
+        }
+        val chosen = listOfNotNull("4K".takeIf { data.support.uhd }, "HDR".takeIf { data.support.hdr }, "Dolby Vision".takeIf { data.support.dolbyVision })
+        Text(stringResource(R.string.title_data_screen_chosen, chosen.joinToString(" · ").ifEmpty { "–" }), color = dim, style = style, modifier = Modifier.testTag("titleDataChosen"))
+        Text(stringResource(R.string.title_data_app, data.app), color = dim, style = style)
     }
 }
 
@@ -253,6 +347,7 @@ fun TitleDataDialog(data: TitleData, onDismiss: () -> Unit) {
                     TitleDataLines(data, style)
                 }
             }
+            item(key = "screen") { FocusableBlock { TitleDataScreen(data, style) } }
             items(data.versions, key = { "version:" + it.id }) { version ->
                 FocusableBlock { TitleDataVersion(version, style, current = R.string.title_data_this_chip) }
             }

@@ -154,6 +154,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -343,6 +345,11 @@ class PlayerActivity : ComponentActivity() {
         // Recreated (Android stopped the app in the background, or a setting changed): what played, from where it was.
         request = savedInstanceState?.getString(EXTRA_REQUEST)?.let(::decodeRequest)
             ?: requireNotNull(intent.playRequest()) { "PlayerActivity needs a play request" }
+        // Opened alone (from a launcher's row, Android's recents): the screen read here, as the app's pages read it, for the
+        // title data's version that plays first.
+        if (PictureSupportProbe.facts == null) {
+            UiMappers.pictureSupport = PictureSupportProbe.of(this) { UiMappers.pictureSupport = it.pictureSupport() }.pictureSupport()
+        }
         // Edge to edge on every Android version (the default from Android 15), light bars over the black video.
         enableEdgeToEdge(SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -445,9 +452,18 @@ class PlayerActivity : ComponentActivity() {
                         }
                     }
                     // What the provider calls the title and its versions, read off the main thread when the statistics
-                    // show, again for each title played.
+                    // show, again for each title played, and again when what is known of its streams changes (the
+                    // player's reading of this one, a version's details).
                     val titleData by produceState<TitleData?>(null, request, showsStatistics) {
-                        value = if (showsStatistics) titleDataOf(request) else null
+                        if (!showsStatistics) {
+                            value = null
+                            return@produceState
+                        }
+                        repository.state
+                            .distinctUntilChanged { old, new ->
+                                old.measuredSpecs === new.measuredSpecs && old.movieDetails === new.movieDetails && old.detailsFailures === new.detailsFailures
+                            }
+                            .collectLatest { value = titleDataOf(request) }
                     }
                     statistics?.takeIf { showsStatistics && !inPictureInPicture }?.let {
                         Row(
@@ -1132,9 +1148,7 @@ class PlayerActivity : ComponentActivity() {
      * thread. Its own stream only: not a fallback's (another version's address, [urlIndex] past the first), not a channel.
      */
     private fun recordSpecs(tracks: androidx.media3.common.Tracks) {
-        if (request.isLive || request.replayStart != null || urlIndex != 0) return
-        val parts = request.progressKey?.split('|') ?: return
-        if (parts.size != 4 || parts[1] != ItemKind.MOVIE.name) return
+        val (playlistId, movieId) = MeasuredTracks.recordedFilm(request, urlIndex) ?: return
         val specs = MeasuredTracks.specs(tracks) ?: return
         // Once read, a stream is read again only when its picture grew (an adaptive stream climbing), not on every change
         // of its tracks (the viewer picking another sound or subtitles).
@@ -1143,7 +1157,7 @@ class PlayerActivity : ComponentActivity() {
         if (key == recordedKey && area <= recordedArea) return
         recordedKey = key
         recordedArea = area
-        repository.recordMeasuredSpecs(parts[0], parts[2], specs)
+        repository.recordMeasuredSpecs(playlistId, movieId, specs)
     }
 
     /** The stream whose specs were recorded last, and its picture's size then ([recordSpecs]). */

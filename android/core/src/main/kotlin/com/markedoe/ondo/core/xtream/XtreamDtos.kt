@@ -3,6 +3,7 @@ package com.markedoe.ondo.core.xtream
 import com.markedoe.ondo.core.HtmlEntities
 import com.markedoe.ondo.core.isNewline
 import com.markedoe.ondo.core.library.FilmVersions
+import com.markedoe.ondo.core.model.ProviderInfo
 import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.core.nilIfBlank
 import com.markedoe.ondo.core.net.Urls
@@ -197,6 +198,8 @@ internal data class XtreamInfoDto(
     val tmdbId: String? = null,
     /** `video`, `audio` and `bitrate`: what the panel's ffprobe read of the stream (`get_vod_info`, when it gives them). */
     val streamSpecs: StreamSpecs? = null,
+    /** The names of the fields of `info`, and whether `video` and `audio` were objects ([ProviderInfo]). */
+    val providerInfo: ProviderInfo = ProviderInfo(),
 ) {
     companion object {
         /** `null` when the key is missing or `null`; an empty info for `info: []`. */
@@ -222,12 +225,13 @@ internal data class XtreamInfoDto(
                 youtubeTrailer = o["youtube_trailer"].lenientString()?.nilIfBlank(),
                 tmdbId = (o["tmdb_id"].lenientString() ?: o["tmdb"].lenientString())?.nilIfBlank(),
                 streamSpecs = StreamSpecs.fromProbe(probeBlock(o["video"]), probeBlock(o["audio"]), o["bitrate"].lenientString()),
+                providerInfo = ProviderInfo(ProviderInfo.keysOf(o.keys), video = o["video"] is JsonObject, audio = o["audio"] is JsonObject),
             )
         }
 
         /**
-         * A block of ffprobe's answer (`info.video`, `info.audio`): its scalar fields by name in lower case, and the types
-         * of its `side_data_list` ([StreamSpecs.ProbeBlock]). Null for anything but an object (`[]`, `""`).
+         * A block of ffprobe's answer (`info.video`, `info.audio`): its scalar fields by name in lower case, the types of
+         * its `side_data_list` and their numbers ([StreamSpecs.ProbeBlock]). Null for anything but an object (`[]`, `""`).
          */
         internal fun probeBlock(json: JsonElement?): StreamSpecs.ProbeBlock? {
             val o = json as? JsonObject ?: return null
@@ -235,10 +239,17 @@ internal data class XtreamInfoDto(
             for ((key, value) in o) {
                 if (value is JsonPrimitive && value !is JsonNull) value.lenientString()?.let { fields[key.lowercase()] = it }
             }
-            val sideData = (o["side_data_list"] as? JsonArray).orEmpty().mapNotNull { entry ->
-                (entry as? JsonObject)?.get("side_data_type").lenientString()?.lowercase()
+            val entries = (o["side_data_list"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+            val sideData = entries.mapNotNull { entry -> entry["side_data_type"].lenientString()?.lowercase() }
+            // The numbers of the side data (a Dolby Vision record's `dv_profile`, `dv_bl_signal_compatibility_id`), the
+            // first of each name.
+            val sideFields = HashMap<String, String>()
+            for (entry in entries) {
+                for ((key, value) in entry) {
+                    if (value is JsonPrimitive && value !is JsonNull) sideFields.putIfAbsent(key.lowercase(), value.content)
+                }
             }
-            return StreamSpecs.ProbeBlock(fields, sideData)
+            return StreamSpecs.ProbeBlock(fields, sideData, sideFields)
         }
     }
 }
