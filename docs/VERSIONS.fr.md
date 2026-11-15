@@ -131,16 +131,25 @@ sources, la meilleure d'abord, champ par champ :
 
 1. **Ce que le lecteur a mesuré** pendant la lecture : la taille, la plage (HDR10, HLG, Dolby Vision, ou SDR) et le
    codec de l'image, le codec, les canaux et l'Atmos (E-AC-3 JOC) du son, d'après les pistes de Media3 sur Android et
-   les descriptions de format d'AVFoundation chez Apple (le rendu le plus haut d'un flux adaptatif). Gardé sur l'appareil
-   pour les 2 000 derniers films lus, par playlist et par flux (`MeasuredSpecs`, `measured-specs.json`), lu la première
-   fois que la page d'un film ou le lecteur en a besoin, jamais au lancement. Une image mesurée SDR n'est pas une image
-   HDR, quoi que dise son nom.
+   les descriptions de format d'AVFoundation chez Apple (le rendu le plus haut d'un flux adaptatif ; chez Apple un flux
+   HLS ne liste pas ses pistes, son image est donc laissée au fournisseur ou au nom). Le son est la piste par défaut du
+   flux, sinon celle qui a le plus de canaux, jamais le choix du moment de l'utilisateur ; un flux déjà lu n'est relu
+   que si son image a grandi. Gardé sur l'appareil pour les 2 000 derniers films lus, par la playlist d'où le film est
+   lu et par flux (`MeasuredSpecs`, `measured-specs.json`), lu la première fois que la page d'un film ou le lecteur en
+   a besoin, jamais au lancement. Une image mesurée SDR n'est pas une image HDR, quoi que dise son nom ; une mesure
+   n'enlève jamais l'Atmos du fournisseur (AVFoundation n'en nomme aucun, Media3 aucun en TrueHD).
 2. **Les détails du fournisseur** (`info.video`, `info.audio` et `info.bitrate` de `get_vod_info`, ce qu'a lu le ffprobe
-   du panneau), gardés avec les détails. Un champ absent, vide, nul ou inconnu reste inconnu ; le Dolby Vision d'après
-   son enregistrement de configuration, le HDR10+ seulement d'après des métadonnées SMPTE ST 2094, le HDR10 et le HLG
-   d'après `color_transfer` (jamais d'après un seul profil 10 bits). La page du film demande déjà les détails de sa
-   propre version ; une fois ouverte et au repos un moment, elle demande ceux de ses autres versions, un à la fois,
-   annulés quand elle se ferme. La navigation (rangées, en-têtes, recherche) n'en demande aucun.
+   du panneau), gardés avec les détails. Un champ absent, vide, nul ou inconnu reste inconnu. Seuls les champs qui le
+   disent sont lus, jamais un texte libre comme le titre d'un flux : le Dolby Vision d'après `codec_tag_string`, le
+   `profile` de la vidéo ou un enregistrement de configuration dans `side_data_list`, le HDR10+ seulement d'après des
+   métadonnées SMPTE ST 2094 à cet endroit, le HDR10 et le HLG d'après `color_transfer` (jamais d'après un seul profil
+   10 bits), l'Atmos d'après le `profile` du son, sa disposition d'après `channel_layout` (« 5.1(side) » est du 5.1,
+   « 4.1 » et « 3.0 » restent tels quels ; le nombre de canaux seulement sans elle). La page du film demande déjà les
+   détails de sa propre version ; une fois ouverte et au repos un moment, elle demande ceux de ses autres versions :
+   six au plus à chaque ouverture, à 400 ms d'intervalle, annulés quand elle se ferme, arrêtés au premier refus (cette
+   version n'est plus demandée avant le redémarrage de l'app), et jamais tant que le lecteur est par-dessus (la page
+   reprend à son retour). Ils sont gardés à part des pages ouvertes par l'utilisateur (`DetailsArchive.versions`, 300
+   au plus), pour ne jamais les en chasser. La navigation (rangées, en-têtes, recherche) n'en demande aucun.
 3. **Les étiquettes du nom** (« 4K », « DV », « HEVC »), comme avant.
 
 - **Classes de définition** : 4K, 1080p, 720p ou SD, d'après la hauteur ou la largeur, la première qui atteint une
@@ -154,7 +163,9 @@ sources, la meilleure d'abord, champ par champ :
   rien. Deux versions que les règles ci-dessus réunissent en une pastille restent séparées quand leurs caractéristiques
   connues diffèrent ; celle dont on ne sait rien reste avec la première. Des pastilles qui se liraient pareil sont
   départagées par leur codec vidéo, puis le codec de leur son, puis comme avant. Sans caractéristiques, les pastilles
-  sont celles d'avant (`fixtures/film-versions/labels.json`).
+  sont celles d'avant (`fixtures/film-versions/labels.json`). Chaque pastille est connue par l'identifiant de sa
+  première version : une pastille qui se divise à l'arrivée des caractéristiques n'en déplace aucune autre, et le focus
+  reste sur la version où était la télécommande.
 - **Les données du titre** listent les caractéristiques de chaque version et leur source (mesurées par le lecteur,
   selon le fournisseur, d'après le nom).
 - Les détails gardés avant ce changement n'ont pas de caractéristiques jusqu'à ce qu'ils soient redemandés (une fois

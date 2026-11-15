@@ -20,13 +20,35 @@ public struct DetailsArchive: Codable, Sendable, Equatable {
     /// The most recently fetched are kept: a series with all its episodes takes far more room than a movie.
     public static let movieLimit = 1_000
     public static let seriesLimit = 300
+    /// Other versions' details asked by films' pages (`versions`).
+    public static let versionLimit = 300
 
     public var movies: [String: Entry<MediaDetails>]
     public var series: [String: Entry<SeriesDetails>]
+    /// The details a film's page asked for its other versions, for what their streams are made of: kept apart, at most
+    /// `versionLimit`, so that they never push the pages viewers opened out of `movies`.
+    public var versions: [String: Entry<MediaDetails>]
 
-    public init(movies: [String: Entry<MediaDetails>] = [:], series: [String: Entry<SeriesDetails>] = [:]) {
+    public init(
+        movies: [String: Entry<MediaDetails>] = [:],
+        series: [String: Entry<SeriesDetails>] = [:],
+        versions: [String: Entry<MediaDetails>] = [:]
+    ) {
         self.movies = movies
         self.series = series
+        self.versions = versions
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case movies, series, versions
+    }
+
+    /// A document written before `versions` existed reads too.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        movies = try c.decodeIfPresent([String: Entry<MediaDetails>].self, forKey: .movies) ?? [:]
+        series = try c.decodeIfPresent([String: Entry<SeriesDetails>].self, forKey: .series) ?? [:]
+        versions = (try? c.decodeIfPresent([String: Entry<MediaDetails>].self, forKey: .versions)) ?? [:]
     }
 
     public static func documentName(for playlistID: UUID) -> String {
@@ -40,9 +62,13 @@ public struct DetailsArchive: Codable, Sendable, Equatable {
         return age >= 0 && age < maxAge
     }
 
-    /// At most `movieLimit` movies and `seriesLimit` series: the most recently fetched.
-    public func trimmed(movieLimit: Int = Self.movieLimit, seriesLimit: Int = Self.seriesLimit) -> DetailsArchive {
-        DetailsArchive(movies: Self.newest(movies, limit: movieLimit), series: Self.newest(series, limit: seriesLimit))
+    /// At most `movieLimit` movies, `seriesLimit` series and `versionLimit` versions: the most recently fetched.
+    public func trimmed(movieLimit: Int = Self.movieLimit, seriesLimit: Int = Self.seriesLimit, versionLimit: Int = Self.versionLimit) -> DetailsArchive {
+        DetailsArchive(
+            movies: Self.newest(movies, limit: movieLimit),
+            series: Self.newest(series, limit: seriesLimit),
+            versions: Self.newest(versions, limit: versionLimit)
+        )
     }
 
     private static func newest<Value>(_ entries: [String: Entry<Value>], limit: Int) -> [String: Entry<Value>] {

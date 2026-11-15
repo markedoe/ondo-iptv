@@ -51,7 +51,10 @@ class StreamSpecsTest {
     @Test
     fun soundLabels() {
         for (case in table["audio"]!!.jsonArray.map { it.jsonObject }) {
-            val specs = StreamSpecs(audioCodec = case["codec"].text(), channels = case["channels"].int(), atmos = case["atmos"]!!.jsonPrimitive.content == "true")
+            val specs = StreamSpecs(
+                audioCodec = case["codec"].text(), channels = case["channels"].int(), channelLayout = case["layout"].text(),
+                atmos = case["atmos"]!!.jsonPrimitive.content == "true",
+            )
             assertEquals(case["facts"].text(), specs.audioLabel, "$case")
             assertEquals(case["chip"].text(), specs.chipAudio, "$case")
         }
@@ -63,6 +66,38 @@ class StreamSpecsTest {
         for (pair in codecs["video"]!!.jsonArray.map { it.jsonArray }) assertEquals(pair[1].text(), StreamSpecs.videoCodec(pair[0].text()), "$pair")
         for (pair in codecs["audio"]!!.jsonArray.map { it.jsonArray }) assertEquals(pair[1].text(), StreamSpecs.audioCodec(pair[0].text()), "$pair")
         for (pair in codecs["layouts"]!!.jsonArray.map { it.jsonArray }) assertEquals(pair[1].int(), StreamSpecs.channelsOfLayout(pair[0].text()), "$pair")
+        for (pair in codecs["layoutNames"]!!.jsonArray.map { it.jsonArray }) assertEquals(pair[1].text(), StreamSpecs.layoutOf(pair[0].text()), "$pair")
+    }
+
+    /** What the player measured over the provider's: Atmos only ever added, a layout only where it agrees. */
+    @Test
+    fun measuredOverTheProviders() {
+        for (case in table["merge"]!!.jsonArray.map { it.jsonObject }) {
+            assertEquals(specs(case["merged"]), specs(case["measured"])!!.orElse(specs(case["provider"])), case["about"]!!.jsonPrimitive.content)
+        }
+    }
+
+    /** One stream read in turn: the first reading stays, unless the picture grew. */
+    @Test
+    fun readingsOfOneStream() {
+        for (case in table["measured"]!!.jsonArray.map { it.jsonObject }) {
+            val about = case["about"]!!.jsonPrimitive.content
+            val store = com.markedoe.ondo.core.library.MeasuredSpecs()
+            for (reading in case["readings"]!!.jsonArray.map { it.jsonObject }) {
+                assertEquals(reading["kept"]!!.jsonPrimitive.content == "true", store.record("p|1", specs(reading["specs"])!!), "$about: $reading")
+            }
+            assertEquals(specs(case["final"]), store["p|1"], about)
+        }
+    }
+
+    /** The sound the player measures: the default track, else the most channels; never the viewer's pick. */
+    @Test
+    fun theSoundMeasured() {
+        for (case in table["audioPick"]!!.jsonArray.map { it.jsonObject }) {
+            val defaults = case["defaults"]!!.jsonArray.map { it.jsonPrimitive.content == "true" }
+            val channels = case["channels"]!!.jsonArray.map { it.int() }
+            assertEquals(case["index"].int(), StreamSpecs.measuredAudio(defaults, channels), "$case")
+        }
     }
 
     /** The facts line's badges: specs where they know, the name's tags elsewhere, nothing invented. */

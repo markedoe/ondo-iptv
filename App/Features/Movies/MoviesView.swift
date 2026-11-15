@@ -389,8 +389,8 @@ struct VersionChips: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(choices.indices, id: \.self) { index in
-                    let choice = choices[index]
+                // Each chip identified by its first stream: one that splits as specs arrive moves none of the others.
+                ForEach(Array(zip(Self.keys(choices), choices)), id: \.0) { _, choice in
                     let label = choice.label
                     let isSelected = choice.contains(selected)
                     Button {
@@ -413,5 +413,16 @@ struct VersionChips: View {
             }
         }
         .accessibilityIdentifier("versions")
+    }
+
+    /// The chips' identities: each its first stream's id, which stays when another chip splits or relabels; a stream a
+    /// panel lists twice that ends on two chips gets its occurrence after it. The same as Android's `versionKeys`.
+    static func keys(_ choices: [VersionChoice]) -> [String] {
+        var seen: [String: Int] = [:]
+        return choices.map { choice in
+            seen[choice.id, default: 0] += 1
+            let n = seen[choice.id] ?? 1
+            return n == 1 ? "version:\(choice.id)" : "version:\(choice.id)#\(n)"
+        }
     }
 }

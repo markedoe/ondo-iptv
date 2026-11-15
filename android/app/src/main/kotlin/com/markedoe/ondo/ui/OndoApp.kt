@@ -674,11 +674,12 @@ private fun SearchDestination(viewModel: OndoViewModel, navController: NavHostCo
 private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostController, id: String) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    LaunchedEffect(id) {
-        viewModel.loadMovie(id)
-        // Once the page is open and idle: what the film's other versions are made of (their details), one at a time,
-        // cancelled when the page closes.
-        viewModel.loadVersionSpecs(id)
+    LaunchedEffect(id) { viewModel.loadMovie(id) }
+    // Once the page is open and idle: what the film's other versions are made of (their details), a few, one at a time.
+    // Only while the page is in front: stopped when the player comes on top (or the page closes), asked again once back.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(id, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { viewModel.loadVersionSpecs(id) }
     }
     val locale = LocalConfiguration.current.locales[0]
     // Off the main thread: finding the movie, its similar titles, awards and hidden categories go through the whole

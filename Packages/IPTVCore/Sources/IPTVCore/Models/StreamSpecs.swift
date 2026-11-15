@@ -30,6 +30,8 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
     /// "AAC", "AC-3", "E-AC-3", "DTS", "TrueHD"… (`audioCodec(_:)`).
     public var audioCodec: String?
     public var channels: Int?
+    /// The provider's layout of them ("5.1", "4.1", "3.0": `layout(of:)`); nil when it gives none.
+    public var channelLayout: String?
     /// Dolby Atmos: E-AC-3 JOC, or a provider's profile naming Atmos.
     public var atmos: Bool
     /// The provider's whole bitrate, in kbit/s.
@@ -43,6 +45,7 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         videoCodec: String? = nil,
         audioCodec: String? = nil,
         channels: Int? = nil,
+        channelLayout: String? = nil,
         atmos: Bool = false,
         bitrate: Int? = nil,
         source: SpecSource = .provider
@@ -53,13 +56,14 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         self.videoCodec = videoCodec
         self.audioCodec = audioCodec
         self.channels = channels
+        self.channelLayout = channelLayout
         self.atmos = atmos
         self.bitrate = bitrate
         self.source = source
     }
 
     enum CodingKeys: String, CodingKey {
-        case width, height, range, videoCodec, audioCodec, channels, atmos, bitrate, source
+        case width, height, range, videoCodec, audioCodec, channels, channelLayout, atmos, bitrate, source
     }
 
     /// Every field may be missing (Android writes them all; a field it left out is unknown).
@@ -71,6 +75,7 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         videoCodec = try? c.decodeIfPresent(String.self, forKey: .videoCodec)
         audioCodec = try? c.decodeIfPresent(String.self, forKey: .audioCodec)
         channels = try? c.decodeIfPresent(Int.self, forKey: .channels)
+        channelLayout = try? c.decodeIfPresent(String.self, forKey: .channelLayout)
         atmos = (try? c.decodeIfPresent(Bool.self, forKey: .atmos)) ?? false
         bitrate = try? c.decodeIfPresent(Int.self, forKey: .bitrate)
         source = (try? c.decodeIfPresent(SpecSource.self, forKey: .source)) ?? .provider
@@ -78,8 +83,11 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
 
     /// Whether anything at all is known.
     public var isEmpty: Bool {
-        resolution == nil && range == nil && videoCodec == nil && audioCodec == nil && channels == nil && !atmos
+        resolution == nil && range == nil && videoCodec == nil && audioCodec == nil && channels == nil && channelLayout == nil && !atmos
     }
+
+    /// The sound's layout: the provider's ("4.1"), else its channels' (`layout(_:)`: "5.1" for six); nil when unknown.
+    public var soundLayout: String? { channelLayout ?? channels.map(Self.layout) }
 
     /// "SD", "720p", "1080p", "4K" from the picture's size; nil when unknown (`resolution(width:height:)`).
     public var resolution: String? { Self.resolution(width: width, height: height) }
@@ -90,17 +98,19 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
     /// The sound as the facts line shows it: "Atmos", "5.1 AAC", "2.0 AC-3", "AAC"; nil when unknown.
     public var audioLabel: String? {
         if atmos { return Self.atmosWord }
-        let text = [channels.map(Self.layout), audioCodec].compactMap { $0 }.joined(separator: " ")
+        let text = [soundLayout, audioCodec].compactMap { $0 }.joined(separator: " ")
         return text.isEmpty ? nil : text
     }
 
     /// The sound as a chip says it: "Atmos", "5.1", else its codec; nil when unknown.
     public var chipAudio: String? {
         if atmos { return Self.atmosWord }
-        return channels.map(Self.layout) ?? audioCodec
+        return soundLayout ?? audioCodec
     }
 
-    /// These specs where they are known, `other`'s where they are not; this one's source.
+    /// These specs where they are known, `other`'s where they are not; this one's source. Atmos stays when either says
+    /// it: a player that reads no Atmos (AVFoundation, Media3 on TrueHD) does not take the provider's away. The provider's
+    /// layout only where it agrees with the channels known.
     public func orElse(_ other: StreamSpecs?) -> StreamSpecs {
         guard let other else { return self }
         var merged = self
@@ -110,7 +120,10 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         merged.videoCodec = videoCodec ?? other.videoCodec
         merged.audioCodec = audioCodec ?? other.audioCodec
         merged.channels = channels ?? other.channels
-        merged.atmos = atmos || (audioCodec == nil && channels == nil && other.atmos)
+        merged.channelLayout = channelLayout ?? other.channelLayout.flatMap { layout in
+            channels == nil || Self.channels(ofLayout: layout) == channels ? layout : nil
+        }
+        merged.atmos = atmos || other.atmos
         merged.bitrate = bitrate ?? other.bitrate
         return merged
     }
@@ -119,7 +132,7 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
     public func summary() -> String {
         var size: String?
         if let width, let height { size = "\(width)×\(height)" } else if let height { size = "\(height)p" }
-        let sound = [channels.map(Self.layout), audioCodec].compactMap { $0 }.joined(separator: " ")
+        let sound = [soundLayout, audioCodec].compactMap { $0 }.joined(separator: " ")
         let parts: [String?] = [
             size,
             resolution,
@@ -134,15 +147,15 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
     }
 
     /// A block of the provider's ffprobe answer (`info.video` or `info.audio`): its scalar fields by name, in lower case
-    /// (`fields`, numbers as text), and every scalar value it holds, nested ones too, in lower case (`text`: the Dolby
-    /// Vision configuration record of `side_data_list`).
+    /// (`fields`, numbers as text), and the types of its `side_data_list` in lower case (`sideData`: "dovi configuration
+    /// record", "hdr dynamic metadata smpte2094-40 (hdr10+)"). Free text (a stream's title) is never read.
     public struct ProbeBlock: Hashable, Sendable {
         public var fields: [String: String]
-        public var text: String
+        public var sideData: [String]
 
-        public init(fields: [String: String], text: String) {
+        public init(fields: [String: String], sideData: [String] = []) {
             self.fields = fields
-            self.text = text
+            self.sideData = sideData
         }
     }
 
@@ -197,7 +210,7 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         switch channels {
         case 1: return "1.0"
         case 2: return "2.0"
-        case 3: return "2.1"
+        case 3: return "3.0"
         case 4: return "4.0"
         case 5: return "5.0"
         case 6: return "5.1"
@@ -255,6 +268,32 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         lowered(fourCC).map { dolbyVisionCodecs.contains($0) } ?? false
     }
 
+    /// The provider's layout as the apps say it: "5.1(side)" is "5.1", "4.1" and "3.0" stay, "stereo" is "2.0", "mono"
+    /// "1.0", "quad" "4.0"; nil when it is none of those.
+    public static func layout(of raw: String?) -> String? {
+        guard let layout = lowered(raw) else { return nil }
+        switch layout {
+        case "mono": return "1.0"
+        case "stereo", "downmix": return "2.0"
+        case "quad": return "4.0"
+        case "hexagonal": return "6.0"
+        case "octagonal": return "8.0"
+        default: break
+        }
+        let main = String(layout.prefix { $0 != "(" }).trimmingCharacters(in: .whitespaces)
+        guard main.filter({ $0 == "." }).count == 1, main.allSatisfy({ $0 == "." || ($0.isASCII && $0.isNumber) }) else { return nil }
+        return channels(ofLayout: main) == nil ? nil : main
+    }
+
+    /// The sound the player measured: the track marked default (`defaults`), else the one of the most channels, the first
+    /// of them; -1 for none. Not the viewer's choice of the moment: a stream's sound is what it offers first.
+    public static func measuredAudio(defaults: [Bool], channels: [Int?]) -> Int {
+        if let marked = defaults.firstIndex(of: true) { return marked }
+        var best = -1
+        for i in channels.indices where best < 0 || (channels[i] ?? 0) > (channels[best] ?? 0) { best = i }
+        return best
+    }
+
     /// "5.1(side)" is 6, "stereo" 2, "7.1" 8, "mono" 1; nil when it says no number.
     public static func channels(ofLayout raw: String?) -> Int? {
         guard let layout = lowered(raw) else { return nil }
@@ -300,9 +339,10 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         let tag = v["codec_tag_string"]?.lowercased()
         var range: PictureRange?
         if let video {
-            if video.text.contains("dovi") || video.text.contains("dolby vision") || tag.map(dolbyVisionCodecs.contains) == true {
+            if tag.map(dolbyVisionCodecs.contains) == true || (v["profile"]?.lowercased() ?? "").contains("dolby vision")
+                || video.sideData.contains(where: { $0.contains("dovi") || $0.contains("dolby vision") }) {
                 range = .dolbyVision
-            } else if video.text.contains("smpte2094") || video.text.contains("st 2094") || video.text.contains("hdr10+") {
+            } else if video.sideData.contains(where: { $0.contains("smpte2094") || $0.contains("hdr10+") }) {
                 range = .hdr10Plus
             } else {
                 switch v["color_transfer"]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
@@ -313,9 +353,9 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
                 }
             }
         }
-        let audioText = audio?.text ?? ""
+        let audioProfile = a["profile"]?.lowercased() ?? ""
         var codec = audioCodec(a["codec_name"]) ?? audioCodec(a["codec_tag_string"])
-        if codec == "DTS", (a["profile"]?.lowercased() ?? "").contains("dts-hd") { codec = "DTS-HD" }
+        if codec == "DTS", audioProfile.contains("dts-hd") { codec = "DTS-HD" }
         let channelCount = positive(a["channels"]).flatMap { $0 <= 32 ? $0 : nil } ?? channels(ofLayout: a["channel_layout"])
         let specs = StreamSpecs(
             width: positive(v["width"]) ?? positive(v["coded_width"]),
@@ -324,7 +364,8 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
             videoCodec: videoCodec(v["codec_name"]) ?? videoCodec(tag),
             audioCodec: codec,
             channels: channelCount,
-            atmos: audio != nil && (audioText.contains("atmos") || " \(audioText)".contains(" joc")),
+            channelLayout: layout(of: a["channel_layout"]),
+            atmos: audioProfile.contains("atmos") || audioProfile.contains("joc"),
             bitrate: positive(bitrate),
             source: .provider
         )
@@ -356,11 +397,11 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         if let specs {
             if specs.atmos {
                 sound.append(words.atmos)
-            } else if let channels = specs.channels {
-                switch channels {
-                case 1: sound.append(words.mono)
-                case 2: sound.append(words.stereo)
-                default: sound.append(words.surround(layout(channels)))
+            } else if let layout = specs.soundLayout {
+                switch layout {
+                case "1.0": sound.append(words.mono)
+                case "2.0": sound.append(words.stereo)
+                default: sound.append(words.surround(layout))
                 }
             }
             if let codec = specs.audioCodec { sound.append(codec) }

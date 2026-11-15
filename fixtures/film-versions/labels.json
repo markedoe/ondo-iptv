@@ -351,6 +351,22 @@
         {"name": "Sand Harbor", "extension": "mkv", "specs": {"width": 1920, "height": 1080, "audioCodec": "AAC", "channels": 6}}
       ],
       "chips": ["1080p · 5.1 · AC-3", "1080p · 5.1 · AAC"]
+    },
+    {
+      "name": "specs: the provider's layout says the sound (3.0, not a count's guess), next to 5.1; the shared 1080p is left out",
+      "rows": [
+        {"name": "Copper Valley", "extension": "mkv", "specs": {"height": 1080, "audioCodec": "AAC", "channels": 3, "channelLayout": "3.0"}},
+        {"name": "Copper Valley", "extension": "mkv", "specs": {"height": 1080, "audioCodec": "AAC", "channels": 6, "channelLayout": "5.1"}}
+      ],
+      "chips": ["3.0", "5.1"]
+    },
+    {
+      "name": "specs: Atmos kept from the provider over a measurement that reads none",
+      "rows": [
+        {"name": "Copper Valley", "specs": {"height": 2160, "audioCodec": "E-AC-3", "channels": 6, "atmos": true, "source": "MEASURED"}},
+        {"name": "Copper Valley 1080p", "specs": {"height": 1080, "audioCodec": "AC-3", "channels": 6}}
+      ],
+      "chips": ["4K · Atmos", "1080p · 5.1"]
     }
   ]
 }

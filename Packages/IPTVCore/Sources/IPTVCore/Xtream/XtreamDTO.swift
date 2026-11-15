@@ -343,21 +343,10 @@ private indirect enum XtreamProbeValue: Decodable {
             }
         }
     }
-
-    /// Every scalar value in it, nested ones too, in lower case.
-    func collect(into text: inout [String], depth: Int = 0) {
-        guard depth <= 8 else { return }
-        switch self {
-        case .object(let values): for value in values.values { value.collect(into: &text, depth: depth + 1) }
-        case .array(let values): for value in values { value.collect(into: &text, depth: depth + 1) }
-        case .scalar(let value): text.append(value.lowercased())
-        case .null: break
-        }
-    }
 }
 
-/// A block of ffprobe's answer (`info.video`, `info.audio`): its scalar fields by name in lower case, and every scalar
-/// value in it, nested ones too (`StreamSpecs.ProbeBlock`). Nil for anything but an object (`[]`, `""`). The same as
+/// A block of ffprobe's answer (`info.video`, `info.audio`): its scalar fields by name in lower case, and the types of
+/// its `side_data_list` (`StreamSpecs.ProbeBlock`). Nil for anything but an object (`[]`, `""`). The same as
 /// Android's `XtreamInfoDto.probeBlock`.
 struct XtreamProbe: Decodable {
     var block: StreamSpecs.ProbeBlock?
@@ -371,9 +360,13 @@ struct XtreamProbe: Decodable {
         for (key, value) in values {
             if case .scalar(let text) = value { fields[key.lowercased()] = text }
         }
-        var text: [String] = []
-        XtreamProbeValue.object(values).collect(into: &text)
-        block = StreamSpecs.ProbeBlock(fields: fields, text: text.joined(separator: " "))
+        var sideData: [String] = []
+        if case .array(let entries)? = values["side_data_list"] {
+            for case .object(let entry) in entries {
+                if case .scalar(let type)? = entry["side_data_type"] { sideData.append(type.lowercased()) }
+            }
+        }
+        block = StreamSpecs.ProbeBlock(fields: fields, sideData: sideData)
     }
 }
 

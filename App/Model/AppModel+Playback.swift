@@ -294,7 +294,7 @@ extension AppModel {
             self?.recordProgress(item, position: position, duration: duration, creditsStart: creditsStart)
         }
         controller.onSpecs = { [weak self] item, specs in
-            self?.recordMeasuredSpecs(specs, movieID: item.reference.itemID)
+            self?.recordMeasuredSpecs(specs, movieID: item.reference.itemID, playlistID: item.reference.playlistID)
         }
         controller.onEnded = { [weak session] item in
             guard let session else { return }

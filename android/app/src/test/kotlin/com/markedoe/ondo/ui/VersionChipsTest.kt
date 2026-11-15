@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -114,6 +115,46 @@ class VersionChipsTest {
         } finally {
             UiMappers.forgetCatalogue()
         }
+    }
+
+    /**
+     * What the versions are made of arrives while a TV page is open (another version's details, a measurement): a chip
+     * that splits in two, before or after the one the remote is on, leaves the focus on that version's chip, and a split
+     * after it does not move it.
+     */
+    @Test
+    @Config(qualifiers = "w960dp-h2400dp-television-xhdpi")
+    fun aChipSplittingElsewhereKeepsTheFocusOnTheSameVersion() {
+        val plain = VersionChip("a", "Standard")
+        val dv = VersionChip("b", "4K Dolby Vision")
+        val vostfr = VersionChip("c", "Original, French subtitles")
+        var page by mutableStateOf(state.copy(versions = listOf(plain, dv, vostfr), version = null))
+        compose.setContent { OndoTheme { TelevisionFrame { TvMovieDetailScreen(page, DetailActions()) } } }
+        compose.onNodeWithTag("detail").performScrollToNode(hasTestTag("versions"))
+        compose.onNodeWithTag("version-b").performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.onNodeWithTag("version-b").assertIsFocused()
+        fun left() = compose.onNodeWithTag("version-b").fetchSemanticsNode().boundsInRoot.left
+
+        // A chip after it splits: it neither moves nor loses the focus.
+        val before = left()
+        page = page.copy(versions = listOf(plain, dv, vostfr.copy(label = "1080p · 2.0"), VersionChip("d", "4K · Original, French subtitles")))
+        compose.waitForIdle()
+        compose.onNodeWithTag("version-b").assertIsFocused()
+        assertEquals(before, left())
+
+        // A chip before it splits: the focus stays on the same version.
+        page = page.copy(versions = listOf(plain.copy(label = "1080p · 5.1"), VersionChip("e", "4K · Atmos")) + page.versions.drop(1))
+        compose.waitForIdle()
+        compose.onNodeWithTag("version-b").assertIsFocused()
+        assertEquals("4K Dolby Vision", compose.onNodeWithTag("version-b").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Text)?.joinToString())
+    }
+
+    /** The chips' keys: each its first stream's id, the same whatever the other chips do; a stream on two chips stays apart. */
+    @Test
+    fun chipKeysAreTheirFirstStreams() {
+        val chips = listOf(VersionChip("a", "Standard"), VersionChip("b", "4K"), VersionChip("a", "Cinema copy (CAM)"))
+        assertEquals(listOf("version:a", "version:b", "version:a#2"), com.markedoe.ondo.ui.screens.versionKeys(chips))
+        assertEquals(listOf("version:x", "version:a", "version:b"), com.markedoe.ondo.ui.screens.versionKeys(listOf(VersionChip("x", "HD")) + chips.take(2)))
     }
 
     private fun hasTestTagStartingWith(prefix: String) = SemanticsMatcher("test tag starting with $prefix") { node ->

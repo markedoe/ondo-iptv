@@ -34,6 +34,8 @@ data class StreamSpecs(
     /** "AAC", "AC-3", "E-AC-3", "DTS", "TrueHD"… ([audioCodec]). */
     val audioCodec: String? = null,
     val channels: Int? = null,
+    /** The provider's layout of them ("5.1", "4.1", "3.0": [layoutOf]); null when it gives none. */
+    val channelLayout: String? = null,
     /** Dolby Atmos: E-AC-3 JOC, or a provider's profile naming Atmos. */
     val atmos: Boolean = false,
     /** The provider's whole bitrate, in kbit/s. */
@@ -42,7 +44,11 @@ data class StreamSpecs(
 ) {
     /** Whether anything at all is known. */
     val isEmpty: Boolean
-        get() = resolution == null && range == null && videoCodec == null && audioCodec == null && channels == null && !atmos
+        get() = resolution == null && range == null && videoCodec == null && audioCodec == null && channels == null &&
+            channelLayout == null && !atmos
+
+    /** The sound's layout: the provider's ("4.1"), else its channels' ([layout]: "5.1" for six); null when unknown. */
+    val soundLayout: String? get() = channelLayout ?: channels?.let(::layout)
 
     /** "SD", "720p", "1080p", "4K" from the picture's size; null when unknown ([resolutionOf]). */
     val resolution: String? get() = resolutionOf(width, height)
@@ -54,13 +60,17 @@ data class StreamSpecs(
     val audioLabel: String?
         get() {
             if (atmos) return ATMOS
-            return listOfNotNull(channels?.let(::layout), audioCodec).joinToString(" ").ifEmpty { null }
+            return listOfNotNull(soundLayout, audioCodec).joinToString(" ").ifEmpty { null }
         }
 
     /** The sound as a chip says it: "Atmos", "5.1", else its codec; null when unknown. */
-    val chipAudio: String? get() = if (atmos) ATMOS else channels?.let(::layout) ?: audioCodec
+    val chipAudio: String? get() = if (atmos) ATMOS else soundLayout ?: audioCodec
 
-    /** These specs where they are known, [other]'s where they are not; this one's source. */
+    /**
+     * These specs where they are known, [other]'s where they are not; this one's source. Atmos stays when either says it:
+     * a player that reads no Atmos (AVFoundation, Media3 on TrueHD) does not take the provider's away. The provider's
+     * layout only where it agrees with the channels known.
+     */
     fun orElse(other: StreamSpecs?): StreamSpecs {
         if (other == null) return this
         return copy(
@@ -70,7 +80,8 @@ data class StreamSpecs(
             videoCodec = videoCodec ?: other.videoCodec,
             audioCodec = audioCodec ?: other.audioCodec,
             channels = channels ?: other.channels,
-            atmos = atmos || audioCodec == null && channels == null && other.atmos,
+            channelLayout = channelLayout ?: other.channelLayout?.takeIf { channels == null || channelsOfLayout(it) == channels },
+            atmos = atmos || other.atmos,
             bitrate = bitrate ?: other.bitrate,
         )
     }
@@ -81,17 +92,17 @@ data class StreamSpecs(
         resolution,
         range?.let { if (it == PictureRange.SDR) "SDR" else rangeLabel(it) },
         videoCodec,
-        listOfNotNull(channels?.let(::layout), audioCodec).joinToString(" ").ifEmpty { null },
+        listOfNotNull(soundLayout, audioCodec).joinToString(" ").ifEmpty { null },
         ATMOS.takeIf { atmos },
         bitrate?.let { "$it kbit/s" },
     ).joinToString(" · ").ifEmpty { "–" }
 
     /**
      * The block of the provider's ffprobe answer (`info.video` or `info.audio`): its scalar fields by name, in lower case
-     * ([fields], numbers as text), and every scalar value it holds, nested ones too, in lower case ([text]: the Dolby
-     * Vision configuration record of `side_data_list`).
+     * ([fields], numbers as text), and the types of its `side_data_list` in lower case ([sideData]: "dovi configuration
+     * record", "hdr dynamic metadata smpte2094-40 (hdr10+)"). Free text (a stream's title) is never read.
      */
-    data class ProbeBlock(val fields: Map<String, String>, val text: String)
+    data class ProbeBlock(val fields: Map<String, String>, val sideData: List<String> = emptyList())
 
     /** The words a screen reader says for specs, in the viewer's language (the app's strings; English by default). */
     data class Words(
@@ -134,7 +145,7 @@ data class StreamSpecs(
         fun layout(channels: Int): String = when (channels) {
             1 -> "1.0"
             2 -> "2.0"
-            3 -> "2.1"
+            3 -> "3.0"
             4 -> "4.0"
             5 -> "5.0"
             6 -> "5.1"
@@ -203,6 +214,36 @@ data class StreamSpecs(
         /** E-AC-3 with Dolby Atmos (JOC), as the player names it. */
         fun isAtmosMime(mime: String?): Boolean = mime?.trim()?.lowercase() == "audio/eac3-joc"
 
+        /**
+         * The provider's layout as the apps say it: "5.1(side)" is "5.1", "4.1" and "3.0" stay, "stereo" is "2.0", "mono"
+         * "1.0", "quad" "4.0"; null when it is none of those.
+         */
+        fun layoutOf(raw: String?): String? {
+            val layout = raw?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
+            when (layout) {
+                "mono" -> return "1.0"
+                "stereo", "downmix" -> return "2.0"
+                "quad" -> return "4.0"
+                "hexagonal" -> return "6.0"
+                "octagonal" -> return "8.0"
+            }
+            val main = layout.takeWhile { it != '(' }.trim()
+            if (main.count { it == '.' } != 1 || !main.all { it == '.' || it in '0'..'9' }) return null
+            return main.takeIf { channelsOfLayout(it) != null }
+        }
+
+        /**
+         * The sound the player measured: the track marked default ([defaults]), else the one of the most channels, the
+         * first of them; -1 for none. Not the viewer's choice of the moment: a stream's sound is what it offers first.
+         */
+        fun measuredAudio(defaults: List<Boolean>, channels: List<Int?>): Int {
+            val marked = defaults.indexOfFirst { it }
+            if (marked >= 0) return marked
+            var best = -1
+            for (i in channels.indices) if (best < 0 || (channels[i] ?: 0) > (channels[best] ?: 0)) best = i
+            return best
+        }
+
         /** "5.1(side)" is 6, "stereo" 2, "7.1" 8, "mono" 1; null when it says no number. */
         fun channelsOfLayout(raw: String?): Int? {
             val layout = raw?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
@@ -248,8 +289,9 @@ data class StreamSpecs(
             val tag = v["codec_tag_string"]?.lowercase()
             val range = when {
                 video == null -> null
-                "dovi" in video.text || "dolby vision" in video.text || tag in DOLBY_VISION_CODECS -> PictureRange.DOLBY_VISION
-                "smpte2094" in video.text || "st 2094" in video.text || "hdr10+" in video.text -> PictureRange.HDR10_PLUS
+                tag in DOLBY_VISION_CODECS || "dolby vision" in v["profile"]?.lowercase().orEmpty() ||
+                    video.sideData.any { "dovi" in it || "dolby vision" in it } -> PictureRange.DOLBY_VISION
+                video.sideData.any { "smpte2094" in it || "hdr10+" in it } -> PictureRange.HDR10_PLUS
                 else -> when (v["color_transfer"]?.trim()?.lowercase()) {
                     "smpte2084" -> PictureRange.HDR10
                     "arib-std-b67" -> PictureRange.HLG
@@ -257,16 +299,17 @@ data class StreamSpecs(
                     else -> null
                 }
             }
-            val audioText = audio?.text.orEmpty()
+            val audioProfile = a["profile"]?.lowercase().orEmpty()
             val audioCodec = audioCodec(a["codec_name"]) ?: audioCodec(a["codec_tag_string"])
             val specs = StreamSpecs(
                 width = positive(v["width"]) ?: positive(v["coded_width"]),
                 height = positive(v["height"]) ?: positive(v["coded_height"]),
                 range = range,
                 videoCodec = videoCodec(v["codec_name"]) ?: videoCodec(tag),
-                audioCodec = if (audioCodec == "DTS" && "dts-hd" in (a["profile"]?.lowercase() ?: "")) "DTS-HD" else audioCodec,
+                audioCodec = if (audioCodec == "DTS" && "dts-hd" in audioProfile) "DTS-HD" else audioCodec,
                 channels = positive(a["channels"])?.takeIf { it <= 32 } ?: channelsOfLayout(a["channel_layout"]),
-                atmos = audio != null && ("atmos" in audioText || " joc" in " $audioText"),
+                channelLayout = layoutOf(a["channel_layout"]),
+                atmos = "atmos" in audioProfile || "joc" in audioProfile,
                 bitrate = positive(bitrate),
                 source = SpecSource.PROVIDER,
             )
@@ -299,13 +342,13 @@ data class StreamSpecs(
         fun description(specs: StreamSpecs?, nameTags: List<VersionTag>, words: Words = Words()): String {
             val picture = badges(specs, nameTags).let { if (specs?.audioLabel != null) it.dropLast(1) else it }
             val sound = specs?.let { s ->
-                val channels = s.channels
+                val layout = s.soundLayout
                 val heard = when {
                     s.atmos -> words.atmos
-                    channels == null -> null
-                    channels == 1 -> words.mono
-                    channels == 2 -> words.stereo
-                    else -> format(words.surround, layout(channels))
+                    layout == null -> null
+                    layout == "1.0" -> words.mono
+                    layout == "2.0" -> words.stereo
+                    else -> format(words.surround, layout)
                 }
                 listOfNotNull(heard, s.audioCodec)
             }.orEmpty()

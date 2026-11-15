@@ -17,6 +17,7 @@ final class StreamSpecsTests: XCTestCase {
         struct Audio: Decodable {
             var codec: String?
             var channels: Int?
+            var layout: String?
             var atmos: Bool
             var facts: String?
             var chip: String?
@@ -35,6 +36,31 @@ final class StreamSpecsTests: XCTestCase {
             var video: [[String?]]
             var audio: [[String?]]
             var layouts: [Layout]
+            var layoutNames: [[String?]]
+        }
+        struct Merge: Decodable {
+            var about: String
+            var measured: StreamSpecs
+            var provider: StreamSpecs?
+            var merged: StreamSpecs
+        }
+        struct Readings: Decodable {
+            struct Reading: Decodable {
+                var specs: StreamSpecs
+                var kept: Bool
+            }
+            var about: String
+            var readings: [Reading]
+            var finalSpecs: StreamSpecs?
+            enum CodingKeys: String, CodingKey {
+                case about, readings
+                case finalSpecs = "final"
+            }
+        }
+        struct AudioPick: Decodable {
+            var defaults: [Bool]
+            var channels: [Int?]
+            var index: Int
         }
         /// ["5.1(side)", 6]
         struct Layout: Decodable {
@@ -51,6 +77,9 @@ final class StreamSpecsTests: XCTestCase {
         var codecs: Codecs
         var badges: [Badge]
         var provider: [Provider]
+        var merge: [Merge]
+        var measured: [Readings]
+        var audioPick: [AudioPick]
     }
 
     private static var file: URL {
@@ -75,7 +104,7 @@ final class StreamSpecsTests: XCTestCase {
 
     func testSoundLabels() throws {
         for test in try table().audio {
-            let specs = StreamSpecs(audioCodec: test.codec, channels: test.channels, atmos: test.atmos)
+            let specs = StreamSpecs(audioCodec: test.codec, channels: test.channels, channelLayout: test.layout, atmos: test.atmos)
             XCTAssertEqual(specs.audioLabel, test.facts, "\(test)")
             XCTAssertEqual(specs.chipAudio, test.chip, "\(test)")
         }
@@ -86,6 +115,32 @@ final class StreamSpecsTests: XCTestCase {
         for pair in codecs.video { XCTAssertEqual(StreamSpecs.videoCodec(pair[0]), pair[1], "\(pair)") }
         for pair in codecs.audio { XCTAssertEqual(StreamSpecs.audioCodec(pair[0]), pair[1], "\(pair)") }
         for layout in codecs.layouts { XCTAssertEqual(StreamSpecs.channels(ofLayout: layout.raw), layout.channels, layout.raw) }
+        for pair in codecs.layoutNames { XCTAssertEqual(StreamSpecs.layout(of: pair[0]), pair[1], "\(pair)") }
+    }
+
+    /// What the player measured over the provider's: Atmos only ever added, a layout only where it agrees.
+    func testMeasuredOverTheProviders() throws {
+        for test in try table().merge {
+            XCTAssertEqual(test.measured.orElse(test.provider), test.merged, test.about)
+        }
+    }
+
+    /// One stream read in turn: the first reading stays, unless the picture grew.
+    func testReadingsOfOneStream() throws {
+        for test in try table().measured {
+            var store = MeasuredSpecs()
+            for reading in test.readings {
+                XCTAssertEqual(store.record("p|1", reading.specs), reading.kept, "\(test.about): \(reading.specs)")
+            }
+            XCTAssertEqual(store["p|1"], test.finalSpecs, test.about)
+        }
+    }
+
+    /// The sound the player measures: the default track, else the most channels; never the viewer's pick.
+    func testTheSoundMeasured() throws {
+        for test in try table().audioPick {
+            XCTAssertEqual(StreamSpecs.measuredAudio(defaults: test.defaults, channels: test.channels), test.index, "\(test.defaults) \(test.channels)")
+        }
     }
 
     /// The facts line's badges: specs where they know, the name's tags elsewhere, nothing invented.

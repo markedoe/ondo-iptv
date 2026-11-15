@@ -202,6 +202,19 @@ data class VersionChip(
     val members: List<String> = listOf(id),
 )
 
+/**
+ * The keys of a film's chips: each its first stream's id, which stays when another chip splits or relabels as what the
+ * versions are made of becomes known (focus and scroll stay on the same version); a stream a panel lists twice that ends
+ * on two chips gets its occurrence after it.
+ */
+fun versionKeys(versions: List<VersionChip>): List<String> {
+    val seen = HashMap<String, Int>()
+    return versions.map { chip ->
+        val n = seen.merge(chip.id, 1, Int::plus) ?: 1
+        if (n == 1) "version:${chip.id}" else "version:${chip.id}#$n"
+    }
+}
+
 /** What a screen reader says of a version's chip: "Version: 4K Dolby Vision", so the row reads as the film's versions. */
 @Composable
 fun versionDescription(chip: VersionChip): String = stringResource(R.string.version_chip_description, chip.label)
@@ -295,7 +308,8 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.testTag("versions"),
                     ) {
-                        itemsIndexed(state.versions, key = { index, chip -> "$index:${chip.id}" }) { _, chip ->
+                        val keys = versionKeys(state.versions)
+                        itemsIndexed(state.versions, key = { index, _ -> keys[index] }) { _, chip ->
                             val description = versionDescription(chip)
                             FilterChip(
                                 selected = selected in chip.members,

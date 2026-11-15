@@ -194,6 +194,8 @@ extension AppModel {
         guard let details = fetched, activePlaylist?.id == playlist.id else { return fetched ?? kept }
         movieDetailsCache[movie.id] = details
         movieDetailsFetchedAt[movie.id] = .now
+        // Asked by its own page (or Home): kept with the pages viewers opened; a version's loop marks it again.
+        versionFetchedIDs.remove(movie.id)
         detailsRevision += 1
         // A TMDb id in the details: the posters' scores follow the title page's keys.
         updatePosterScores()

@@ -114,6 +114,7 @@ import com.markedoe.ondo.ui.screens.isSeasonWatched
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailUiState
 import com.markedoe.ondo.ui.screens.VersionChip
+import com.markedoe.ondo.ui.screens.versionKeys
 import com.markedoe.ondo.ui.screens.WatchProgress
 import com.markedoe.ondo.ui.screens.durationText
 import com.markedoe.ondo.ui.screens.myListState
@@ -756,7 +757,9 @@ private fun LazyListScope.versionsShelf(versions: List<VersionChip>, selected: S
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.testTag("versions"),
             ) {
-                itemsIndexed(versions, key = { index, chip -> "version:$index:${chip.id}" }) { _, chip ->
+                // Keyed by each chip's first stream: a chip that splits as specs arrive moves none of the others.
+                val keys = versionKeys(versions)
+                itemsIndexed(versions, key = { index, _ -> keys[index] }) { _, chip ->
                     val description = versionDescription(chip)
                     TvChip(
                         text = chip.label,

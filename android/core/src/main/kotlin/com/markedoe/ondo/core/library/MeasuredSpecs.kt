@@ -32,22 +32,28 @@ class MeasuredSpecs(val capacity: Int = CAPACITY, entries: List<Entry> = emptyLi
     fun size(): Int = map.size
 
     /**
-     * Keeps what the player measured of [key]'s stream: false (nothing to save) when it is what was kept already, or
-     * nothing is known. A field the player did not read this time keeps what it read before ([StreamSpecs.orElse]).
+     * Keeps what the player measured of [key]'s stream: false (nothing to save) when nothing is known, or a reading is kept
+     * already and this one's picture is no larger (the tracks change as an adaptive stream climbs, or the viewer picks
+     * another sound: the first reading stays). A field the player did not read this time keeps what it read before
+     * ([StreamSpecs.orElse]).
      */
     @Synchronized
     fun record(key: String, specs: StreamSpecs): Boolean {
         if (specs.isEmpty) return false
-        val measured = specs.copy(source = SpecSource.MEASURED).orElse(map[key])
-        if (map[key] == measured) {
+        val old = map[key]
+        val measured = specs.copy(source = SpecSource.MEASURED).orElse(old)
+        if (old != null && (area(specs) <= area(old) || old == measured)) {
             // Played again: kept a while longer.
             map.remove(key)
-            map[key] = measured
+            map[key] = old
             return false
         }
         put(key, measured)
         return true
     }
+
+    /** A picture's size, its height alone (or width) when only one is known. */
+    private fun area(specs: StreamSpecs): Long = (specs.width ?: specs.height ?: 0).toLong() * (specs.height ?: specs.width ?: 0)
 
     private fun put(key: String, specs: StreamSpecs) {
         map.remove(key)

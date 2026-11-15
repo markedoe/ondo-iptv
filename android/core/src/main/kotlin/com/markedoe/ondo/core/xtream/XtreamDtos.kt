@@ -226,8 +226,8 @@ internal data class XtreamInfoDto(
         }
 
         /**
-         * A block of ffprobe's answer (`info.video`, `info.audio`): its scalar fields by name in lower case, and every
-         * scalar value in it, nested ones too ([StreamSpecs.ProbeBlock]). Null for anything but an object (`[]`, `""`).
+         * A block of ffprobe's answer (`info.video`, `info.audio`): its scalar fields by name in lower case, and the types
+         * of its `side_data_list` ([StreamSpecs.ProbeBlock]). Null for anything but an object (`[]`, `""`).
          */
         internal fun probeBlock(json: JsonElement?): StreamSpecs.ProbeBlock? {
             val o = json as? JsonObject ?: return null
@@ -235,18 +235,10 @@ internal data class XtreamInfoDto(
             for ((key, value) in o) {
                 if (value is JsonPrimitive && value !is JsonNull) value.lenientString()?.let { fields[key.lowercase()] = it }
             }
-            val text = StringBuilder()
-            fun collect(element: JsonElement, depth: Int) {
-                if (depth > 8) return
-                when (element) {
-                    is JsonObject -> element.values.forEach { collect(it, depth + 1) }
-                    is JsonArray -> element.forEach { collect(it, depth + 1) }
-                    is JsonNull -> Unit
-                    is JsonPrimitive -> text.append(element.content.lowercase()).append(' ')
-                }
+            val sideData = (o["side_data_list"] as? JsonArray).orEmpty().mapNotNull { entry ->
+                (entry as? JsonObject)?.get("side_data_type").lenientString()?.lowercase()
             }
-            collect(o, 0)
-            return StreamSpecs.ProbeBlock(fields, text.toString().trim())
+            return StreamSpecs.ProbeBlock(fields, sideData)
         }
     }
 }

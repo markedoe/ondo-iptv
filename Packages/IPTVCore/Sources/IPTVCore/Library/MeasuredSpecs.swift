@@ -42,21 +42,29 @@ public struct MeasuredSpecs: Sendable, Equatable {
     /// Every stream's key, oldest first.
     public var keys: [String] { order }
 
-    /// Keeps what the player measured of `key`'s stream: false (nothing to save) when it is what was kept already, or
-    /// nothing is known. A field the player did not read this time keeps what it read before (`StreamSpecs.orElse`).
+    /// Keeps what the player measured of `key`'s stream: false (nothing to save) when nothing is known, or a reading is
+    /// kept already and this one's picture is no larger (the tracks change as an adaptive stream climbs, or the viewer
+    /// picks another sound: the first reading stays). A field the player did not read this time keeps what it read before
+    /// (`StreamSpecs.orElse`).
     @discardableResult
     public mutating func record(_ key: String, _ measured: StreamSpecs) -> Bool {
         guard !measured.isEmpty else { return false }
         var reading = measured
         reading.source = .measured
-        let merged = reading.orElse(specs[key])
-        if specs[key] == merged {
+        let old = specs[key]
+        let merged = reading.orElse(old)
+        if let old, Self.area(measured) <= Self.area(old) || old == merged {
             // Played again: kept a while longer.
-            put(key, merged)
+            put(key, old)
             return false
         }
         put(key, merged)
         return true
+    }
+
+    /// A picture's size, its height alone (or width) when only one is known.
+    private static func area(_ specs: StreamSpecs) -> Int {
+        (specs.width ?? specs.height ?? 0) * (specs.height ?? specs.width ?? 0)
     }
 
     private mutating func put(_ key: String, _ value: StreamSpecs) {

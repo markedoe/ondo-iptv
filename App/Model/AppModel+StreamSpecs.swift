@@ -31,16 +31,31 @@ extension AppModel {
     /// VoiceOver says of them: its specs where known, the tags of its name (as its chip reads them, among `versions`)
     /// elsewhere.
     func specBadges(for version: Movie, among versions: [Movie]) -> (badges: [String], description: String) {
-        let names = categoryNames
-        let tags: [VersionTag]
-        if versions.count > 1, let index = versions.firstIndex(where: { $0.id == version.id }) {
-            tags = FilmVersions.labelTags(versions, categoryName: { names[$0] })[index]
-        } else {
-            tags = FilmVersions.labelTags(name: version.name, categoryName: names[version.categoryID])
-        }
+        let tags = nameTags(of: version, among: versions)
         let specs = streamSpecs(for: version.id)
         _ = detailsRevision  // redraw the page when details arrive
         return (StreamSpecs.badges(specs, nameTags: tags), StreamSpecs.description(specs, nameTags: tags, words: Self.specWords))
+    }
+
+    /// The tags of `version`'s name as its chip reads them among `versions`: worked out once per film and catalogue
+    /// (`versionTagsCache`, emptied with the chips'), not on each pass of a page's body.
+    private func nameTags(of version: Movie, among versions: [Movie]) -> [VersionTag] {
+        let key = versions.count > 1 ? versions.map(\.id).joined(separator: "\u{1F}") : version.id
+        let tags: [String: [VersionTag]]
+        if let known = versionTagsCache[key] {
+            tags = known
+        } else {
+            let names = categoryNames
+            if versions.count > 1 {
+                let all = FilmVersions.labelTags(versions, categoryName: { names[$0] })
+                tags = Dictionary(zip(versions.map(\.id), all), uniquingKeysWith: { first, _ in first })
+            } else {
+                tags = [version.id: FilmVersions.labelTags(name: version.name, categoryName: names[version.categoryID])]
+            }
+            versionTagsCache[key] = tags
+        }
+        let names = categoryNames
+        return tags[version.id] ?? FilmVersions.labelTags(name: version.name, categoryName: names[version.categoryID])
     }
 
     /// The words VoiceOver says of a version's sound, in the app's language, read once.
@@ -65,10 +80,11 @@ extension AppModel {
         await measuredSpecsLoad?.value
     }
 
-    /// The player read `specs` of film `movieID`'s stream in the open playlist: kept (the films played last) and written on
-    /// the device when they changed, off the main thread.
-    func recordMeasuredSpecs(_ specs: StreamSpecs, movieID: String) {
-        guard let key = measuredKey(movieID), !specs.isEmpty else { return }
+    /// The player read `specs` of film `movieID`'s stream in playlist `playlistID` (the one it plays from, whichever is
+    /// open): kept (the films played last) and written on the device when they changed, off the main thread.
+    func recordMeasuredSpecs(_ specs: StreamSpecs, movieID: String, playlistID: UUID) {
+        let key = MeasuredSpecs.key(playlistID: playlistID.uuidString, streamID: movieID)
+        guard !specs.isEmpty else { return }
         Task {
             await loadMeasuredSpecs()
             var kept = measuredSpecs
@@ -86,21 +102,45 @@ extension AppModel {
         }
     }
 
+    /// Other versions a film's page asks at most each time it opens (`loadVersionDetails`), and the wait between two.
+    static let versionsPerPage = 6
+    static let versionGap: Duration = .milliseconds(400)
+
+    /// The player (or the multiview) is on top of the pages: nothing is asked for them meanwhile.
+    var isPlayerOnTop: Bool { playbackRequest != nil || isMultiviewPresented }
+
     /// A film's page is open and idle: the details of its other `versions` not known yet, for what their streams are made
-    /// of, one at a time, in the caller's task (the page's), so cancelled when it closes. Never while browsing. A version
-    /// already asked (its details kept, specs or not) is not asked again. Returns how many were asked.
+    /// of: at most `limit`, `gap` apart, in the caller's task (the page's), so cancelled when it closes. Never while
+    /// browsing; while the player is on top it waits, and goes on once the page is back. A version already asked (its
+    /// details kept, specs or not) is not asked again; the first failure stops the round, and that version is not asked
+    /// again this session. Kept apart from the pages viewers opened (`DetailsArchive.versions`). Returns how many were asked.
     @discardableResult
-    func loadVersionDetails(_ versions: [Movie]) async -> Int {
+    func loadVersionDetails(_ versions: [Movie], gap: Duration = versionGap, limit: Int = versionsPerPage) async -> Int {
         await storedDetailsLoaded()
         var asked = 0
         for version in versions {
+            guard !Task.isCancelled, asked < limit else { break }
+            guard movieDetailsCache[version.id] == nil, !failedVersionIDs.contains(version.id), version.xtreamStreamID != nil else { continue }
+            await waitWhilePlayerOnTop()
+            if asked > 0 { try? await Task.sleep(for: gap) }
+            // A stream started meanwhile: nothing is asked while it starts.
+            await waitWhilePlayerOnTop()
             guard !Task.isCancelled else { break }
-            guard movieDetailsCache[version.id] == nil, version.xtreamStreamID != nil else { continue }
+            guard movieDetailsCache[version.id] == nil else { continue }
             _ = await details(for: version)
             asked += 1
+            guard movieDetailsCache[version.id] != nil else {
+                failedVersionIDs.insert(version.id)
+                break
+            }
+            versionFetchedIDs.insert(version.id)
         }
         if asked > 0 { versionChoicesCache = [:] }
         return asked
+    }
+
+    private func waitWhilePlayerOnTop() async {
+        while isPlayerOnTop, !Task.isCancelled { try? await Task.sleep(for: .milliseconds(500)) }
     }
 }
 

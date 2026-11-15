@@ -33,21 +33,27 @@ extension PlayerController {
                 }
             }
         }
-        // An HLS stream lists no tracks: the size the item shows.
-        if specs.width == nil, specs.height == nil {
-            let size = playerItem.presentationSize
-            if size.width > 0 { specs.width = Int(size.width) }
-            if size.height > 0 { specs.height = Int(size.height) }
-        }
-        if let audio = try? await asset.loadTracks(withMediaType: .audio).first,
-           let descriptions = try? await audio.load(.formatDescriptions),
-           let description = descriptions.first {
-            specs.audioCodec = StreamSpecs.audioCodec(Self.fourCC(CMFormatDescriptionGetMediaSubType(description)))
+        // An HLS stream lists no tracks: its picture stays unknown here (the provider's or the name's say it), never the
+        // size the item happens to show.
+        // The stream's own sound: its default (enabled) track, else the one of the most channels, never the viewer's
+        // choice of the moment. AVFoundation names no Atmos: the provider's stays.
+        var sounds: [(codec: String?, channels: Int?, isDefault: Bool)] = []
+        for audio in (try? await asset.loadTracks(withMediaType: .audio)) ?? [] {
+            guard let loaded = try? await audio.load(.formatDescriptions, .isEnabled), let description = loaded.0.first else { continue }
+            let enabled = loaded.1
+            var channels: Int?
             if let basic = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee, basic.mChannelsPerFrame > 0 {
-                specs.channels = Int(basic.mChannelsPerFrame)
+                channels = Int(basic.mChannelsPerFrame)
             }
+            sounds.append((StreamSpecs.audioCodec(Self.fourCC(CMFormatDescriptionGetMediaSubType(description))), channels, enabled))
+        }
+        let chosen = StreamSpecs.measuredAudio(defaults: sounds.map(\.isDefault), channels: sounds.map(\.channels))
+        if sounds.indices.contains(chosen) {
+            specs.audioCodec = sounds[chosen].codec
+            specs.channels = sounds[chosen].channels
         }
         guard playerItem == player.currentItem, !specs.isEmpty else { return }
+        // Read once per stream: the item is ready once; another sound picked later does not read it again.
         onSpecs?(item, specs)
     }
 

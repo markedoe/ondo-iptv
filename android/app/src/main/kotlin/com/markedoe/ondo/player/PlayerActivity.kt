@@ -1136,8 +1136,19 @@ class PlayerActivity : ComponentActivity() {
         val parts = request.progressKey?.split('|') ?: return
         if (parts.size != 4 || parts[1] != ItemKind.MOVIE.name) return
         val specs = MeasuredTracks.specs(tracks) ?: return
-        repository.recordMeasuredSpecs(parts[2], specs)
+        // Once read, a stream is read again only when its picture grew (an adaptive stream climbing), not on every change
+        // of its tracks (the viewer picking another sound or subtitles).
+        val key = request.progressKey
+        val area = (specs.width ?: 0).toLong() * (specs.height ?: 0)
+        if (key == recordedKey && area <= recordedArea) return
+        recordedKey = key
+        recordedArea = area
+        repository.recordMeasuredSpecs(parts[0], parts[2], specs)
     }
+
+    /** The stream whose specs were recorded last, and its picture's size then ([recordSpecs]). */
+    private var recordedKey: String? = null
+    private var recordedArea = 0L
 
     /** The channel [by] places after (or before) this one in Live TV. */
     private fun zap(by: Int) {

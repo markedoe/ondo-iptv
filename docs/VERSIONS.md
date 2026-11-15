@@ -118,15 +118,24 @@ same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three so
 
 1. **What the player measured** while the stream played: the picture's size, range (HDR10, HLG, Dolby Vision, or SDR)
    and codec, the sound's codec, channels and Atmos (E-AC-3 JOC), from Media3's tracks on Android and AVFoundation's
-   format descriptions on Apple (an adaptive stream's highest rendition). Kept on the device for the 2,000 films played
-   last, by playlist and stream (`MeasuredSpecs`, `measured-specs.json`), read the first time a film's page or the
-   player needs it, never at launch. A measured SDR picture is no HDR picture, whatever its name says.
+   format descriptions on Apple (an adaptive stream's highest rendition; on Apple an HLS stream lists no tracks, so its
+   picture is left to the provider or the name). The sound is the stream's default track, else the one of the most
+   channels, never the viewer's choice of the moment; a stream once read is read again only when its picture grew.
+   Kept on the device for the 2,000 films played last, by the playlist the film plays from and its stream
+   (`MeasuredSpecs`, `measured-specs.json`), read the first time a film's page or the player needs it, never at launch.
+   A measured SDR picture is no HDR picture, whatever its name says; a measurement never takes the provider's Atmos
+   away (AVFoundation names none, Media3 none on TrueHD).
 2. **The provider's details** (`get_vod_info`'s `info.video`, `info.audio` and `info.bitrate`, what the panel's ffprobe
-   read), kept with the details. A field missing, empty, zero or unknown stays unknown; Dolby Vision from its
-   configuration record, HDR10+ only from SMPTE ST 2094 metadata, HDR10 and HLG from `color_transfer` (never from a
-   10-bit profile alone). The film's page already asks for its own version's details; once it is open and idle a
-   moment, it asks for its other versions' details, one at a time, cancelled when it closes. Browsing (rows, headers,
-   search) asks for none of them.
+   read), kept with the details. A field missing, empty, zero or unknown stays unknown. Only the fields that say it are
+   read, never free text such as a stream's title: Dolby Vision from `codec_tag_string`, the video's `profile` or a
+   configuration record in `side_data_list`, HDR10+ only from SMPTE ST 2094 metadata there, HDR10 and HLG from
+   `color_transfer` (never from a 10-bit profile alone), Atmos from the sound's `profile`, its layout from
+   `channel_layout` ("5.1(side)" is 5.1, "4.1" and "3.0" stay as they are; the count of channels only without one).
+   The film's page already asks for its own version's details; once it is open and idle a moment, it asks for its
+   other versions' details: six at most each time it opens, 400 ms apart, cancelled when it closes, stopped at the
+   first refusal (that version is not asked again until the app restarts), and never while the player is on top (the
+   page goes on once it is back). They are kept apart from the pages viewers opened (`DetailsArchive.versions`, 300 at
+   most), so they never push those out. Browsing (rows, headers, search) asks for none of them.
 3. **The tags of the name** ("4K", "DV", "HEVC"), as before.
 
 - **Resolution classes**: 4K, 1080p, 720p or SD, from the height or the width, whichever reaches a class: a film in
@@ -138,7 +147,8 @@ same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three so
   its name's tags elsewhere; "Standard" only for a version nothing is known of. Two versions the rules above make one
   chip stay apart when their known specs differ; one whose specs are unknown stays with the first. Chips that would read
   the same are set apart by their video codec, then their sound's codec, then as before. Without specs, the chips are
-  those of before (`fixtures/film-versions/labels.json`).
+  those of before (`fixtures/film-versions/labels.json`). Each chip is known by its first version's id, so a chip that
+  splits as specs arrive moves no other one, and the focus stays on the version the remote was on.
 - **The title data** lists each version's specs and where they come from (measured by the player, from the provider,
   from the name).
 - Details kept before this change have no specs until they are asked again (once they are old, `DetailsArchive`), or

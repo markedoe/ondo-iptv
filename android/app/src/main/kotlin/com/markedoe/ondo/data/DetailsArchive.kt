@@ -13,13 +13,18 @@ import kotlinx.serialization.Serializable
 data class DetailsArchive(
     val movies: Map<String, Entry<MediaDetails>> = emptyMap(),
     val series: Map<String, Entry<SeriesDetails>> = emptyMap(),
+    /**
+     * The details a film's page asked for its other versions, for what their streams are made of: kept apart, at most
+     * [VERSION_LIMIT], so that they never push the pages viewers opened out of [movies].
+     */
+    val versions: Map<String, Entry<MediaDetails>> = emptyMap(),
 ) {
     @Serializable
     data class Entry<T>(val value: T, val fetchedAt: Long)
 
-    /** At most [movieLimit] movies and [seriesLimit] series: the most recently fetched. */
-    fun trimmed(movieLimit: Int = MOVIE_LIMIT, seriesLimit: Int = SERIES_LIMIT) =
-        DetailsArchive(newest(movies, movieLimit), newest(series, seriesLimit))
+    /** At most [movieLimit] movies, [seriesLimit] series and [versionLimit] versions: the most recently fetched. */
+    fun trimmed(movieLimit: Int = MOVIE_LIMIT, seriesLimit: Int = SERIES_LIMIT, versionLimit: Int = VERSION_LIMIT) =
+        DetailsArchive(newest(movies, movieLimit), newest(series, seriesLimit), newest(versions, versionLimit))
 
     companion object {
         /** A movie's page hardly changes; a series gains episodes. */
@@ -29,6 +34,9 @@ data class DetailsArchive(
         /** The most recently fetched are kept: a series with all its episodes takes far more room than a movie. */
         const val MOVIE_LIMIT = 1_000
         const val SERIES_LIMIT = 300
+
+        /** Other versions' details asked by films' pages ([versions]). */
+        const val VERSION_LIMIT = 300
 
         /** Fetched less than [maxAge] ago. A date in the future (the clock was changed) is not trusted. */
         fun isFresh(fetchedAt: Long?, maxAge: Long, now: Long): Boolean {

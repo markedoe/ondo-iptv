@@ -208,6 +208,12 @@ final class AppModel {
     var measuredSpecs = MeasuredSpecs()
     @ObservationIgnored var measuredSpecsLoad: Task<Void, Never>?
     @ObservationIgnored var measuredSpecsWrite: Task<Void, Never>?
+    /// The movies whose details a film's page asked as another version (AppModel+StreamSpecs): kept apart on disk.
+    @ObservationIgnored var versionFetchedIDs: Set<String> = []
+    /// The versions whose details the provider refused or could not give this session: not asked again until a restart.
+    @ObservationIgnored var failedVersionIDs: Set<String> = []
+    /// The tags of the films' versions' names by their ids, worked out once per catalogue (AppModel+StreamSpecs).
+    @ObservationIgnored var versionTagsCache: [String: [String: [VersionTag]]] = [:]
     /// TMDb backdrops and dead provider backdrops (AppModel+Backdrops).
     let backdrops = BackdropStore()
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]
@@ -711,6 +717,7 @@ final class AppModel {
         index = ContentIndex()
         posterScores = [:]
         versionChoicesCache = [:]
+        versionTagsCache = [:]
         peopleIndex = PeopleIndex()
         categoryTags = CategoryTagIndex()
         movieAwards = [:]
@@ -772,6 +779,7 @@ final class AppModel {
                 index = ContentIndex()
                 posterScores = [:]
                 versionChoicesCache = [:]
+                versionTagsCache = [:]
                 peopleIndex = PeopleIndex()
                 categoryTags = CategoryTagIndex()
                 movieAwards = [:]
@@ -856,6 +864,7 @@ final class AppModel {
         content = edited
         index = built
         versionChoicesCache = [:]
+        versionTagsCache = [:]
         categoryTags = tags
         // The posters' TMDb scores, from what the device kept, at once.
         updatePosterScores(now: true)

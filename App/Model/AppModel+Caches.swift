@@ -42,6 +42,8 @@ extension AppModel {
         seriesDetailsCache = [:]
         movieDetailsFetchedAt = [:]
         seriesDetailsFetchedAt = [:]
+        versionFetchedIDs = []
+        failedVersionIDs = []
     }
 
     /// Reads the playlist's document in the background when it opens. `details(for:)` waits for it, so Home's
@@ -60,6 +62,11 @@ extension AppModel {
             for (id, entry) in archive.movies where movieDetailsCache[id] == nil {
                 movieDetailsCache[id] = entry.value
                 movieDetailsFetchedAt[id] = entry.fetchedAt
+            }
+            for (id, entry) in archive.versions where movieDetailsCache[id] == nil {
+                movieDetailsCache[id] = entry.value
+                movieDetailsFetchedAt[id] = entry.fetchedAt
+                versionFetchedIDs.insert(id)
             }
             for (id, entry) in archive.series where seriesDetailsCache[id] == nil {
                 seriesDetailsCache[id] = entry.value
@@ -104,7 +111,12 @@ extension AppModel {
         guard let playlistID = detailsPlaylistID, playlists.contains(where: { $0.id == playlistID }) else { return }
         var archive = DetailsArchive()
         for (id, date) in movieDetailsFetchedAt {
-            if let details = movieDetailsCache[id] { archive.movies[id] = .init(value: details, fetchedAt: date) }
+            guard let details = movieDetailsCache[id] else { continue }
+            if versionFetchedIDs.contains(id) {
+                archive.versions[id] = .init(value: details, fetchedAt: date)
+            } else {
+                archive.movies[id] = .init(value: details, fetchedAt: date)
+            }
         }
         for (id, date) in seriesDetailsFetchedAt {
             if let details = seriesDetailsCache[id] { archive.series[id] = .init(value: details, fetchedAt: date) }

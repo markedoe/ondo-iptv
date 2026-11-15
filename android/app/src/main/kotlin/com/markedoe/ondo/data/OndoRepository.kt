@@ -1801,36 +1801,62 @@ class OndoRepository(
         storedDetailsJob?.join()
         val kept = _state.value.movieDetails[movie.id]
         if (kept != null && DetailsArchive.isFresh(movieFetchedAt[movie.id], DetailsArchive.MOVIE_MAX_AGE_MS, now())) return kept
-        val playlist = _state.value.activePlaylist ?: return kept
-        val streamId = movie.xtreamStreamId ?: return kept
-        val credentials = playlist.credentials() ?: return kept
+        return fetchDetails(movie, asVersion = false)?.getOrNull() ?: kept
+    }
+
+    /**
+     * The provider's details of [movie], kept in [OndoState.movieDetails]: with the pages viewers opened, or, [asVersion]
+     * (another version asked by a film's page), apart from them ([DetailsArchive.versions]). Null when there is nothing to
+     * ask (no provider's server, no stream id); a failure when the provider refused or could not be reached.
+     */
+    private suspend fun fetchDetails(movie: Movie, asVersion: Boolean): Result<MediaDetails>? {
+        val playlist = _state.value.activePlaylist ?: return null
+        val streamId = movie.xtreamStreamId ?: return null
+        val credentials = playlist.credentials() ?: return null
         movieDetailRequests.incrementAndGet()
         // A cancelled call stays one: the caller (a page closed, the remote moved on) does not go on as if it had failed.
-        val details = loadCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }.getOrNull() ?: return kept
+        val result = loadCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }
+        val details = result.getOrNull() ?: return result
         // Another playlist opened meanwhile: these details are not its own.
-        if (_state.value.activePlaylistId != playlist.id) return details
+        if (_state.value.activePlaylistId != playlist.id) return result
         movieFetchedAt[movie.id] = now()
+        if (asVersion) versionFetchedIds += movie.id else versionFetchedIds -= movie.id
         _state.update { it.copy(movieDetails = it.movieDetails + (movie.id to details)) }
         scheduleDetailsSave()
-        return details
+        return result
     }
+
+    /** The movies whose details a film's page asked as another version ([versionDetails]): kept apart on disk. */
+    private val versionFetchedIds = mutableSetOf<String>()
+
+    /** The versions whose details the provider refused or could not give this session: not asked again until a restart. */
+    private val failedVersionIds = mutableSetOf<String>()
 
     /** The provider's details asked for movies since the app started (a film's page, a TV's header, its versions): for tests. */
     val movieDetailRequests = java.util.concurrent.atomic.AtomicInteger()
 
     /**
      * The details of a film's other [versions] whose details are not known yet, for what their streams are made of
-     * (`get_vod_info`'s `video` and `audio`): one at a time, in the caller's coroutine (a film's page, open and idle),
-     * cancelled with it; never while browsing. A version already asked (its details kept, specs or not) is not asked
-     * again. Returns how many were asked.
+     * (`get_vod_info`'s `video` and `audio`): at most [limit], [gapMs] apart, in the caller's coroutine (a film's page,
+     * open and idle), cancelled with it; never while browsing, nor while the player is on top ([isPlaying]: the page asks
+     * again when it is back). A version already asked (its details kept, specs or not) is not asked again; the first
+     * failure stops the round, and that version is not asked again this session. Returns how many were asked.
      */
-    suspend fun versionDetails(versions: List<Movie>): Int {
+    suspend fun versionDetails(versions: List<Movie>, gapMs: Long = VERSION_GAP_MS, limit: Int = VERSIONS_PER_PAGE): Int {
         storedDetailsJob?.join()
         var asked = 0
         for (version in versions) {
-            if (version.id in _state.value.movieDetails || version.xtreamStreamId == null) continue
-            details(version)
+            if (asked >= limit || inPlayback) break
+            if (version.id in _state.value.movieDetails || version.id in failedVersionIds || version.xtreamStreamId == null) continue
+            if (asked > 0) delay(gapMs)
+            // A stream started meanwhile: nothing is asked while it starts.
+            if (inPlayback) break
+            val result = fetchDetails(version, asVersion = true) ?: continue
             asked++
+            if (result.isFailure) {
+                failedVersionIds += version.id
+                break
+            }
         }
         return asked
     }
@@ -1852,11 +1878,11 @@ class OndoRepository(
     }.also { measuredJob = it }
 
     /**
-     * The player read [specs] of the stream of [movieId] in the active playlist: kept (the [MeasuredSpecs.CAPACITY]
-     * films played last) and written on the device when they changed, off the main thread.
+     * The player read [specs] of the stream of [movieId] in playlist [playlistId] (the one it plays from, whichever is
+     * open): kept (the [MeasuredSpecs.CAPACITY] films played last) and written on the device when they changed, off the
+     * main thread.
      */
-    fun recordMeasuredSpecs(movieId: String, specs: StreamSpecs) {
-        val playlistId = _state.value.activePlaylistId ?: return
+    fun recordMeasuredSpecs(playlistId: String, movieId: String, specs: StreamSpecs) {
         if (specs.isEmpty) return
         scope.launch {
             loadMeasuredSpecs().join()
@@ -1917,6 +1943,8 @@ class OndoRepository(
         detailsPlaylistId = playlistId
         movieFetchedAt.clear()
         seriesFetchedAt.clear()
+        versionFetchedIds.clear()
+        failedVersionIds.clear()
     }
 
     /**
@@ -1936,10 +1964,16 @@ class OndoRepository(
             // A title fetched while the document was read has the newer details.
             val current = _state.value
             archive.movies.forEach { (id, entry) -> if (id !in current.movieDetails) movieFetchedAt[id] = entry.fetchedAt }
+            archive.versions.forEach { (id, entry) ->
+                if (id !in current.movieDetails && id !in archive.movies) {
+                    movieFetchedAt[id] = entry.fetchedAt
+                    versionFetchedIds += id
+                }
+            }
             archive.series.forEach { (id, entry) -> if (id !in current.seriesDetails) seriesFetchedAt[id] = entry.fetchedAt }
             _state.update { state ->
                 state.copy(
-                    movieDetails = archive.movies.mapValues { it.value.value } + state.movieDetails,
+                    movieDetails = archive.versions.mapValues { it.value.value } + archive.movies.mapValues { it.value.value } + state.movieDetails,
                     seriesDetails = archive.series.mapValues { it.value.value } + state.seriesDetails,
                 )
             }
@@ -1965,7 +1999,8 @@ class OndoRepository(
         // The playlist was deleted meanwhile: its details go with it.
         if (state.playlists.none { it.id == playlistId }) return
         val archive = DetailsArchive(
-            movies = movieFetchedAt.mapNotNull { (id, at) -> state.movieDetails[id]?.let { id to DetailsArchive.Entry(it, at) } }.toMap(),
+            movies = movieFetchedAt.filterKeys { it !in versionFetchedIds }.mapNotNull { (id, at) -> state.movieDetails[id]?.let { id to DetailsArchive.Entry(it, at) } }.toMap(),
+            versions = movieFetchedAt.filterKeys { it in versionFetchedIds }.mapNotNull { (id, at) -> state.movieDetails[id]?.let { id to DetailsArchive.Entry(it, at) } }.toMap(),
             series = seriesFetchedAt.mapNotNull { (id, at) -> state.seriesDetails[id]?.let { id to DetailsArchive.Entry(it, at) } }.toMap(),
         )
         persist { saveDetails(playlistId, archive.trimmed()) }
@@ -2600,6 +2635,10 @@ class OndoRepository(
         /** TMDb's trending titles are asked for again after this (as on Apple devices). */
         const val TRENDING_FRESH_MS = 6 * 60 * 60 * 1000L
         private const val DETAILS_SAVE_DELAY_MS = 2_000L
+
+        /** Other versions a film's page asks at most each time it opens ([versionDetails]), and the wait between two. */
+        const val VERSIONS_PER_PAGE = 6
+        const val VERSION_GAP_MS = 400L
 
         /** Titles asked of TMDb ahead of the viewer at the same time, and the pause after each (as on Apple devices). */
         private const val MAX_PREFETCHING = 2

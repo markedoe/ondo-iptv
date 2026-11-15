@@ -12,40 +12,40 @@ import com.markedoe.ondo.core.model.StreamSpecs
 /**
  * What the player reads of a film's stream from its tracks (`MeasuredSpecs`, docs/VERSIONS.md): the picture's size, range
  * and codec, the sound's codec, channels and Atmos. Only what Media3 says: a range it does not give stays unknown, and a
- * 10-bit profile alone is no HDR.
+ * 10-bit profile alone is no HDR; Atmos only when Media3 names it (E-AC-3 JOC), the provider's kept otherwise.
  */
 @OptIn(UnstableApi::class)
 internal object MeasuredTracks {
     /**
      * The specs of [tracks]: the best picture of the selected video group (an adaptive stream's highest rendition, not
-     * the one playing now), the selected sound; null when nothing is known yet.
+     * the one playing now), and the stream's own sound: its default track, else the one of the most channels
+     * ([StreamSpecs.measuredAudio]), never the viewer's choice of the moment; null when nothing is known yet.
      */
     fun specs(tracks: Tracks): StreamSpecs? {
         var video: Format? = null
-        var audio: Format? = null
+        val sounds = ArrayList<Format>()
         for (group in tracks.groups) {
-            if (!group.isSelected) continue
-            when (group.type) {
-                C.TRACK_TYPE_VIDEO -> {
-                    for (i in 0 until group.length) {
-                        if (!group.isTrackSupported(i)) continue
-                        val format = group.getTrackFormat(i)
-                        val best = video
-                        if (best == null || pixels(format) > pixels(best)) video = format
-                    }
+            if (group.type == C.TRACK_TYPE_AUDIO) {
+                for (i in 0 until group.length) {
+                    if (group.isTrackSupported(i)) sounds.add(group.getTrackFormat(i))
                 }
-                C.TRACK_TYPE_AUDIO -> if (audio == null) {
-                    for (i in 0 until group.length) {
-                        if (group.isTrackSelected(i)) {
-                            audio = group.getTrackFormat(i)
-                            break
-                        }
-                    }
+            } else if (group.type == C.TRACK_TYPE_VIDEO && group.isSelected) {
+                for (i in 0 until group.length) {
+                    if (!group.isTrackSupported(i)) continue
+                    val format = group.getTrackFormat(i)
+                    val best = video
+                    if (best == null || pixels(format) > pixels(best)) video = format
                 }
             }
         }
-        return of(video, audio)
+        return of(video, sounds.getOrNull(audioIndex(sounds)))
     }
+
+    /** The sound a stream offers first ([StreamSpecs.measuredAudio]) among [sounds]. */
+    fun audioIndex(sounds: List<Format>): Int = StreamSpecs.measuredAudio(
+        sounds.map { (it.selectionFlags and C.SELECTION_FLAG_DEFAULT) != 0 },
+        sounds.map { format -> format.channelCount.takeIf { it > 0 } },
+    )
 
     private fun pixels(format: Format): Long = maxOf(format.width, 0).toLong() * maxOf(format.height, 0)
 
