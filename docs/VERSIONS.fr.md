@@ -52,7 +52,7 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   Accueil, Ma liste, Titres similaires) : chaque film une fois. Dans une catégorie, la première de ses versions dans
   cette catégorie le représente : un film est donc dans chaque catégorie où se trouve l'une de ses versions.
 - **La fiche d'un film** : ses versions en pastilles (qu'atteint la télécommande sur une TV). Chaque pastille dit en
-  toutes lettres, dans la langue de l'app, ce qui distingue sa version des autres (`FilmVersions.labels`, les mêmes
+  toutes lettres, dans la langue de l'app, ce qui distingue sa version des autres (`FilmVersions.choices`, les mêmes
   règles et la même table dans les deux apps : `fixtures/film-versions/labels.json`). Les tags sont lus dans le nom du
   flux et dans celui de sa catégorie :
   - qualité : 4K (4K, UHD, 2160p), Full HD (FHD, 1080p), HD (HD, 720p), SD (SD, 480p, 576p) ;
@@ -71,24 +71,39 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   « The English Orchard MULTI » se lisent « Standard » et « Multilingue ». Une espace insécable sépare les mots comme une
   espace.
 
+  **Des versions qui lisent la même chose sont une seule pastille.** Un panel range souvent un même flux dans deux
+  catégories (« |FR| AJOUTÉS » et « |FR| DRAME | THRILLER »), parfois avec une autre casse. Des versions aux mêmes
+  tags de pastille (qualité, HDR ou Dolby Vision, 3D, IMAX, codec, langue, sous-titres), au même conteneur et au même nom
+  une fois normalisé (casse, accents, apostrophes, ponctuation, préfixe du fournisseur comme « |FR| » et année omis :
+  `FilmVersions.nameKey`) forment une pastille, nommée comme une seule version : « |FR| Copper Vallée », « |FR| COPPER
+  VALLÉE » et « |FR| Copper Vallée 4K DV » se lisent « Standard » et « 4K Dolby Vision ». La pastille lit son flux
+  préféré, selon les règles de la version montrée d'abord (plus bas) : celui en cours, sinon le dernier choisi, sinon le
+  premier dans l'ordre du catalogue. Ses autres flux sont ses secours : quand le préféré ne démarre pas, le lecteur les
+  essaie tour à tour (les adresses suivantes de la demande de lecture) avant d'afficher une erreur. La progression reste
+  celle du flux lancé : une version en cours reprend là où elle en était.
+
   Une pastille ne nomme que ce qui diffère entre les versions, dans cet ordre (« 4K Dolby Vision », « HD · VO,
   sous-titres français ») : un tag que toutes les versions ont est omis. Deux versions qui se liraient pareil ajoutent
   les mots de leur nom que les autres n'ont pas (« Extended Cut ») ; une version sans aucun tag, à côté de versions qui
-  en ont, s'appelle « Standard ». Des pastilles encore identiques ajoutent, dans cet ordre, les mots du nom de leur
-  catégorie que les autres n'ont pas (« Standard · Recently added »), leur conteneur (« Standard · MKV »,
-  « Standard · MP4 »), puis les mots du fournisseur que les pastilles ne savent pas nommer, tels que le nom les écrit
-  (« DUB »). Des pastilles encore identiques sont numérotées (« 4K 1 », « 4K 2 » ; « Version 1 », « Version 2 » quand
-  rien ne les distingue : une année seule ou la ponctuation ne sont pas une différence). Deux pastilles d'un même film
-  ne se lisent jamais pareil. Un lecteur d'écran dit « Version : 4K Dolby Vision ». La version choisie est celle qui est
-  lue ; Lecture, la progression et le badge du format sont les siens.
+  en ont, s'appelle « Standard ». Des pastilles encore identiques ajoutent, dans cet ordre, leur conteneur
+  (« Standard · MKV », « Standard · MP4 »), puis les mots du fournisseur que les pastilles ne savent pas nommer, tels
+  que le nom les écrit (« DUB »). Le nom d'une catégorie ne distingue jamais des pastilles : la fiche d'un film ne montre
+  aucune catégorie (seuls les tags qu'on y lit comptent, « FILMS 4K » est de la 4K). Des pastilles encore identiques
+  sont numérotées (« 4K 1 », « 4K 2 » ; « Version 1 », « Version 2 »), en dernier recours. Deux pastilles d'un même film
+  ne se lisent jamais pareil, et un film dont toutes les versions lisent la même chose n'a pas de pastille. Un lecteur
+  d'écran dit « Version : 4K Dolby Vision ». La version choisie est celle qui est lue ; Lecture, la progression et le
+  badge du format sont les siens.
 - **Données du titre** : ce que l'app a lu chez le fournisseur pour un titre, à photographier quand une pastille se lit
   mal. Dans le lecteur, Plus, Statistiques du flux les montre à côté des statistiques (les deux apps) : le titre
   affiché, le nom du fournisseur, les identifiants (un numéro du fournisseur seulement, jamais ceux d'une playlist M3U,
   qui sont un hachage de l'adresse du flux), la catégorie (nom et identifiant), l'année, les tags lus, les
   identifiants TMDb (la liste du fournisseur, sa fiche, et sur Android le titre reconnu), le conteneur ; pour les
   versions d'un film (quatre au plus, celle en lecture d'abord), la pastille, le nom, la catégorie, l'identifiant, le
-  conteneur et les tags de chacune, celle en lecture, celle lue en premier et pourquoi ; pour un épisode, son titre brut
-  et le nom de sa série. Sur une TV, OK maintenu sur la pastille d'une version, sur la page d'un film, montre la même
+  conteneur et les tags de chacune, celle en lecture, celle lue en premier et pourquoi ; chaque flux reste listé, ceux
+  qu'une même pastille réunit marqués « identique à » celui que lit leur pastille ; pour un épisode, son titre brut et
+  le nom de sa série. Sur Android, le titre affiché est celui de l'app, sans les tags du fournisseur autour du nom
+  (`CatalogueMatcher.displayTitle`), comme le montrent le lecteur et la fiche du film ; le lecteur d'Apple montre encore
+  le nom du fournisseur tel quel, et ses données du titre aussi. Sur une TV, OK maintenu sur la pastille d'une version, sur la page d'un film, montre la même
   chose pour toutes les versions, chacune une étape de la télécommande. Jamais d'adresse, d'identifiant, de mot de passe
   ni de serveur : ceux de la playlist sont masqués partout où ils apparaissent, comme les adresses, `user:password@`,
   les valeurs de requête, les adresses IP et `hôte:port` (`Redaction`, les mêmes règles et la même table sur les deux

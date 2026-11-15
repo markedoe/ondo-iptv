@@ -199,7 +199,7 @@ final class AppModel {
     @ObservationIgnored private var epgTask: Task<Void, Never>?
     @ObservationIgnored var movieDetailsCache: [String: MediaDetails] = [:]
     /// The chips of the films' versions by their ids, worked out once per catalogue (AppModel+Versions).
-    @ObservationIgnored var versionLabelsCache: [String: [String]] = [:]
+    @ObservationIgnored var versionChoicesCache: [String: [VersionChoice]] = [:]
     @ObservationIgnored var movieDetailsInFlight: [String: Task<MediaDetails?, Never>] = [:]
     /// TMDb backdrops and dead provider backdrops (AppModel+Backdrops).
     let backdrops = BackdropStore()
@@ -703,7 +703,7 @@ final class AppModel {
         rawContent = .empty
         index = ContentIndex()
         posterScores = [:]
-        versionLabelsCache = [:]
+        versionChoicesCache = [:]
         peopleIndex = PeopleIndex()
         categoryTags = CategoryTagIndex()
         movieAwards = [:]
@@ -764,7 +764,7 @@ final class AppModel {
                 rawContent = .empty
                 index = ContentIndex()
                 posterScores = [:]
-                versionLabelsCache = [:]
+                versionChoicesCache = [:]
                 peopleIndex = PeopleIndex()
                 categoryTags = CategoryTagIndex()
                 movieAwards = [:]
@@ -848,7 +848,7 @@ final class AppModel {
         rawContent = newContent
         content = edited
         index = built
-        versionLabelsCache = [:]
+        versionChoicesCache = [:]
         categoryTags = tags
         // The posters' TMDb scores, from what the device kept, at once.
         updatePosterScores(now: true)

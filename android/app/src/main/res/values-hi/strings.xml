@@ -364,6 +364,7 @@
     <string name="title_data_this_chip">यह संस्करण</string>
     <string name="title_data_plays_first">पहले चलता है</string>
     <string name="title_data_hidden">छिपी हुई कैटेगरी: नहीं दिखाया जाता</string>
+    <string name="title_data_same_as">%1$s जैसा ही</string>
     <string name="title_data_more">और संस्करण: %1$d</string>
     <string name="title_data_first_in_progress">पहले चलता है, क्योंकि यह देखा जा रहा है।</string>
     <string name="title_data_first_chosen">पहले चलता है, क्योंकि इसे इस डिवाइस पर आख़िरी बार चुना गया था।</string>

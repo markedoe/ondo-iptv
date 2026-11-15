@@ -756,8 +756,15 @@ class OndoViewModel(
 
     // Playback
 
+    /**
+     * Plays the movie [id]; the other streams of its chip (versions that play the same thing, `UiMappers.fallbacks`) are
+     * tried in turn when it fails to start. Main thread: the grouping only when already built.
+     */
     fun playMovie(id: String, fromStart: Boolean = false) {
-        state.value.content.movies.firstOrNull { it.id == id }?.let { emit(repository.playRequest(it, fromStart)) }
+        val current = state.value
+        current.content.movies.firstOrNull { it.id == id }?.let { movie ->
+            emit(repository.playRequest(movie, fromStart, UiMappers.fallbacks(current, movie, UiMappers.filmsIfReady(current))))
+        }
     }
 
     fun playEpisode(seriesId: String, episode: Episode) {

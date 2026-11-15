@@ -754,9 +754,9 @@ private fun LazyListScope.versionsShelf(versions: List<VersionChip>, selected: S
                     val description = versionDescription(chip)
                     TvChip(
                         text = chip.label,
-                        selected = chip.id == selected,
-                        onClick = { actions.onVersion(chip.id) },
-                        onLongClick = { actions.onVersionInfo(chip.id) },
+                        selected = selected in chip.members,
+                        onClick = { actions.onVersion(chip.plays) },
+                        onLongClick = { actions.onVersionInfo(chip.plays) },
                         modifier = Modifier.focusMemory("version:${chip.id}").testTag("version-${chip.id}")
                             .semantics { contentDescription = description },
                     )

@@ -104,6 +104,27 @@ data class VersionWords(
 }
 
 /**
+ * One chip of a film's page ([FilmVersions.choices]): versions that play the same thing (the same chip tags, the same
+ * container, the same name once normalised: a panel filing one stream under two categories) are one choice.
+ */
+data class VersionChoice(
+    /** What its chip says. */
+    val label: String,
+    /** Its versions, in catalogue order. */
+    val members: List<Movie>,
+    /** The member it plays ([FilmVersions.preferred]): the one in progress, else the one chosen last, else the first. */
+    val preferred: Movie,
+) {
+    /** Its first member's id: the same whichever member plays (the chip's key, focus and test tag). */
+    val id: String get() = members.first().id
+
+    /** [preferred], then the others in catalogue order: the streams tried in turn when one fails to start. */
+    val playOrder: List<Movie> get() = listOf(preferred) + members.filter { it.id != preferred.id }
+
+    operator fun contains(id: String): Boolean = members.any { it.id == id }
+}
+
+/**
  * The same film's versions in one playlist (4K, Dolby Vision, HD, VOSTFR…), grouped so that lists show each film once
  * and its page offers the versions. Movies only. A derivation of the catalogue, built once per load off the main thread;
  * favourites, history and progress stay per stream. The same rules and tests as Apple's `FilmVersions` (IPTVCore);
@@ -669,17 +690,85 @@ class FilmVersions private constructor(
             return versions.map { labelTags(it.name, categoryName(it.categoryId), shared) }
         }
 
+        /** Apostrophes as providers write them: "Director's", "Director’s" and "Directors" are one name. */
+        private const val APOSTROPHES = "'’‘ʼ`´"
+
+        /**
+         * A version's name as [choices] compares it: case, accents, apostrophes and punctuation left out, and the words
+         * its chip tags come from (the provider's prefix "|FR|", "4K", "Dolby Vision") and years. The words the chips
+         * have no name for ("DUB") and those of an edition ("Extended Cut") stay: they tell versions apart.
+         */
+        fun nameKey(name: String): String {
+            val words = TextNormalizer.normalize(name.filterNot { it in APOSTROPHES }).split(' ').filter { it.isNotEmpty() }
+            // A language's code at an end only where a provider's delimiter sets it apart, as [labelTags] reads it.
+            val prefix = PREFIX_CODE.containsMatchIn(name)
+            val suffix = SUFFIX_CODE.containsMatchIn(name)
+            val kept = ArrayList<String>(words.size)
+            var i = 0
+            while (i < words.size) {
+                val word = words[i]
+                val next = words.getOrNull(i + 1)
+                val pair = word == "dolby" && next == "vision" || word == "h" && next == "265" ||
+                    (word == "st" || word == "sub") && next == "fr" || word == "fr" && next == "sub"
+                when {
+                    pair -> i += 2
+                    word in TAG_WORDS || isYear(word) || (i == 0 && prefix || i == words.size - 1 && suffix) && word in EDGE_CODES -> i++
+                    else -> { kept.add(word); i++ }
+                }
+            }
+            return kept.joinToString(" ")
+        }
+
+        /**
+         * The member of a choice that plays: the one in progress ([inProgress], most recent first), else the one the viewer
+         * chose last ([chosen], most recent first), else the first in catalogue order. The rules of [defaultChoice].
+         */
+        fun preferred(members: List<Movie>, inProgress: List<String>, chosen: List<String>): Movie {
+            inProgress.firstNotNullOfOrNull { id -> members.firstOrNull { it.id == id } }?.let { return it }
+            chosen.firstNotNullOfOrNull { id -> members.firstOrNull { it.id == id } }?.let { return it }
+            return members.first()
+        }
+
+        /**
+         * A film's chips: its [versions] (catalogue order) with the same chip tags ([labelTags]), the same container
+         * ([container]) and the same [nameKey] are one choice, labelled as one version ("Standard", "4K Dolby Vision"),
+         * in the order of its first member; a category's name never sets versions apart. Each plays its [preferred]
+         * member ([inProgress], [chosen]); the others are its fallbacks ([VersionChoice.playOrder]). One choice alone
+         * reads "Standard". Empty without versions.
+         */
+        fun choices(
+            versions: List<Movie>,
+            categoryName: (String) -> String?,
+            words: VersionWords = VersionWords(),
+            inProgress: List<String> = emptyList(),
+            chosen: List<String> = emptyList(),
+        ): List<VersionChoice> {
+            if (versions.isEmpty()) return emptyList()
+            val tags = labelTags(versions, categoryName)
+            val groups = LinkedHashMap<Triple<List<VersionTag>, String?, String>, MutableList<Int>>()
+            for (i in versions.indices) groups.getOrPut(Triple(tags[i], container(versions[i]), nameKey(versions[i].name))) { ArrayList() }.add(i)
+            val members = groups.values.toList()
+            val texts = if (members.size < 2) listOf(words.standard) else labels(members.map { versions[it.first()] }, members.map { tags[it.first()] }, words)
+            return members.mapIndexed { k, group ->
+                val movies = group.map { versions[it] }
+                VersionChoice(texts[k], movies, preferred(movies, inProgress, chosen))
+            }
+        }
+
         /**
          * What a film's [versions] say on their chips, in their order, in [words]. Each names what sets it apart from the
          * others, in [VersionAspect]'s order ("4K Dolby Vision", "HD · Original, French subtitles"): a tag they all share
          * is left out. Two that would read the same add the words of their names the others lack ("Extended Cut"); a
-         * version without a tag next to tagged ones is "Standard". Labels still the same add, in turn, the words of their
-         * categories' names the others lack, their container ("Standard · MKV", "Standard · MP4"), then the provider's
-         * words the chips have no word for ("DUB"); labels still the same are numbered ("4K 1", "4K 2"; "Version 1",
-         * "Version 2"): no two versions read the same. [categoryName] names a stream's category.
+         * version without a tag next to tagged ones is "Standard". Labels still the same add, in turn, their container
+         * ("Standard · MKV", "Standard · MP4"), then the provider's words the chips have no word for ("DUB"); labels still
+         * the same are numbered ("4K 1", "4K 2"; "Version 1", "Version 2"): no two versions read the same. A category's
+         * name is never one of those words (only its tags count). [categoryName] names a stream's category. The page's
+         * chips are [choices]: versions that play the same thing are one.
          */
-        fun labels(versions: List<Movie>, categoryName: (String) -> String?, words: VersionWords = VersionWords()): List<String> {
-            val tags = labelTags(versions, categoryName)
+        fun labels(versions: List<Movie>, categoryName: (String) -> String?, words: VersionWords = VersionWords()): List<String> =
+            labels(versions, labelTags(versions, categoryName), words)
+
+        private fun labels(versions: List<Movie>, tags: List<List<VersionTag>>, words: VersionWords): List<String> {
             // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
             val differing = VersionAspect.entries.filter { aspect -> tags.map { list -> list.filter { it.aspect == aspect } }.distinct().size > 1 }
             val texts = tags.map { list ->
@@ -695,9 +784,9 @@ class FilmVersions private constructor(
             }
             val anyTagged = texts.any { it.isNotEmpty() }
             val labels = texts.mapTo(ArrayList(texts.size)) { if (it.isEmpty() && anyTagged) words.standard else it }
-            // Still the same: what else sets them apart, in this order: the words of their categories' names, their
-            // container ("MKV", "MP4"), then the provider's words the chips have no name for ("DUB").
-            setApart(labels) { same -> differingWords(same.map { categoryName(versions[it].categoryId).orEmpty() }) }
+            // Still the same: what else sets them apart, in this order: their container ("MKV", "MP4"), then the
+            // provider's words the chips have no name for ("DUB"). Never their categories' names: viewers see no category
+            // on a film's page, and a panel files one stream under several.
             setApart(labels) { same -> same.map { container(versions[it]).orEmpty() } }
             setApart(labels) { same -> differingWords(same.map { versions[it].name }, tagsOnly = true) }
             if (labels.any { it.isNotEmpty() }) for (i in labels.indices) if (labels[i].isEmpty()) labels[i] = words.standard

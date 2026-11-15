@@ -48,7 +48,7 @@ Only movies, and only within one playlist (live channels and series are never gr
   film once. In a category, the first of its versions in that category stands for it, so a film is in every category one
   of its versions is in.
 - **A film's page**: its versions as chips (focusable on a TV). Each chip says in words, in the app's language, what
-  sets its version apart from the others (`FilmVersions.labels`, the same rules and table on both apps:
+  sets its version apart from the others (`FilmVersions.choices`, the same rules and table on both apps:
   `fixtures/film-versions/labels.json`). The tags are read from the stream's name and its category's name:
   - quality: 4K (4K, UHD, 2160p), Full HD (FHD, 1080p), HD (HD, 720p), SD (SD, 480p, 576p);
   - picture: Dolby Vision (DV, DoVi, Dolby Vision), HDR (HDR, HDR10, HDR10+), 3D (3D, SBS, HSBS), IMAX, HEVC (HEVC,
@@ -64,21 +64,36 @@ Only movies, and only within one playlist (live channels and series are never gr
   is a tag only outside the words every version's name shares: "The English Orchard" and "The English Orchard MULTI"
   read "Standard" and "Multilingual". A no-break space separates words as a space does.
 
+  **Versions that play the same thing are one chip.** A panel often files one stream under two categories ("|FR|
+  AJOUTÉS" and "|FR| DRAME | THRILLER"), sometimes in another letter case. Versions with the same chip tags
+  (quality, HDR or Dolby Vision, 3D, IMAX, codec, language, subtitles), the same container and the same name once
+  normalised (case, accents, apostrophes, punctuation, the provider's prefix such as "|FR|", the year left out:
+  `FilmVersions.nameKey`) make one chip, labelled as one version: "|FR| Copper Vallée", "|FR| COPPER VALLÉE" and "|FR|
+  Copper Vallée 4K DV" read "Standard" and "4K Dolby Vision". The chip plays its preferred stream, by the rules of the
+  version shown first (below): the one in progress, else the one chosen last, else the first in catalogue order. Its
+  other streams are its fallbacks: when the preferred one fails to start, the player tries them in turn (the next
+  addresses of the playback request) before showing an error. The progress stays the stream's that was started, so a
+  version in progress resumes where it was.
+
   A chip names only what differs between the versions, in that order ("4K Dolby Vision", "HD · Original, French
   subtitles"): a tag every version has is left out. Two versions that would read the same add the words of their names
   the others lack ("Extended Cut"); a version without any tag, next to tagged ones, reads "Standard". Chips still alike
-  add, in turn, the words of their categories' names the others lack ("Standard · Recently added"), their container
-  ("Standard · MKV", "Standard · MP4"), then the provider's words the chips have no word for, as the name writes them
-  ("DUB"). Chips still alike are numbered ("4K 1", "4K 2"; "Version 1", "Version 2" when nothing tells them apart: a
-  year alone or punctuation is no difference). No two chips of a film read the same. A screen reader says "Version: 4K
-  Dolby Vision". The version picked plays; Play, the progress and the format badge are its own.
+  add, in turn, their container ("Standard · MKV", "Standard · MP4"), then the provider's words the chips have no word
+  for, as the name writes them ("DUB"). A category's name never sets chips apart: viewers see no category on a film's
+  page (only the tags read in it count, "FILMS 4K" is 4K). Chips still alike are numbered ("4K 1", "4K 2"; "Version 1",
+  "Version 2"), the last resort. No two chips of a film read the same, and a film whose versions all play the same
+  thing shows no chip. A screen reader says "Version: 4K Dolby Vision". The version picked plays; Play, the progress and
+  the format badge are its own.
 - **Title data**: what the app read from the provider for a title, to photograph when a chip reads wrong. In the
   player, More, Stream Statistics shows it next to the statistics (both apps): the title shown, the provider's name,
   ids (a provider's number only, never an M3U playlist's, which is a hash of the stream's address), category (name and
   id), year, the tags read, the TMDb ids (the provider's list, its details, and on Android the
   title matched), the container; for a film's versions (four at most, the one playing first), each one's chip, name,
-  category, id, container and tags, the one playing, the one played first and why; for an episode, its raw title and
-  its series' name. On a TV, OK held on a version's chip of a film's page shows the same for every version, each a stop
+  category, id, container and tags, the one playing, the one played first and why; every stream stays listed, those one
+  chip holds together marked "same as" the one their chip plays; for an episode, its raw title and its series' name. On
+  Android the title shown is the app's, without the provider's tags around the name (`CatalogueMatcher.displayTitle`),
+  as the player and the film's page show it; Apple's player still shows the provider's name as it is, and so does its
+  title data. On a TV, OK held on a version's chip of a film's page shows the same for every version, each a stop
   of the remote. Never an address, a login, a password or a server: the playlist's own are masked wherever they
   appear, as are addresses, `user:password@`, query values, IP addresses and `host:port` (`Redaction`, the same rules
   and table on both apps: `fixtures/title-data/redaction.json`). It is not in the problem report.

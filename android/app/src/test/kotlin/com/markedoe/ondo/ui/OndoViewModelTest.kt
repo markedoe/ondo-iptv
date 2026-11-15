@@ -573,6 +573,47 @@ class OndoViewModelTest {
         }
     }
 
+    /**
+     * One film a panel files under two categories (a prefix, another letter case) next to a 4K Dolby Vision version: its
+     * page's "Standard" chip plays its first stream, and the other one follows as a fallback address, so the player tries
+     * it before showing an error (PlayerActivity's next address). The progress stays the first one's.
+     */
+    @Test
+    fun theStandardChipPlaysItsPreferredStreamAndFallsBackToTheOther() = runTest {
+        val filedTwice = """
+            #EXTM3U
+            #EXTINF:6000 group-title="|FR| DRAME | THRILLER",|FR| COPPER VALLÉE (2024)
+            http://provider.example.com/movie/cv-801.mkv
+            #EXTINF:6000 group-title="|FR| FILMS 4K",|FR| Copper Vallée 4K DV (2024)
+            http://provider.example.com/movie/cv-802.mkv
+            #EXTINF:6000 group-title="|FR| AJOUTÉS",|FR| Copper Vallee (2024)
+            http://provider.example.com/movie/cv-803.mkv
+        """.trimIndent()
+        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to filedTwice)), backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        val viewModel = track(readyViewModel(repository))
+        viewModel.addPlaylist(PlaylistForm.M3u("Home", list, "")) {}
+        val state = viewModel.state.first { it.content.movies.size == 3 }
+        try {
+            UiMappers.films(state)
+            val (first, _, again) = state.content.movies
+            val page = UiMappers.movieDetail(state, again)
+            assertEquals(listOf("Standard", "4K Dolby Vision"), page.versions.map { it.label })
+            val standard = page.versions.first()
+            assertEquals(first.id, standard.plays)
+            viewModel.playRequests.test {
+                // The grouping the film's page built (Play, on the main thread, never builds one).
+                UiMappers.films(viewModel.state.value)
+                viewModel.playMovie(standard.plays)
+                val request = awaitItem()
+                assertEquals(listOf("http://provider.example.com/movie/cv-801.mkv", "http://provider.example.com/movie/cv-803.mkv"), request.urls)
+                assertTrue(request.progressKey!!.contains(first.id))
+                cancelAndIgnoreRemainingEvents()
+            }
+        } finally {
+            UiMappers.forgetCatalogue()
+        }
+    }
+
     /** A Live TV category chosen on one playlist does not follow the viewer to another one, nor outlive its category. */
     @Test
     fun aLiveCategoryChosenOnOnePlaylistDoesNotFollowToTheNext() = runTest {

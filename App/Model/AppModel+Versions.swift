@@ -38,28 +38,52 @@ extension AppModel {
     func defaultChoice(of movie: Movie, among known: [Movie]? = nil) -> (movie: Movie, reason: DefaultReason) {
         let versions = known ?? visibleVersions(of: movie)
         guard versions.count > 1 else { return (movie, .only) }
-        let inProgress = versions.compactMap { version -> (movie: Movie, watched: Date)? in
-            guard let entry = progress(movie: version), entry.isResumable else { return nil }
-            return (version, entry.lastWatchedAt)
-        }.max { $0.watched < $1.watched }?.movie
         let names = categoryNames
         return FilmVersions.defaultChoice(
-            versions, inProgress: inProgress?.id, chosen: settings.chosenVersions, support: Self.pictureSupport,
+            versions, inProgress: inProgress(among: versions).first, chosen: settings.chosenVersions, support: Self.pictureSupport,
             categoryName: { names[$0] }
         ) ?? (movie, .only)
     }
 
-    /// What the chips of a film's versions say, in their order, in the app's language (`FilmVersions.labels`): what sets
-    /// each apart ("4K Dolby Vision", "Original, French subtitles", "Standard").
-    /// Worked out once per catalogue and set of versions (`versionLabelsCache`, emptied with each catalogue), in words
-    /// read once (`versionWords`): a film's page and its Continue Watching card ask on every pass of their body.
-    func versionLabels(_ versions: [Movie]) -> [String] {
+    /// The ids of `versions` that can be resumed, the one watched last first.
+    private func inProgress(among versions: [Movie]) -> [String] {
+        versions.compactMap { version -> (id: String, watched: Date)? in
+            guard let entry = progress(movie: version), entry.isResumable else { return nil }
+            return (version.id, entry.lastWatchedAt)
+        }.sorted { $0.watched > $1.watched }.map(\.id)
+    }
+
+    /// A film's chips (`FilmVersions.choices`), in their order, in the app's language: versions that play the same thing
+    /// are one ("Standard", "4K Dolby Vision"), which plays the member in progress, else the one chosen last, else its
+    /// first. `versions`: the film's visible ones. The chips' labels and members are worked out once per catalogue and
+    /// set of versions (`versionChoicesCache`, emptied with each catalogue), in words read once (`versionWords`): a
+    /// film's page and its Continue Watching card ask on every pass of their body; the member each plays is read here.
+    func versionChoices(_ versions: [Movie]) -> [VersionChoice] {
+        guard versions.count > 1 else { return versions.map { VersionChoice(label: Self.versionWords.standard, members: [$0], preferred: $0) } }
         let key = versions.map(\.id).joined(separator: "\u{1F}")
-        if let known = versionLabelsCache[key], known.count == versions.count { return known }
-        let names = categoryNames
-        let labels = FilmVersions.labels(versions, categoryName: { names[$0] }, words: Self.versionWords)
-        versionLabelsCache[key] = labels
-        return labels
+        let choices: [VersionChoice]
+        if let known = versionChoicesCache[key] {
+            choices = known
+        } else {
+            let names = categoryNames
+            choices = FilmVersions.choices(versions, categoryName: { names[$0] }, words: Self.versionWords)
+            versionChoicesCache[key] = choices
+        }
+        let watching = inProgress(among: versions)
+        let chosen = settings.chosenVersions
+        return choices.map { choice in
+            var choice = choice
+            choice.preferred = FilmVersions.preferred(choice.members, inProgress: watching, chosen: chosen) ?? choice.preferred
+            return choice
+        }
+    }
+
+    /// The other streams of `movie`'s chip, tried in turn when it fails to start (`VersionChoice.playOrder`): the
+    /// versions that play the same thing, visible ones of the same headers only. Empty when its chip has one stream.
+    func fallbacks(for movie: Movie) -> [Movie] {
+        let versions = visibleVersions(of: movie)
+        guard versions.count > 1, let choice = versionChoices(versions).first(where: { $0.contains(movie.id) }) else { return [] }
+        return choice.playOrder.filter { $0.id != movie.id && $0.headers == movie.headers }
     }
 
     /// The words of the chips in the app's language, read once.
@@ -85,8 +109,10 @@ extension AppModel {
     func versionLabel(for entry: HistoryEntry) -> String? {
         guard entry.reference.type == .movie, let movie = index.moviesByID[entry.reference.itemID] else { return nil }
         let versions = visibleVersions(of: movie)
-        guard versions.count > 1, let index = versions.firstIndex(where: { $0.id == movie.id }) else { return nil }
-        return versionLabels(versions)[index]
+        guard versions.count > 1 else { return nil }
+        let choices = versionChoices(versions)
+        guard choices.count > 1 else { return nil }
+        return choices.first { $0.contains(movie.id) }?.label
     }
 
     /// Whether a film is in My List: when one of its versions is.

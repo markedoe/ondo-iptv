@@ -38,6 +38,9 @@ struct TitleData: Equatable, Sendable {
         var playing: Bool
         /// The version the film's card plays and its page selects first.
         var first: Bool
+        /// One chip with another version that plays the same thing (`FilmVersions.choices`): that one's id as the panel
+        /// shows it, else its name; nil for the one its chip plays, or a version alone on its chip.
+        var sameAs: String?
     }
 
     var lines: [Line]
@@ -52,7 +55,7 @@ struct TitleData: Equatable, Sendable {
     /// then read off it (`build`).
     struct Input: Sendable {
         enum Title: Sendable {
-            case film(movie: Movie, versions: [Movie], chips: [String: String], first: String?, reason: DefaultReason?, detailsTMDb: String?)
+            case film(movie: Movie, versions: [Movie], chips: [String: String], sameAs: [String: String], first: String?, reason: DefaultReason?, detailsTMDb: String?)
             case episode(series: Series, episodeID: String, episode: Episode?, detailsTMDb: String?, category: String?)
         }
 
@@ -66,8 +69,8 @@ struct TitleData: Equatable, Sendable {
     static func build(_ input: Input) -> TitleData {
         let clean = { (text: String) in Redaction.clean(text, secrets: input.secrets) }
         switch input.title {
-        case let .film(movie, all, chips, first, reason, detailsTMDb):
-            return film(movie, all: all, chips: chips, first: first, reason: reason, detailsTMDb: detailsTMDb, input: input, clean: clean)
+        case let .film(movie, all, chips, sameAs, first, reason, detailsTMDb):
+            return film(movie, all: all, chips: chips, sameAs: sameAs, first: first, reason: reason, detailsTMDb: detailsTMDb, input: input, clean: clean)
         case let .episode(series, episodeID, episode, detailsTMDb, category):
             var lines = [
                 Line(label: .shown, value: clean(input.shownTitle)),
@@ -92,6 +95,7 @@ struct TitleData: Equatable, Sendable {
         _ movie: Movie,
         all: [Movie],
         chips: [String: String],
+        sameAs: [String: String],
         first: String?,
         reason: DefaultReason?,
         detailsTMDb: String?,
@@ -132,7 +136,8 @@ struct TitleData: Equatable, Sendable {
                 container: container.isEmpty ? nil : container,
                 tags: tags(of: version),
                 playing: version.id == movie.id,
-                first: version.id == first
+                first: version.id == first,
+                sameAs: sameAs[version.id].map(clean)
             )
         }
         return TitleData(lines: lines, versions: versions, reason: reason)
@@ -174,16 +179,27 @@ extension AppModel {
             var seen = Set<String>()
             let all = films.versions(of: movie).filter { seen.insert($0.id).inserted }
             var chips: [String: String] = [:]
+            var sameAs: [String: String] = [:]
             var choice: (movie: Movie, reason: DefaultReason)?
             if all.count > 1 {
                 let visible = visibleVersions(of: movie)
-                if visible.count > 1 {
-                    chips = Dictionary(zip(visible.map(\.id), versionLabels(visible)), uniquingKeysWith: { first, _ in first })
+                // Every version, those one chip holds together too (marked "same as" the one it plays).
+                // One chip for them all ("Standard", not shown on the page) still names each, never "hidden".
+                let choices = visible.count > 1 ? versionChoices(visible) : []
+                for chip in choices {
+                    let shown = Redaction.shownID(chip.preferred.id) ?? chip.preferred.name
+                    for member in chip.members {
+                        chips[member.id] = chip.label
+                        if member.id != chip.preferred.id { sameAs[member.id] = shown }
+                    }
                 }
                 choice = defaultChoice(of: movie, among: visible)
             }
             return TitleData.Input(
-                title: .film(movie: movie, versions: all, chips: chips, first: choice?.movie.id, reason: choice?.reason, detailsTMDb: movieDetailsCache[movie.id]?.tmdbID),
+                title: .film(
+                    movie: movie, versions: all, chips: chips, sameAs: sameAs, first: choice?.movie.id, reason: choice?.reason,
+                    detailsTMDb: movieDetailsCache[movie.id]?.tmdbID
+                ),
                 shownTitle: item.title, categoryNames: categoryNames, secrets: secrets
             )
         case .series:

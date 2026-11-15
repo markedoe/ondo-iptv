@@ -350,6 +350,7 @@
     <string name="title_data_this_chip">此版本</string>
     <string name="title_data_plays_first">优先播放</string>
     <string name="title_data_hidden">隐藏的分类：不提供</string>
+    <string name="title_data_same_as">与 %1$s 相同</string>
     <string name="title_data_more">更多版本：%1$d</string>
     <string name="title_data_first_in_progress">优先播放，因为正在观看。</string>
     <string name="title_data_first_chosen">优先播放，因为它是在此设备上最后选择的版本。</string>

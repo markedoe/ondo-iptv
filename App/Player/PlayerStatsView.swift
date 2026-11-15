@@ -139,6 +139,11 @@ struct TitleDataView: View {
                     Text(verbatim: "· ★")
                     Text("Plays first")
                 }
+                // One chip with the version it names: the same film, filed elsewhere by the provider.
+                if let sameAs = version.sameAs {
+                    Text(verbatim: "· =")
+                    Text("Same as \(sameAs)")
+                }
             }
             .fontWeight(.semibold)
             .foregroundStyle(version.playing ? Color.green : Color.white)

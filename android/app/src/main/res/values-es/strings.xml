@@ -378,6 +378,7 @@
     <string name="title_data_this_chip">Esta versión</string>
     <string name="title_data_plays_first">Se reproduce primero</string>
     <string name="title_data_hidden">Categoría oculta: no se ofrece</string>
+    <string name="title_data_same_as">Igual que %1$s</string>
     <string name="title_data_more">Más versiones: %1$d</string>
     <string name="title_data_first_in_progress">Se reproduce primero porque está en curso.</string>
     <string name="title_data_first_chosen">Se reproduce primero porque fue la última elegida en este dispositivo.</string>

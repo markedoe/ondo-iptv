@@ -201,6 +201,8 @@ fun TitleDataVersion(
         val marks = listOfNotNull(
             if (version.playing) "▶ " + stringResource(current) else null,
             if (version.first) "★ " + stringResource(R.string.title_data_plays_first) else null,
+            // One chip with the version it names: the same film, filed elsewhere by the provider.
+            version.sameAs?.let { "= " + stringResource(R.string.title_data_same_as, it) },
         )
         Text(
             (listOf(version.chip ?: stringResource(R.string.title_data_hidden)) + marks).joinToString("  ·  "),

@@ -420,6 +420,7 @@
     <string name="title_data_this_chip">هذه النسخة</string>
     <string name="title_data_plays_first">تُشغَّل أولًا</string>
     <string name="title_data_hidden">فئة مخفية: غير معروضة</string>
+    <string name="title_data_same_as">مطابقة لـ %1$s</string>
     <string name="title_data_more">نسخ أخرى: %1$d</string>
     <string name="title_data_first_in_progress">تُشغَّل أولًا لأنها قيد المشاهدة.</string>
     <string name="title_data_first_chosen">تُشغَّل أولًا لأنها آخر نسخة اختيرت على هذا الجهاز.</string>
