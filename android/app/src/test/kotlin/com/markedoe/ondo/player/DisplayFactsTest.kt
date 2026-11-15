@@ -62,6 +62,53 @@ class DisplayFactsTest {
         assertTrue(DisplayFacts.of(current = 3840 to 2160, modes = emptyList(), hdrTypes = emptyList()).pictureSupport().uhd)
     }
 
+    /**
+     * A box in "auto" whose display lists its 1080p interface mode only, on a 4K HDR10/HLG TV without Dolby Vision: the
+     * `display-size` property Media3 reads says 3840x2160, so it is a 4K screen (it read "chosen for: HDR" before).
+     */
+    @Test
+    fun aBoxListingIts1080pModeOnlyIs4kByItsDisplaySize() {
+        val box = DisplayFacts.of(current = 1920 to 1080, modes = listOf(1920 to 1080), hdrTypes = listOf(hdr10, hlg), dolbyVisionDecoder = false, hevcMain10Decoder = true)
+        assertFalse("the modes alone say 1080p", box.pictureSupport().uhd)
+        val read = box.with(DisplayFacts.Background(dolbyVisionDecoder = false, hevcMain10Decoder = true, uhdDecoder = false, displaySize = 3840 to 2160, television = true))
+        assertEquals(DisplayFacts.UhdSource.DISPLAY_SIZE, read.uhdSource)
+        assertEquals(PictureSupport(hdr = true, dolbyVision = false, uhd = true), read.pictureSupport())
+        assertEquals(1920 to 1920, read.currentWidth to read.largestWidth)
+    }
+
+    /**
+     * No `display-size` property (Media3 then reads the mode, 1080p): a TV whose display takes HDR with a hardware decoder
+     * for 3840×2160 is 4K; a phone, a software decoder or an SDR screen is not; a plain 1080p screen is not.
+     */
+    @Test
+    fun withoutTheDisplaySizeAnHdrTvWithA4kHardwareDecoderIs4k() {
+        val box = DisplayFacts.of(current = 1920 to 1080, modes = listOf(1920 to 1080), hdrTypes = listOf(hdr10, hdr10Plus, hlg))
+        fun facts(television: Boolean, uhdDecoder: Boolean, of: DisplayFacts = box) =
+            of.with(DisplayFacts.Background(dolbyVisionDecoder = true, hevcMain10Decoder = true, uhdDecoder = uhdDecoder, displaySize = 1920 to 1080, television = television))
+        assertEquals(DisplayFacts.UhdSource.HDR_AND_DECODER, facts(television = true, uhdDecoder = true).uhdSource)
+        assertTrue(facts(television = true, uhdDecoder = true).pictureSupport().uhd)
+        assertFalse("a phone with a 4K decoder", facts(television = false, uhdDecoder = true).pictureSupport().uhd)
+        assertFalse("no 4K hardware decoder", facts(television = true, uhdDecoder = false).pictureSupport().uhd)
+        assertFalse("an SDR TV", facts(television = true, uhdDecoder = true, of = hd).pictureSupport().uhd)
+        // The plain 1080p case: nothing says 4K, and once read it is a "no", not "unknown".
+        val plain = facts(television = true, uhdDecoder = false, of = hd)
+        assertEquals(null, plain.uhdSource)
+        assertTrue(plain.uhdChecked)
+        assertFalse(hd.uhdChecked)
+        // The modes first, whatever the rest says.
+        assertEquals(DisplayFacts.UhdSource.MODES, samsung4k.uhdSource)
+
+        // Only a hardware HEVC or Dolby Vision decoder for 3840×2160 counts.
+        val hevc = DisplayFacts.HEVC_MIME
+        assertTrue(DisplayFacts.decoderFacts(listOf(DisplayFacts.Decoder(mapOf(hevc to emptyList()), hardware = true, uhdTypes = setOf(hevc)))).third)
+        assertFalse(DisplayFacts.decoderFacts(listOf(DisplayFacts.Decoder(mapOf(hevc to emptyList()), hardware = false, uhdTypes = setOf(hevc)))).third)
+        assertFalse(DisplayFacts.decoderFacts(listOf(DisplayFacts.Decoder(mapOf("video/avc" to emptyList()), hardware = true, uhdTypes = setOf("video/avc")))).third)
+        assertFalse(DisplayFacts.hardware("c2.android.hevc.decoder", hardwareAccelerated = null))
+        assertFalse(DisplayFacts.hardware("OMX.google.hevc.decoder", hardwareAccelerated = null))
+        assertTrue(DisplayFacts.hardware("OMX.amlogic.hevc.decoder.awesome2", hardwareAccelerated = null))
+        assertFalse(DisplayFacts.hardware("OMX.amlogic.hevc.decoder.awesome2", hardwareAccelerated = false))
+    }
+
     @Test
     fun theDecodersAreReadFromTheirTypesAndProfiles() {
         val main10 = MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10

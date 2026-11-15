@@ -118,9 +118,15 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   appareil ; sinon celle qui convient le mieux à l'écran (une copie cinéma en dernier) ; sinon la première. Ce qui
   convient à l'écran se lit dans ce qu'on sait de chaque version (mesuré, sinon selon le fournisseur, sinon les tags du
   nom) et dans l'écran :
-  - **la 4K** sur un écran dont le plus grand mode est 4K, quel que soit son mode du moment : sur Android le plus grand
-    de `Display.supportedModes` en taille physique (un boîtier qui dessine une interface 1080p, ou qui lit 1080p en
-    « auto » tant qu'aucun film ne joue, reste un écran 4K) ; chez Apple la taille native de l'écran ;
+  - **la 4K** sur un écran 4K, quel que soit son mode du moment. Sur Android, dans cet ordre : le plus grand de
+    `Display.supportedModes` en taille physique (un boîtier qui dessine une interface 1080p, ou qui lit 1080p en
+    « auto » tant qu'aucun film ne joue, reste un écran 4K) ; sinon la taille que Media3 lit de l'écran d'une TV
+    (`Util.getCurrentDisplayModeSize` : la propriété `vendor.display-size` qu'écrit un boîtier, `sys.display-size` avant
+    Android 9, la dalle 4K d'une Sony BRAVIA), pour un boîtier en « auto » qui ne liste que le mode 1080p de son
+    interface ; sinon, sur une TV seulement, un écran qui prend le HDR avec un décodeur matériel HEVC ou Dolby Vision
+    pour 3840×2160 (les TV HDR sont presque toujours 4K ; une TV HDR 1080p derrière un boîtier 4K se lit alors 4K, et
+    ses versions 4K jouent quand même, réduites). Jamais un téléphone ni une tablette pour cette dernière règle, jamais
+    un décodeur logiciel. Lu une fois en arrière-plan avec les décodeurs. Chez Apple la taille native de l'écran ;
   - **le HDR** (HDR10, HDR10+, HLG) seulement là où l'écran l'annonce (`Display.getHdrCapabilities`, sans les types que
     l'utilisateur a désactivés ; AVFoundation chez Apple) ;
   - **le Dolby Vision** en premier seulement là où l'écran lui-même annonce le Dolby Vision et qu'un décodeur existe
@@ -192,9 +198,15 @@ sources, la meilleure d'abord, champ par champ :
   - son profil Dolby Vision (« P8.1 », « P5 », inconnu) et ce qu'elle demande à l'écran sans l'obtenir (« Dolby Vision
     non pris en charge par cet écran : profil inconnu, pas lu en premier », « HDR non pris en charge par cet écran »,
     « 4K au-delà du plus grand mode de cet écran ») ;
-  - pour l'écran : le mode du moment et le plus grand mode (Android), HDR10, HDR10+, HLG et Dolby Vision oui ou non,
-    les décodeurs Dolby Vision et HEVC Main 10, ce pour quoi les versions sont choisies (« 4K · HDR »), et la version et
-    le build de l'app, pour qu'une photo dise de quel build il s'agit.
+  - pour l'écran, après les versions : le mode du moment et le plus grand mode (Android), HDR10, HDR10+, HLG et Dolby
+    Vision oui ou non, les décodeurs Dolby Vision et HEVC Main 10, s'il est 4K et pourquoi (ses modes, sa taille
+    d'affichage, un écran HDR avec un décodeur 4K) avec la taille d'affichage que lit Media3 (Android), ce pour quoi les
+    versions sont choisies (« 4K · HDR »), et la version et le build de l'app, pour qu'une photo dise de quel build il
+    s'agit.
+
+  Le panneau ne dépasse jamais le bas de l'écran : quand il ne tient pas, il défile, sur une TV avec Haut et Bas de la
+  télécommande tant que les commandes sont masquées (en haut Haut, en bas Bas, font ce qu'ils font sans lui), sur un
+  téléphone, un iPhone ou un Mac d'un glissement ou à la molette.
 
   Un film seul a aussi sa ligne. Dans le lecteur, le panneau est recalculé quand arrivent la mesure du lecteur, les
   détails d'une version ou un échec.

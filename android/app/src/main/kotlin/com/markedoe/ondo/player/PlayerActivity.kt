@@ -36,6 +36,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.OptIn
 import androidx.annotation.VisibleForTesting
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +61,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -67,6 +69,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -149,6 +152,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -467,12 +471,25 @@ class PlayerActivity : ComponentActivity() {
                     }
                     statistics?.takeIf { showsStatistics && !inPictureInPicture }?.let {
                         Row(
-                            // On a TV, below the title of the controls.
-                            Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(start = 16.dp, top = if (television) 96.dp else 64.dp, end = 16.dp),
+                            // On a TV, below the title of the controls; never past the bottom of the screen: the title
+                            // data scrolls within what is left.
+                            Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(start = 16.dp, top = if (television) 96.dp else 64.dp, end = 16.dp, bottom = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             StreamStatisticsPanel(it)
-                            titleData?.let { data -> TitleDataPanel(data, television) }
+                            titleData?.let { data ->
+                                // A new title starts at the top of its panel; the remote's Up and Down reach it through
+                                // remoteKey while the controls are hidden (never the focus, which stays the controls').
+                                val scroll = remember(request) { ScrollState(0) }
+                                // The composition's scope: its frame clock runs the scrolling.
+                                val scope = rememberCoroutineScope()
+                                DisposableEffect(scroll, scope) {
+                                    val shown = scroll to scope
+                                    titleDataScroll = shown
+                                    onDispose { if (titleDataScroll === shown) titleDataScroll = null }
+                                }
+                                TitleDataPanel(data, television, scroll = scroll, canFocus = false)
+                            }
                         }
                     }
                     // The small Picture-in-Picture window shows the video only: the system draws its own controls.
@@ -1094,6 +1111,7 @@ class PlayerActivity : ComponentActivity() {
         controls.touch()
         // A replay keeps its channel: the channel keys go on from it.
         val zapping = request.channelId != null
+        if (scrollsTitleData(event, zapping)) return true
         val action = RemoteKeys.action(event.keyCode, controlsShown, zapping, exoPlayer.isCurrentMediaItemSeekable, episodes = episodes != null)
             ?: return television && showsControlsFor(event)
         // A stream that failed: OK presses Try Again; the channel keys still lead to another channel.
@@ -1129,6 +1147,24 @@ class PlayerActivity : ComponentActivity() {
         handledKeys += event.keyCode
         return true
     }
+
+    /**
+     * The title data panel shown (More, Stream Statistics) on a film or an episode, the controls hidden: Up and Down
+     * scroll it while it can still move that way (held, they go on); at its top Up, at its bottom Down, do what they do
+     * without it (the controls, the Episodes row). A channel keeps them for zapping.
+     */
+    private fun scrollsTitleData(event: KeyEvent, zapping: Boolean): Boolean {
+        if (!television || zapping || controlsShown || !showsStatistics) return false
+        val (scroll, scope) = titleDataScroll ?: return false
+        val down = TitleDataScrolling.direction(event.keyCode) ?: return false
+        if (!TitleDataScrolling.canScroll(scroll, down)) return false
+        scope.launch { TitleDataScrolling.step(scroll, down) }
+        handledKeys += event.keyCode
+        return true
+    }
+
+    /** The scroll of the title data panel on screen and its composition's scope; null while it is not. */
+    private var titleDataScroll: Pair<ScrollState, CoroutineScope>? = null
 
     /**
      * On a TV with the controls hidden, a key with nothing else to do shows them; not the system's keys (Back, the

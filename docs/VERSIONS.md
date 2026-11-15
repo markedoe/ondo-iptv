@@ -105,9 +105,14 @@ Only movies, and only within one playlist (live channels and series are never gr
 - **The version shown first** (and played from a card): the one in progress; else the one chosen last on this device;
   else the one the screen suits best (a cinema copy last); else the first. What the screen suits is read from what is
   known of each version (measured, else the provider's, else the name's tags) and from the screen:
-  - **4K** on a screen whose largest mode is 4K, whatever its mode of the moment: on Android the largest of
+  - **4K** on a 4K screen, whatever its mode of the moment. On Android, in this order: the largest of
     `Display.supportedModes` by physical size (a box drawing a 1080p interface, or reading 1080p in "auto" until a film
-    plays, is still a 4K screen); on Apple the screen's native size.
+    plays, is still a 4K screen); else the size Media3 reads of a TV's display (`Util.getCurrentDisplayModeSize`: the
+    `vendor.display-size` property a box writes, `sys.display-size` before Android 9, a Sony BRAVIA's 4K panel), for a
+    box in "auto" that lists its 1080p interface mode only; else, on a TV only, a display that takes HDR with a
+    hardware HEVC or Dolby Vision decoder for 3840×2160 (HDR TVs are 4K nearly always; a 1080p HDR TV behind a 4K box
+    then reads as 4K, and its 4K versions still play, downscaled). Never a phone or a tablet on that last rule, never a
+    software decoder. Read once in the background with the decoders. On Apple the screen's native size.
   - **HDR** (HDR10, HDR10+, HLG) only where the display reports it (`Display.getHdrCapabilities`, without the types
     the viewer turned off; AVFoundation on Apple).
   - **Dolby Vision** first only where the display itself reports Dolby Vision and a decoder for it exists (on Android
@@ -173,9 +178,14 @@ same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three so
   - its Dolby Vision profile ("P8.1", "P5", unknown) and what it asks of the screen and does not get ("Dolby Vision not
     supported by this screen: profile unknown, not played first", "HDR not supported by this screen", "4K above this
     screen's largest mode");
-  - for the screen: the mode of the moment and the largest mode (Android), HDR10, HDR10+, HLG and Dolby Vision yes or
-    no, the Dolby Vision and HEVC Main 10 decoders, what the versions are chosen for ("4K · HDR"), and the app's
-    version and build, so a photo says which build it was.
+  - for the screen, after the versions: the mode of the moment and the largest mode (Android), HDR10, HDR10+, HLG and
+    Dolby Vision yes or no, the Dolby Vision and HEVC Main 10 decoders, whether it is 4K and why (its modes, its display
+    size, an HDR screen with a 4K decoder) with the display size Media3 reads (Android), what the versions are chosen
+    for ("4K · HDR"), and the app's version and build, so a photo says which build it was.
+
+  The panel never runs past the bottom of the screen: when it does not fit it scrolls, on a TV with the remote's Up and
+  Down while the controls are hidden (at its top Up, at its bottom Down, do what they do without it), on a phone, an
+  iPhone or a Mac with a swipe or the scroll wheel.
 
   A film alone lists its own line too. In the player the panel is worked out again when the player's reading, a
   version's details or a failure arrive.

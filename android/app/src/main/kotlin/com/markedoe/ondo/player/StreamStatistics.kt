@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,12 +27,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -45,6 +53,7 @@ import com.markedoe.ondo.core.playback.PlaybackHealth
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.min
+import kotlinx.coroutines.launch
 
 /** The rows of More, Stream Statistics, as shown: what arrives, what the video needs, the freezes and their cause. */
 data class StreamStatistics(
@@ -138,16 +147,37 @@ private fun StatisticsRow(@StringRes label: Int, value: String, style: TextStyle
 /**
  * The title data next to the statistics (More, Stream Statistics): what the provider calls the title and its versions
  * ([TitleData]). Over the picture, touches going through: at most [TitleData.PANEL_VERSIONS] versions, the one playing
- * first, then a line counting the others (all of them on the film's TV page, OK held on a version's chip).
+ * first, then a line counting the others (all of them on the film's TV page, OK held on a version's chip), then what the
+ * app read of this screen. Never taller than the room it is given: it scrolls ([scroll]), with the remote's Up and Down
+ * ([TitleDataScrolling]: the player hands them over while its controls are hidden, and the panel takes them itself
+ * when it has the focus, which it can take only when [canFocus]: outlined then).
  */
 @Composable
-fun TitleDataPanel(data: TitleData, television: Boolean, modifier: Modifier = Modifier) {
+fun TitleDataPanel(
+    data: TitleData,
+    television: Boolean,
+    modifier: Modifier = Modifier,
+    scroll: ScrollState = rememberScrollState(),
+    canFocus: Boolean = television,
+) {
     val style = (if (television) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall).copy(fontFeatureSettings = "tnum")
     val shown = data.versions.sortedByDescending { it.playing }.take(TitleData.PANEL_VERSIONS)
+    val scope = rememberCoroutineScope()
+    var focused by remember { mutableStateOf(false) }
     Column(
         modifier
             .widthIn(max = if (television) 560.dp else 380.dp)
             .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+            .border(2.dp, if (focused) Color.White else Color.Transparent, RoundedCornerShape(12.dp))
+            .onFocusChanged { focused = it.isFocused }
+            .onPreviewKeyEvent { event ->
+                val down = TitleDataScrolling.direction(event.nativeKeyEvent.keyCode) ?: return@onPreviewKeyEvent false
+                if (event.type != KeyEventType.KeyDown || !TitleDataScrolling.canScroll(scroll, down)) return@onPreviewKeyEvent false
+                scope.launch { TitleDataScrolling.step(scroll, down) }
+                true
+            }
+            .focusable(enabled = canFocus)
+            .verticalScroll(scroll)
             .padding(12.dp)
             .semantics(mergeDescendants = true) {}
             .testTag("titleData"),
@@ -155,7 +185,7 @@ fun TitleDataPanel(data: TitleData, television: Boolean, modifier: Modifier = Mo
     ) {
         Text(stringResource(R.string.title_data), color = Color.White, style = style.copy(fontWeight = FontWeight.SemiBold))
         TitleDataLines(data, style)
-        TitleDataScreen(data, style)
+        // The versions before the screen: what a photo of the panel is taken for.
         if (shown.isNotEmpty()) {
             Text(
                 stringResource(R.string.title_data_versions),
@@ -168,6 +198,28 @@ fun TitleDataPanel(data: TitleData, television: Boolean, modifier: Modifier = Mo
             if (more > 0) Text(stringResource(R.string.title_data_more, more), color = Color.White.copy(alpha = 0.7f), style = style)
             data.reason?.let { TitleDataReason(it, style) }
         }
+        TitleDataScreen(data, style)
+    }
+}
+
+/**
+ * The remote's Up and Down on the title data panel: a step of most of what it shows, only while it can still move that
+ * way (at its top, Up does what it does without the panel; at its bottom, Down).
+ */
+object TitleDataScrolling {
+    /** Down (true) or Up (false) for [keyCode]; null for another key. */
+    fun direction(keyCode: Int): Boolean? = when (keyCode) {
+        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> true
+        android.view.KeyEvent.KEYCODE_DPAD_UP -> false
+        else -> null
+    }
+
+    fun canScroll(scroll: ScrollState, down: Boolean): Boolean = if (down) scroll.canScrollForward else scroll.canScrollBackward
+
+    /** Three quarters of what the panel shows, so a line at its edge stays in sight. */
+    suspend fun step(scroll: ScrollState, down: Boolean) {
+        val by = (scroll.viewportSize * 3 / 4).coerceAtLeast(1).toFloat()
+        scroll.animateScrollBy(if (down) by else -by)
     }
 }
 
@@ -295,7 +347,8 @@ private fun TitleDataDiagnosis(version: TitleData.Version, style: TextStyle) {
 
 /**
  * What the app read of this screen ([TitleData.display]): its mode of the moment and its largest mode, the HDR formats it
- * takes, the decoders, what the versions are chosen for, and the app's build. Nothing before the screen was read.
+ * takes, the decoders, whether it is 4K and why (with the display size Media3 reads), what the versions are chosen for,
+ * and the app's build. Nothing before the screen was read.
  */
 @Composable
 fun TitleDataScreen(data: TitleData, style: TextStyle) {
@@ -316,6 +369,19 @@ fun TitleDataScreen(data: TitleData, style: TextStyle) {
             Text(stringResource(R.string.title_data_screen_modes, size(facts.currentWidth, facts.currentHeight), size(facts.largestWidth, facts.largestHeight)), color = dim, style = style)
             Text(stringResource(R.string.title_data_screen_hdr, word(facts.hdr10), word(facts.hdr10Plus), word(facts.hlg), word(facts.dolbyVisionDisplay)), color = dim, style = style)
             Text(stringResource(R.string.title_data_screen_decoders, word(facts.dolbyVisionDecoder), word(facts.hevcMain10Decoder)), color = dim, style = style)
+            // Where 4K came from: the modes, the display-size property Media3 reads, or an HDR TV with a 4K decoder.
+            val uhd = when (facts.uhdSource) {
+                DisplayFacts.UhdSource.MODES -> stringResource(R.string.title_data_uhd_modes)
+                DisplayFacts.UhdSource.DISPLAY_SIZE -> stringResource(R.string.title_data_uhd_display_size)
+                DisplayFacts.UhdSource.HDR_AND_DECODER -> stringResource(R.string.title_data_uhd_decoder)
+                null -> if (facts.uhdChecked) no else unknown
+            }
+            Text(
+                stringResource(R.string.title_data_screen_uhd, uhd, size(facts.displaySizeWidth, facts.displaySizeHeight)),
+                color = dim,
+                style = style,
+                modifier = Modifier.testTag("titleDataUhd"),
+            )
         }
         val chosen = listOfNotNull("4K".takeIf { data.support.uhd }, "HDR".takeIf { data.support.hdr }, "Dolby Vision".takeIf { data.support.dolbyVision })
         Text(stringResource(R.string.title_data_screen_chosen, chosen.joinToString(" · ").ifEmpty { "–" }), color = dim, style = style, modifier = Modifier.testTag("titleDataChosen"))
@@ -347,13 +413,14 @@ fun TitleDataDialog(data: TitleData, onDismiss: () -> Unit) {
                     TitleDataLines(data, style)
                 }
             }
-            item(key = "screen") { FocusableBlock { TitleDataScreen(data, style) } }
             items(data.versions, key = { "version:" + it.id }) { version ->
                 FocusableBlock { TitleDataVersion(version, style, current = R.string.title_data_this_chip) }
             }
             data.reason?.takeIf { data.versions.isNotEmpty() }?.let { reason ->
                 item(key = "reason") { FocusableBlock { TitleDataReason(reason, style) } }
             }
+            // After the versions, as in the player's panel.
+            item(key = "screen") { FocusableBlock { TitleDataScreen(data, style) } }
         }
         LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
     }

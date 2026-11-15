@@ -1,6 +1,19 @@
 package com.markedoe.ondo.player
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -199,5 +212,46 @@ class TitleDataTest {
         compose.onNodeWithText("4K Dolby Vision  ·  ▶ Playing", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("Standard · MP4  ·  ★ Plays first", useUnmergedTree = true).assertExists()
         compose.onNodeWithTag("titleDataReason", useUnmergedTree = true).assert(hasText("suits this screen best", substring = true))
+    }
+
+    /**
+     * A long title data on a TV (five versions, the screen after them) in less room than it needs: it scrolls with the
+     * remote. Down brings the last version listed, then the screen, on screen; Up goes back to the top. It was cut at
+     * the bottom of the screen, its versions out of reach.
+     */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun aLongTitleDataScrollsWithTheRemote() {
+        val more = listOf(version("v104", "Copper Valley VOSTFR", "mkv"), version("v105", "Copper Valley MULTI", "mp4"))
+        val long = state().let { it.copy(content = it.content.copy(movies = it.content.movies + more)) }
+        val data = TitleData.of(long, "${Fixtures.PLAYLIST_ID}|MOVIE|${dv.id}|", shownTitle = "Copper Valley")!!
+        assertTrue("more versions than the panel lists", data.versions.size > TitleData.PANEL_VERSIONS)
+        compose.setContent { OndoTheme { Box(Modifier.height(320.dp)) { TitleDataPanel(data, television = true) } } }
+        val tag = SemanticsProperties.TestTag
+        val tags = compose.onAllNodes(SemanticsMatcher("a version") { it.config.getOrNull(tag)?.startsWith("titleDataVersion-") == true }, useUnmergedTree = true)
+            .fetchSemanticsNodes().mapNotNull { node -> node.config.getOrNull(tag) }
+        assertEquals(TitleData.PANEL_VERSIONS, tags.size)
+        val last = compose.onNodeWithTag(tags.last(), useUnmergedTree = true)
+        last.assertIsNotDisplayed()
+        val panel = compose.onNodeWithTag("titleData")
+        panel.requestFocus()
+        fun shown(tag: String) = runCatching { compose.onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed() }.isSuccess
+        repeat(20) { if (!shown(tags.last())) panel.performKeyInput { pressKey(Key.DirectionDown) }.also { compose.waitForIdle() } }
+        last.assertIsDisplayed()
+        repeat(20) { if (!shown("titleDataChosen")) panel.performKeyInput { pressKey(Key.DirectionDown) }.also { compose.waitForIdle() } }
+        compose.onNodeWithTag("titleDataChosen", useUnmergedTree = true).assertIsDisplayed()
+        repeat(40) { panel.performKeyInput { pressKey(Key.DirectionUp) }; compose.waitForIdle() }
+        compose.onNodeWithText("Title data", useUnmergedTree = true).assertIsDisplayed()
+        last.assertIsNotDisplayed()
+    }
+
+    /** On the panel, the versions come before what the app read of the screen. */
+    @Test
+    fun thePanelListsTheVersionsBeforeTheScreen() {
+        val data = TitleData.of(state(), "${Fixtures.PLAYLIST_ID}|MOVIE|${dv.id}|", shownTitle = "Copper Valley")!!
+        compose.setContent { OndoTheme { TitleDataPanel(data, television = true) } }
+        val versions = compose.onNodeWithText("Versions", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top
+        val screen = compose.onNodeWithTag("titleDataScreen", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top
+        assertTrue("versions at $versions, screen at $screen", versions < screen)
     }
 }

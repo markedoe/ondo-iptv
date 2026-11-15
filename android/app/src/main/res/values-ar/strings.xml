@@ -438,6 +438,10 @@
     <string name="title_data_screen_modes">الوضع %1$s · الأكبر %2$s</string>
     <string name="title_data_screen_hdr">HDR10 %1$s · HDR10+ %2$s · HLG %3$s · Dolby Vision %4$s</string>
     <string name="title_data_screen_decoders">أجهزة فك الترميز: Dolby Vision %1$s · HEVC Main 10 %2$s</string>
+    <string name="title_data_screen_uhd">4K: %1$s · حجم العرض %2$s</string>
+    <string name="title_data_uhd_modes">نعم (الأوضاع)</string>
+    <string name="title_data_uhd_display_size">نعم (حجم العرض)</string>
+    <string name="title_data_uhd_decoder">نعم (شاشة HDR، فك ترميز 4K)</string>
     <string name="title_data_screen_chosen">النسخ مختارة لـ: %1$s</string>
     <string name="title_data_app">التطبيق %1$s</string>
     <string name="title_data_yes">نعم</string>

@@ -396,6 +396,10 @@
     <string name="title_data_screen_modes">Modo %1$s · o maior %2$s</string>
     <string name="title_data_screen_hdr">HDR10 %1$s · HDR10+ %2$s · HLG %3$s · Dolby Vision %4$s</string>
     <string name="title_data_screen_decoders">Decodificadores: Dolby Vision %1$s · HEVC Main 10 %2$s</string>
+    <string name="title_data_screen_uhd">4K: %1$s · tamanho da tela %2$s</string>
+    <string name="title_data_uhd_modes">sim (modos)</string>
+    <string name="title_data_uhd_display_size">sim (tamanho da tela)</string>
+    <string name="title_data_uhd_decoder">sim (tela HDR, decodificador 4K)</string>
     <string name="title_data_screen_chosen">Versões escolhidas para: %1$s</string>
     <string name="title_data_app">App %1$s</string>
     <string name="title_data_yes">sim</string>

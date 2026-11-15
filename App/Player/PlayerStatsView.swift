@@ -78,13 +78,30 @@ struct TitleDataKey: Equatable {
 }
 
 /// Next to the statistics (More, Stream Statistics): what the provider calls the title and its versions (`TitleData`):
-/// at most `TitleData.panelVersions` versions, the one playing first, then a line counting the others.
+/// at most `TitleData.panelVersions` versions, the one playing first, then a line counting the others, then what the app
+/// read of this screen. Never taller than the room it is given: when it does not fit (an iPhone in landscape, a small
+/// window), it scrolls (a swipe, the trackpad, the scroll wheel) instead of running past the bottom of the screen.
 struct TitleDataView: View {
     let data: TitleData
 
     var body: some View {
+        ViewThatFits(in: .vertical) {
+            // Touches go through to the player while it fits.
+            rows.allowsHitTesting(false)
+            ScrollView(.vertical) { rows }
+                .scrollBounceBehavior(.basedOnSize)
+        }
+        .font(.caption.monospacedDigit())
+        .foregroundStyle(.white)
+        .frame(maxWidth: 420, alignment: .leading)
+        .background(.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("titleData")
+    }
+
+    private var rows: some View {
         let shown = Array(data.versions.sorted { $0.playing && !$1.playing }.prefix(TitleData.panelVersions))
-        VStack(alignment: .leading, spacing: 2) {
+        return VStack(alignment: .leading, spacing: 2) {
             Text("Title data").fontWeight(.semibold)
             ForEach(Array(data.lines.enumerated()), id: \.offset) { _, line in
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -94,7 +111,7 @@ struct TitleDataView: View {
                     Text(verbatim: line.value).lineLimit(2)
                 }
             }
-            screenRows
+            // The versions before the screen: what a look at the panel is for.
             if !shown.isEmpty {
                 Text("Versions").fontWeight(.semibold).padding(.top, 4)
                 ForEach(shown) { version in
@@ -107,15 +124,10 @@ struct TitleDataView: View {
                     reasonText(reason).foregroundStyle(.white.opacity(0.7)).padding(.top, 4)
                 }
             }
+            screenRows
         }
-        .font(.caption.monospacedDigit())
-        .foregroundStyle(.white)
         .padding(12)
-        .frame(maxWidth: 420, alignment: .leading)
-        .background(.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 12))
-        .allowsHitTesting(false)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("titleData")
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

@@ -1,6 +1,12 @@
 import XCTest
+import SwiftUI
 import IPTVCore
 @testable import Ondo
+#if canImport(UIKit)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// The title data of More, Stream Statistics: a film's raw names, categories and tags, each version's chip, the one
 /// playing and the one played first. The same as Android's `TitleDataTest`. Invented names and example.com only.
@@ -76,6 +82,26 @@ final class TitleDataAppTests: XCTestCase {
                 }
             }
         }
+    }
+
+    /// A title data taller than the room it is given (an iPhone in landscape) scrolls within it instead of running past
+    /// the bottom of the screen, its versions out of reach; with room enough it shows whole.
+    func testTheTitleDataPanelNeverRunsPastTheRoomItIsGiven() async throws {
+        let model = try await model()
+        let dv = try XCTUnwrap(model.content.movies.first { $0.name == "Copper Valley 4K DV" })
+        let item = try XCTUnwrap(model.downloadItem(for: dv))
+        let maybe = await model.titleData(for: item)
+        let data = try XCTUnwrap(maybe)
+        #if canImport(UIKit)
+        let host = UIHostingController(rootView: TitleDataView(data: data))
+        #else
+        let host = NSHostingController(rootView: TitleDataView(data: data))
+        #endif
+        let room = CGSize(width: 420, height: 160)
+        let whole = host.sizeThatFits(in: CGSize(width: 420, height: 10_000))
+        XCTAssertGreaterThan(whole.height, room.height, "the panel needs more room than it is given")
+        let fitted = host.sizeThatFits(in: room)
+        XCTAssertLessThanOrEqual(fitted.height, room.height + 0.5)
     }
 
     /// Every text the panel shows.

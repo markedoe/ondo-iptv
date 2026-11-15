@@ -76,6 +76,8 @@ struct PlayerView: View {
                     Spacer()
                 }
                 .padding(.top, controlsVisible ? 70 : 16)
+                // Never past the bottom of the screen: the title data scrolls within what is left.
+                .padding(.bottom, 16)
                 .padding(.horizontal, 16)
             }
 

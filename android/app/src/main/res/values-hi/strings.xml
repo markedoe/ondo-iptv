@@ -382,6 +382,10 @@
     <string name="title_data_screen_modes">मोड %1$s · सबसे बड़ा %2$s</string>
     <string name="title_data_screen_hdr">HDR10 %1$s · HDR10+ %2$s · HLG %3$s · Dolby Vision %4$s</string>
     <string name="title_data_screen_decoders">डिकोडर: Dolby Vision %1$s · HEVC Main 10 %2$s</string>
+    <string name="title_data_screen_uhd">4K: %1$s · डिस्प्ले आकार %2$s</string>
+    <string name="title_data_uhd_modes">हाँ (मोड)</string>
+    <string name="title_data_uhd_display_size">हाँ (डिस्प्ले आकार)</string>
+    <string name="title_data_uhd_decoder">हाँ (HDR स्क्रीन, 4K डिकोडर)</string>
     <string name="title_data_screen_chosen">संस्करण इसके लिए चुने गए: %1$s</string>
     <string name="title_data_app">ऐप %1$s</string>
     <string name="title_data_yes">हाँ</string>
