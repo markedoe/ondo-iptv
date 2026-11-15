@@ -151,6 +151,7 @@
     <string name="version_arabic">Arabic</string>
     <string name="version_french_subtitles">Original, French subtitles</string>
     <string name="version_subtitled">Original, subtitled</string>
+    <string name="version_cinema_copy">Cinema copy (%1$s)</string>
     <string name="version_chip_description">Version: %1$s</string>
     <string name="kind_movie">Movie</string>
     <string name="kind_series">Series</string>
@@ -374,6 +375,7 @@
     <string name="title_data_this_chip">This chip</string>
     <string name="title_data_plays_first">Plays first</string>
     <string name="title_data_hidden">Hidden category: not offered</string>
+    <string name="title_data_same_as">Same as %1$s</string>
     <string name="title_data_more">More versions: %1$d</string>
     <string name="title_data_first_in_progress">Plays first because it is in progress.</string>
     <string name="title_data_first_chosen">Plays first because it was chosen last on this device.</string>

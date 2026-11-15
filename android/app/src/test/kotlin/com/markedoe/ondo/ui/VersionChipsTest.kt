@@ -1,8 +1,12 @@
 package com.markedoe.ondo.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -12,8 +16,13 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
+import com.markedoe.ondo.FiledTwice
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.core.library.PictureSupport
+import com.markedoe.ondo.data.ItemKind
+import com.markedoe.ondo.data.LibraryState
+import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
@@ -70,5 +79,44 @@ class VersionChipsTest {
         compose.onNodeWithContentDescription("Version: 4K Dolby Vision").assertExists()
         compose.onNodeWithTag("version-4k-2").performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf("4k-2"), picked)
+    }
+
+    /**
+     * One film a panel files under two categories, next to a 4K Dolby Vision version: the TV page shows two chips,
+     * "Standard" and "4K Dolby Vision", and the remote on "Standard" plays its preferred stream (the first, else the one in
+     * progress).
+     */
+    @Test
+    @Config(qualifiers = "w960dp-h2400dp-television-xhdpi")
+    fun aFilmFiledTwiceShowsTwoChipsOnATv() {
+        val shape = FiledTwice
+        // A screen without 4K or Dolby Vision, whatever another test left.
+        UiMappers.pictureSupport = PictureSupport()
+        val watching = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, shape.again.id, title = shape.again.name, lastWatchedAt = 1)
+        val inProgress = LibraryState().recordStart(watching).updateProgress(watching.key, 600.0, 6_000.0, now = 2)
+        val pages = listOf(LibraryState() to shape.first.id, inProgress to shape.again.id)
+        val picked = mutableListOf<String>()
+        var page by mutableStateOf(UiMappers.movieDetail(shape.state(), shape.again))
+        compose.setContent { OndoTheme { TelevisionFrame { TvMovieDetailScreen(page, DetailActions(onVersion = { picked += it })) } } }
+        try {
+            for ((library, plays) in pages) {
+                page = UiMappers.movieDetail(shape.state(library), shape.again)
+                compose.waitForIdle()
+                compose.onNodeWithTag("detail").performScrollToNode(hasTestTag("versions"))
+                assertEquals(2, compose.onAllNodes(hasTestTagStartingWith("version-")).fetchSemanticsNodes().size)
+                compose.onNodeWithText("Standard").assertExists()
+                compose.onNodeWithText("4K Dolby Vision").assertExists()
+                assertEquals(true, selected("version-${shape.first.id}"))
+                picked.clear()
+                compose.onNodeWithTag("version-${shape.first.id}").performSemanticsAction(SemanticsActions.OnClick)
+                assertEquals(listOf(plays), picked)
+            }
+        } finally {
+            UiMappers.forgetCatalogue()
+        }
+    }
+
+    private fun hasTestTagStartingWith(prefix: String) = SemanticsMatcher("test tag starting with $prefix") { node ->
+        node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith(prefix) == true
     }
 }

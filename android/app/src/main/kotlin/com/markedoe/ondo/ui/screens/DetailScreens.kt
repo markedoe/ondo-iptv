@@ -180,10 +180,19 @@ data class SeriesDetailUiState(
 )
 
 /**
- * A version of a film on its page: its stream and what its chip says, what sets it apart from the film's other
- * versions in the app's words ("4K Dolby Vision", "Original, French subtitles", "Standard": `FilmVersions.labels`).
+ * A version of a film on its page: what its chip says, what sets it apart from the film's other versions in the app's
+ * words ("4K Dolby Vision", "Original, French subtitles", "Standard": `FilmVersions.choices`), and its streams: versions
+ * that play the same thing (one stream a panel files under two categories) are one chip.
  */
-data class VersionChip(val id: String, val label: String)
+data class VersionChip(
+    /** Its first stream's id, whichever plays: the chip's key, focus and test tag. */
+    val id: String,
+    val label: String,
+    /** The stream it plays: the one in progress, else the one chosen last, else its first. */
+    val plays: String = id,
+    /** Its streams, in catalogue order. */
+    val members: List<String> = listOf(id),
+)
 
 /** What a screen reader says of a version's chip: "Version: 4K Dolby Vision", so the row reads as the film's versions. */
 @Composable
@@ -278,8 +287,8 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                         itemsIndexed(state.versions, key = { index, chip -> "$index:${chip.id}" }) { _, chip ->
                             val description = versionDescription(chip)
                             FilterChip(
-                                selected = chip.id == selected,
-                                onClick = { actions.onVersion(chip.id) },
+                                selected = selected in chip.members,
+                                onClick = { actions.onVersion(chip.plays) },
                                 label = { Text(chip.label) },
                                 modifier = Modifier.testTag("version-${chip.id}").semantics { contentDescription = description },
                             )

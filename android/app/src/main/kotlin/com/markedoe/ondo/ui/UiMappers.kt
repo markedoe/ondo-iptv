@@ -17,6 +17,7 @@ import com.markedoe.ondo.core.library.Selections
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
+import com.markedoe.ondo.core.library.VersionChoice
 import com.markedoe.ondo.core.library.VersionWords
 import com.markedoe.ondo.core.library.WeightedRating
 import com.markedoe.ondo.core.model.Channel
@@ -234,21 +235,49 @@ object UiMappers {
     /** [defaultVersion] and why it is that one (`FilmVersions.defaultChoice`), for the player's title data. */
     fun defaultChoice(state: OndoState, movie: Movie, versions: List<Movie> = visibleVersions(state, movie)): Pair<Movie, DefaultReason> {
         if (versions.size < 2) return movie to DefaultReason.ONLY
-        val playlistId = state.activePlaylistId.orEmpty()
-        val inProgress = versions.mapNotNull { version ->
-            state.library.progress(WatchEntry(playlistId, ItemKind.MOVIE, version.id, null, title = "", lastWatchedAt = 0).key)
-                ?.takeIf { it.isResumable }?.let { version to it.lastWatchedAt }
-        }.maxByOrNull { it.second }?.first
         return FilmVersions.defaultChoice(
-            versions, inProgress?.id, state.settings.chosenVersions, pictureSupport, FilmVersions.categoryNames(state.content.movieCategories),
+            versions, inProgress(state, versions).firstOrNull(), state.settings.chosenVersions, pictureSupport,
+            FilmVersions.categoryNames(state.content.movieCategories),
         ) ?: (movie to DefaultReason.ONLY)
     }
 
-    /** The chips of a film's versions, each with its stream (for its page), in [words]; empty when the film has one. */
+    /** The ids of [versions] that can be resumed, the one watched last first. */
+    private fun inProgress(state: OndoState, versions: List<Movie>): List<String> {
+        val playlistId = state.activePlaylistId.orEmpty()
+        return versions.mapNotNull { version ->
+            state.library.progress(WatchEntry(playlistId, ItemKind.MOVIE, version.id, null, title = "", lastWatchedAt = 0).key)
+                ?.takeIf { it.isResumable }?.let { version.id to it.lastWatchedAt }
+        }.sortedByDescending { it.second }.map { it.first }
+    }
+
+    /**
+     * A film's chips ([FilmVersions.choices]): versions that play the same thing are one, which plays the member in
+     * progress, else the one chosen last, else its first. [versions]: the film's visible ones.
+     */
+    fun versionChoices(state: OndoState, versions: List<Movie>, words: VersionWords = VersionWords()): List<VersionChoice> {
+        if (versions.size < 2) return versions.map { VersionChoice(words.standard, listOf(it), it) }
+        return FilmVersions.choices(
+            versions, FilmVersions.categoryNames(state.content.movieCategories), words, inProgress(state, versions), state.settings.chosenVersions,
+        )
+    }
+
+    /** The chips of a film's versions, each with the stream it plays (for its page), in [words]; empty for one chip. */
     fun versionChips(state: OndoState, versions: List<Movie>, words: VersionWords = VersionWords()): List<VersionChip> {
         if (versions.size < 2) return emptyList()
-        val labels = FilmVersions.labels(versions, FilmVersions.categoryNames(state.content.movieCategories), words)
-        return versions.zip(labels) { movie, label -> VersionChip(movie.id, label) }
+        val choices = versionChoices(state, versions, words)
+        if (choices.size < 2) return emptyList()
+        return choices.map { VersionChip(it.id, it.label, plays = it.preferred.id, members = it.members.map { member -> member.id }) }
+    }
+
+    /**
+     * The other streams of [movie]'s chip, tried in turn when [movie] fails to start ([VersionChoice.playOrder]): the
+     * versions that play the same thing, visible ones of the same headers only. Empty when its chip has one stream.
+     */
+    fun fallbacks(state: OndoState, movie: Movie, grouped: FilmVersions = films(state)): List<Movie> {
+        val versions = visibleVersions(state, movie, grouped)
+        if (versions.size < 2) return emptyList()
+        val choice = versionChoices(state, versions).firstOrNull { movie.id in it } ?: return emptyList()
+        return choice.playOrder.filter { it.id != movie.id && it.headers == movie.headers }
     }
 
     /** Movies and series by id; the first of an id the catalogue lists twice, as a search through the list would find. */
@@ -306,7 +335,7 @@ object UiMappers {
         }
         // Continue Watching stays per stream: a film of several versions says which one is in progress.
         val version = if (entry.kind == ItemKind.MOVIE && entry.subtitle.isNullOrBlank()) {
-            movie(state, entry.itemId)?.let { movie -> versionChips(state, visibleVersions(state, movie), versionWords).firstOrNull { it.id == movie.id }?.label }
+            movie(state, entry.itemId)?.let { movie -> versionChips(state, visibleVersions(state, movie), versionWords).firstOrNull { movie.id in it.members }?.label }
         } else {
             null
         }

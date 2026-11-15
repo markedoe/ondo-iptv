@@ -1911,9 +1911,15 @@ class OndoRepository(
 
     // MARK: Playback
 
-    fun playRequest(movie: Movie, fromStart: Boolean = false): PlayRequest? {
+    /**
+     * [movie]'s request; the addresses of [fallbacks] (the other streams of its chip, which play the same thing) follow
+     * its own, so the player tries them before showing an error. The progress stays [movie]'s.
+     */
+    fun playRequest(movie: Movie, fromStart: Boolean = false, fallbacks: List<Movie> = emptyList()): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
-        val item = PlaybackFactory(playlist.toCorePlaylist()).item(movie)
+        val factory = PlaybackFactory(playlist.toCorePlaylist())
+        val own = factory.item(movie)
+        val item = if (fallbacks.isEmpty()) own else own.copy(urls = (own.urls + fallbacks.flatMap { factory.item(it).urls }).distinct())
         val entry = WatchEntry(playlist.id, ItemKind.MOVIE, movie.id, null, movie.name, movie.year?.toString(), movie.posterUrl, lastWatchedAt = 0)
         val tmdbId = movie.tmdbId ?: _state.value.movieDetails[movie.id]?.tmdbId?.toIntOrNull()
         return start(item, entry, fromStart).copy(subtitleSearch = SubtitleSearchHint.of(movie.name, movie.year, tmdbId = tmdbId))

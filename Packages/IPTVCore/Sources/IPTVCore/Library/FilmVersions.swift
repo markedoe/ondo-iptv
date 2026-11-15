@@ -30,6 +30,8 @@ public enum DefaultReason: String, Hashable, Sendable {
 /// What a version's tag says about it, in the order a version's chip names them (docs/VERSIONS.md).
 public enum VersionAspect: Int, CaseIterable, Hashable, Sendable, Comparable {
     case quality, range, threeD, edition, codec, language, subtitles
+    /// A copy filmed or leaked before the film's release (CAM, TS, TC, SCR, R5, WORKPRINT): named last, played last.
+    case source
 
     public static func < (lhs: VersionAspect, rhs: VersionAspect) -> Bool { lhs.rawValue < rhs.rawValue }
 }
@@ -40,6 +42,7 @@ public enum VersionTag: Int, CaseIterable, Hashable, Sendable, Comparable {
     case uhd, fhd, hd, sd, dolbyVision, hdr, threeD, imax, hevc
     case multi, vff, vfq, vfi, vf, vo, english, spanish, german, italian, portuguese, arabic
     case vostfr, vost
+    case cam, telesync, telecine, screener, r5, workprint
 
     public var aspect: VersionAspect {
         switch self {
@@ -50,6 +53,7 @@ public enum VersionTag: Int, CaseIterable, Hashable, Sendable, Comparable {
         case .hevc: return .codec
         case .multi, .vff, .vfq, .vfi, .vf, .vo, .english, .spanish, .german, .italian, .portuguese, .arabic: return .language
         case .vostfr, .vost: return .subtitles
+        case .cam, .telesync, .telecine, .screener, .r5, .workprint: return .source
         }
     }
 
@@ -83,6 +87,8 @@ public struct VersionWords {
     public var arabic = "Arabic"
     public var frenchSubtitles = "Original, French subtitles"
     public var subtitled = "Original, subtitled"
+    /// A copy filmed or leaked before the film's release: "Cinema copy (CAM)" (the provider's marker).
+    public var cinemaCopy: (String) -> String = { "Cinema copy (\($0))" }
 
     public init() {}
 
@@ -111,8 +117,40 @@ public struct VersionWords {
         case .arabic: return arabic
         case .vostfr: return frenchSubtitles
         case .vost: return subtitled
+        case .cam: return cinemaCopy("CAM")
+        case .telesync: return cinemaCopy("TS")
+        case .telecine: return cinemaCopy("TC")
+        case .screener: return cinemaCopy("SCR")
+        case .r5: return cinemaCopy("R5")
+        case .workprint: return cinemaCopy("Workprint")
         }
     }
+}
+
+/// One chip of a film's page (`FilmVersions.choices`): versions that play the same thing (the same chip tags, the same
+/// container, the same name once normalised: a panel filing one stream under two categories) are one choice. The same as
+/// Android's `VersionChoice`.
+public struct VersionChoice: Hashable, Sendable {
+    /// What its chip says.
+    public var label: String
+    /// Its versions, in catalogue order.
+    public var members: [Movie]
+    /// The member it plays (`FilmVersions.preferred`): the one in progress, else the one chosen last, else the first.
+    public var preferred: Movie
+
+    public init(label: String, members: [Movie], preferred: Movie) {
+        self.label = label
+        self.members = members
+        self.preferred = preferred
+    }
+
+    /// Its first member's id: the same whichever member plays (the chip's identity, focus and tests).
+    public var id: String { members.first?.id ?? preferred.id }
+
+    /// `preferred`, then the others in catalogue order: the streams tried in turn when one fails to start.
+    public var playOrder: [Movie] { [preferred] + members.filter { $0.id != preferred.id } }
+
+    public func contains(_ id: String) -> Bool { members.contains { $0.id == id } }
 }
 
 /// The same film's versions in one playlist (4K, Dolby Vision, HD, VOSTFR…), grouped so that lists show each film once
@@ -591,9 +629,38 @@ public struct FilmVersions: Sendable {
                 // French subtitles in two words: "ST FR", "SUB FR", "FR SUB".
                 if (word == "st" || word == "sub") && next == "fr" || word == "fr" && next == "sub" { found.insert(.vostfr) }
             }
+            // A copy filmed or leaked before release, in the name or the category ("Cinema CAM"), as written.
+            for word in writtenWords(text) { if let tag = sourceTag(word) { found.insert(tag) } }
         }
         return tidy(found)
     }
+
+    /// A copy filmed or leaked before the film's release, in any letter case ("HDCAM", "Telesync", "DVDScr").
+    private static let sourceWords: [String: VersionTag] = [
+        "hdcam": .cam, "hdts": .telesync, "telesync": .telesync, "telecine": .telecine, "dvdscr": .screener, "workprint": .workprint,
+    ]
+
+    /// The same, also words or letters of titles ("Cam", "Ts", "Screener"): a tag only in capitals ("CAM", "TS").
+    private static let sourceCaps: [String: VersionTag] = [
+        "cam": .cam, "ts": .telesync, "tc": .telecine, "scr": .screener, "screener": .screener, "r5": .r5,
+    ]
+
+    /// A provider's word of a copy filmed or leaked before release (`sourceWords`, `sourceCaps`), or nil. The same as
+    /// Android's.
+    static func sourceTag(_ word: String) -> VersionTag? {
+        let lower = word.lowercased()
+        if let tag = sourceWords[lower] { return tag }
+        guard let tag = sourceCaps[lower], word == word.uppercased() else { return nil }
+        return tag
+    }
+
+    /// `text`'s words as written, split at every character that is no letter or digit (no regular expression).
+    private static func writtenWords(_ text: String) -> [String] {
+        text.split(whereSeparator: { !($0.isLetter || $0.isNumber) }).map(String.init)
+    }
+
+    /// A copy filmed or leaked before the film's release (CAM, TS, TC, SCR, R5, WORKPRINT).
+    public static func isEarlyCopy(_ tags: [VersionTag]) -> Bool { tags.contains { $0.aspect == .source } }
 
     /// One quality (the best) and one French; subtitles mean the original language, not a dub.
     private static func tidy(_ tags: Set<VersionTag>) -> [VersionTag] {
@@ -637,15 +704,97 @@ public struct FilmVersions: Sendable {
         return versions.map { labelTags(name: $0.name, categoryName: categoryName($0.categoryID), titleWords: shared) }
     }
 
+    /// Apostrophes as providers write them: "Director's", "Director’s" and "Directors" are one name.
+    private static let apostrophes: Set<Character> = ["'", "’", "‘", "ʼ", "`", "´"]
+
+    /// A version's name as `choices` compares it: case, accents, apostrophes and punctuation left out, and the words its
+    /// chip tags come from (the provider's prefix "|FR|", "4K", "Dolby Vision") and years. The words the chips have no
+    /// name for ("DUB") and those of an edition ("Extended Cut") stay: they tell versions apart. The same as Android's.
+    public static func nameKey(_ name: String) -> String {
+        // A copy's marker ("CAM") is its tag, not a word of its name.
+        let written = writtenWords(String(name.filter { !apostrophes.contains($0) })).filter { sourceTag($0) == nil }.joined(separator: " ")
+        let words = TextNormalizer.normalize(written).split(separator: " ").map(String.init)
+        // A language's code at an end only where a provider's delimiter sets it apart, as `labelTags` reads it.
+        let range = NSRange(name.startIndex..., in: name)
+        let prefix = prefixCode.firstMatch(in: name, range: range) != nil
+        let suffix = suffixCode.firstMatch(in: name, range: range) != nil
+        var kept: [String] = []
+        var i = 0
+        while i < words.count {
+            let word = words[i]
+            let next = i + 1 < words.count ? words[i + 1] : nil
+            let pair = (word == "dolby" && next == "vision") || (word == "h" && next == "265")
+                || ((word == "st" || word == "sub") && next == "fr") || (word == "fr" && next == "sub")
+            if pair {
+                i += 2
+                continue
+            }
+            let edge = (i == 0 && prefix) || (i == words.count - 1 && suffix)
+            if tagWords[word] == nil && !isYear(word) && !(edge && edgeCodes[word] != nil) { kept.append(word) }
+            i += 1
+        }
+        return kept.joined(separator: " ")
+    }
+
+    /// The member of a choice that plays: the one in progress (`inProgress`, most recent first), else the one the viewer
+    /// chose last (`chosen`, most recent first), else the first in catalogue order. The rules of `defaultChoice`.
+    public static func preferred(_ members: [Movie], inProgress: [String], chosen: [String]) -> Movie? {
+        for id in inProgress { if let movie = members.first(where: { $0.id == id }) { return movie } }
+        for id in chosen { if let movie = members.first(where: { $0.id == id }) { return movie } }
+        return members.first
+    }
+
+    /// A film's chips: its `versions` (catalogue order) with the same chip tags (`labelTags`), the same container
+    /// (`container(of:)`) and the same `nameKey` are one choice, labelled as one version ("Standard", "4K Dolby Vision"),
+    /// in the order of its first member; a category's name never sets versions apart. Each plays its `preferred` member
+    /// (`inProgress`, `chosen`); the others are its fallbacks (`VersionChoice.playOrder`). One choice alone reads
+    /// "Standard". Empty without versions. The same rules as Android's.
+    public static func choices(
+        _ versions: [Movie],
+        categoryName: (String) -> String?,
+        words: VersionWords = VersionWords(),
+        inProgress: [String] = [],
+        chosen: [String] = []
+    ) -> [VersionChoice] {
+        guard !versions.isEmpty else { return [] }
+        let tags = labelTags(versions, categoryName: categoryName)
+        struct Key: Hashable {
+            var tags: [VersionTag]
+            var container: String?
+            var name: String
+        }
+        var order: [Key] = []
+        var groups: [Key: [Int]] = [:]
+        for (i, movie) in versions.enumerated() {
+            let key = Key(tags: tags[i], container: container(of: movie), name: nameKey(movie.name))
+            if groups[key] == nil { order.append(key) }
+            groups[key, default: []].append(i)
+        }
+        // A proper copy's chips before those of a copy filmed or leaked before release, each in catalogue order.
+        let all = order.map { groups[$0] ?? [] }
+        let members = all.filter { !isEarlyCopy(tags[$0[0]]) } + all.filter { isEarlyCopy(tags[$0[0]]) }
+        let texts = members.count < 2
+            ? [words.standard]
+            : labels(members.map { versions[$0[0]] }, tags: members.map { tags[$0[0]] }, words: words)
+        return members.enumerated().map { k, group in
+            let movies = group.map { versions[$0] }
+            return VersionChoice(label: texts[k], members: movies, preferred: preferred(movies, inProgress: inProgress, chosen: chosen) ?? movies[0])
+        }
+    }
+
     /// What a film's `versions` say on their chips, in their order, in `words`. Each names what sets it apart from the
     /// others, in `VersionAspect`'s order ("4K Dolby Vision", "HD · Original, French subtitles"): a tag they all share is
     /// left out. Two that would read the same add the words of their names the others lack ("Extended Cut"); a version
-    /// without a tag next to tagged ones is "Standard". Labels still the same add, in turn, the words of their categories'
-    /// names the others lack, their container ("Standard · MKV", "Standard · MP4"), then the provider's words the chips
-    /// have no word for ("DUB"); labels still the same are numbered ("4K 1", "4K 2"; "Version 1", "Version 2"): no two
-    /// versions read the same. `categoryName` names a stream's category. The same rules as Android's.
+    /// without a tag next to tagged ones is "Standard". Labels still the same add, in turn, their container ("Standard ·
+    /// MKV", "Standard · MP4"), then the provider's words the chips have no word for ("DUB"); labels still the same are
+    /// numbered ("4K 1", "4K 2"; "Version 1", "Version 2"): no two versions read the same. A category's name is never one
+    /// of those words (only its tags count). `categoryName` names a stream's category. The page's chips are `choices`:
+    /// versions that play the same thing are one. The same rules as Android's.
     public static func labels(_ versions: [Movie], categoryName: (String) -> String?, words: VersionWords = VersionWords()) -> [String] {
-        let tags = labelTags(versions, categoryName: categoryName)
+        labels(versions, tags: labelTags(versions, categoryName: categoryName), words: words)
+    }
+
+    private static func labels(_ versions: [Movie], tags: [[VersionTag]], words: VersionWords) -> [String] {
         // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
         let differing = Set(VersionAspect.allCases.filter { aspect in Set(tags.map { $0.filter { $0.aspect == aspect } }).count > 1 })
         var texts = tags.map { list -> String in
@@ -663,9 +812,9 @@ public struct FilmVersions: Sendable {
         }
         let anyTagged = texts.contains { !$0.isEmpty }
         var labels = texts.map { $0.isEmpty && anyTagged ? words.standard : $0 }
-        // Still the same: what else sets them apart, in this order: the words of their categories' names, their
-        // container ("MKV", "MP4"), then the provider's words the chips have no name for ("DUB").
-        setApart(&labels) { same in differingWords(same.map { categoryName(versions[$0].categoryID) ?? "" }) }
+        // Still the same: what else sets them apart, in this order: their container ("MKV", "MP4"), then the provider's
+        // words the chips have no name for ("DUB"). Never their categories' names: viewers see no category on a film's
+        // page, and a panel files one stream under several.
         setApart(&labels) { same in same.map { container(of: versions[$0]) ?? "" } }
         setApart(&labels) { same in differingWords(same.map { versions[$0].name }, tagsOnly: true) }
         if labels.contains(where: { !$0.isEmpty }) {
@@ -700,13 +849,15 @@ public struct FilmVersions: Sendable {
 
     /// A provider's tag, a part of one, or a year: never a word that tells a version apart.
     private static func isNoise(_ word: String) -> Bool {
-        tagWords[word] != nil || edgeCodes[word] != nil || tagParts.contains(word) || CatalogueMatcher.isTagWord(word) || isYear(word)
+        tagWords[word] != nil || edgeCodes[word] != nil || tagParts.contains(word) || sourceWords[word] != nil || sourceCaps[word] != nil
+            || CatalogueMatcher.isTagWord(word) || isYear(word)
     }
 
     /// How well a version suits the screen: 4K on a 4K screen, HD; Dolby Vision or HDR only where the screen shows it
     /// (a Dolby Vision stream elsewhere can show wrong colours).
     public static func score(_ tags: [VersionTag], support: PictureSupport) -> Int {
-        var score = 0
+        // A copy filmed or leaked before release below every other.
+        var score = isEarlyCopy(tags) ? -1_000 : 0
         if tags.contains(.dolbyVision) { score += support.dolbyVision ? 4 : -40 }
         if tags.contains(.hdr) { score += support.hdr ? 2 : -20 }
         if tags.contains(.uhd) { score += support.uhd ? 8 : 1 }

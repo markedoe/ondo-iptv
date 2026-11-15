@@ -220,6 +220,7 @@ fun Resources.versionWords(): VersionWords = VersionWords(
     arabic = getString(R.string.version_arabic),
     frenchSubtitles = getString(R.string.version_french_subtitles),
     subtitled = getString(R.string.version_subtitled),
+    cinemaCopy = getString(R.string.version_cinema_copy),
 )
 
 /** The app's words for the names the core gives in English where the provider gives none ("Uncategorized", "Channel 12"…). */

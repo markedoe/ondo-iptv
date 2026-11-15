@@ -153,6 +153,7 @@
     <string name="version_arabic">Árabe</string>
     <string name="version_french_subtitles">Original, legendas em francês</string>
     <string name="version_subtitled">Original legendado</string>
+    <string name="version_cinema_copy">Cópia de cinema (%1$s)</string>
     <string name="version_chip_description">Versão: %1$s</string>
     <string name="kind_movie">Filme</string>
     <string name="kind_series">Série</string>
@@ -378,6 +379,7 @@
     <string name="title_data_this_chip">Esta versão</string>
     <string name="title_data_plays_first">Reproduzida primeiro</string>
     <string name="title_data_hidden">Categoria oculta: não oferecida</string>
+    <string name="title_data_same_as">Igual a %1$s</string>
     <string name="title_data_more">Mais versões: %1$d</string>
     <string name="title_data_first_in_progress">Reproduzida primeiro porque está em andamento.</string>
     <string name="title_data_first_chosen">Reproduzida primeiro porque foi a última escolhida neste dispositivo.</string>

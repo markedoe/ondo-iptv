@@ -135,6 +135,8 @@ struct MovieDetailView: View {
     var body: some View {
         let versions = model.visibleVersions(of: movie)
         let version = picked.flatMap { id in versions.first { $0.id == id } } ?? model.defaultVersion(of: movie, among: versions)
+        // Its chips: versions that play the same thing are one (`FilmVersions.choices`).
+        let choices = versions.count > 1 ? model.versionChoices(versions) : []
         let progress = model.progress(movie: version)
         let resumable = progress?.isResumable == true
         // Watched once one of the film's versions is (`AppModel.watchedKeys`).
@@ -178,8 +180,8 @@ struct MovieDetailView: View {
                 }
             }
         } content: { metrics in
-            if versions.count > 1 {
-                VersionChips(versions: versions, labels: model.versionLabels(versions), selected: version.id) { chosen in
+            if choices.count > 1 {
+                VersionChips(choices: choices, selected: version.id) { chosen in
                     picked = chosen.id
                     model.rememberVersion(chosen)
                 }
@@ -365,22 +367,23 @@ struct AwardsList: View {
 }
 
 /// A film's versions as chips, each saying what sets it apart ("4K Dolby Vision", "Original, French subtitles",
-/// "Standard": `FilmVersions.labels`): the one selected plays; a tap, a click or the remote picks another.
+/// "Standard": `FilmVersions.choices`; versions that play the same thing are one chip): the one holding the version
+/// selected is selected; a tap, a click or the remote picks another, which plays its preferred stream.
 struct VersionChips: View {
-    let versions: [Movie]
-    let labels: [String]
+    let choices: [VersionChoice]
+    /// The version Play plays.
     let selected: String
     let onPick: (Movie) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(versions.indices, id: \.self) { index in
-                    let movie = versions[index]
-                    let label = index < labels.count ? labels[index] : String(localized: "Version \(index + 1)")
-                    let isSelected = movie.id == selected
+                ForEach(choices.indices, id: \.self) { index in
+                    let choice = choices[index]
+                    let label = choice.label
+                    let isSelected = choice.contains(selected)
                     Button {
-                        onPick(movie)
+                        onPick(choice.preferred)
                     } label: {
                         Text(label)
                             .font(.subheadline.weight(isSelected ? .bold : .medium))
@@ -394,7 +397,7 @@ struct VersionChips: View {
                     // A screen reader hears what the row is: the film's versions.
                     .accessibilityLabel(String(localized: "Version: \(label)"))
                     .accessibilityAddTraits(isSelected ? .isSelected : [])
-                    .accessibilityIdentifier("version-\(movie.id)")
+                    .accessibilityIdentifier("version-\(choice.id)")
                 }
             }
         }

@@ -25,7 +25,11 @@ enum class DefaultReason {
 }
 
 /** What a version's tag says about it, in the order a version's chip names them (docs/VERSIONS.md). */
-enum class VersionAspect { QUALITY, RANGE, THREE_D, EDITION, CODEC, LANGUAGE, SUBTITLES }
+enum class VersionAspect {
+    QUALITY, RANGE, THREE_D, EDITION, CODEC, LANGUAGE, SUBTITLES,
+    /** A copy filmed or leaked before the film's release (CAM, TS, TC, SCR, R5, WORKPRINT): named last, played last. */
+    SOURCE,
+}
 
 /**
  * A tag of a version, read from its name and its category's name. Its chip says it in words ([VersionWords]): "DV" is
@@ -40,6 +44,8 @@ enum class VersionTag(val aspect: VersionAspect) {
     GERMAN(VersionAspect.LANGUAGE), ITALIAN(VersionAspect.LANGUAGE), PORTUGUESE(VersionAspect.LANGUAGE),
     ARABIC(VersionAspect.LANGUAGE),
     VOSTFR(VersionAspect.SUBTITLES), VOST(VersionAspect.SUBTITLES),
+    CAM(VersionAspect.SOURCE), TELESYNC(VersionAspect.SOURCE), TELECINE(VersionAspect.SOURCE), SCREENER(VersionAspect.SOURCE),
+    R5(VersionAspect.SOURCE), WORKPRINT(VersionAspect.SOURCE),
     ;
 
     /** Said with the other picture tags without a dot ("4K Dolby Vision"); a language or subtitles apart ("4K · English"). */
@@ -72,6 +78,8 @@ data class VersionWords(
     val arabic: String = "Arabic",
     val frenchSubtitles: String = "Original, French subtitles",
     val subtitled: String = "Original, subtitled",
+    /** A copy filmed or leaked before the film's release: "Cinema copy (CAM)" (`%1$s` is the provider's marker). */
+    val cinemaCopy: String = "Cinema copy (%1\$s)",
 ) {
     fun word(tag: VersionTag): String = when (tag) {
         VersionTag.UHD -> "4K"
@@ -97,10 +105,40 @@ data class VersionWords(
         VersionTag.ARABIC -> arabic
         VersionTag.VOSTFR -> frenchSubtitles
         VersionTag.VOST -> subtitled
+        VersionTag.CAM -> copy("CAM")
+        VersionTag.TELESYNC -> copy("TS")
+        VersionTag.TELECINE -> copy("TC")
+        VersionTag.SCREENER -> copy("SCR")
+        VersionTag.R5 -> copy("R5")
+        VersionTag.WORKPRINT -> copy("Workprint")
     }
+
+    private fun copy(marker: String): String =
+        runCatching { String.format(java.util.Locale.ROOT, cinemaCopy, marker) }.getOrElse { "$cinemaCopy $marker" }
 
     /** "Version 2". */
     fun number(n: Int): String = runCatching { String.format(java.util.Locale.ROOT, numbered, n) }.getOrElse { "$numbered $n" }
+}
+
+/**
+ * One chip of a film's page ([FilmVersions.choices]): versions that play the same thing (the same chip tags, the same
+ * container, the same name once normalised: a panel filing one stream under two categories) are one choice.
+ */
+data class VersionChoice(
+    /** What its chip says. */
+    val label: String,
+    /** Its versions, in catalogue order. */
+    val members: List<Movie>,
+    /** The member it plays ([FilmVersions.preferred]): the one in progress, else the one chosen last, else the first. */
+    val preferred: Movie,
+) {
+    /** Its first member's id: the same whichever member plays (the chip's key, focus and test tag). */
+    val id: String get() = members.first().id
+
+    /** [preferred], then the others in catalogue order: the streams tried in turn when one fails to start. */
+    val playOrder: List<Movie> get() = listOf(preferred) + members.filter { it.id != preferred.id }
+
+    operator fun contains(id: String): Boolean = members.any { it.id == id }
 }
 
 /**
@@ -609,6 +647,41 @@ class FilmVersions private constructor(
             "vost" to VersionTag.VOST, "vosta" to VersionTag.VOST, "vosten" to VersionTag.VOST, "subbed" to VersionTag.VOST,
         )
 
+        /** A copy filmed or leaked before the film's release, in any letter case ("HDCAM", "Telesync", "DVDScr"). */
+        private val SOURCE_WORDS: Map<String, VersionTag> = mapOf(
+            "hdcam" to VersionTag.CAM, "hdts" to VersionTag.TELESYNC, "telesync" to VersionTag.TELESYNC,
+            "telecine" to VersionTag.TELECINE, "dvdscr" to VersionTag.SCREENER, "workprint" to VersionTag.WORKPRINT,
+        )
+
+        /** The same, also words or letters of titles ("Cam", "Ts", "Screener"): a tag only in capitals ("CAM", "TS"). */
+        private val SOURCE_CAPS: Map<String, VersionTag> = mapOf(
+            "cam" to VersionTag.CAM, "ts" to VersionTag.TELESYNC, "tc" to VersionTag.TELECINE, "scr" to VersionTag.SCREENER,
+            "screener" to VersionTag.SCREENER, "r5" to VersionTag.R5,
+        )
+
+        /** A provider's word of a copy filmed or leaked before release ([SOURCE_WORDS], [SOURCE_CAPS]), or null. */
+        internal fun sourceTag(word: String): VersionTag? {
+            val lower = word.lowercase()
+            SOURCE_WORDS[lower]?.let { return it }
+            return SOURCE_CAPS[lower]?.takeIf { word == word.uppercase() }
+        }
+
+        /** [text]'s words as written, split at every character that is no letter or digit (no regular expression). */
+        private fun writtenWords(text: String): List<String> {
+            val words = ArrayList<String>()
+            val word = StringBuilder()
+            for (c in text) {
+                if (c.isLetterOrDigit()) {
+                    word.append(c)
+                } else if (word.isNotEmpty()) {
+                    words.add(word.toString())
+                    word.setLength(0)
+                }
+            }
+            if (word.isNotEmpty()) words.add(word.toString())
+            return words
+        }
+
         /**
          * A language's code: a tag only in capitals, at either end of a name or a category ("FR - Sandstorm",
          * "EN | Movies", "Sandstorm (DE)"), where "It" and "De" are words of titles.
@@ -664,6 +737,8 @@ class FilmVersions private constructor(
                     // French subtitles in two words: "ST FR", "SUB FR", "FR SUB".
                     if ((word == "st" || word == "sub") && next == "fr" || word == "fr" && next == "sub") found.add(VersionTag.VOSTFR)
                 }
+                // A copy filmed or leaked before release, in the name or the category ("Cinema CAM"), as written.
+                for (word in writtenWords(text)) sourceTag(word)?.let(found::add)
             }
             return tidy(found)
         }
@@ -705,17 +780,91 @@ class FilmVersions private constructor(
             return versions.map { labelTags(it.name, categoryName(it.categoryId), shared) }
         }
 
+        /** A copy filmed or leaked before the film's release (CAM, TS, TC, SCR, R5, WORKPRINT). */
+        fun isEarlyCopy(tags: List<VersionTag>): Boolean = tags.any { it.aspect == VersionAspect.SOURCE }
+
+        /** Apostrophes as providers write them: "Director's", "Director’s" and "Directors" are one name. */
+        private const val APOSTROPHES = "'’‘ʼ`´"
+
+        /**
+         * A version's name as [choices] compares it: case, accents, apostrophes and punctuation left out, and the words
+         * its chip tags come from (the provider's prefix "|FR|", "4K", "Dolby Vision") and years. The words the chips
+         * have no name for ("DUB") and those of an edition ("Extended Cut") stay: they tell versions apart.
+         */
+        fun nameKey(name: String): String {
+            // A copy's marker ("CAM") is its tag, not a word of its name.
+            val written = writtenWords(name.filterNot { it in APOSTROPHES }).filter { sourceTag(it) == null }.joinToString(" ")
+            val words = TextNormalizer.normalize(written).split(' ').filter { it.isNotEmpty() }
+            // A language's code at an end only where a provider's delimiter sets it apart, as [labelTags] reads it.
+            val prefix = PREFIX_CODE.containsMatchIn(name)
+            val suffix = SUFFIX_CODE.containsMatchIn(name)
+            val kept = ArrayList<String>(words.size)
+            var i = 0
+            while (i < words.size) {
+                val word = words[i]
+                val next = words.getOrNull(i + 1)
+                val pair = word == "dolby" && next == "vision" || word == "h" && next == "265" ||
+                    (word == "st" || word == "sub") && next == "fr" || word == "fr" && next == "sub"
+                when {
+                    pair -> i += 2
+                    word in TAG_WORDS || isYear(word) || (i == 0 && prefix || i == words.size - 1 && suffix) && word in EDGE_CODES -> i++
+                    else -> { kept.add(word); i++ }
+                }
+            }
+            return kept.joinToString(" ")
+        }
+
+        /**
+         * The member of a choice that plays: the one in progress ([inProgress], most recent first), else the one the viewer
+         * chose last ([chosen], most recent first), else the first in catalogue order. The rules of [defaultChoice].
+         */
+        fun preferred(members: List<Movie>, inProgress: List<String>, chosen: List<String>): Movie {
+            inProgress.firstNotNullOfOrNull { id -> members.firstOrNull { it.id == id } }?.let { return it }
+            chosen.firstNotNullOfOrNull { id -> members.firstOrNull { it.id == id } }?.let { return it }
+            return members.first()
+        }
+
+        /**
+         * A film's chips: its [versions] (catalogue order) with the same chip tags ([labelTags]), the same container
+         * ([container]) and the same [nameKey] are one choice, labelled as one version ("Standard", "4K Dolby Vision"),
+         * in the order of its first member; a category's name never sets versions apart. Each plays its [preferred]
+         * member ([inProgress], [chosen]); the others are its fallbacks ([VersionChoice.playOrder]). One choice alone
+         * reads "Standard". Empty without versions.
+         */
+        fun choices(
+            versions: List<Movie>,
+            categoryName: (String) -> String?,
+            words: VersionWords = VersionWords(),
+            inProgress: List<String> = emptyList(),
+            chosen: List<String> = emptyList(),
+        ): List<VersionChoice> {
+            if (versions.isEmpty()) return emptyList()
+            val tags = labelTags(versions, categoryName)
+            val groups = LinkedHashMap<Triple<List<VersionTag>, String?, String>, MutableList<Int>>()
+            for (i in versions.indices) groups.getOrPut(Triple(tags[i], container(versions[i]), nameKey(versions[i].name))) { ArrayList() }.add(i)
+            // A proper copy's chips before those of a copy filmed or leaked before release, each in catalogue order.
+            val members = groups.values.sortedBy { group -> isEarlyCopy(tags[group.first()]) }
+            val texts = if (members.size < 2) listOf(words.standard) else labels(members.map { versions[it.first()] }, members.map { tags[it.first()] }, words)
+            return members.mapIndexed { k, group ->
+                val movies = group.map { versions[it] }
+                VersionChoice(texts[k], movies, preferred(movies, inProgress, chosen))
+            }
+        }
+
         /**
          * What a film's [versions] say on their chips, in their order, in [words]. Each names what sets it apart from the
          * others, in [VersionAspect]'s order ("4K Dolby Vision", "HD · Original, French subtitles"): a tag they all share
          * is left out. Two that would read the same add the words of their names the others lack ("Extended Cut"); a
-         * version without a tag next to tagged ones is "Standard". Labels still the same add, in turn, the words of their
-         * categories' names the others lack, their container ("Standard · MKV", "Standard · MP4"), then the provider's
-         * words the chips have no word for ("DUB"); labels still the same are numbered ("4K 1", "4K 2"; "Version 1",
-         * "Version 2"): no two versions read the same. [categoryName] names a stream's category.
+         * version without a tag next to tagged ones is "Standard". Labels still the same add, in turn, their container
+         * ("Standard · MKV", "Standard · MP4"), then the provider's words the chips have no word for ("DUB"); labels still
+         * the same are numbered ("4K 1", "4K 2"; "Version 1", "Version 2"): no two versions read the same. A category's
+         * name is never one of those words (only its tags count). [categoryName] names a stream's category. The page's
+         * chips are [choices]: versions that play the same thing are one.
          */
-        fun labels(versions: List<Movie>, categoryName: (String) -> String?, words: VersionWords = VersionWords()): List<String> {
-            val tags = labelTags(versions, categoryName)
+        fun labels(versions: List<Movie>, categoryName: (String) -> String?, words: VersionWords = VersionWords()): List<String> =
+            labels(versions, labelTags(versions, categoryName), words)
+
+        private fun labels(versions: List<Movie>, tags: List<List<VersionTag>>, words: VersionWords): List<String> {
             // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
             val differing = VersionAspect.entries.filter { aspect -> tags.map { list -> list.filter { it.aspect == aspect } }.distinct().size > 1 }
             val texts = tags.map { list ->
@@ -731,9 +880,9 @@ class FilmVersions private constructor(
             }
             val anyTagged = texts.any { it.isNotEmpty() }
             val labels = texts.mapTo(ArrayList(texts.size)) { if (it.isEmpty() && anyTagged) words.standard else it }
-            // Still the same: what else sets them apart, in this order: the words of their categories' names, their
-            // container ("MKV", "MP4"), then the provider's words the chips have no name for ("DUB").
-            setApart(labels) { same -> differingWords(same.map { categoryName(versions[it].categoryId).orEmpty() }) }
+            // Still the same: what else sets them apart, in this order: their container ("MKV", "MP4"), then the
+            // provider's words the chips have no name for ("DUB"). Never their categories' names: viewers see no category
+            // on a film's page, and a panel files one stream under several.
             setApart(labels) { same -> same.map { container(versions[it]).orEmpty() } }
             setApart(labels) { same -> differingWords(same.map { versions[it].name }, tagsOnly = true) }
             if (labels.any { it.isNotEmpty() }) for (i in labels.indices) if (labels[i].isEmpty()) labels[i] = words.standard
@@ -801,7 +950,8 @@ class FilmVersions private constructor(
 
         /** A provider's tag, a part of one, or a year: never a word that tells a version apart. */
         private fun isNoise(word: String): Boolean =
-            word in TAG_WORDS || word in EDGE_CODES || word in TAG_PARTS || CatalogueMatcher.isTagWord(word) || isYear(word)
+            word in TAG_WORDS || word in EDGE_CODES || word in TAG_PARTS || word in SOURCE_WORDS || word in SOURCE_CAPS ||
+                CatalogueMatcher.isTagWord(word) || isYear(word)
 
         /** The names of a playlist's movie categories by id, for [labels]. */
         fun categoryNames(categories: List<MediaCategory>): (String) -> String? {
@@ -812,10 +962,11 @@ class FilmVersions private constructor(
 
         /**
          * How well a version suits the screen: 4K on a 4K screen, HD; Dolby Vision or HDR only where the screen shows
-         * it (a Dolby Vision stream elsewhere can show wrong colours).
+         * it (a Dolby Vision stream elsewhere can show wrong colours). A copy filmed or leaked before release
+         * ([isEarlyCopy]) below every other.
          */
         fun score(tags: List<VersionTag>, support: PictureSupport): Int {
-            var score = 0
+            var score = if (isEarlyCopy(tags)) -1_000 else 0
             if (VersionTag.DOLBY_VISION in tags) score += if (support.dolbyVision) 4 else -40
             if (VersionTag.HDR in tags) score += if (support.hdr) 2 else -20
             if (VersionTag.UHD in tags) score += if (support.uhd) 8 else 1

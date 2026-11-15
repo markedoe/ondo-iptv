@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.markedoe.ondo.FiledTwice
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.DefaultReason
@@ -61,7 +62,7 @@ class TitleDataTest {
     }
 
     private fun everyText(data: TitleData): List<String> =
-        data.lines.map { it.value } + data.versions.flatMap { listOfNotNull(it.chip, it.name, it.category, it.shownId, it.container, it.tags) }
+        data.lines.map { it.value } + data.versions.flatMap { listOfNotNull(it.chip, it.name, it.category, it.shownId, it.container, it.tags, it.sameAs) }
 
     @Test
     fun aFilmShowsItsVersionsAndTheirChips() {
@@ -142,6 +143,49 @@ class TitleDataTest {
         assertNull(TitleData.of(state(), "${Fixtures.PLAYLIST_ID}|CHANNEL|c1|", shownTitle = "News"))
         assertNull(TitleData.of(state(), null, shownTitle = "News"))
         assertNull(TitleData.of(state(), "${Fixtures.PLAYLIST_ID}|MOVIE|missing|", shownTitle = "Gone"))
+    }
+
+    /**
+     * One film a panel files under two categories is one chip on its page; the title data still lists every stream, the
+     * other one marked "same as" the one its chip plays. Its displayed title is the app's, without the provider's prefix
+     * (it showed "|FR| …"), from the player and from a TV page's chip alike.
+     */
+    @Test
+    fun aFilmFiledTwiceListsEveryStreamAndWhichOneItIsTheSameAs() {
+        UiMappers.pictureSupport = PictureSupport()
+        val shape = FiledTwice
+        try {
+            val held = TitleData.film(shape.state(), shape.again, shownTitle = shape.again.name)
+            val played = TitleData.of(shape.state(), "${Fixtures.PLAYLIST_ID}|MOVIE|${shape.first.id}|", shownTitle = shape.first.name)!!
+            assertEquals("Copper Vallee", held.lines.single { it.label == com.markedoe.ondo.R.string.title_data_shown }.value)
+            assertEquals("COPPER VALLÉE", played.lines.single { it.label == com.markedoe.ondo.R.string.title_data_shown }.value)
+            for (data in listOf(held, played)) {
+                assertEquals(listOf(shape.first.id, shape.uhd.id, shape.again.id), data.versions.map { it.id })
+                assertEquals(listOf("Standard", "4K Dolby Vision", "Standard"), data.versions.map { it.chip })
+                assertEquals(listOf(null, null, shape.first.id), data.versions.map { it.sameAs })
+            }
+            compose.setContent { OndoTheme { TitleDataPanel(played, television = true) } }
+            compose.onNodeWithText("Standard  ·  ▶ Playing  ·  ★ Plays first", useUnmergedTree = true).assertExists()
+            compose.onNodeWithText("Standard  ·  = Same as ${shape.first.id}", useUnmergedTree = true).assertExists()
+        } finally {
+            UiMappers.forgetCatalogue()
+        }
+    }
+
+    /** Every stream of a film one chip holds (no chip on its page): each still named, never "hidden", one "same as". */
+    @Test
+    fun aFilmOfOneChipNamesEachStream() {
+        UiMappers.pictureSupport = PictureSupport()
+        val shape = FiledTwice
+        try {
+            val alone = Fixtures.state(content = shape.content.copy(movies = shape.content.movies - shape.uhd))
+            val data = TitleData.film(alone, shape.again, shownTitle = shape.again.name)
+            assertEquals(listOf(shape.first.id, shape.again.id), data.versions.map { it.id })
+            assertEquals(listOf("Standard", "Standard"), data.versions.map { it.chip })
+            assertEquals(listOf(null, shape.first.id), data.versions.map { it.sameAs })
+        } finally {
+            UiMappers.forgetCatalogue()
+        }
     }
 
     @Test

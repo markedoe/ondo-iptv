@@ -2,6 +2,7 @@ package com.markedoe.ondo.player
 
 import androidx.annotation.StringRes
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import com.markedoe.ondo.core.library.DefaultReason
 import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.VersionTag
@@ -47,6 +48,11 @@ data class TitleData(
         val playing: Boolean,
         /** The version the film's card plays and its page selects first. */
         val first: Boolean,
+        /**
+         * One chip with another version that plays the same thing (`FilmVersions.choices`): that one's id as the panel
+         * shows it, else its name; null for the one its chip plays, or a version alone on its chip.
+         */
+        val sameAs: String? = null,
     )
 
     companion object {
@@ -91,7 +97,8 @@ data class TitleData(
             // The tags as the chips read them: a title word shared by every version ("The English Orchard") is no tag.
             val tagsOf: Map<String, List<VersionTag>> = if (all.size < 2) emptyMap() else all.map { it.id }.zip(FilmVersions.labelTags(all, categoryName)).toMap()
             val lines = listOfNotNull(
-                Line("", clean(shownTitle), R.string.title_data_shown),
+                // As the app shows it: without the provider's tags around the name ("|FR| ").
+                Line("", clean(CatalogueMatcher.displayTitle(clean(shownTitle))), R.string.title_data_shown),
                 Line("name", clean(movie.name)),
                 // Never the M3U reader's ids: a hash of the stream's address, its login and password included.
                 Redaction.shownId(movie.id)?.let { Line("id", it) },
@@ -104,8 +111,14 @@ data class TitleData(
             )
             if (all.size < 2) return TitleData(lines)
             val visible = UiMappers.visibleVersions(state, movie)
-            val chips = if (visible.size > 1) FilmVersions.labels(visible, categoryName, words) else emptyList()
-            val chipOf = visible.map { it.id }.zip(chips).toMap()
+            // Every version, those one chip holds together too (marked "same as" the one it plays); one chip for them all
+            // ("Standard", not shown on the page) still names each, never "hidden".
+            val choices = if (visible.size > 1) UiMappers.versionChoices(state, visible, words) else emptyList()
+            val chipOf = choices.flatMap { choice -> choice.members.map { it.id to choice.label } }.toMap()
+            val sameAs = choices.flatMap { choice ->
+                val shown = Redaction.shownId(choice.preferred.id) ?: clean(choice.preferred.name)
+                choice.members.filter { it.id != choice.preferred.id }.map { it.id to shown }
+            }.toMap()
             val (first, reason) = UiMappers.defaultChoice(state, movie, visible)
             val versions = all.map { version ->
                 val name = categoryName(version.categoryId)
@@ -119,6 +132,7 @@ data class TitleData(
                     tags = tagText(tagsOf[version.id] ?: FilmVersions.labelTags(version.name, name)),
                     playing = version.id == movie.id,
                     first = version.id == first.id,
+                    sameAs = sameAs[version.id],
                 )
             }
             return TitleData(lines, versions, reason)
@@ -139,7 +153,7 @@ data class TitleData(
             val category = UiMappers.categoryName(state, series = true, categoryId = series.categoryId)
             return TitleData(
                 listOfNotNull(
-                    Line("", clean(shownTitle), R.string.title_data_shown),
+                    Line("", clean(CatalogueMatcher.displayTitle(clean(shownTitle))), R.string.title_data_shown),
                     Line("series_name", clean(series.name)),
                     Redaction.shownId(series.id)?.let { Line("series_id", it) },
                     Line("category", clean(categoryText(category, series.categoryId))),

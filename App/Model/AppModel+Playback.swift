@@ -113,10 +113,25 @@ extension AppModel {
     }
 
     func play(_ movie: Movie, fromStart: Bool = false) {
-        guard let factory else { return }
-        var item = Self.preferringDownload(factory.item(for: movie))
+        guard let own = playbackItem(for: movie) else { return }
+        var item = Self.preferringDownload(own)
         item.startPosition = fromStart ? nil : resumePosition(for: item)
         present(PlaybackSession(queue: [item], index: 0))
+    }
+
+    /// `movie`'s item, the addresses of the other streams of its chip after its own (`fallbacks(for:)`: versions that
+    /// play the same thing), so the player tries them before showing an error. The progress stays `movie`'s.
+    func playbackItem(for movie: Movie) -> PlaybackItem? {
+        guard let factory else { return nil }
+        var item = factory.item(for: movie)
+        for other in fallbacks(for: movie) {
+            let next = factory.item(for: other)
+            item.fallbackURLs += [next.streamURL] + next.fallbackURLs
+        }
+        // Each address once, its own first (as Android's request): a panel can give two rows one address.
+        var seen: Set<URL> = [item.streamURL]
+        item.fallbackURLs = item.fallbackURLs.filter { seen.insert($0).inserted }
+        return item
     }
 
     /// Plays the local copy when the item was downloaded (the stream stays as a fallback). The App Store edition has no

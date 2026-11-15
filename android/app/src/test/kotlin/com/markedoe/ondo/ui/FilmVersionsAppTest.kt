@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui
 
+import com.markedoe.ondo.FiledTwice
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.PictureSupport
@@ -200,6 +201,51 @@ class FilmVersionsAppTest {
     fun aStreamListedTwiceIsOneVersion() {
         val twice = Fixtures.state(content = content.copy(movies = content.movies + dv))
         assertEquals(4, UiMappers.movieDetail(twice, hd).versions.size)
+    }
+
+    /**
+     * A panel files one film under two categories (a prefix, another letter case, the same tags and container) next to a
+     * 4K Dolby Vision version: the TV's chips read "Standard · DRAME THRILLER", "4K Dolby Vision", "Standard ·
+     * AJOUTÉS". One chip for the first two now, which plays the one in progress, else the one chosen last, else the
+     * first, and keeps the other as its fallback.
+     */
+    @Test
+    fun oneFilmFiledUnderTwoCategoriesIsOneChip() {
+        val shape = FiledTwice
+        val page = UiMappers.movieDetail(shape.state(), shape.again)
+        assertEquals(listOf("Standard", "4K Dolby Vision"), page.versions.map { it.label })
+        assertEquals(listOf(listOf(shape.first.id, shape.again.id), listOf(shape.uhd.id)), page.versions.map { it.members })
+        assertEquals("the chip plays the first in catalogue order", shape.first.id, page.versions[0].plays)
+        assertEquals("and so does Play", shape.first, page.version)
+        assertEquals("the other is its fallback", listOf(shape.again), UiMappers.fallbacks(shape.state(), shape.first))
+        assertEquals("the 4K one has none", emptyList<Movie>(), UiMappers.fallbacks(shape.state(), shape.uhd))
+
+        // The second one in progress: it plays and resumes, the first is its fallback, Continue Watching names its chip.
+        val watching = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, shape.again.id, title = shape.again.name, lastWatchedAt = 1)
+        val library = LibraryState().recordStart(watching).updateProgress(watching.key, 600.0, 6_000.0, now = 2)
+        val resumed = UiMappers.movieDetail(shape.state(library), shape.first)
+        assertEquals(shape.again.id, resumed.versions[0].plays)
+        assertEquals(shape.again, resumed.version)
+        assertTrue(resumed.progress != null)
+        assertEquals(listOf(shape.first), UiMappers.fallbacks(shape.state(library), shape.again))
+        assertEquals("Standard", UiMappers.resume(library.progress(watching.key)!!, shape.state(library)).subtitle)
+
+        // The second one chosen last: it plays.
+        val chosen = UiMappers.movieDetail(shape.state(chosen = listOf(shape.again.id)), shape.first)
+        assertEquals(shape.again.id, chosen.versions[0].plays)
+        assertEquals(shape.again, chosen.version)
+    }
+
+    /** A film whose versions all play the same thing has no chips, and Continue Watching names no version. */
+    @Test
+    fun versionsThatPlayTheSameThingAloneShowNoChip() {
+        val shape = FiledTwice
+        val alone = Fixtures.state(content = shape.content.copy(movies = shape.content.movies - shape.uhd))
+        assertTrue(UiMappers.movieDetail(alone, shape.first).versions.isEmpty())
+        val watching = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, shape.again.id, title = shape.again.name, lastWatchedAt = 1)
+        val library = LibraryState().recordStart(watching).updateProgress(watching.key, 600.0, 6_000.0, now = 2)
+        val entry = library.progress(watching.key)!!
+        assertFalse(UiMappers.resume(entry, Fixtures.state(library, alone.content)).subtitle == "Standard")
     }
 
     @Test
