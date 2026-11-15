@@ -5,6 +5,7 @@ import com.markedoe.ondo.data.HomeSnapshot
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.WatchEntry
+import com.markedoe.ondo.data.WatchedTitles
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
@@ -84,6 +85,9 @@ object HomeSnapshots {
         val playlistId = state.activePlaylistId.orEmpty()
         val library = state.library
         val entries = if (playlistId == snapshot.playlistId) library.continueWatching(playlistId).associateBy { "${it.kind}|${it.itemId}" } else emptyMap()
+        // The carousel never shows a title watched since it was kept (`UiMappers.watchedKeys`'s rule, from the history
+        // alone: the catalogue is not grouped for it).
+        val watched = library.watchedTitles(playlistId)
         fun inMyList(title: HomeSnapshot.Title): Boolean = when {
             title.movie != null -> (title.ids + title.movie.id).any { library.isFavorite(playlistId, ItemKind.MOVIE, it) }
             title.series != null -> library.isFavorite(playlistId, ItemKind.SERIES, title.series.id)
@@ -93,7 +97,8 @@ object HomeSnapshots {
             playlistName = state.activePlaylist?.name ?: snapshot.playlistName,
             updatedAt = snapshot.fetchedAt.takeIf { it > 0 },
             now = now,
-            hero = snapshot.hero.mapNotNull { page -> item(page.title)?.let { HeroPage(it, page.meta, inMyList(page.title), page.resumable, page.backdropUrl, page.plot) } },
+            hero = snapshot.hero.filterNot { isWatched(it.title, watched, state) }
+                .mapNotNull { page -> item(page.title)?.let { HeroPage(it, page.meta, inMyList(page.title), page.resumable, page.backdropUrl, page.plot) } },
             continueWatching = snapshot.continueWatching.mapNotNull { card ->
                 val kept = WatchEntry.ofKey(card.key)?.takeIf { it.playlistId == playlistId } ?: return@mapNotNull null
                 val entry = entries["${kept.kind}|${kept.itemId}"] ?: return@mapNotNull null
@@ -119,6 +124,22 @@ object HomeSnapshots {
             isRestoring = state.isRestoring,
             profile = state.activeProfile.takeIf { state.profiles.isNotEmpty() },
         )
+    }
+
+    /**
+     * Whether a kept title is watched: a movie once one of its versions kept with it is, a series once every episode
+     * known (its seasons fetched, else the playlist's own list) is; as its poster's check mark ([UiMappers.watchedKeys]).
+     */
+    private fun isWatched(title: HomeSnapshot.Title, watched: WatchedTitles, state: OndoState): Boolean = when {
+        title.movie != null -> (title.ids + title.movie.id).any { it in watched.movies }
+        title.series != null -> !watched.episodes[title.series.id].isNullOrEmpty() && run {
+            val id = title.series.id
+            val known = state.seriesDetails[id]?.seasons?.flatMap { season -> season.episodes.map { it.id } }
+                ?: state.content.series.firstOrNull { it.id == id && it.episodes.isNotEmpty() }?.episodes?.map { it.id }
+                ?: title.series.episodes.map { it.id }
+            watched.isSeriesWatched(id, known)
+        }
+        else -> false
     }
 
     /**

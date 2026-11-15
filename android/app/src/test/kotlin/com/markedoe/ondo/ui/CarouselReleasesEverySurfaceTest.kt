@@ -14,14 +14,19 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.TmdbRating
+import com.markedoe.ondo.data.ItemKind
+import com.markedoe.ondo.data.LibraryState
+import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
+import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.OndoTvTheme
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import java.util.Locale
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -33,8 +38,8 @@ import org.robolectric.annotation.Config
  * Regression guard for the carousel, on every surface that shows it: it goes by release date (a movie's release, a
  * series' latest episode), not by the day the provider added a title. An old series with a new season is in; an old
  * series with nothing new, old films (however well rated or trending), a release to come and a hidden category are out;
- * the best weighted rating comes first, and the facts say when it came out (a series: "New episode"). The Apple apps have the same test (`CarouselReleasesEverySurfaceTests`). A new
- * screen that shows the carousel is added to [surfaces] here.
+ * the best weighted rating comes first, and the facts say when it came out (a series: "New episode"). The Apple apps have the same test (`CarouselReleasesEverySurfaceTests`). No carousel shows a title watched
+ * ([noCarouselShowsATitleWatched]). A new screen that shows the carousel is added to [surfaces] here.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -63,11 +68,24 @@ class CarouselReleasesEverySurfaceTest {
         UiMappers.home(state, Labels("Movie", "Series", Locale.US), Fixtures.NOW, Fixtures.kept())
     }
 
+    /** Home with a movie watched and a series watched to its last episode (`UiMappers.watchedKeys`). */
+    private val watchedHome by lazy {
+        fun entry(kind: ItemKind, itemId: String, episodeId: String? = null) =
+            WatchEntry(Fixtures.PLAYLIST_ID, kind, itemId, episodeId, title = itemId, lastWatchedAt = 0)
+        var library = LibraryState().markingWatched(entry(ItemKind.MOVIE, Fixtures.lastSignal.id), now = 1)
+        Fixtures.harborLights.episodes.forEachIndexed { index, episode ->
+            library = library.markingWatched(entry(ItemKind.SERIES, Fixtures.harborLights.id, episode.id), now = 2L + index)
+        }
+        UiMappers.home(Fixtures.state(library).copy(tmdbRatings = votes), Labels("Movie", "Series", Locale.US), Fixtures.NOW, Fixtures.kept())
+    }
+
     /** Every screen that shows Home's carousel, with the tag of its frame. */
-    private val surfaces: List<Pair<String, @Composable () -> Unit>> = listOf(
+    private fun surfaces(home: HomeUiState): List<Pair<String, @Composable () -> Unit>> = listOf(
         "hero" to { OndoTheme { HomeScreen(home, HomeActions(), autoAdvance = false) } },
         "heroFrame" to { OndoTvTheme { TvHomeScreen(home, HomeActions(), autoAdvance = false) } },
     )
+
+    private val surfaces by lazy { surfaces(home) }
 
     private fun shows(title: String, frame: String): Boolean =
         compose.onAllNodes((hasText(title, substring = true) or hasContentDescription(title, substring = true)) and hasAnyAncestor(hasTestTag(frame)), useUnmergedTree = true)
@@ -94,6 +112,22 @@ class CarouselReleasesEverySurfaceTest {
             for (title in listOf("The Archive", "Summer in Lisbon", "The Long Road", "Midnight Orchard", "Late Show")) {
                 assertTrue("$frame shows $title", !shows(title, frame))
             }
+        }
+    }
+
+    /** No carousel shows a title watched; the next recent release comes first. Apple: `testNoCarouselShowsATitleWatched`. */
+    @Test
+    fun noCarouselShowsATitleWatched() {
+        assertEquals(listOf("Blue Horizon", "Northern Lights", "Silent Harbor", "Glass City"), watchedHome.hero.map { it.item.title })
+        val watchedSurfaces = surfaces(watchedHome)
+        var shown by mutableIntStateOf(0)
+        compose.setContent { CompositionLocalProvider(LocalCarouselAutoAdvance provides false) { watchedSurfaces[shown].second() } }
+        for ((index, surface) in watchedSurfaces.withIndex()) {
+            shown = index
+            compose.waitForIdle()
+            val frame = surface.first
+            assertTrue("$frame: the next one first", shows("Blue Horizon", frame))
+            for (title in listOf("The Last Signal", "Harbor Lights")) assertFalse("$frame shows $title, watched", shows(title, frame))
         }
     }
 }

@@ -160,7 +160,8 @@ chaque changement de l'interface.
   jours (une série de 2014 avec un nouvel épisode cette semaine y est, une série sans rien de nouveau non), rien
   d'annoncé pour plus tard ; une seule carte par série et par film ; les meilleurs d'abord selon la note moyenne de
   TMDb pondérée pour les nouveautés (avec un jeton TMDb ; 5 votes au moins) plus un petit bonus pour les plus récents,
-  les autres après eux par date ; films et séries en alternance ; masqué quand rien n'est sorti récemment ; chaque
+  les autres après eux par date ; films et séries en alternance ; jamais un titre déjà vu (un film, une série vue jusqu'à son
+  dernier épisode ; un titre en cours reste) ; masqué quand rien n'est sorti récemment ; chaque
   titre indique le jour de sa sortie (une série : « Nouvel
   épisode » et le jour) au lieu de son année. Films et séries en
   cours (une rangée chacun ; appuyez longuement sur une carte, ou

@@ -147,7 +147,8 @@ interface changes.
   released in the last 90 days, series with an episode out in the last 30 days (a series from 2014 with a new episode
   this week is in, one with nothing new is not), nothing announced for later; one card per series and per film; the
   best first by TMDb's average vote weighted for new titles (with a TMDb token; 5 votes at least) plus a small bonus
-  for the newest, the others after them by date; movies and series in turn; hidden when nothing came out lately;
+  for the newest, the others after them by date; movies and series in turn; never a title already watched (a movie, a series watched to its last
+  episode; one in progress stays); hidden when nothing came out lately;
   each title says the day it came out (a series: "New episode" and
   the day) in place of its year. Movies
   and series in progress (one row each; long-press a card, or hold OK on a TV, to take

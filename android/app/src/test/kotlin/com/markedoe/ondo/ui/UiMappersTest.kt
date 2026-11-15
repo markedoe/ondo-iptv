@@ -333,6 +333,39 @@ class UiMappersTest {
         assertEquals(listOf("Drama", "Mystery"), series.rows.map { it.category.name })
     }
 
+    /**
+     * Home's carousel leaves out what was watched, as the posters' check mark has it ([UiMappers.watchedKeys]): a movie
+     * finished (any version of its film), a series watched to its last episode; the next recent releases take their place.
+     * A movie or a series only in progress stays, an unwatched one too. Apple: `ShowcaseTests.testTheCarouselLeavesOutTheTitlesWatched`.
+     */
+    @Test
+    fun theCarouselLeavesOutWhatWasWatched() {
+        fun entry(kind: ItemKind, itemId: String, episodeId: String? = null) =
+            WatchEntry(Fixtures.PLAYLIST_ID, kind, itemId, episodeId, title = itemId, lastWatchedAt = 0)
+        var library = LibraryState().markingWatched(entry(ItemKind.MOVIE, Fixtures.glassCity.id), now = 1)
+        Fixtures.harborLights.episodes.forEachIndexed { index, episode ->
+            library = library.markingWatched(entry(ItemKind.SERIES, Fixtures.harborLights.id, episode.id), now = 2L + index)
+        }
+        // In progress: a movie halfway, a series with one episode of three watched.
+        val halfway = entry(ItemKind.MOVIE, Fixtures.northernLights.id).copy(lastWatchedAt = 20)
+        library = library.recordStart(halfway).updateProgress(halfway.key, 3_000.0, 6_000.0, now = 21)
+            .markingWatched(entry(ItemKind.SERIES, Fixtures.blueHorizon.id, Fixtures.blueHorizon.episodes.first().id), now = 22)
+        fun hero(library: LibraryState) = UiMappers.home(Fixtures.state(library), labels, Fixtures.NOW, Fixtures.kept()).hero.map { it.item.title }
+        assertEquals(listOf("Harbor Lights", "The Last Signal", "Blue Horizon", "Northern Lights", "Glass City", "Silent Harbor"), hero(LibraryState()))
+        assertEquals(
+            "the watched movie and series out, those in progress and the unwatched ones as before",
+            listOf("The Last Signal", "Blue Horizon", "Northern Lights", "Silent Harbor"),
+            hero(library),
+        )
+        // The same as the badge.
+        val keys = UiMappers.watchedKeys(Fixtures.state(library))
+        assertTrue("m-${Fixtures.glassCity.id}" in keys && "s-${Fixtures.harborLights.id}" in keys)
+        assertFalse("m-${Fixtures.northernLights.id}" in keys || "s-${Fixtures.blueHorizon.id}" in keys)
+        // Marked unwatched again: back in the carousel.
+        val unwatched = library.markingUnwatched(entry(ItemKind.MOVIE, Fixtures.glassCity.id).key, now = 30)
+        assertTrue("Glass City" in hero(unwatched))
+    }
+
     @Test
     fun finishedMoviesLeaveTheListsWhenSettingsHidesThemButStayInSearchAndMyList() {
         val finished = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, title = "Glass City", lastWatchedAt = 1)
@@ -354,7 +387,9 @@ class UiMappersTest {
             )
         }
         val shown = titles(Fixtures.state(library))
-        shown.forEach { (list, items) -> assertTrue("$list shows it by default", "Glass City" in items) }
+        // The carousel never shows a watched title, the setting on or off (`theCarouselLeavesOutWhatWasWatched`).
+        shown.filterKeys { it != "hero" }.forEach { (list, items) -> assertTrue("$list shows it by default", "Glass City" in items) }
+        assertFalse("the carousel leaves it out by default too", "Glass City" in shown.getValue("hero"))
         val hidden = titles(Fixtures.state(library, settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, hideWatchedMovies = true)))
         listOf("grid", "rows", "new", "hero", "similar", "year").forEach { assertFalse("$it leaves it out", "Glass City" in hidden.getValue(it)) }
         listOf("search", "myList").forEach { assertTrue("$it keeps it", "Glass City" in hidden.getValue(it)) }

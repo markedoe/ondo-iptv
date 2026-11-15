@@ -5,7 +5,7 @@ import IPTVCore
 /// Regression guard for the carousel, on every surface that shows it: it goes by release date (a movie's release, a
 /// series' latest episode), not by the day the provider added a title. An old series with a new season is in; an old
 /// series with nothing new, an old film (however well rated, trending or being watched), a release to come and a hidden
-/// category are out; the best weighted rating comes first. The Android apps have the same test
+/// category are out; the best weighted rating comes first; a title watched is out. The Android apps have the same test
 /// (`CarouselReleasesEverySurfaceTest`, phone and TV). A new screen that shows the carousel is added to `surfaces` here.
 @MainActor
 final class CarouselReleasesEverySurfaceTests: XCTestCase {
@@ -89,6 +89,18 @@ final class CarouselReleasesEverySurfaceTests: XCTestCase {
             for name in ["The Long Road", "The Archive", "Midnight Orchard", "Late Show"] {
                 XCTAssertFalse(carousel.map(\.title).contains(name), "\(surface) shows \(name)")
             }
+        }
+
+        // No carousel shows a title watched (as its poster's check mark): a movie, a series to its last episode; the next
+        // ones come first. Android: `noCarouselShowsATitleWatched`.
+        guard case .movie(let signal) = try item("The Last Signal"), case .series(let horizon) = try item("Blue Horizon") else { return XCTFail("titles") }
+        model.setWatched(true, movie: signal)
+        model.setWatched(true, episodes: horizon.episodes, in: horizon)
+        let watchedSurfaces: [String: [ShowcaseItem]] = [
+            "Home": model.heroItems(),
+        ]
+        for (surface, carousel) in watchedSurfaces {
+            XCTAssertEqual(carousel.map(\.title), ["Northern Lights", "Glass City"], "\(surface): without the titles watched")
         }
     }
 }

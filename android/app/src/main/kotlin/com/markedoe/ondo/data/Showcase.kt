@@ -27,7 +27,7 @@ class Showcase(
     private val library: LibraryState,
     private val playlistId: String,
     private val excludedCategoryIds: Set<String> = emptySet(),
-    /** Finished movies stay out of the new titles, the carousel and similar titles (they stay in My List). */
+    /** Finished movies stay out of the new titles and similar titles (they stay in My List); the carousel never has them ([watchedTitles]). */
     private val hideWatchedMovies: Boolean = false,
     /** Titles of the catalogue that are trending on TMDb (with the viewer's token), in TMDb's order. */
     private val trendingMatches: List<TrendingMatch> = emptyList(),
@@ -44,6 +44,11 @@ class Showcase(
     private val providerRelease: (ShowcaseItem) -> String? = { null },
     /** Whether a title has a backdrop to show besides its poster (the provider's, TMDb's of this session). */
     private val hasBackdrop: (ShowcaseItem) -> Boolean = { false },
+    /**
+     * The keys ([ShowcaseItem.key]) of the titles watched, as their posters' check mark has them (`UiMappers.watchedKeys`):
+     * never in the carousel, whatever Settings says. Titles only in progress are not in it.
+     */
+    private val watchedTitles: Set<String> = emptySet(),
 ) {
     private fun shown(movie: Movie) = movie.categoryId !in excludedCategoryIds && movie.id !in excludedMovieIds
     private fun shown(series: Series) = series.categoryId !in excludedCategoryIds && series.id !in excludedSeriesIds
@@ -191,12 +196,14 @@ class Showcase(
      * ([RecentReleases.pick]): the movies released in the last 90 days and the series with an episode in the last 30,
      * best first by their rating for new titles plus freshness, those not rated enough after them by date, movies and
      * series in turn; with no recent release, none (the carousel hides). Only titles
-     * with artwork, never one of a hidden category, hidden by name or watched when Settings hides those; each film, and each series, once.
+     * with artwork, never one of a hidden category, hidden by name, or watched ([watchedTitles]: a movie, a series watched
+     * to its last episode; the next titles take their place); each film, and each series, once.
      */
     fun heroItems(now: Long, limit: Int = HERO_TITLES): List<ShowcaseItem> {
         val today = today(now)
         val dated = HashMap<String, Long>()
         val shown = (browsableMovies.map { ShowcaseItem.MovieItem(it) } + series.map { ShowcaseItem.SeriesItem(it) }).filter { item ->
+            if (item.key in watchedTitles) return@filter false
             val day = releaseDay(item) ?: return@filter false
             dated[item.key] = day
             today - day in 0 until RecentReleases.WIDEST

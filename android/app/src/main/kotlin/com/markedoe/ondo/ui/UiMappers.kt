@@ -120,6 +120,7 @@ object UiMappers {
         kept: Map<String, TitleMetadata> = emptyMap(),
         grouped: FilmVersions = films(state),
         hidden: Set<String> = hiddenCategoryIds(state),
+        watched: Set<String> = emptySet(),
     ): Showcase {
         val votes = HashMap<String, TmdbRating>()
         kept.forEach { (key, title) -> title.rating?.let { votes[key] = it } }
@@ -131,6 +132,7 @@ object UiMappers {
             kept = kept,
             providerRelease = { item -> providerRelease(state, item) },
             hasBackdrop = { item -> backdrop(state, item) != null },
+            watchedTitles = watched,
         )
     }
 
@@ -581,7 +583,8 @@ object UiMappers {
     }
 
     fun home(state: OndoState, labels: Labels, now: Long, kept: Map<String, TitleMetadata> = emptyMap()): HomeUiState {
-        val showcase = showcase(state, kept)
+        // The carousel leaves out the titles watched, as their check mark has them (off the main thread: Home's flow).
+        val showcase = showcase(state, kept, watched = watchedKeys(state))
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val hero = showcase.heroItems(now).map { item ->

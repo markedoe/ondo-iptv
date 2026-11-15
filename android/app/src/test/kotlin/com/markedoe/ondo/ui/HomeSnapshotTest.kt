@@ -165,6 +165,29 @@ class HomeSnapshotTest {
         assertTrue("every card shown is in the library now", drawn.continueWatching.all { it.key in shown })
     }
 
+    /**
+     * A title watched since Home was kept (a movie, a series to its last episode) leaves the kept carousel as it is shown,
+     * as it leaves the one worked out ([UiMappers.home]); one only in progress stays.
+     */
+    @Test
+    fun theKeptCarouselLeavesOutWhatWasWatchedSince() {
+        val snapshot = snapshotOf(state)
+        val kept = snapshot.hero.mapNotNull { it.title.movie?.name ?: it.title.series?.name }
+        assertTrue("Glass City" in kept && "Harbor Lights" in kept && "Northern Lights" in kept)
+        var library = mine.markingWatched(WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, title = "Glass City", lastWatchedAt = 0), now = Fixtures.NOW)
+        Fixtures.harborLights.episodes.forEachIndexed { index, episode ->
+            library = library.markingWatched(WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, Fixtures.harborLights.id, episode.id, title = "Harbor Lights", lastWatchedAt = 0), now = Fixtures.NOW + 1 + index)
+        }
+        val changed = state.copy(library = library)
+        assertTrue(HomeSnapshots.matches(snapshot, changed, labels, Fixtures.NOW))
+        // While the catalogue is read: no seasons fetched, the series' own episodes as it was kept.
+        val restoring = changed.copy(isRestoring = true, content = com.markedoe.ondo.core.model.PlaylistContent(), seriesDetails = emptyMap())
+        val drawn = HomeSnapshots.home(snapshot, restoring, Fixtures.NOW).hero.map { it.item.title }
+        assertEquals(kept - "Glass City" - "Harbor Lights", drawn)
+        assertTrue("in progress, it stays", "Northern Lights" in drawn)
+        assertEquals("as Home worked out anew", UiMappers.home(changed, labels, Fixtures.NOW, Fixtures.kept()).hero.map { it.item.title }, drawn)
+    }
+
     // The view model, on a store as the app keeps it.
 
     private fun store(launchProfile: String): AppStore {

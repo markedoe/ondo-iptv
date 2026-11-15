@@ -125,6 +125,20 @@ class ShowcaseTest {
         assertTrue(Showcase(Fixtures.content, LibraryState(), playlistId).heroItems(Fixtures.NOW).isEmpty())
     }
 
+    /** Same as `ShowcaseTests.testTheCarouselLeavesOutTheTitlesWatched` on Apple. */
+    @Test
+    fun theCarouselLeavesOutTheTitlesWatchedAndTheNextOnesTakeTheirPlace() {
+        fun hero(watched: Set<String>, limit: Int = HERO_TITLES) =
+            Showcase(Fixtures.content, LibraryState(), playlistId, setOf(Fixtures.adultMovies.id), kept = Fixtures.kept(), watchedTitles = watched)
+                .heroItems(Fixtures.NOW, limit).map { it.title }
+        assertEquals(listOf("Harbor Lights", "The Last Signal", "Blue Horizon", "Northern Lights", "Glass City", "Silent Harbor"), hero(emptySet()))
+        // A watched movie and a series watched to its last episode: out, whatever Settings says of watched movies.
+        assertEquals(listOf("The Last Signal", "Blue Horizon", "Northern Lights", "Silent Harbor"), hero(setOf("m-${Fixtures.glassCity.id}", "s-${Fixtures.harborLights.id}")))
+        // Fewer than it shows: the next recent release takes the place.
+        assertEquals(listOf("Harbor Lights", "The Last Signal"), hero(emptySet(), limit = 2))
+        assertEquals(listOf("The Last Signal", "Blue Horizon"), hero(setOf("s-${Fixtures.harborLights.id}"), limit = 2))
+    }
+
     @Test
     fun theProvidersFullReleaseDateCountsAndAYearAloneDoesNot() {
         val kept = Fixtures.kept().mapValues { it.value.copy(releaseDate = "") }

@@ -258,16 +258,18 @@ extension AppModel {
     /// (`RecentReleases.pick`): the movies released in the last 90 days and the series with an episode in the last 30,
     /// best first by their rating for new titles plus freshness, those not rated enough after them by date, movies and
     /// series in turn; with no recent release, none (Home shows no carousel). Only titles with artwork, nothing from a
-    /// hidden or locked category, a hidden language or a movie hidden as watched; each film, and each series, once.
-    /// Picked again when the carousel's fill brought dates (`TMDbMetadata.carouselRevision`).
+    /// hidden or locked category or a hidden language, never a title watched (`watchedKeys`, as its poster's check mark:
+    /// a movie, a series watched to its last episode; the next titles take their place, those in progress stay), whatever
+    /// Settings says of watched movies; each film, and each series, once.
+    /// Picked again when the carousel's fill brought dates (`TMDbMetadata.carouselRevision`) or something was watched.
     func heroItems(limit: Int = 5, now: Date = .now) -> [ShowcaseItem] {
         let today = RecentReleases.today(now)
-        let watched = hiddenWatchedMovieIDs()
+        let watched = watchedKeys
         let key = newKey("hero", today...today) + "|\(limit)|\(watched.hashValue)|\(tmdbMetadata.carouselRevision)|\(films.isGrouped)"
         return cachedList(key) { () -> [ShowcaseItem] in
-            let movies: [ShowcaseItem] = self.movies(in: nil, sort: .playlist, includingWatched: true).filter { !watched.contains($0.id) }.map(ShowcaseItem.movie)
+            let movies: [ShowcaseItem] = self.movies(in: nil, sort: .playlist, includingWatched: true).map(ShowcaseItem.movie)
             let series: [ShowcaseItem] = self.series(in: nil, sort: .playlist).map(ShowcaseItem.series)
-            let shown = movies + series
+            let shown = (movies + series).filter { !watched.contains($0.id) }
             var released: [String: Int] = [:]
             let recent = shown.filter { item in
                 guard let day = self.releaseDay(of: item), (0..<RecentReleases.widest).contains(today - day) else { return false }

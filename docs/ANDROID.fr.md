@@ -185,8 +185,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   priori pèse donc comme 50 votes et non 200), 5 votes au moins, plus un bonus de fraîcheur de 0,5 le jour de la
   sortie qui décroît régulièrement jusqu'à 0 à la fin de la fenêtre (`freshness`) ; les titres avec moins de votes
   après eux, par date ; égalité au plus récent puis au titre ; films et séries en alternance, la sorte du premier
-  d'abord ; moins de 15 : ceux qu'il y a ; rien de sorti récemment, pas de carrousel (jamais de titres plus anciens). Une image est requise (affiche ou image de fond) ; catégories, langues et mots masqués,
-  films vus et limites du profil s'appliquent. Les dates arrivent sans rafale sur l'accueil : avec le jeton de
+  d'abord ; moins de 15 : ceux qu'il y a ; rien de sorti récemment, pas de carrousel (jamais de titres plus anciens). Une image est requise (affiche ou image de fond) ; catégories, langues et mots masqués
+  et limites du profil s'appliquent ; un titre vu (un film, une série vue jusqu'à son dernier épisode, comme le dit la
+  coche de son affiche) n'y est jamais, quels que soient les réglages, les sorties suivantes prenant sa place ; un titre
+  en cours y reste. Les dates arrivent sans rafale sur l'accueil : avec le jeton de
   l'utilisateur, tant qu'Ondo est à l'écran, les titres peut-être récents (sortis cette année ou l'an dernier, ou
   modifiés par le fournisseur ces 90 derniers jours, comme une série avec un nouvel épisode) dont l'appareil ne
   connaît pas la date, ou que le fournisseur a modifiés depuis la question à TMDb, sont demandés en arrière-plan,

@@ -154,6 +154,41 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(model.heroItems(limit: 2), [.movie(bright), .series(harbor)])
     }
 
+    /// The carousel leaves out what was watched, as the posters' check mark has it (`watchedKeys`): a movie finished or
+    /// marked watched, a series watched to its last episode; the next recent releases take their place; a movie or a
+    /// series only in progress stays. Android: `ShowcaseTest.theCarouselLeavesOutTheTitlesWatchedAndTheNextOnesTakeTheirPlace`
+    /// and `UiMappersTest.theCarouselLeavesOutWhatWasWatched`.
+    func testTheCarouselLeavesOutTheTitlesWatched() async throws {
+        let model = try await model()
+        let bright = try movie("Bright Side", in: model)
+        let quiet = try movie("Quiet Water", in: model)
+        let harbor = try XCTUnwrap(model.content.series.first)
+        release(.movie(bright), in: model, daysAgo: 2, votes: (7.8, 5_000))
+        release(.movie(quiet), in: model, daysAgo: 5, votes: (8.0, 300))
+        release(.series(harbor), in: model, daysAgo: 1, votes: (7.0, 100))
+        XCTAssertEqual(model.heroItems(limit: 5), [.movie(bright), .series(harbor), .movie(quiet)])
+        XCTAssertEqual(model.heroItems(limit: 1), [.movie(bright)])
+
+        // Bright Side watched to its end; Quiet Water halfway; one episode of Harbor's three.
+        try await watch(model.downloadItem(for: bright), in: model, fraction: 0.99, duration: 6_000)
+        try await watch(model.downloadItem(for: quiet), in: model, fraction: 0.5, duration: 5_400)
+        let details = try await model.details(for: harbor)
+        let episodes = details.seasons.flatMap(\.episodes)
+        model.setWatched(true, episodes: Array(episodes.prefix(1)), in: harbor)
+        XCTAssertFalse(model.settings.hideWatchedMovies)
+        XCTAssertEqual(model.heroItems(limit: 5), [.movie(quiet), .series(harbor)], "the watched movie out; those in progress as before")
+        XCTAssertEqual(model.heroItems(limit: 1), [.movie(quiet)], "the next one takes its place")
+
+        // Every episode watched: the series is out too, as its poster's check mark says.
+        model.setWatched(true, series: harbor, details: details)
+        XCTAssertTrue(model.isWatched(.series(harbor)))
+        XCTAssertEqual(model.heroItems(limit: 5), [.movie(quiet)])
+
+        // Marked unwatched again: back.
+        model.setWatched(false, movie: bright)
+        XCTAssertEqual(model.heroItems(limit: 5), [.movie(bright), .movie(quiet)])
+    }
+
     /// One series, one card: listed again under other categories ("|FR| Harbor", "Harbor 4K"), each copy released
     /// lately, the carousel shows it once, dated by the latest. The same rule as Android's `ShowcaseTest` (a series listed
     /// once per new episode is tested in IPTVCore, `RecentReleasesTests`).
@@ -275,7 +310,7 @@ final class ShowcaseTests: XCTestCase {
         // Off by default. These lists are kept in a cache from now on: hiding must still apply to them.
         XCTAssertEqual(model.movies(in: drama, sort: .name).map(\.name), ["Long Road", "Quiet Water"])
         XCTAssertTrue(model.newMovies().contains(.movie(quiet)))
-        XCTAssertTrue(model.heroItems().contains(.movie(quiet)))
+        XCTAssertFalse(model.heroItems().contains(.movie(quiet)), "the carousel leaves a watched title out, the setting off too")
 
         model.updateSettings { $0.hideWatchedMovies = true }
         XCTAssertEqual(model.movies(in: drama, sort: .name).map(\.name), ["Long Road"], "a category's row and grid; a movie in progress stays")

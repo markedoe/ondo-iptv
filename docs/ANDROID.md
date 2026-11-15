@@ -162,8 +162,9 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   so the prior weighs as 50 votes, not 200), 5 votes at least, plus a freshness bonus of 0.5 on the release day falling
   evenly to 0 at the end of the window (`freshness`); the titles with fewer votes after them, by date; ties to the
   newest then the title; movies and series in turn, the kind of the first one first; fewer than 15: those there are;
-  nothing released lately, no carousel (never older titles). Artwork required (a poster or a backdrop); hidden categories, languages, words,
-  watched movies and the profile's limits apply. The dates come without a burst on Home: with the viewer's token,
+  nothing released lately, no carousel (never older titles). Artwork required (a poster or a backdrop); hidden categories, languages, words
+  and the profile's limits apply; a title watched (a movie, a series watched to its last episode, as its poster's check
+  mark says) is never in it, whatever Settings says, the next releases taking its place; one in progress stays. The dates come without a burst on Home: with the viewer's token,
   while Ondo is on screen, the titles that may be recent (released this year or last, or changed by the provider in
   the last 90 days, as a series with a new episode) whose date the device does not know, or that the provider
   changed since TMDb was asked, are asked in the background, 100 at most per catalogue, two at a time at the pace of
