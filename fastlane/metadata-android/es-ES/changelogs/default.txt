@@ -1,9 +1,8 @@
-• Perfiles: «¿Quién está viendo?», PIN y perfiles Infantil
-• Ajustes → Orden de las filas; Todas las películas y Todas las series
-• Una tarjeta por película; sus versiones (4K, DV, VOSTFR) en su página
-• Títulos limpios, con el logo de la película en TV
-• Marcada como vista en los créditos finales o a 10 minutos del final
-• Carrusel: los estrenos, según los votos de TMDb
-• Los idiomas ocultos se aplican en todas partes
-• Sincronización entre dispositivos más fiable
+• Puntuación de TMDb en los pósteres
+• Marcar como visto desde su página; una marca en los pósteres vistos
+• Mi lista como marcador
+• Botones de versión con datos reales (4K, HDR, Dolby Vision, códec, 5.1, Atmos); versiones idénticas en uno
+• El Dolby Vision que tu pantalla no muestra ya no va primero; copias de cine (CAM, TS…) al final
+• Estadísticas del flujo: datos del título
+• Inicio más rápido; en TV, pestañas más rápidas, filas sin cortes, foco más estable
 • Muchas correcciones

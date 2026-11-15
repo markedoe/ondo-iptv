@@ -1,10 +1,9 @@
-• Perfis: "Quem está assistindo?", PIN e perfis Infantil
-• Ajustes → Ordem das fileiras; Todos os filmes e Todas as séries
-• Um card por filme; suas versões (4K, DV, VOSTFR) na página dele
-• Títulos limpos
-• Marcado como assistido nos créditos finais ou a 10 minutos do fim
-• Carrossel do Início: lançamentos, pelos votos do TMDb
-• Idiomas ocultos valem em todo lugar
-• Sincronização entre dispositivos mais confiável
-• Deixar uma gorjeta (Ajustes): três gorjetas opcionais pela App Store. Elas não liberam nada: tudo no Ondo continua disponível para todos.
-• Várias correções
+• Nota do TMDb nos pôsteres e nos cards de Continuar assistindo
+• Marcar como assistido ou não assistido nas páginas de filme, série e episódio, ou uma temporada inteira de uma vez; títulos assistidos mostram um check no pôster
+• Minha lista aparece como um marcador
+• As versões de um filme que tocam a mesma coisa agora ficam em um só botão
+• Os botões de versão e a página do filme mostram o que cada stream traz: resolução, HDR ou Dolby Vision, codec e som (5.1, E-AC-3, Atmos)
+• Uma versão Dolby Vision que sua tela não exibe corretamente não toca mais primeiro
+• Cópias de cinema (CAM, TS…) são sinalizadas e tocam por último
+• Estatísticas do stream: um painel Dados do título com os detalhes de cada versão
+• Muitas correções

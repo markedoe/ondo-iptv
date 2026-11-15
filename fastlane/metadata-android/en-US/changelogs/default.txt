@@ -1,9 +1,8 @@
-• Profiles: "Who's watching?", PIN and Kids profiles
-• Settings → Row order; All movies and All series
-• One card per film; its versions (4K, DV, VOSTFR) on its page
-• Clean titles, with the film's logo on TV
-• Marked as watched at the end credits or 10 minutes from the end
-• Home carousel: the latest releases, ranked by TMDb votes
-• Hidden languages apply everywhere
-• More reliable sync between devices
+• TMDb score on posters
+• Mark as watched from a title's page; a check mark on watched posters
+• My List shown as a bookmark
+• Version chips show real specs (4K, HDR, Dolby Vision, codec, 5.1, Atmos); identical versions share one
+• Dolby Vision your screen can't show no longer plays first; cinema copies (CAM, TS…) play last
+• Stream Statistics: title data
+• Faster start; on TV, faster tabs, rows no longer cut, steadier focus
 • Many fixes

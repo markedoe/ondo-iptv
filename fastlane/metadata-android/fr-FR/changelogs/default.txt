@@ -1,9 +1,8 @@
-• Profils : « Qui regarde ? », code PIN et profils Enfant
-• Réglages → Ordre des rangées ; Tous les films et Toutes les séries
-• Une carte par film ; ses versions (4K, DV, VOSTFR) sur sa page
-• Titres épurés, avec le logo du film sur TV
-• Marqué vu au générique de fin ou à 10 minutes de la fin
-• Carrousel d'accueil : les dernières sorties, classées par les votes TMDb
-• Langues masquées appliquées partout
-• Synchronisation entre appareils plus fiable
+• Note TMDb sur les affiches
+• Marquer comme vu depuis sa page ; coche sur les affiches vues
+• Ma liste en marque-page
+• Pastilles de version aux caractéristiques réelles (4K, HDR, Dolby Vision, codec, 5.1, Atmos) ; versions identiques réunies
+• Le Dolby Vision mal affiché par l'écran ne passe plus en premier ; copies cinéma (CAM, TS…) en dernier
+• Statistiques du flux : données du titre
+• Démarrage plus rapide ; sur TV, onglets plus vifs, rangées entières, focus stable
 • Nombreuses corrections

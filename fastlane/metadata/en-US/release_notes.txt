@@ -1,10 +1,9 @@
-• Profiles: "Who's watching?", PIN and Kids profiles
-• Settings → Row Order; All Movies and All Series
-• One card per film; its versions (4K, DV, VOSTFR) on its page
-• Clean titles
-• Marked as watched at the end credits or 10 minutes from the end
-• Home carousel: the latest releases, ranked by TMDb votes
-• Hidden languages apply everywhere
-• More reliable sync between devices
-• Leave a tip (Settings): three optional tips through the App Store. They unlock nothing: everything in Ondo stays available to everyone.
+• TMDb score on posters and Continue Watching cards
+• Mark as Watched or Unwatched on movie, series and episode pages, or a whole season at once; watched titles show a check mark on their posters
+• My List shown as a bookmark
+• A film's versions that play the same thing now share one chip
+• Version chips and the film page show what each stream holds: resolution, HDR or Dolby Vision, codec and sound (5.1, E-AC-3, Atmos)
+• A Dolby Vision version your screen cannot show correctly no longer plays first
+• Cinema copies (CAM, TS…) are marked and play last
+• Stream Statistics: a Title data panel with each version's details
 • Many fixes

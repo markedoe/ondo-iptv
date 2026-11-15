@@ -1,10 +1,9 @@
-• Perfiles: «¿Quién está viendo?», PIN y perfiles Infantil
-• Ajustes → Orden de las filas; Todas las películas y Todas las series
-• Una tarjeta por película; sus versiones (4K, DV, VOSTFR) en su página
-• Títulos limpios
-• Marcada como vista en los créditos finales o a 10 minutos del final
-• Carrusel de Inicio: los estrenos, según los votos de TMDb
-• Los idiomas ocultos se aplican en todas partes
-• Sincronización entre dispositivos más fiable
-• Dejar una propina (Ajustes): tres propinas opcionales a través de App Store. No desbloquean nada: todo Ondo sigue disponible para todos.
+• Puntuación de TMDb en los pósteres y en las tarjetas de Seguir viendo
+• Marcar como visto o no visto desde la página de una película, una serie o un episodio, o una temporada entera de una vez; los títulos vistos llevan una marca en su póster
+• Mi lista se muestra como un marcador
+• Las versiones de una película que reproducen lo mismo comparten ahora un solo botón
+• Los botones de versión y la página de la película muestran lo que contiene cada flujo: resolución, HDR o Dolby Vision, códec y sonido (5.1, E-AC-3, Atmos)
+• Una versión Dolby Vision que tu pantalla no puede mostrar bien ya no se reproduce primero
+• Las copias de cine (CAM, TS…) se señalan y se reproducen al final
+• Estadísticas del flujo: un panel Datos del título con los detalles de cada versión
 • Muchas correcciones
