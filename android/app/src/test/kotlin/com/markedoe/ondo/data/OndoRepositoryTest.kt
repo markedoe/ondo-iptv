@@ -96,6 +96,24 @@ class OndoRepositoryTest {
         assertNull(state.error)
     }
 
+    /**
+     * A playlist added is on screen before its catalogue is written to the device (tens of megabytes on a large panel:
+     * Home does not wait for the storage); the add still ends only once it is written.
+     */
+    @Test
+    fun aPlaylistAddedShowsBeforeItsCatalogueIsWritten() = runTest {
+        val repository = repository()
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        val adding = launch { assertTrue(repository.addPlaylist("Home", list).isSuccess) }
+        val shown = repository.awaitState { !it.content.isEmpty }
+        val file = folder.root.resolve("content-${shown.activePlaylistId}.json")
+        assertFalse("written before it showed", file.exists())
+        assertFalse("the add ended before its catalogue was written", adding.isCompleted)
+        adding.join()
+        assertTrue("written once added", file.isFile)
+    }
+
     /** Back on Welcome while the demo loads cancels the add: the buttons must not stay disabled. */
     @Test
     fun aCancelledAddDoesNotLeaveTheAppLoading() = runTest {
@@ -157,7 +175,7 @@ class OndoRepositoryTest {
     }
 
     /**
-     * A playlist that arrives by sync while an added one is being saved stays, in memory and on disk. The parse may end
+     * A playlist that arrives by sync while an added one is being shown and saved stays, in memory and on disk. The parse may end
      * after the download step let go ([parseEndsFirst] false: its result comes back as a step) or before (true: the step
      * goes on at once); on a real thread either happens.
      */
@@ -177,7 +195,7 @@ class OndoRepositoryTest {
         parsing?.runNext() // parsed
         if (io.queued > 0) io.runNext() // the parse's result, back as a step of its own
         assertEquals("nothing else waits on the steps", 0, io.queued)
-        testScheduler.runCurrent() // the add saves its catalogue, on the writer
+        testScheduler.runCurrent() // the add goes on: its catalogue is put in the app's words, shown, then saved on the writer
         val synced = SyncPlaylist(id = "from-phone", name = "Phone", kind = SyncPlaylist.M3U, url = other, addedAt = clock, updatedAt = clock)
         assertNotNull(repository.mergeSync(SyncSnapshot(device = "phone", playlists = listOf(synced)), "TV"))
         runSteps(io, parsing) { adding.isCompleted }
@@ -217,7 +235,7 @@ class OndoRepositoryTest {
         parsing.runNext() // both parsed: each continues on the steps' dispatcher
         assertEquals(2, io.queued)
         io.runNext()
-        io.runNext() // each has read the playlists and saves its catalogue on the writer
+        io.runNext() // each has its catalogue: shown, then saved on the writer
         runSteps(io, parsing) { first.isCompleted && second.isCompleted }
         assertEquals(setOf("Home", "Office"), repository.state.value.playlists.map { it.name }.toSet())
         io.runAll()

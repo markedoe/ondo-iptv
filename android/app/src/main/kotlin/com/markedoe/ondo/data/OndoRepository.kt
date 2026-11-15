@@ -533,8 +533,6 @@ class OndoRepository(
         loadCatching { withContext(io) { loader().load(saved.toCorePlaylist()) } }
             .map { content ->
                 LaunchMarks.timed("add: downloaded and parsed", started)
-                withContext(writer) { runCatching { store.saveContent(saved.id, content) } }
-                LaunchMarks.timed("add: catalogue saved", started)
                 startDetails(saved.id)
                 val shown = shown(content)
                 // The playlists and settings as they are once saved: a playlist synced or added meanwhile stays.
@@ -550,7 +548,12 @@ class OndoRepository(
                     savePlaylists(state.playlists)
                     saveSettings(state.settings)
                 }
+                // On screen before it is written: a large panel's catalogue is tens of megabytes, and Home does not
+                // wait for the device's storage. Written before this returns all the same.
+                val saving = persist { saveContent(saved.id, content) }
                 loadGuide(saved, content)
+                saving.join()
+                LaunchMarks.timed("add: catalogue saved", started)
             }
             .onFailure { error -> _state.update { it.copy(isLoading = false, error = LoadError.of(error)) } }
 
@@ -1370,7 +1373,6 @@ class OndoRepository(
             _state.update { it.copy(isLoading = true, isRestoring = false, error = null) }
             loadCatching { withContext(io) { loader().load(playlist.toCorePlaylist()) } }
                 .onSuccess { content ->
-                    withContext(writer) { runCatching { store.saveContent(playlist.id, content) } }
                     if (_state.value.activePlaylistId == playlist.id) {
                         val shown = shown(content)
                         _state.update { it.copy(content = shown, isLoading = false) }
@@ -1379,6 +1381,9 @@ class OndoRepository(
                     } else {
                         _state.update { it.copy(isLoading = false) }
                     }
+                    // Written once it is on screen, as a playlist added is ([add]); not for a playlist deleted meanwhile
+                    // (its deletion took its files away).
+                    persist { if (_state.value.playlists.any { it.id == playlist.id }) saveContent(playlist.id, content) }.join()
                 }
                 .onFailure { error ->
                     // The error of a playlist that is no longer shown is not this one's.

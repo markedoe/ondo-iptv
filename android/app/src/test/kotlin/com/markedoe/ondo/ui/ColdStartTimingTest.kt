@@ -677,6 +677,8 @@ class ColdStartTimingTest {
             assertTrue("the catalogue came", shown.get() >= 0)
             assertTrue("Home showed its rows: ${rows.get()} ms", rows.get() in 0L until 60_000L)
             assertTrue("the catalogue was saved", savedAt >= 0)
+            // Home does not wait for the device's storage: the catalogue is in the state before its file is written.
+            assertTrue("the catalogue is on screen before it is written", !savedWhenShown.get())
             assertTrue("the playlist was added", added.get() >= 0)
         } finally {
             watching.cancel()
