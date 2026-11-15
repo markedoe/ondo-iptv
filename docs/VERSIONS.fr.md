@@ -18,7 +18,7 @@ mêmes catalogues écrits à la main et leurs groupes attendus (`fixtures/film-v
 Seulement les films, et seulement dans une même playlist (les chaînes et les séries ne sont jamais regroupées).
 
 - **Le titre** comparé est celui du fournisseur sans ses étiquettes (`CatalogueMatcher.displayTitle` : `|FR|`, `[FR]`,
-  `FR -`, `STFR|`, `VFF`, `MULTI`, `4K`…), sans tenir compte de la casse ni des accents : « |FR| Le Transport 4K » et « Le
+  `FR -`, `STFR|`, `VFF`, `MULTI`, `4K`, ceux du son `Atmos`, `DTS`, `5.1`…), sans tenir compte de la casse ni des accents : « |FR| Le Transport 4K » et « Le
   Transport VOSTFR » sont tous deux « le transport ».
 - **Règle A, l'identifiant TMDb du fournisseur.** Le champ `tmdb` (ou `tmdb_id`) de la liste Xtream ne compte que s'il
   est un nombre entier supérieur à zéro (`0`, vide, `true`, `12.5` ou du texte ne sont pas un identifiant). L'identifiant
@@ -201,8 +201,8 @@ sources, la meilleure d'abord, champ par champ :
     non pris en charge par cet écran : profil inconnu, pas lu en premier », « HDR non pris en charge par cet écran »,
     « 4K au-delà du plus grand mode de cet écran ») ;
   - pour l'écran, après les versions : le mode du moment et le plus grand mode (Android), HDR10, HDR10+, HLG et Dolby
-    Vision oui ou non, les décodeurs Dolby Vision et HEVC Main 10, ce que prend la sortie son (Android : ses canaux au
-    plus et les encodages qu'elle transmet tels quels à la TV ou à l'ampli, d'après `AudioCapabilities` de Media3, relu
+    Vision oui ou non, les décodeurs Dolby Vision et HEVC Main 10, ce que prend la sortie son (Android : les canaux de
+    ses haut-parleurs selon Media3 et les encodages qu'elle transmet tels quels à la TV ou à l'ampli, d'après `AudioCapabilities` de Media3, relu
     chaque fois que le panneau est recalculé ; iPhone et iPad : ses canaux et l'audio spatial), s'il est 4K et pourquoi (ses modes, sa taille
     d'affichage, un écran HDR avec un décodeur 4K) avec la taille d'affichage que lit Media3 (Android), ce pour quoi les
     versions sont choisies (« 4K · HDR »), et la version et le build de l'app, pour qu'une photo dise de quel build il
@@ -210,7 +210,7 @@ sources, la meilleure d'abord, champ par champ :
 
   Le panneau ne dépasse jamais le bas de l'écran : quand il ne tient pas, il défile, sur une TV avec Haut et Bas de la
   télécommande tant que les commandes sont masquées (en haut Haut, en bas Bas, font ce qu'ils font sans lui), sur un
-  téléphone, un iPhone ou un Mac d'un glissement ou à la molette.
+  iPhone, un iPad ou un Mac d'un glissement ou à la molette.
 
   Un film seul a aussi sa ligne. Dans le lecteur, le panneau est recalculé quand arrivent la mesure du lecteur, les
   détails d'une version ou un échec.

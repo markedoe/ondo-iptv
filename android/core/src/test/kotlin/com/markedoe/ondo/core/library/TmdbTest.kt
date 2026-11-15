@@ -338,6 +338,14 @@ class TmdbTest {
         assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport (MULTI) (2021)"))
         assertEquals("Le Transport", CatalogueMatcher.displayTitle("|FR-4K DV| Le Transport [VOSTFR]"))
         assertEquals("MobLand", CatalogueMatcher.displayTitle("MobLand |MULTI|"))
+        // The sound's tags: they were kept, and a "5.1" made another film of the same one.
+        assertEquals("Sand Harbor", CatalogueMatcher.displayTitle("Sand Harbor DTS 5.1"))
+        assertEquals("Sand Harbor", CatalogueMatcher.displayTitle("Sand Harbor 4K Atmos 7.1"))
+        assertEquals("Sand Harbor", CatalogueMatcher.displayTitle("Sand Harbor DD+ 5.1"))
+        assertEquals("Sand Harbor", CatalogueMatcher.displayTitle("Sand Harbor (TrueHD Atmos) (2026)"))
+        assertEquals(CatalogueMatcher.filmKey("Sand Harbor"), CatalogueMatcher.filmKey("Sand Harbor DTS 5.1"))
+        // A short one only in capitals: "Dts" stays a word.
+        assertEquals("Sand Harbor Dts", CatalogueMatcher.displayTitle("Sand Harbor Dts"))
         // Subtitle tags, before a bar, a dash or in brackets, in one word or two.
         for (tag in listOf("STFR| ", "STFR | ", "ST FR - ", "VOSTFR| ", "SUBFR - ", "FR SUB | ", "VOST - ", "[STFR] ", "[ST FR] ")) {
             assertEquals("Le Transport", CatalogueMatcher.displayTitle(tag + "Le Transport"), tag)

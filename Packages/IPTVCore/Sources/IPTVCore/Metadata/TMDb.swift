@@ -558,6 +558,8 @@ public enum CatalogueMatcher {
     /// Words of a copy's quality or edition, never the film's, in a provider's title ("Sandstorm MULTI 4K").
     private static let qualityWords: Set<String> = [
         "multi", "4k", "uhd", "fhd", "hd", "sd", "hdr", "dv", "hevc", "x265", "h265", "1080p", "720p", "2160p", "vfq", "imax",
+        // The sound's: "Sand Harbor Atmos", "Sand Harbor DTS 5.1" are "Sand Harbor" (a "5.1" left in made another film).
+        "atmos", "truehd", "dts", "ddp", "dd+", "eac3", "ac3", "5.1", "7.1",
     ]
 
     /// A tag of the provider's, not a word of the film's: a language or version, or a quality. A short one (three

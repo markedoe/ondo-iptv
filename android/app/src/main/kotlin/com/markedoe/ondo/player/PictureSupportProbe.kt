@@ -179,8 +179,10 @@ data class DisplayFacts(
 /**
  * What the sound output takes, as Media3 reads it (`AudioCapabilities`: the HDMI or default route of the moment): the
  * surround encodings it takes as they are, for the TV or amplifier to decode ([passthrough], in the order of
- * [ENCODINGS]), and the channels it plays at most ([maxChannels]: 2 for a stereo output, 8 for 7.1).
+ * [ENCODINGS]), and its speakers' channels ([maxChannels]: Media3's best guess at the speaker layout, its first
+ * `speakerLayoutChannelMasks`: 2 for stereo, 6 for 5.1; not `maxChannelCount`, which can be a default of 10).
  */
+@OptIn(UnstableApi::class)
 data class AudioOutput(val passthrough: List<String>, val maxChannels: Int) {
     companion object {
         /** The encodings the panel names, as it names them. */
@@ -203,7 +205,7 @@ data class AudioOutput(val passthrough: List<String>, val maxChannels: Int) {
         fun read(context: Context): AudioOutput? = runCatching {
             val attributes = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
             val capabilities = AudioCapabilities.getCapabilities(context.applicationContext, attributes, null, emptyList())
-            of(capabilities::supportsEncoding, capabilities.maxChannelCount)
+            of(capabilities::supportsEncoding, capabilities.speakerLayoutChannelMasks.firstOrNull()?.let(Integer::bitCount) ?: 2)
         }.getOrNull()
     }
 }
@@ -260,6 +262,7 @@ object PictureSupportProbe {
     private fun display(activity: Activity): Display =
         (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) activity.display else null) ?: activity.windowManager.defaultDisplay
 
+    @Suppress("DEPRECATION")
     private fun read(activity: Activity): DisplayFacts {
         val display = display(activity)
         val mode = display.mode

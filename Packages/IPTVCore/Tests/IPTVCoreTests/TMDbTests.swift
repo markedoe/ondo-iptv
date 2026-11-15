@@ -326,6 +326,14 @@ final class PeopleTests: XCTestCase {
         XCTAssertEqual(CatalogueMatcher.displayTitle("Le Transport (MULTI) (2021)"), "Le Transport")
         XCTAssertEqual(CatalogueMatcher.displayTitle("|FR-4K DV| Le Transport [VOSTFR]"), "Le Transport")
         XCTAssertEqual(CatalogueMatcher.displayTitle("MobLand |MULTI|"), "MobLand")
+        // The sound's tags: they were kept, and a "5.1" made another film of the same one.
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Sand Harbor DTS 5.1"), "Sand Harbor")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Sand Harbor 4K Atmos 7.1"), "Sand Harbor")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Sand Harbor DD+ 5.1"), "Sand Harbor")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Sand Harbor (TrueHD Atmos) (2026)"), "Sand Harbor")
+        XCTAssertEqual(CatalogueMatcher.key("Sand Harbor"), CatalogueMatcher.key("Sand Harbor DTS 5.1"))
+        // A short one only in capitals: "Dts" stays a word.
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Sand Harbor Dts"), "Sand Harbor Dts")
         // Subtitle tags, before a bar, a dash or in brackets, in one word or two.
         for tag in ["STFR| ", "STFR | ", "ST FR - ", "VOSTFR| ", "SUBFR - ", "FR SUB | ", "VOST - ", "[STFR] ", "[ST FR] "] {
             XCTAssertEqual(CatalogueMatcher.displayTitle(tag + "Le Transport"), "Le Transport", tag)

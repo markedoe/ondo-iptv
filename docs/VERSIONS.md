@@ -17,7 +17,7 @@ their expected groups (`fixtures/film-versions/golden.json`).
 Only movies, and only within one playlist (live channels and series are never grouped).
 
 - **The title** compared is the provider's title without its tags (`CatalogueMatcher.displayTitle`: `|FR|`, `[FR]`,
-  `FR -`, `STFR|`, `VFF`, `MULTI`, `4K`…), case and accents ignored: "|FR| Le Transport 4K" and "Le Transport VOSTFR" are both
+  `FR -`, `STFR|`, `VFF`, `MULTI`, `4K`, the sound's `Atmos`, `DTS`, `5.1`…), case and accents ignored: "|FR| Le Transport 4K" and "Le Transport VOSTFR" are both
   "le transport".
 - **Rule A, the provider's TMDb id.** The Xtream list's `tmdb` (or `tmdb_id`) field counts only when it is a whole
   number above zero (`0`, empty, `true`, `12.5` or text are no id). A provider's id can be wrong (a sequel matched to
@@ -182,14 +182,14 @@ same rules and words on both apps: `fixtures/stream-specs/specs.json`). Three so
     screen's largest mode");
   - for the screen, after the versions: the mode of the moment and the largest mode (Android), HDR10, HDR10+, HLG and
     Dolby Vision yes or no, the Dolby Vision and HEVC Main 10 decoders, what the sound output takes (Android: its
-    channels at most and the encodings it passes as they are to the TV or amplifier, from Media3's `AudioCapabilities`,
+    speakers' channels as Media3 guesses them and the encodings it passes as they are to the TV or amplifier, from Media3's `AudioCapabilities`,
     read again each time the panel is worked out; iPhone and iPad: its channels and Spatial Audio), whether it is 4K and why (its modes, its display
     size, an HDR screen with a 4K decoder) with the display size Media3 reads (Android), what the versions are chosen
     for ("4K · HDR"), and the app's version and build, so a photo says which build it was.
 
   The panel never runs past the bottom of the screen: when it does not fit it scrolls, on a TV with the remote's Up and
-  Down while the controls are hidden (at its top Up, at its bottom Down, do what they do without it), on a phone, an
-  iPhone or a Mac with a swipe or the scroll wheel.
+  Down while the controls are hidden (at its top Up, at its bottom Down, do what they do without it), on an iPhone, an
+  iPad or a Mac with a swipe or the scroll wheel.
 
   A film alone lists its own line too. In the player the panel is worked out again when the player's reading, a
   version's details or a failure arrive.
