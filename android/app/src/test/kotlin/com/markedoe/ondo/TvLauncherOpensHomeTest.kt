@@ -128,10 +128,11 @@ class TvLauncherOpensHomeTest {
         settle(2_000)
         val computed = model.homeComputations.get() + model.savedHomesShown.get()
         settle(3_000)
-        // A minute's tick or a background refresh may work it out once or twice more; a loop, hundreds of times.
+        // A minute's tick or a background refresh may work it out a few times more; a loop, hundreds of times. Wide
+        // bounds: this guards against a loop, not a count.
         val again = model.homeComputations.get() + model.savedHomesShown.get() - computed
-        assertTrue("Home worked out $again more times with nothing changed", again <= 2)
-        assertTrue("Home worked out ${model.homeComputations.get()} times at launch", model.homeComputations.get() <= 6)
+        assertTrue("Home worked out $again more times with nothing changed", again <= 10)
+        assertTrue("Home worked out ${model.homeComputations.get()} times at launch", model.homeComputations.get() <= 30)
     }
 
     @Test

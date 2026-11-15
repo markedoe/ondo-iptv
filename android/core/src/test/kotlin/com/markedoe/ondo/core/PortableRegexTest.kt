@@ -7,10 +7,11 @@ import org.junit.Test
 
 /**
  * Every regular expression of the apps' Android code compiles on Android, whose `java.util.regex` is ICU's engine, not
- * the JDK's the unit tests run on: ICU knows the inline flags `i`, `m`, `s`, `x` (and `w`, which the JDK does not), so
- * the JDK's `(?U)` (UNICODE_CHARACTER_CLASS), `(?u)`, `(?d)` or `(?c)` throw a PatternSyntaxException on a device while
- * every JVM and Robolectric test passes; Android refuses the UNICODE_CHARACTER_CLASS and CANON_EQ flags too. A pattern
- * kept in a class's static field then breaks the class for good: FilmVersions' did at launch (build 1081).
+ * the JDK's the unit tests run on. ICU's grammar (regexcst.txt, `open-paren-extended` and `paren-flag`) takes the inline
+ * flags `i d m s u w x` and nothing else, so the JDK's `(?U)` throws a PatternSyntaxException on a device while every
+ * JVM and Robolectric test passes; the JDK has no `w`. Only the flags both take are allowed: `i d m s u x`. Android
+ * documents the UNICODE_CHARACTER_CLASS and CANON_EQ flags as not supported. A pattern kept in a class's static field
+ * breaks the class for good: FilmVersions' did at launch (build 1081).
  * Every source file of every module is read, so a new one is checked too.
  */
 class PortableRegexTest {
@@ -35,7 +36,7 @@ class PortableRegexTest {
         val flags = Regex("""\(\?([A-Za-z]*(?:-[A-Za-z]*)?)[:)]""")
         val found = sources().flatMap { file ->
             file.readLines().withIndex().flatMap { (index, line) ->
-                flags.findAll(line).filter { group -> group.groupValues[1].any { it != '-' && it !in "imsx" } }
+                flags.findAll(line).filter { group -> group.groupValues[1].any { it != '-' && it !in "idmsux" } }
                     .map { "${file.relativeTo(modules)}:${index + 1}: ${it.value}" }
             }
         }
