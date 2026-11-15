@@ -415,7 +415,8 @@ internal fun TvArtwork(
                     .padding(end = TvTokens.EdgeEnd + 24.dp, top = 12.dp, bottom = 12.dp)
                     .fillMaxHeight(0.82f)
                     .aspectRatio(2f / 3f)
-                    .clip(RoundedCornerShape(14.dp)),
+                    .clip(RoundedCornerShape(14.dp))
+                    .testTag("tvArtworkPoster"),
             )
         }
     }
