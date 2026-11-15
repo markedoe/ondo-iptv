@@ -14,10 +14,10 @@ que la nuit et à la main :
 | | Courts : chaque push sur `main` et pull request (et tout autre run) | Longs : la nuit sur `main`, et à la main |
 |---|---|---|
 | *CI* | *Lint + IPTVCore tests (Linux)* : SwiftLint, les contrôles de configuration et leurs tests, les tests du cœur Swift sur Linux (environ 2 min) | *Build iOS + macOS (Debug, App Store edition)* et *App tests — unit + UI (iPhone simulator)*, tous deux sur macOS (environ 20 min de durée réelle, 38 minutes de jobs) |
-| *Android* | *Core (Kotlin) tests* (environ 2 min), *App — lint, debug APK, release bundle* (lint, l'APK debug et le bundle release réduit par R8 : environ 6 min), *Google Play listing limits* | *App — unit, Compose and screenshot tests* : les tests unitaires et Compose de l'app avec Robolectric et les captures Roborazzi comparées aux références (environ 14 min) |
+| *Android* | *Core (Kotlin) tests* (environ 2 min), *App — lint, debug APK, release bundle* (lint, l'APK debug et le bundle release réduit par R8 : environ 6 min), *Google Play listing limits* | *App — unit, Compose and screenshot tests* : les tests unitaires et Compose de l'app avec Robolectric et les captures Roborazzi comparées aux références (environ 14 min) ; *App — release APK launched on an Android TV emulator* : l'APK release sur le runtime d'Android lui-même, ce que les tests JVM ne sont pas (une playlist de films en plusieurs versions ajoutée à la télécommande, chaque onglet, un démarrage à froid depuis le catalogue enregistré) |
 
-(Durées : les mesures plus bas, 4 novembre 2026.) *TV release check* (le build release sur un émulateur Android TV)
-reste un run à la main, hors de la nuit.
+(Durées : les mesures plus bas, 4 novembre 2026.) *TV release check* (le build release sur un émulateur Android TV,
+avec ses catalogues plus grands et plus de parcours) reste un run à la main, hors de la nuit.
 
 - **Les builds des testeurs partent après les jobs courts.** Un push sur `main` ne lance que les jobs courts ; une fois
   ce run vert, *Deliver* envoie le push sur TestFlight (testeurs internes et externes) et en test interne puis fermé

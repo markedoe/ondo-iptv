@@ -13,10 +13,10 @@ only:
 | | Short: every push to `main` and pull request (and every other run) | Long: at night on `main`, and by hand |
 |---|---|---|
 | *CI* | *Lint + IPTVCore tests (Linux)*: SwiftLint, the configuration checks and their tests, the Swift core tests on Linux (about 2 min) | *Build iOS + macOS (Debug, App Store edition)* and *App tests — unit + UI (iPhone simulator)*, both on macOS (about 20 min of wall clock, 38 job-minutes) |
-| *Android* | *Core (Kotlin) tests* (about 2 min), *App — lint, debug APK, release bundle* (lint, the debug APK and the release bundle shrunk by R8: about 6 min), *Google Play listing limits* | *App — unit, Compose and screenshot tests*: the app's unit and Compose tests with Robolectric and the Roborazzi screenshots compared with the references (about 14 min) |
+| *Android* | *Core (Kotlin) tests* (about 2 min), *App — lint, debug APK, release bundle* (lint, the debug APK and the release bundle shrunk by R8: about 6 min), *Google Play listing limits* | *App — unit, Compose and screenshot tests*: the app's unit and Compose tests with Robolectric and the Roborazzi screenshots compared with the references (about 14 min); *App — release APK launched on an Android TV emulator*: the release APK on Android's own runtime, which the JVM tests are not (a playlist of film versions added with the remote, every tab, a cold start from the stored catalogue) |
 
 (Durations: the measurements below, 4 November 2026.) *TV release check* (the release build on an Android TV
-emulator) stays a run by hand, outside the night.
+emulator, with its larger catalogues and more paths) stays a run by hand, outside the night.
 
 - **The testers' builds leave after the short jobs.** A push to `main` runs the short jobs only; once that run is green,
   *Deliver* sends the push to TestFlight (internal and external testers) and to Google Play internal then closed

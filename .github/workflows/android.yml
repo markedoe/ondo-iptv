@@ -352,6 +352,70 @@ jobs:
             git show --stat --format="%h %s" HEAD | sed 's/^/    /'
           } >> "$GITHUB_STEP_SUMMARY"
 
+  tv-launch:
+    # Long: at night and by hand only (job "What to run"). The release APK (R8) on Android's own runtime, which the JVM
+    # and Robolectric tests are not (its regex engine is ICU's): first launch, a playlist of film versions added with the
+    # remote, every tab, then a cold start from the stored catalogue and the Movies rows. A crash, an ANR or Android
+    # ending the app fails the night, and Ship needs a green night (ship.py).
+    name: App — release APK launched on an Android TV emulator
+    needs: scope
+    if: needs.scope.outputs.run == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Release APK (R8, signed with the debug key)
+        working-directory: android
+        run: ./gradlew :app:assembleRelease --stacktrace
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Made-up Xtream panel (movies 7 and 8 of each ten are other versions of movie 6)
+        run: |
+          mkdir -p out
+          nohup python3 -I .github/scripts/fake_xtream_panel.py --port 8080 --live 20 --movies 60 --series 15 --guide-channels 20 --guide-days 2 \
+            --log out/panel-requests.log --media "" > out/panel.log 2>&1 &
+          for _ in $(seq 1 300); do grep -q "panel on" out/panel.log && break; sleep 1; done
+          cat out/panel.log
+      - name: Launch, add a playlist, start again from the stored catalogue
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 30
+          target: android-tv
+          arch: x86
+          profile: tv_1080p
+          ram-size: 2048M
+          disk-size: 6000M
+          disable-animations: true
+          script: |
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
+            adb reverse tcp:8080 tcp:8080
+            python3 -I .github/scripts/tv_drive.py out/tv --paths=rows
+      - name: Crash with the app's names (R8 mapping)
+        if: always()
+        run: |
+          mapping=android/app/build/outputs/mapping/release/mapping.txt
+          retrace=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/retrace 2>/dev/null | head -1)
+          if [ -s out/tv/crash.txt ] && [ -n "$retrace" ]; then "$retrace" "$mapping" out/tv/crash.txt > out/tv/crash-retraced.txt || true; fi
+          tail -40 out/tv/steps.log 2>/dev/null || true
+          cat out/tv/crash-retraced.txt 2>/dev/null || cat out/tv/crash.txt 2>/dev/null || true
+      - name: Screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tv-launch
+          path: out
+          if-no-files-found: ignore
+
   listing:
     # Google Play rejects the whole upload when one text is too long; better to know before a release.
     name: Google Play listing limits

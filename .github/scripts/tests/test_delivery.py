@@ -467,7 +467,7 @@ class ProductionGateTests(WorkflowScriptTestCase):
 
     def test_only_a_long_run_on_this_very_commit_lets_it_through(self):
         long_jobs = {"ci": ["Build iOS + macOS (Debug, App Store edition)", "App tests — unit + UI (iPhone simulator)"],
-                     "android": ["App — unit, Compose and screenshot tests"]}
+                     "android": ["App — unit, Compose and screenshot tests", "App — release APK launched on an Android TV emulator"]}
 
         def night(event: str = "schedule", head: str = "") -> dict:
             return {"id": 7, "head_sha": head, "head_commit": {"tree_id": "0" * 40}, "event": event, "conclusion": "success"}
