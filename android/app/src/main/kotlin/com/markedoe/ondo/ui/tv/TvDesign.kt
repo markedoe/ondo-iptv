@@ -68,6 +68,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
@@ -522,9 +523,13 @@ fun TvBadge(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Facts of a title ("2024 · 1 h 52 · ★ 7.1"), the format last as a badge. */
+/**
+ * Facts of a title ("2024 · 1 h 52 · ★ 7.1"), the format as a badge, then what the version is made of ([specs]: "4K",
+ * "Dolby Vision", "5.1 AAC"), which a screen reader says in one sentence ([specDescription]). The badges keep their
+ * room: the facts give way (ellipsis) when the line is full.
+ */
 @Composable
-fun TvFacts(facts: List<String>, badges: List<String>, modifier: Modifier = Modifier) {
+fun TvFacts(facts: List<String>, badges: List<String>, modifier: Modifier = Modifier, specs: List<String> = emptyList(), specDescription: String = "") {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (facts.isNotEmpty()) {
             Text(
@@ -533,9 +538,15 @@ fun TvFacts(facts: List<String>, badges: List<String>, modifier: Modifier = Modi
                 color = Color.White.copy(alpha = 0.8f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
         }
         badges.forEach { TvBadge(it) }
+        specs.forEachIndexed { index, text ->
+            // The first says them all, in words ("4K, Dolby Vision, 5.1 surround sound"); the others say nothing more.
+            val spoken = if (index == 0) specDescription.ifEmpty { specs.joinToString(", ") } else null
+            TvBadge(text, Modifier.testTag("spec-$index").clearAndSetSemantics { spoken?.let { contentDescription = it } })
+        }
     }
 }
 

@@ -201,6 +201,13 @@ final class AppModel {
     /// The chips of the films' versions by their ids, worked out once per catalogue (AppModel+Versions).
     @ObservationIgnored var versionChoicesCache: [String: [VersionChoice]] = [:]
     @ObservationIgnored var movieDetailsInFlight: [String: Task<MediaDetails?, Never>] = [:]
+    /// The provider's details asked for movies since the app started (a page, Home's prefetch, a film's versions): for tests.
+    @ObservationIgnored var movieDetailRequests = 0
+    /// What the player measured of the films it played (AppModel+StreamSpecs), read from the device the first time a film's
+    /// page or the player needs it; observed: a page shows it once read.
+    var measuredSpecs = MeasuredSpecs()
+    @ObservationIgnored var measuredSpecsLoad: Task<Void, Never>?
+    @ObservationIgnored var measuredSpecsWrite: Task<Void, Never>?
     /// TMDb backdrops and dead provider backdrops (AppModel+Backdrops).
     let backdrops = BackdropStore()
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]

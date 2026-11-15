@@ -850,6 +850,7 @@ class PlayerActivity : ComponentActivity() {
 
                     // The subtitle downloaded for this title plays as soon as its track is there.
                     override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                        recordSpecs(tracks)
                         if (!sideLoadPending) return
                         val parameters = SideLoadedSubtitle.select(exoPlayer.trackSelectionParameters, tracks) ?: return
                         sideLoadPending = false
@@ -1125,6 +1126,18 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private val repository get() = (application as OndoApplication).repository
+
+    /**
+     * A film's tracks are known: what its stream is made of is kept for its page (`MeasuredSpecs`), written off the main
+     * thread. Its own stream only: not a fallback's (another version's address, [urlIndex] past the first), not a channel.
+     */
+    private fun recordSpecs(tracks: androidx.media3.common.Tracks) {
+        if (request.isLive || request.replayStart != null || urlIndex != 0) return
+        val parts = request.progressKey?.split('|') ?: return
+        if (parts.size != 4 || parts[1] != ItemKind.MOVIE.name) return
+        val specs = MeasuredTracks.specs(tracks) ?: return
+        repository.recordMeasuredSpecs(parts[2], specs)
+    }
 
     /** The channel [by] places after (or before) this one in Live TV. */
     private fun zap(by: Int) {

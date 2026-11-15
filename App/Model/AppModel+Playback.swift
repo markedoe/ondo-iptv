@@ -293,6 +293,9 @@ extension AppModel {
         controller.onProgress = { [weak self] item, position, duration, creditsStart in
             self?.recordProgress(item, position: position, duration: duration, creditsStart: creditsStart)
         }
+        controller.onSpecs = { [weak self] item, specs in
+            self?.recordMeasuredSpecs(specs, movieID: item.reference.itemID)
+        }
         controller.onEnded = { [weak session] item in
             guard let session else { return }
             if session.isTimeshifted {

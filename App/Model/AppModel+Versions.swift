@@ -60,13 +60,17 @@ extension AppModel {
     /// film's page and its Continue Watching card ask on every pass of their body; the member each plays is read here.
     func versionChoices(_ versions: [Movie]) -> [VersionChoice] {
         guard versions.count > 1 else { return versions.map { VersionChoice(label: Self.versionWords.standard, members: [$0], preferred: $0) } }
-        let key = versions.map(\.id).joined(separator: "\u{1F}")
+        // What is known of each version's stream (AppModel+StreamSpecs) is part of what the chips say.
+        let specs = Dictionary(versions.map { ($0.id, streamSpecs(for: $0.id)) }, uniquingKeysWith: { first, _ in first })
+        let key = versions.map { version in
+            version.id + "\u{1E}" + (FilmVersions.specKey(specs[version.id] ?? nil)?.map { $0 ?? "" }.joined(separator: "\u{1D}") ?? "")
+        }.joined(separator: "\u{1F}")
         let choices: [VersionChoice]
         if let known = versionChoicesCache[key] {
             choices = known
         } else {
             let names = categoryNames
-            choices = FilmVersions.choices(versions, categoryName: { names[$0] }, words: Self.versionWords)
+            choices = FilmVersions.choices(versions, categoryName: { names[$0] }, words: Self.versionWords, specs: { specs[$0] ?? nil })
             versionChoicesCache[key] = choices
         }
         let watching = inProgress(among: versions)

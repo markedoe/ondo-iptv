@@ -22,6 +22,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.library.VersionWords
+import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.core.net.OkHttpClientAdapter
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.AwardsDownload
@@ -221,6 +222,14 @@ fun Resources.versionWords(): VersionWords = VersionWords(
     frenchSubtitles = getString(R.string.version_french_subtitles),
     subtitled = getString(R.string.version_subtitled),
     cinemaCopy = getString(R.string.version_cinema_copy),
+)
+
+/** What a screen reader says of a version's sound, in the app's language (StreamSpecs.description). */
+fun Resources.specWords(): StreamSpecs.Words = StreamSpecs.Words(
+    surround = getString(R.string.spec_surround),
+    stereo = getString(R.string.spec_stereo),
+    mono = getString(R.string.spec_mono),
+    atmos = getString(R.string.spec_atmos),
 )
 
 /** The app's words for the names the core gives in English where the provider gives none ("Uncategorized", "Channel 12"…). */

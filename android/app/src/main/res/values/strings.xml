@@ -153,6 +153,11 @@
     <string name="version_subtitled">Original, subtitled</string>
     <string name="version_cinema_copy">Cinema copy (%1$s)</string>
     <string name="version_chip_description">Version: %1$s</string>
+    <!-- What a screen reader says of a version's sound (StreamSpecs.description). -->
+    <string name="spec_surround">%1$s surround sound</string>
+    <string name="spec_stereo">Stereo sound</string>
+    <string name="spec_mono">Mono sound</string>
+    <string name="spec_atmos">Dolby Atmos sound</string>
     <string name="kind_movie">Movie</string>
     <string name="kind_series">Series</string>
     <string name="hero_new_episode">New episode</string>
@@ -381,6 +386,9 @@
     <string name="title_data_first_chosen">Plays first because it was chosen last on this device.</string>
     <string name="title_data_first_best">Plays first because it suits this screen best.</string>
     <string name="title_data_first_first">Plays first because nothing sets the versions apart: it comes first in the catalogue.</string>
+    <string name="title_data_specs_measured">Measured by the player</string>
+    <string name="title_data_specs_provider">From the provider</string>
+    <string name="title_data_specs_name">From the name</string>
     <string name="stats_engine">Engine</string>
     <string name="stats_format">Format</string>
     <string name="stats_video">Video</string>

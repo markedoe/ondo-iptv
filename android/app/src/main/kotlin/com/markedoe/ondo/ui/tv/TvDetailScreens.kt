@@ -151,6 +151,9 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                 award = state.awards.firstOrNull(),
                 facts = facts,
                 badges = listOfNotNull(MediaFormat.label((state.version ?: movie).streamUrl)),
+                // 4K, Dolby Vision, HEVC, 5.1 AAC: what that version is made of, as far as it is known.
+                specBadges = state.specBadges,
+                specDescription = state.specDescription,
                 plot = details?.plot ?: movie.plot,
                 director = details?.director,
                 progress = state.progress.takeIf { resumable },
@@ -316,6 +319,9 @@ private fun TvDetailHeader(
     director: String?,
     progress: WatchProgress?,
     watched: Boolean,
+    /** What the version Play plays is made of ("4K", "Dolby Vision", "5.1 AAC"), after [badges]; and in words. */
+    specBadges: List<String> = emptyList(),
+    specDescription: String = "",
     buttons: @Composable FlowRowScope.() -> Unit,
 ) {
     val ink = TvTokens.Ink
@@ -339,7 +345,7 @@ private fun TvDetailHeader(
                 textTag = "detailTitle",
                 logoTag = "detailLogo",
             )
-            TvFacts(facts, badges)
+            TvFacts(facts, badges, specs = specBadges, specDescription = specDescription)
             if (watched) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("detailWatchedState")) {
                     Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = TvTokens.Accent, modifier = Modifier.size(22.dp))

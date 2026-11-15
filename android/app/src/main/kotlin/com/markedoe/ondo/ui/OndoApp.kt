@@ -72,6 +72,7 @@ import androidx.navigation.toRoute
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
+import com.markedoe.ondo.specWords
 import com.markedoe.ondo.versionWords
 import com.markedoe.ondo.core.library.Genres
 import com.markedoe.ondo.core.library.ErrorAttribution
@@ -673,7 +674,12 @@ private fun SearchDestination(viewModel: OndoViewModel, navController: NavHostCo
 private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostController, id: String) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    LaunchedEffect(id) { viewModel.loadMovie(id) }
+    LaunchedEffect(id) {
+        viewModel.loadMovie(id)
+        // Once the page is open and idle: what the film's other versions are made of (their details), one at a time,
+        // cancelled when the page closes.
+        viewModel.loadVersionSpecs(id)
+    }
     val locale = LocalConfiguration.current.locales[0]
     // Off the main thread: finding the movie, its similar titles, awards and hidden categories go through the whole
     // catalogue. A change (My List, details loaded) keeps the page on screen until the new one is ready.
@@ -683,8 +689,9 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
     // The version whose chip OK was held on (TV): its title data shows.
     var infoFor by remember(id) { mutableStateOf<String?>(null) }
     val versionWords = remember(locale) { context.resources.versionWords() }
+    val specWords = remember(locale) { context.resources.specWords() }
     val detail by produceKept<MovieDetailUiState?>("movie", null, state, id, locale, picked) {
-        withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale, picked, versionWords) } }
+        withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale, picked, versionWords, specWords) } }
             .also { gone = it == null && !state.isLoading && !state.isRestoring }
     }
     BackWhenGone(gone, navController)

@@ -10,6 +10,10 @@ struct DetailScaffold<Actions: View, Content: View>: View {
     let facts: [String]
     /// Outlined after the facts: the format of the stream (MKV, MP4…).
     var badges: [String] = []
+    /// What the version Play plays is made of ("4K", "Dolby Vision", "HEVC", "5.1 AAC"), outlined after the format, and
+    /// what VoiceOver says of them ("4K, Dolby Vision, HEVC, 5.1 surround sound, AAC"): `AppModel.specBadges`.
+    var specBadges: [String] = []
+    var specDescription = ""
     /// Watched (`AppModel.isWatched`): the check mark on the poster and "Watched" under the facts.
     var watched = false
     /// The backdrop did not load.
@@ -94,8 +98,18 @@ struct DetailScaffold<Actions: View, Content: View>: View {
                         .tracking(compact ? -0.3 : -0.6)
                         .lineLimit(3)
                         .minimumScaleFactor(0.8)
-                    if !facts.isEmpty || !badges.isEmpty {
-                        FactsLine(facts: facts, badges: badges, lineLimit: 2)
+                    if specBadges.isEmpty {
+                        if !facts.isEmpty || !badges.isEmpty {
+                            FactsLine(facts: facts, badges: badges, lineLimit: 2)
+                                .font(.subheadline)
+                        }
+                    } else {
+                        // The format and what the version is made of on a line of their own, which wraps.
+                        if !facts.isEmpty {
+                            FactsLine(facts: facts, lineLimit: 2)
+                                .font(.subheadline)
+                        }
+                        SpecBadges(badges: badges, specs: specBadges, description: specDescription)
                             .font(.subheadline)
                     }
                     if watched {

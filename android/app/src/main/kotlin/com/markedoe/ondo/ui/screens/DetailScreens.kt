@@ -73,6 +73,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -144,6 +145,13 @@ data class MovieDetailUiState(
     val versions: List<VersionChip> = emptyList(),
     /** The version Play plays: the one picked among [versions], else the film's default version; null is [item]'s own stream. */
     val version: Movie? = null,
+    /**
+     * What [version] is made of, as badges after its format ("4K", "Dolby Vision", "HEVC", "5.1 AAC"): measured by the
+     * player, else the provider's, else its name's tags; only what is known (`UiMappers.specBadges`).
+     */
+    val specBadges: List<String> = emptyList(),
+    /** What a screen reader says of [specBadges]: "4K, Dolby Vision, HEVC, 5.1 surround sound, AAC". */
+    val specDescription: String = "",
     val similar: List<ShowcaseItem> = emptyList(),
     /** Awards and festival selections, wins first. */
     val awards: List<AwardRow> = emptyList(),
@@ -261,6 +269,9 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         backdropUrl = state.backdropUrl,
         facts = facts,
         badges = badges,
+        // 4K, Dolby Vision, HEVC, 5.1 AAC: what that version is made of, as far as it is known.
+        specBadges = state.specBadges,
+        specDescription = state.specDescription,
         watched = state.watched,
         onBack = actions.onBack,
         onBackdropFailed = actions.onBackdropFailed,
@@ -503,27 +514,42 @@ private fun initials(name: String): String =
 
 /** A small outlined tag for the format or the quality (MKV, 4K, 5.1…). */
 @Composable
-private fun Badge(text: String, color: Color) {
+private fun Badge(text: String, color: Color, modifier: Modifier = Modifier) {
     Text(
         text,
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         color = color,
         maxLines = 1,
-        modifier = Modifier
+        modifier = modifier
             .border(1.dp, color.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
             .padding(horizontal = 6.dp, vertical = 1.dp),
     )
 }
 
-/** Facts of a title ("2024 · 1 h 52 · ★ 7.1") in grey, the format after them as a badge. */
+/**
+ * Facts of a title ("2024 · 1 h 52 · ★ 7.1") in grey, the format after them as a badge, then what the version is made
+ * of ([specs]: "4K", "Dolby Vision", "5.1 AAC"), which a screen reader says in one sentence ([specDescription]).
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Facts(facts: List<String>, badges: List<String>, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
-    if (facts.isEmpty() && badges.isEmpty()) return
+private fun Facts(
+    facts: List<String>,
+    badges: List<String>,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    specs: List<String> = emptyList(),
+    specDescription: String = "",
+) {
+    if (facts.isEmpty() && badges.isEmpty() && specs.isEmpty()) return
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
         if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = color, maxLines = 2)
         badges.forEach { Badge(it, color) }
+        specs.forEachIndexed { index, text ->
+            // The first says them all, in words ("4K, Dolby Vision, 5.1 surround sound"); the others say nothing more.
+            val spoken = if (index == 0) specDescription.ifEmpty { specs.joinToString(", ") } else null
+            Badge(text, color, Modifier.testTag("spec-$index").clearAndSetSemantics { spoken?.let { contentDescription = it } })
+        }
     }
 }
 
@@ -540,6 +566,8 @@ private fun DetailScaffold(
     onBackdropFailed: (String) -> Unit,
     actions: @Composable (ShelfMetrics) -> Unit,
     content: LazyListScope.(ShelfMetrics) -> Unit,
+    specBadges: List<String> = emptyList(),
+    specDescription: String = "",
 ) {
     val metrics = rememberShelfMetrics()
     val window = LocalWindowInfo.current.containerDpSize
@@ -549,7 +577,7 @@ private fun DetailScaffold(
     Box(Modifier.fillMaxSize().testTag("detail")) {
         LazyColumn(contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             if (wide) {
-                item { WideHeader(title, posterUrl, backdropUrl, facts, badges, watched, metrics, onBackdropFailed) { actions(metrics) } }
+                item { WideHeader(title, posterUrl, backdropUrl, facts, badges, watched, metrics, onBackdropFailed, specBadges, specDescription) { actions(metrics) } }
                 content(metrics)
                 return@LazyColumn
             }
@@ -582,7 +610,7 @@ private fun DetailScaffold(
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.padding(bottom = 4.dp)) {
                             Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                            Facts(facts, badges, Modifier.padding(top = 6.dp))
+                            Facts(facts, badges, Modifier.padding(top = 6.dp), specs = specBadges, specDescription = specDescription)
                             if (watched) WatchedLine(Modifier.padding(top = 6.dp))
                         }
                     }
@@ -616,6 +644,8 @@ private fun WideHeader(
     watched: Boolean,
     metrics: ShelfMetrics,
     onBackdropFailed: (String) -> Unit,
+    specBadges: List<String>,
+    specDescription: String,
     actions: @Composable () -> Unit,
 ) {
     Box(Modifier.fillMaxWidth()) {
@@ -638,7 +668,7 @@ private fun WideHeader(
             Spacer(Modifier.width(24.dp))
             Column {
                 Text(title, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Facts(facts, badges, Modifier.padding(top = 6.dp), color = Color.White.copy(alpha = 0.75f))
+                Facts(facts, badges, Modifier.padding(top = 6.dp), color = Color.White.copy(alpha = 0.75f), specs = specBadges, specDescription = specDescription)
                 if (watched) WatchedLine(Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(16.dp))
                 actions()

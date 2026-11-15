@@ -185,6 +185,7 @@ extension AppModel {
         guard let streamID = movie.xtreamStreamID, let playlist = activePlaylist,
               let credentials = playlist.source.xtreamCredentials else { return kept }
         let client = XtreamClient(credentials: credentials, http: http, headers: playlist.headers)
+        movieDetailRequests += 1
         let request = Task { try? await client.movieDetails(streamID: streamID) }
         movieDetailsInFlight[movie.id] = request
         let fetched = await request.value

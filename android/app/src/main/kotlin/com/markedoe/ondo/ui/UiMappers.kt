@@ -7,6 +7,7 @@ import com.markedoe.ondo.core.library.CategoryTags
 import com.markedoe.ondo.core.library.DefaultReason
 import com.markedoe.ondo.core.library.EpisodeTitles
 import com.markedoe.ondo.core.library.FilmVersions
+import com.markedoe.ondo.core.library.MeasuredSpecs
 import com.markedoe.ondo.core.library.PictureSupport
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
@@ -30,6 +31,8 @@ import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
+import com.markedoe.ondo.core.model.SpecSource
+import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.FilmGroupsFile
 import com.markedoe.ondo.data.ItemKind
@@ -258,7 +261,40 @@ object UiMappers {
         if (versions.size < 2) return versions.map { VersionChoice(words.standard, listOf(it), it) }
         return FilmVersions.choices(
             versions, FilmVersions.categoryNames(state.content.movieCategories), words, inProgress(state, versions), state.settings.chosenVersions,
+            specs = { id -> streamSpecs(state, id) },
         )
+    }
+
+    /**
+     * What is known of stream [id]'s picture and sound, best first: what the player measured ([OndoState.measuredSpecs]),
+     * else (field by field) the provider's details ([MediaDetails.streamSpecs]); null when nothing. The tags of its name
+     * come after, where it is shown ([StreamSpecs.badges], `FilmVersions.choices`). Reads what is kept: never a request.
+     */
+    fun streamSpecs(state: OndoState, id: String): StreamSpecs? {
+        val provider = state.movieDetails[id]?.streamSpecs?.takeUnless { it.isEmpty }
+        val playlistId = state.activePlaylistId ?: return provider
+        val measured = state.measuredSpecs[MeasuredSpecs.key(playlistId, id)]?.takeUnless { it.isEmpty }
+        return measured?.orElse(provider) ?: provider
+    }
+
+    /** Where [id]'s specs come from ([streamSpecs]): measured, the provider's, or null (its name's tags only). */
+    fun specSource(state: OndoState, id: String): SpecSource? {
+        val playlistId = state.activePlaylistId
+        if (playlistId != null && state.measuredSpecs[MeasuredSpecs.key(playlistId, id)]?.isEmpty == false) return SpecSource.MEASURED
+        return SpecSource.PROVIDER.takeIf { state.movieDetails[id]?.streamSpecs?.isEmpty == false }
+    }
+
+    /**
+     * The facts line's badges of [version], the one Play plays ("4K", "Dolby Vision", "HEVC", "5.1 AAC"), and what a
+     * screen reader says of them: its specs ([streamSpecs]) where known, the tags of its name (as its chip reads them,
+     * among [versions]) elsewhere.
+     */
+    fun specBadges(state: OndoState, version: Movie, versions: List<Movie>, words: StreamSpecs.Words = StreamSpecs.Words()): Pair<List<String>, String> {
+        val categoryName = FilmVersions.categoryNames(state.content.movieCategories)
+        val index = versions.indexOfFirst { it.id == version.id }
+        val tags = if (versions.size > 1 && index >= 0) FilmVersions.labelTags(versions, categoryName)[index] else FilmVersions.labelTags(version.name, categoryName(version.categoryId))
+        val specs = streamSpecs(state, version.id)
+        return StreamSpecs.badges(specs, tags) to StreamSpecs.description(specs, tags, words)
     }
 
     /** The chips of a film's versions, each with the stream it plays (for its page), in [words]; empty for one chip. */
@@ -1109,12 +1145,16 @@ object UiMappers {
         locale: Locale = Locale.getDefault(),
         selected: String? = null,
         versionWords: VersionWords = VersionWords(),
+        specWords: StreamSpecs.Words = StreamSpecs.Words(),
     ): MovieDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.MovieItem(movie)
         val versions = visibleVersions(state, movie)
         val version = selected?.let { id -> versions.firstOrNull { it.id == id } } ?: defaultVersion(state, movie, versions)
+        val (specBadges, specDescription) = specBadges(state, version, versions, specWords)
         return MovieDetailUiState(
+            specBadges = specBadges,
+            specDescription = specDescription,
             item = item,
             details = state.movieDetails[movie.id],
             backdropUrl = backdrop(state, item),

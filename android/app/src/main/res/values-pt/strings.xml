@@ -155,6 +155,10 @@
     <string name="version_subtitled">Original legendado</string>
     <string name="version_cinema_copy">Cópia de cinema (%1$s)</string>
     <string name="version_chip_description">Versão: %1$s</string>
+    <string name="spec_surround">Som surround %1$s</string>
+    <string name="spec_stereo">Som estéreo</string>
+    <string name="spec_mono">Som mono</string>
+    <string name="spec_atmos">Som Dolby Atmos</string>
     <string name="kind_movie">Filme</string>
     <string name="kind_series">Série</string>
     <string name="hero_new_episode">Novo episódio</string>
@@ -385,6 +389,9 @@
     <string name="title_data_first_chosen">Reproduzida primeiro porque foi a última escolhida neste dispositivo.</string>
     <string name="title_data_first_best">Reproduzida primeiro porque é a mais adequada a esta tela.</string>
     <string name="title_data_first_first">Reproduzida primeiro porque nada diferencia as versões: é a primeira do catálogo.</string>
+    <string name="title_data_specs_measured">Medido pelo player</string>
+    <string name="title_data_specs_provider">Segundo o provedor</string>
+    <string name="title_data_specs_name">Segundo o nome</string>
     <string name="stats_engine">Mecanismo</string>
     <string name="stats_format">Formato</string>
     <string name="stats_video">Vídeo</string>

@@ -119,6 +119,16 @@ struct TitleDataView: View {
         case .shown: Text("Displayed title")
         case .tags: Text("Tags")
         case .raw(let key): Text(verbatim: key)
+        case .specs(let source): specSourceText(source)
+        }
+    }
+
+    /// Where what a stream is made of comes from.
+    private func specSourceText(_ source: SpecSource?) -> Text {
+        switch source {
+        case .measured: Text("Measured by the player")
+        case .provider: Text("From the provider")
+        case nil: Text("From the name")
         }
     }
 
@@ -149,6 +159,10 @@ struct TitleDataView: View {
             .foregroundStyle(version.playing ? Color.green : Color.white)
             Text(verbatim: version.name).lineLimit(2)
             Text(verbatim: [version.category, version.shownID.map { "id \($0)" }, version.container, version.tags].compactMap { $0 }.joined(separator: "  ·  "))
+                .lineLimit(2)
+                .foregroundStyle(.white.opacity(0.7))
+            // What its stream is made of, and where that comes from (measured, the provider's, its name).
+            (specSourceText(version.specSource) + Text(verbatim: ": " + version.specs))
                 .lineLimit(2)
                 .foregroundStyle(.white.opacity(0.7))
         }

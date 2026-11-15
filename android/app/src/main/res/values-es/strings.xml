@@ -155,6 +155,10 @@
     <string name="version_subtitled">VO subtitulada</string>
     <string name="version_cinema_copy">Copia de cine (%1$s)</string>
     <string name="version_chip_description">Versión: %1$s</string>
+    <string name="spec_surround">Sonido envolvente %1$s</string>
+    <string name="spec_stereo">Sonido estéreo</string>
+    <string name="spec_mono">Sonido mono</string>
+    <string name="spec_atmos">Sonido Dolby Atmos</string>
     <string name="kind_movie">Película</string>
     <string name="kind_series">Serie</string>
     <string name="hero_new_episode">Nuevo episodio</string>
@@ -385,6 +389,9 @@
     <string name="title_data_first_chosen">Se reproduce primero porque fue la última elegida en este dispositivo.</string>
     <string name="title_data_first_best">Se reproduce primero porque es la que mejor se adapta a esta pantalla.</string>
     <string name="title_data_first_first">Se reproduce primero porque nada distingue las versiones: es la primera del catálogo.</string>
+    <string name="title_data_specs_measured">Medido por el reproductor</string>
+    <string name="title_data_specs_provider">Según el proveedor</string>
+    <string name="title_data_specs_name">Según el nombre</string>
     <string name="stats_engine">Motor</string>
     <string name="stats_format">Formato</string>
     <string name="stats_video">Vídeo</string>

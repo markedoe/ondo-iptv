@@ -145,6 +145,10 @@
     <string name="version_subtitled">原声，带字幕</string>
     <string name="version_cinema_copy">影院翻录 (%1$s)</string>
     <string name="version_chip_description">版本：%1$s</string>
+    <string name="spec_surround">%1$s 环绕声</string>
+    <string name="spec_stereo">立体声</string>
+    <string name="spec_mono">单声道</string>
+    <string name="spec_atmos">杜比全景声</string>
     <string name="kind_movie">电影</string>
     <string name="kind_series">剧集</string>
     <string name="hero_new_episode">新一集</string>
@@ -357,6 +361,9 @@
     <string name="title_data_first_chosen">优先播放，因为它是在此设备上最后选择的版本。</string>
     <string name="title_data_first_best">优先播放，因为它最适合此屏幕。</string>
     <string name="title_data_first_first">优先播放，因为各版本没有区别：它在目录中排在最前。</string>
+    <string name="title_data_specs_measured">由播放器测得</string>
+    <string name="title_data_specs_provider">来自提供商</string>
+    <string name="title_data_specs_name">来自名称</string>
     <string name="stats_engine">引擎</string>
     <string name="stats_format">格式</string>
     <string name="stats_video">视频</string>

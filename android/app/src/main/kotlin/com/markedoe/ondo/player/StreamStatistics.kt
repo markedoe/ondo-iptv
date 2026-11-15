@@ -217,6 +217,15 @@ fun TitleDataVersion(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        // What its stream is made of, and where that comes from (measured, the provider's, its name).
+        Text(
+            stringResource(version.specSource) + ": " + version.specs,
+            color = Color.White.copy(alpha = 0.7f),
+            style = style,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.testTag("titleDataSpecs-${version.id}"),
+        )
     }
 }
 

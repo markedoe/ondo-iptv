@@ -14,6 +14,8 @@ struct TitleData: Equatable, Sendable {
         case tags
         /// The provider's own name of the field ("name", "category", "tmdb"…), shown as is.
         case raw(String)
+        /// What the stream is made of, named by where it comes from: measured, the provider's, or (nil) its name's tags.
+        case specs(SpecSource?)
     }
 
     struct Line: Equatable, Sendable {
@@ -41,6 +43,10 @@ struct TitleData: Equatable, Sendable {
         /// One chip with another version that plays the same thing (`FilmVersions.choices`): that one's id as the panel
         /// shows it, else its name; nil for the one its chip plays, or a version alone on its chip.
         var sameAs: String?
+        /// What its stream is made of ("1920×802 · 1080p · SDR · H.264 · 5.1 AAC"), as far as it is known; "–" for nothing.
+        var specs = "–"
+        /// Where `specs` come from: measured by the player, the provider's details, or (nil) its name's tags.
+        var specSource: SpecSource?
     }
 
     var lines: [Line]
@@ -63,6 +69,9 @@ struct TitleData: Equatable, Sendable {
         var shownTitle: String
         var categoryNames: [String: String]
         var secrets: [String]
+        /// What is known of each version's stream, and where it comes from (AppModel+StreamSpecs).
+        var specs: [String: StreamSpecs] = [:]
+        var specSources: [String: SpecSource] = [:]
     }
 
     /// The title data of `input`, off the main actor.
@@ -124,6 +133,13 @@ struct TitleData: Equatable, Sendable {
         let tmdb = [movie.tmdbID.map { String($0) }, detailsTMDb].map { value in value.map(clean) ?? "–" }
         lines.append(.init(label: .raw("tmdb"), value: tmdb.joined(separator: " · ")))
         lines.append(.init(label: .raw("container_extension"), value: clean(containerText(movie))))
+        func specs(of version: Movie) -> String {
+            if let known = input.specs[version.id] { return known.summary() }
+            let tags = groupTags[version.id] ?? FilmVersions.labelTags(name: version.name, categoryName: names[version.categoryID])
+            let named = StreamSpecs.badges(nil, nameTags: tags).joined(separator: " · ")
+            return named.isEmpty ? "–" : named
+        }
+        lines.append(.init(label: .specs(input.specSources[movie.id]), value: specs(of: movie)))
         guard all.count > 1 else { return TitleData(lines: lines) }
         let versions = all.map { version in
             let container = clean(containerText(version))
@@ -137,7 +153,9 @@ struct TitleData: Equatable, Sendable {
                 tags: tags(of: version),
                 playing: version.id == movie.id,
                 first: version.id == first,
-                sameAs: sameAs[version.id].map(clean)
+                sameAs: sameAs[version.id].map(clean),
+                specs: specs(of: version),
+                specSource: input.specSources[version.id]
             )
         }
         return TitleData(lines: lines, versions: versions, reason: reason)
@@ -195,12 +213,18 @@ extension AppModel {
                 }
                 choice = defaultChoice(of: movie, among: visible)
             }
+            var specs: [String: StreamSpecs] = [:]
+            var sources: [String: SpecSource] = [:]
+            for version in all {
+                if let known = streamSpecs(for: version.id) { specs[version.id] = known }
+                if let source = specSource(for: version.id) { sources[version.id] = source }
+            }
             return TitleData.Input(
                 title: .film(
                     movie: movie, versions: all, chips: chips, sameAs: sameAs, first: choice?.movie.id, reason: choice?.reason,
                     detailsTMDb: movieDetailsCache[movie.id]?.tmdbID
                 ),
-                shownTitle: item.title, categoryNames: categoryNames, secrets: secrets
+                shownTitle: item.title, categoryNames: categoryNames, secrets: secrets, specs: specs, specSources: sources
             )
         case .series:
             guard let series = index.seriesByID[item.reference.itemID], let episodeID = item.reference.episodeID else { return nil }

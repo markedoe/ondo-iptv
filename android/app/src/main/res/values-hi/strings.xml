@@ -150,6 +150,10 @@
     <string name="version_subtitled">मूल, सबटाइटल के साथ</string>
     <string name="version_cinema_copy">सिनेमा कॉपी (%1$s)</string>
     <string name="version_chip_description">संस्करण: %1$s</string>
+    <string name="spec_surround">%1$s सराउंड साउंड</string>
+    <string name="spec_stereo">स्टीरियो साउंड</string>
+    <string name="spec_mono">मोनो साउंड</string>
+    <string name="spec_atmos">Dolby Atmos साउंड</string>
     <string name="kind_movie">फ़िल्म</string>
     <string name="kind_series">सीरीज़</string>
     <string name="hero_new_episode">नया एपिसोड</string>
@@ -371,6 +375,9 @@
     <string name="title_data_first_chosen">पहले चलता है, क्योंकि इसे इस डिवाइस पर आख़िरी बार चुना गया था।</string>
     <string name="title_data_first_best">पहले चलता है, क्योंकि यह इस स्क्रीन के लिए सबसे अच्छा है।</string>
     <string name="title_data_first_first">पहले चलता है, क्योंकि संस्करणों में कोई अंतर नहीं: यह कैटलॉग में पहला है।</string>
+    <string name="title_data_specs_measured">प्लेयर द्वारा मापा गया</string>
+    <string name="title_data_specs_provider">प्रदाता से</string>
+    <string name="title_data_specs_name">नाम से</string>
     <string name="stats_engine">इंजन</string>
     <string name="stats_format">फ़ॉर्मैट</string>
     <string name="stats_video">वीडियो</string>

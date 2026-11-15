@@ -10,6 +10,7 @@ import com.markedoe.ondo.core.library.CreditRecord
 import com.markedoe.ondo.core.library.EpisodeTitles
 import com.markedoe.ondo.core.library.Genres
 import com.markedoe.ondo.core.library.InMemoryMetadataStore
+import com.markedoe.ondo.core.library.MeasuredSpecs
 import com.markedoe.ondo.core.library.MetadataFreshness
 import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.MetadataStore
@@ -42,6 +43,7 @@ import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
+import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
@@ -155,6 +157,11 @@ data class OndoState(
      * same for every profile, apart from [library].
      */
     val household: LibraryState = LibraryState(),
+    /**
+     * What the player measured of the films it played ([StreamSpecs]), by `MeasuredSpecs.key(playlist, stream)`: read
+     * from the device the first time a film's page or the player needs it ([OndoRepository.loadMeasuredSpecs]).
+     */
+    val measuredSpecs: Map<String, StreamSpecs> = emptyMap(),
 ) {
     /** The collections the open profile sees: its own and those shared with every profile, by name. */
     val collections: List<UserCollection>
@@ -1797,6 +1804,7 @@ class OndoRepository(
         val playlist = _state.value.activePlaylist ?: return kept
         val streamId = movie.xtreamStreamId ?: return kept
         val credentials = playlist.credentials() ?: return kept
+        movieDetailRequests.incrementAndGet()
         // A cancelled call stays one: the caller (a page closed, the remote moved on) does not go on as if it had failed.
         val details = loadCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }.getOrNull() ?: return kept
         // Another playlist opened meanwhile: these details are not its own.
@@ -1805,6 +1813,60 @@ class OndoRepository(
         _state.update { it.copy(movieDetails = it.movieDetails + (movie.id to details)) }
         scheduleDetailsSave()
         return details
+    }
+
+    /** The provider's details asked for movies since the app started (a film's page, a TV's header, its versions): for tests. */
+    val movieDetailRequests = java.util.concurrent.atomic.AtomicInteger()
+
+    /**
+     * The details of a film's other [versions] whose details are not known yet, for what their streams are made of
+     * (`get_vod_info`'s `video` and `audio`): one at a time, in the caller's coroutine (a film's page, open and idle),
+     * cancelled with it; never while browsing. A version already asked (its details kept, specs or not) is not asked
+     * again. Returns how many were asked.
+     */
+    suspend fun versionDetails(versions: List<Movie>): Int {
+        storedDetailsJob?.join()
+        var asked = 0
+        for (version in versions) {
+            if (version.id in _state.value.movieDetails || version.xtreamStreamId == null) continue
+            details(version)
+            asked++
+        }
+        return asked
+    }
+
+    // MARK: What the player measured
+
+    private var measured: MeasuredSpecs? = null
+    private var measuredJob: Job? = null
+
+    /**
+     * What the player measured of the films it played ([OndoState.measuredSpecs]), read from the device once, in the
+     * background, the first time a film's page or the player needs it: never at launch.
+     */
+    fun loadMeasuredSpecs(): Job = measuredJob ?: scope.launch {
+        val entries = withContext(writer) { runCatching { store.loadMeasuredSpecs() }.getOrNull() }.orEmpty()
+        val kept = MeasuredSpecs(entries = entries)
+        measured = kept
+        if (kept.size() > 0) _state.update { it.copy(measuredSpecs = kept.snapshot()) }
+    }.also { measuredJob = it }
+
+    /**
+     * The player read [specs] of the stream of [movieId] in the active playlist: kept (the [MeasuredSpecs.CAPACITY]
+     * films played last) and written on the device when they changed, off the main thread.
+     */
+    fun recordMeasuredSpecs(movieId: String, specs: StreamSpecs) {
+        val playlistId = _state.value.activePlaylistId ?: return
+        if (specs.isEmpty) return
+        scope.launch {
+            loadMeasuredSpecs().join()
+            val kept = measured ?: return@launch
+            val snapshot = withContext(writer) {
+                if (kept.record(MeasuredSpecs.key(playlistId, movieId), specs)) kept.snapshot() else null
+            } ?: return@launch
+            _state.update { it.copy(measuredSpecs = snapshot) }
+            persist { saveMeasuredSpecs(kept.entries()) }
+        }
     }
 
     /**

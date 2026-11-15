@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.library.MeasuredSpecs
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Profile
 import java.io.File
@@ -150,6 +151,15 @@ class AppStore(
         File(directory, "details-$playlistId.json").delete()
     }
 
+    /**
+     * What the player measured of the films it played (`MeasuredSpecs`, a few thousand at most); measured again when they
+     * play, so no previous version is kept.
+     */
+    fun loadMeasuredSpecs(): List<MeasuredSpecs.Entry>? =
+        read(MEASURED_SPECS, ListSerializer(MeasuredSpecs.Entry.serializer()), disposable = true)
+    fun saveMeasuredSpecs(entries: List<MeasuredSpecs.Entry>) =
+        write(MEASURED_SPECS, ListSerializer(MeasuredSpecs.Entry.serializer()), entries, keepPrevious = false)
+
     /** The last error that stopped the app (see [CrashLog]), kept next to the documents. */
     val crashFile: File get() = File(directory, CrashLog.FILE_NAME)
     fun loadLastCrash(): LastCrash? = CrashLog.read(crashFile)
@@ -216,6 +226,9 @@ class AppStore(
 
         /** The main profile's library document ([Profile.libraryDocumentName]). */
         const val MAIN_LIBRARY = "library"
+
+        /** What the player measured of the films it played. */
+        private const val MEASURED_SPECS = "measured-specs.json"
 
         /** The collections shared with every profile (docs/PROFILES.md, "Shared lists"), as a library document of their own. */
         const val HOUSEHOLD = "household"

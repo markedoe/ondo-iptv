@@ -170,6 +170,10 @@
     <string name="version_subtitled">الأصلية مع ترجمة</string>
     <string name="version_cinema_copy">نسخة سينما (%1$s)</string>
     <string name="version_chip_description">النسخة: %1$s</string>
+    <string name="spec_surround">صوت محيطي %1$s</string>
+    <string name="spec_stereo">صوت ستيريو</string>
+    <string name="spec_mono">صوت أحادي</string>
+    <string name="spec_atmos">صوت Dolby Atmos</string>
     <string name="kind_movie">فيلم</string>
     <string name="kind_series">مسلسل</string>
     <string name="hero_new_episode">حلقة جديدة</string>
@@ -427,6 +431,9 @@
     <string name="title_data_first_chosen">تُشغَّل أولًا لأنها آخر نسخة اختيرت على هذا الجهاز.</string>
     <string name="title_data_first_best">تُشغَّل أولًا لأنها الأنسب لهذه الشاشة.</string>
     <string name="title_data_first_first">تُشغَّل أولًا لأن لا شيء يميّز النسخ: إنها الأولى في الكتالوج.</string>
+    <string name="title_data_specs_measured">قاسه المشغّل</string>
+    <string name="title_data_specs_provider">من المزوّد</string>
+    <string name="title_data_specs_name">من الاسم</string>
     <string name="stats_engine">المحرّك</string>
     <string name="stats_format">الصيغة</string>
     <string name="stats_video">الفيديو</string>

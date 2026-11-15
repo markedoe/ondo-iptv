@@ -8,6 +8,8 @@ import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.VersionTag
 import com.markedoe.ondo.core.library.VersionWords
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.SpecSource
+import com.markedoe.ondo.core.model.StreamSpecs
 import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.core.playback.Redaction
 import com.markedoe.ondo.data.ItemKind
@@ -53,6 +55,10 @@ data class TitleData(
          * shows it, else its name; null for the one its chip plays, or a version alone on its chip.
          */
         val sameAs: String? = null,
+        /** What its stream is made of ("1920×802 · 1080p · SDR · H.264 · 5.1 AAC"), as far as it is known; "–" for nothing. */
+        val specs: String = "–",
+        /** Where [specs] come from: measured by the player, the provider's details, or its name's tags. */
+        @StringRes val specSource: Int = R.string.title_data_specs_name,
     )
 
     companion object {
@@ -108,6 +114,7 @@ data class TitleData(
                 Line("", tagText(tagsOf[movie.id] ?: FilmVersions.labelTags(movie.name, category)), R.string.title_data_tags),
                 Line("tmdb", tmdbText(movie.tmdbId?.toString(), state.movieDetails[movie.id]?.tmdbId, matchedTmdb, clean)),
                 Line("container_extension", clean(containerText(movie))),
+                specsLine(state, movie, tagsOf[movie.id] ?: FilmVersions.labelTags(movie.name, category)),
             )
             if (all.size < 2) return TitleData(lines)
             val visible = UiMappers.visibleVersions(state, movie)
@@ -133,6 +140,8 @@ data class TitleData(
                     playing = version.id == movie.id,
                     first = version.id == first.id,
                     sameAs = sameAs[version.id],
+                    specs = specsText(state, version, tagsOf[version.id] ?: FilmVersions.labelTags(version.name, name)),
+                    specSource = specSource(state, version.id),
                 )
             }
             return TitleData(lines, versions, reason)
@@ -168,6 +177,23 @@ data class TitleData(
         }
 
         private fun categoryText(name: String?, id: String) = "${name ?: "–"} ($id)"
+
+        /**
+         * What [movie]'s stream is made of, named by where it comes from (docs/VERSIONS.md, "What a version is made of"):
+         * measured by the player, else the provider's details, else the tags of its name.
+         */
+        private fun specsLine(state: OndoState, movie: Movie, tags: List<VersionTag>) =
+            Line("", specsText(state, movie, tags), specSource(state, movie.id))
+
+        private fun specsText(state: OndoState, movie: Movie, tags: List<VersionTag>): String =
+            UiMappers.streamSpecs(state, movie.id)?.summary() ?: StreamSpecs.badges(null, tags).joinToString(" · ").ifEmpty { "–" }
+
+        @StringRes
+        private fun specSource(state: OndoState, id: String): Int = when (UiMappers.specSource(state, id)) {
+            SpecSource.MEASURED -> R.string.title_data_specs_measured
+            SpecSource.PROVIDER -> R.string.title_data_specs_provider
+            null -> R.string.title_data_specs_name
+        }
 
         private fun tagText(tags: List<VersionTag>) = tags.joinToString(", ") { it.name }.ifEmpty { "–" }
 

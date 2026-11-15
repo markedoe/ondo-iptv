@@ -559,11 +559,30 @@ class OndoViewModel(
     }
 
     fun loadMovie(id: String) {
+        // What the player measured of the films it played, read once from the device (never at launch).
+        repository.loadMeasuredSpecs()
         viewModelScope.launch {
             val movie = withContext(computation) { UiMappers.movie(state.value, id) } ?: return@launch
             repository.details(movie)
             wantTmdb(ShowcaseItem.MovieItem(movie))
         }
+    }
+
+    /**
+     * A film's page is open: once it has been idle a moment ([VERSION_SPECS_IDLE_MS]), the details of its other visible
+     * versions not known yet, for what their streams are made of (`get_vod_info`'s video and audio), one at a time, in
+     * the caller's coroutine (the page's), so cancelled when it closes. Never while browsing: rows and headers ask for
+     * nothing of the sort. Returns how many were asked.
+     */
+    suspend fun loadVersionSpecs(id: String, idle: Long = VERSION_SPECS_IDLE_MS): Int {
+        delay(idle)
+        val others = withContext(computation) {
+            val current = state.value
+            val movie = UiMappers.movie(current, id) ?: return@withContext emptyList()
+            UiMappers.visibleVersions(current, movie).filter { it.id != id }
+        }
+        if (others.isEmpty()) return 0
+        return repository.versionDetails(others)
     }
 
     fun loadSeries(id: String) {
@@ -1150,6 +1169,9 @@ class OndoViewModel(
     fun clearError() = repository.clearError()
 
     companion object {
+        /** How long a film's page stays open before its other versions' details are asked ([loadVersionSpecs]). */
+        const val VERSION_SPECS_IDLE_MS = 1_500L
+
         fun everyMinute(clock: () -> Long): Flow<Long> = flow {
             while (true) {
                 emit(clock())

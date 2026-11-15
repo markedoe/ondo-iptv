@@ -79,6 +79,8 @@ final class PlayerController: NSObject {
     @ObservationIgnored var vlcChaptersRead = false
     /// Called when a VOD item plays to the end (auto-play next episode).
     @ObservationIgnored var onEnded: ((PlaybackItem) -> Void)?
+    /// Called once a film's tracks are read: what its stream is made of (PlayerController+Specs).
+    @ObservationIgnored var onSpecs: ((PlaybackItem, StreamSpecs) -> Void)?
     @ObservationIgnored var onPictureInPictureChange: ((Bool) -> Void)?
     /// Asked to bring the player UI back when the user taps "restore" in PiP.
     @ObservationIgnored var restoreUserInterface: ((@escaping (Bool) -> Void) -> Void)?
@@ -316,7 +318,10 @@ final class PlayerController: NSObject {
             duration = seconds.isFinite ? seconds : 0
             seekToPendingStart(playerItem)
             updateNowPlaying()
-            Task { await loadTracks(for: playerItem) }
+            Task {
+                await loadTracks(for: playerItem)
+                await readSpecs(of: playerItem)
+            }
         case .failed:
             handleFailure(playerItem.error, item: playerItem)
         default:

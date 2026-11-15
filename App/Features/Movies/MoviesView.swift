@@ -141,6 +141,8 @@ struct MovieDetailView: View {
         let resumable = progress?.isResumable == true
         // Watched once one of the film's versions is (`AppModel.watchedKeys`).
         let watched = model.isWatched(.movie(movie))
+        // 4K, Dolby Vision, HEVC, 5.1 AAC: what the version Play plays is made of, as far as it is known.
+        let specs = model.specBadges(for: version, among: versions)
         DetailScaffold(
             title: ShowcaseItem.movie(movie).displayTitle,
             posterURL: details?.posterURL ?? movie.posterURL,
@@ -148,6 +150,8 @@ struct MovieDetailView: View {
             facts: facts,
             // MKV, MP4…: the format the provider sends (MKV plays differently on each device), of the version Play plays.
             badges: MediaFormat.label(for: version.streamURL).map { [$0] } ?? [],
+            specBadges: specs.badges,
+            specDescription: specs.description,
             watched: watched,
             onBackdropFailure: { model.backdropFailed($0, for: .movie(movie), permanently: $1) }
         ) { metrics in
@@ -222,6 +226,13 @@ struct MovieDetailView: View {
             details = await model.details(for: movie)
             isLoading = false
             await model.loadTMDbMetadata(for: .movie(movie))
+            // What the player measured of the films it played, read once from the device (never at launch).
+            await model.loadMeasuredSpecs()
+            // Once the page is open and idle: what the film's other versions are made of (their details), one at a
+            // time; the page's task, so cancelled when it closes.
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
+            await model.loadVersionDetails(model.visibleVersions(of: movie).filter { $0.id != movie.id })
         }
     }
 

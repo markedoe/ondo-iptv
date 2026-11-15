@@ -87,6 +87,27 @@ struct FactBadge: View {
 }
 
 /// The facts of a title in one line ("2024 · Drama · 1 h 52"), then its badges.
+/// The format of a stream and what it is made of ("MKV", "4K", "Dolby Vision", "5.1 AAC"), outlined, wrapping on a narrow
+/// screen; VoiceOver says the format, then `description` ("4K, Dolby Vision, 5.1 surround sound, AAC").
+struct SpecBadges: View {
+    var badges: [String] = []
+    let specs: [String]
+    var description = ""
+    var color: Color = OndoColor.secondary
+
+    var body: some View {
+        FlowLayout(spacing: 6, lineSpacing: 4) {
+            ForEach(Array((badges + specs).enumerated()), id: \.offset) { _, badge in
+                FactBadge(text: badge)
+            }
+        }
+        .foregroundStyle(color)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: (badges + [description.isEmpty ? specs.joined(separator: ", ") : description]).joined(separator: ", ")))
+        .accessibilityIdentifier("specBadges")
+    }
+}
+
 struct FactsLine: View {
     let facts: [String]
     var badges: [String] = []
