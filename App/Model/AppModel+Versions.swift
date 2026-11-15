@@ -39,9 +39,12 @@ extension AppModel {
         let versions = known ?? visibleVersions(of: movie)
         guard versions.count > 1 else { return (movie, .only) }
         let names = categoryNames
+        // What the player measured, else the provider's: a Dolby Vision profile whose base layer this screen shows.
+        var specs: [String: StreamSpecs] = [:]
+        for version in versions { if let known = streamSpecs(for: version.id) { specs[version.id] = known } }
         return FilmVersions.defaultChoice(
             versions, inProgress: inProgress(among: versions).first, chosen: settings.chosenVersions, support: Self.pictureSupport,
-            categoryName: { names[$0] }
+            categoryName: { names[$0] }, specs: { specs[$0] }
         ) ?? (movie, .only)
     }
 
@@ -163,6 +166,31 @@ extension AppModel {
         let size = CGSize.zero
         #endif
         return PictureSupport(hdr: hdr, dolbyVision: dolbyVision, uhd: max(size.width, size.height) >= 3840)
+    }()
+
+    /// What the title data panel shows of this screen (`pictureSupport`'s readings): its size, HDR (HDR10 and HLG on
+    /// Apple's screens), Dolby Vision and a decoder for it; HDR10+ is not read.
+    static let screen: TitleData.Screen = {
+        let hdr = AVPlayer.eligibleForHDRPlayback
+        let decoder = VTIsHardwareDecodeSupported(kCMVideoCodecType_DolbyVisionHEVC)
+        #if canImport(UIKit)
+        let size = UIScreen.main.nativeBounds.size
+        #elseif canImport(AppKit)
+        let size = NSScreen.main.map { $0.convertRectToBacking($0.frame).size } ?? .zero
+        #else
+        let size = CGSize.zero
+        #endif
+        let long = Int(max(size.width, size.height))
+        let short = Int(min(size.width, size.height))
+        return TitleData.Screen(width: long, height: short, hdr10: hdr, hdr10Plus: nil, hlg: hdr, dolbyVision: hdr && decoder, dolbyVisionDecoder: decoder)
+    }()
+
+    /// This build's version and number: "2.0.0 (1086)".
+    static let appVersion: String = {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "–"
+        let build = info?["CFBundleVersion"] as? String ?? "–"
+        return "\(version) (\(build))"
     }()
 }
 

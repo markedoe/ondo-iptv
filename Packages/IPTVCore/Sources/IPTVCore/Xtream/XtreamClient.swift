@@ -293,7 +293,9 @@ public struct XtreamClient: Sendable {
             backdropURL: Self.backdropURL(in: info?.backdrops ?? []),
             trailerYouTubeID: info?.youtubeTrailer,
             tmdbID: info?.tmdbID,
-            streamSpecs: info?.streamSpecs
+            streamSpecs: info?.streamSpecs,
+            // Kept even when `info` is missing or empty (`[]`): the details were asked, and held no technical block.
+            providerInfo: info?.providerInfo ?? ProviderInfo()
         )
     }
 

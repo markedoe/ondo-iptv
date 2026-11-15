@@ -58,6 +58,24 @@ extension AppModel {
         return tags[version.id] ?? FilmVersions.labelTags(name: version.name, categoryName: names[version.categoryID])
     }
 
+    /// A short code of how a request failed, for the title data panel: "HTTP 404", "timeout", "DNS", "TLS", "JSON" (an
+    /// answer that could not be read), else "NETWORK" or "APP". Never a message: it can hold an address. The same as
+    /// Android's `LoadError.code`.
+    nonisolated static func detailsFailureCode(_ error: Error) -> String {
+        if case HTTPClientError.badStatus(let code) = error { return "HTTP \(code)" }
+        if error is XtreamError || error is DecodingError { return "JSON" }
+        if let url = error as? URLError {
+            switch url.code {
+            case .timedOut: return "timeout"
+            case .cannotFindHost, .dnsLookupFailed: return "DNS"
+            case .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid,
+                 .serverCertificateHasUnknownRoot, .clientCertificateRejected, .clientCertificateRequired: return "TLS"
+            default: return "NETWORK"
+            }
+        }
+        return "APP"
+    }
+
     /// The words VoiceOver says of a version's sound, in the app's language, read once.
     static let specWords = StreamSpecs.Words.app()
 
@@ -90,6 +108,7 @@ extension AppModel {
             var kept = measuredSpecs
             guard kept.record(key, specs) else { return }
             measuredSpecs = kept
+            measuredSpecsRevision &+= 1
             versionChoicesCache = [:]
             let store = cacheStore
             let name = Self.measuredSpecsDocument
@@ -120,16 +139,17 @@ extension AppModel {
         var asked = 0
         for version in versions {
             guard !Task.isCancelled, asked < limit else { break }
-            guard movieDetailsCache[version.id] == nil, !failedVersionIDs.contains(version.id), version.xtreamStreamID != nil else { continue }
+            // Details kept by a version of the app that did not read the provider's technical blocks are asked again.
+            guard movieDetailsCache[version.id]?.providerInfo == nil, !failedVersionIDs.contains(version.id), version.xtreamStreamID != nil else { continue }
             await waitWhilePlayerOnTop()
             if asked > 0 { try? await Task.sleep(for: gap) }
             // A stream started meanwhile: nothing is asked while it starts.
             await waitWhilePlayerOnTop()
             guard !Task.isCancelled else { break }
-            guard movieDetailsCache[version.id] == nil else { continue }
+            guard movieDetailsCache[version.id]?.providerInfo == nil else { continue }
             _ = await details(for: version)
             asked += 1
-            guard movieDetailsCache[version.id] != nil else {
+            guard movieDetailsCache[version.id]?.providerInfo != nil else {
                 failedVersionIDs.insert(version.id)
                 break
             }

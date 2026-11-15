@@ -206,12 +206,18 @@ final class AppModel {
     /// What the player measured of the films it played (AppModel+StreamSpecs), read from the device the first time a film's
     /// page or the player needs it; observed: a page shows it once read.
     var measuredSpecs = MeasuredSpecs()
+    /// Counts the changes of `measuredSpecs` (a reading of a stream measured before included): the player's title data
+    /// follows it.
+    var measuredSpecsRevision = 0
     @ObservationIgnored var measuredSpecsLoad: Task<Void, Never>?
     @ObservationIgnored var measuredSpecsWrite: Task<Void, Never>?
     /// The movies whose details a film's page asked as another version (AppModel+StreamSpecs): kept apart on disk.
     @ObservationIgnored var versionFetchedIDs: Set<String> = []
     /// The versions whose details the provider refused or could not give this session: not asked again until a restart.
     @ObservationIgnored var failedVersionIDs: Set<String> = []
+    /// How the provider's details of a movie failed this session, by id ("HTTP 404", "timeout": `detailsFailureCode`), for
+    /// the title data panel; gone once they come. Observed: the panel follows it.
+    var detailsFailures: [String: String] = [:]
     /// The tags of the films' versions' names by their ids, worked out once per catalogue (AppModel+StreamSpecs).
     @ObservationIgnored var versionTagsCache: [String: [String: [VersionTag]]] = [:]
     /// TMDb backdrops and dead provider backdrops (AppModel+Backdrops).

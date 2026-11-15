@@ -172,7 +172,10 @@ struct PlayerView: View {
             if let channel { await model.ensureGuide(for: channel) }
         }
         // Again once the catalogue is read (the player can open before it is).
-        .task(id: TitleDataKey(shown: controller.showsStatistics, item: item?.id, catalogue: model.index.moviesByID.count &+ model.index.seriesByID.count)) {
+        .task(id: TitleDataKey(
+            shown: controller.showsStatistics, item: item?.id, catalogue: model.index.moviesByID.count &+ model.index.seriesByID.count,
+            measured: model.measuredSpecsRevision, details: model.detailsRevision, failures: model.detailsFailures.count
+        )) {
             guard controller.showsStatistics, let item else {
                 titleData = nil
                 return

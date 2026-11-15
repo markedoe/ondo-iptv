@@ -115,8 +115,22 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   les valeurs de requête, les adresses IP et `hôte:port` (`Redaction`, les mêmes règles et la même table sur les deux
   apps : `fixtures/title-data/redaction.json`). Elles ne sont pas dans le rapport de problème.
 - **La version montrée d'abord** (et lue depuis une affiche) : celle en cours ; sinon la dernière choisie sur cet
-  appareil ; sinon celle qui convient le mieux à l'écran (une copie cinéma en dernier) (la 4K sur un écran 4K, le HDR ou le Dolby Vision seulement là
-  où l'écran les affiche, selon l'écran d'Android et AVFoundation chez Apple) ; sinon la première.
+  appareil ; sinon celle qui convient le mieux à l'écran (une copie cinéma en dernier) ; sinon la première. Ce qui
+  convient à l'écran se lit dans ce qu'on sait de chaque version (mesuré, sinon selon le fournisseur, sinon les tags du
+  nom) et dans l'écran :
+  - **la 4K** sur un écran dont le plus grand mode est 4K, quel que soit son mode du moment : sur Android le plus grand
+    de `Display.supportedModes` en taille physique (un boîtier qui dessine une interface 1080p, ou qui lit 1080p en
+    « auto » tant qu'aucun film ne joue, reste un écran 4K) ; chez Apple la taille native de l'écran ;
+  - **le HDR** (HDR10, HDR10+, HLG) seulement là où l'écran l'annonce (`Display.getHdrCapabilities`, et celui de chaque
+    mode à partir d'Android 14 ; AVFoundation chez Apple) ;
+  - **le Dolby Vision** en premier seulement là où l'écran lui-même annonce le Dolby Vision et qu'un décodeur existe
+    (sur Android `MediaCodecList`, lu une fois en arrière-plan ; le décodeur d'un boîtier ne fait pas afficher le Dolby
+    Vision à un téléviseur). Sur un écran qui ne l'a pas, le profil Dolby Vision de la version décide : 8 et 9 (un 10
+    avec une couche de base compatible) lisent leur couche de base HDR10, SDR ou HLG et comptent comme elle ; 5 (un 10
+    sans couche de base) donne de fausses couleurs et n'est jamais lu en premier ; un profil inconnu (un nom qui dit
+    seulement « DV », le profil 7) est pris comme un 5. Une telle version reste sur sa pastille, à choisir. Le profil
+    vient de l'enregistrement de configuration du fournisseur (`dv_profile`, `dv_bl_signal_compatibility_id`), de la
+    chaîne de codec de Media3 (« dvhe.08.06 » : le profil seul) ou de l'enregistrement `dvcC` d'AVFoundation.
 - **Les données gardées restent par flux** : favoris, historique, progression et synchronisation ne changent pas, et
   rien de nouveau n'est synchronisé. Un film est vu (et écarté par « Masquer les films déjà vus ») quand l'une de ses
   versions est terminée, et dans Ma liste quand l'une de ses versions y est ; ajouter un film depuis son affiche ajoute
@@ -167,9 +181,27 @@ sources, la meilleure d'abord, champ par champ :
   première version : une pastille qui se divise à l'arrivée des caractéristiques n'en déplace aucune autre, et le focus
   reste sur la version où était la télécommande.
 - **Les données du titre** listent les caractéristiques de chaque version et leur source (mesurées par le lecteur,
-  selon le fournisseur, d'après le nom).
-- Les détails gardés avant ce changement n'ont pas de caractéristiques jusqu'à ce qu'ils soient redemandés (une fois
-  anciens, `DetailsArchive`), ou que la version soit lue.
+  selon le fournisseur, d'après le nom), et, pour savoir pourquoi une version n'a pas de caractéristiques ou n'est pas
+  lue en premier :
+  - ce que tenaient les détails de son fournisseur : non demandées, aucune pour cette playlist (M3U), échec (un statut
+    HTTP ou « timeout », « DNS », « TLS », « JSON »), gardées par une version précédente (redemandées), demandées sans
+    bloc technique, vidéo + audio, vidéo seule, audio seul ; si elles sont gardées sur l'appareil ; les noms des champs
+    de `info` (les noms seuls, simples, triés, 40 au plus, jamais une valeur : une valeur peut contenir une adresse) ;
+  - son profil Dolby Vision (« P8.1 », « P5 », inconnu) et ce qu'elle demande à l'écran sans l'obtenir (« Dolby Vision
+    non pris en charge par cet écran : profil inconnu, pas lu en premier », « HDR non pris en charge par cet écran »,
+    « 4K au-delà du plus grand mode de cet écran ») ;
+  - pour l'écran : le mode du moment et le plus grand mode (Android), HDR10, HDR10+, HLG et Dolby Vision oui ou non,
+    les décodeurs Dolby Vision et HEVC Main 10, ce pour quoi les versions sont choisies (« 4K · HDR »), et la version et
+    le build de l'app, pour qu'une photo dise de quel build il s'agit.
+
+  Un film seul a aussi sa ligne. Dans le lecteur, le panneau est recalculé quand arrivent la mesure du lecteur, les
+  détails d'une version ou un échec.
+- Les détails gardés par une version de l'app qui ne notait pas ce que tenait la réponse du fournisseur (avant la
+  lecture des caractéristiques) sont montrés, et redemandés comme s'ils étaient anciens : ceux de la page à son
+  ouverture, ceux des autres versions quand elle est au repos.
+- Une mesure de même taille d'un flux déjà mesuré ajoute ce que la première ne savait pas (son profil Dolby Vision) ;
+  une plus petite ou un autre son ne change rien. Un film lu par VLC (un MKV sur Mac, un flux refusé par AVPlayer) est
+  mesuré aussi, la taille de son image seulement.
 
 ## Limites connues
 

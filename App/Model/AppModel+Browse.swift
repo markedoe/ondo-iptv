@@ -186,12 +186,22 @@ extension AppModel {
               let credentials = playlist.source.xtreamCredentials else { return kept }
         let client = XtreamClient(credentials: credentials, http: http, headers: playlist.headers)
         movieDetailRequests += 1
-        let request = Task { try? await client.movieDetails(streamID: streamID) }
+        let id = movie.id
+        let request = Task { () -> MediaDetails? in
+            do {
+                return try await client.movieDetails(streamID: streamID)
+            } catch {
+                // How it failed, for the title data panel (not a page closed meanwhile).
+                if !(error is CancellationError), activePlaylist?.id == playlist.id { detailsFailures[id] = Self.detailsFailureCode(error) }
+                return nil
+            }
+        }
         movieDetailsInFlight[movie.id] = request
         let fetched = await request.value
         movieDetailsInFlight[movie.id] = nil
         // Another playlist opened meanwhile: these details are not its own.
         guard let details = fetched, activePlaylist?.id == playlist.id else { return fetched ?? kept }
+        detailsFailures[movie.id] = nil
         movieDetailsCache[movie.id] = details
         movieDetailsFetchedAt[movie.id] = .now
         // Asked by its own page (or Home): kept with the pages viewers opened; a version's loop marks it again.

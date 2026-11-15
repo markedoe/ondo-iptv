@@ -8,6 +8,18 @@ public enum SpecSource: String, Codable, Hashable, Sendable {
     case provider = "PROVIDER"
 }
 
+/// What a screen without Dolby Vision shows of a stream (`StreamSpecs.dolbyVisionFallback`).
+public enum DolbyVisionFallback: String, Hashable, Sendable {
+    /// No Dolby Vision stream.
+    case none = "NONE"
+    /// Its base layer: HDR10, SDR or HLG, right colours (profiles 8, 9, a 10 with a compatible base layer).
+    case baseLayer = "BASE_LAYER"
+    /// Wrong colours: no base layer such a screen shows (profile 5, a 10 without one).
+    case wrongColours = "WRONG_COLOURS"
+    /// Unknown: the profile is unknown (a name says "DV" only) or needs its enhancement layer (7).
+    case unknown = "UNKNOWN"
+}
+
 /// The picture's dynamic range. `sdr` is known too: a measured SDR stream is no HDR stream, whatever its name says.
 public enum PictureRange: String, Codable, Hashable, Sendable {
     case sdr = "SDR"
@@ -37,6 +49,12 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
     /// The provider's whole bitrate, in kbit/s.
     public var bitrate: Int?
     public var source: SpecSource
+    /// Its Dolby Vision profile (5, 7, 8, 9, 10), from its configuration record (ffprobe's `dv_profile`, a track's `dvcC`)
+    /// or its codec string ("dvhe.08.06"); nil when unknown. A profile 5 stream has no base layer a screen without Dolby
+    /// Vision shows right; a profile 8 one plays its HDR10 (or SDR, HLG) base layer there (`dolbyVisionFallback`).
+    public var dolbyVisionProfile: Int?
+    /// Its base layer's compatibility (`dv_bl_signal_compatibility_id`: 1 HDR10, 2 SDR, 4 HLG, 0 none); nil when unknown.
+    public var dolbyVisionCompatibility: Int?
 
     public init(
         width: Int? = nil,
@@ -48,8 +66,12 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         channelLayout: String? = nil,
         atmos: Bool = false,
         bitrate: Int? = nil,
-        source: SpecSource = .provider
+        source: SpecSource = .provider,
+        dolbyVisionProfile: Int? = nil,
+        dolbyVisionCompatibility: Int? = nil
     ) {
+        self.dolbyVisionProfile = dolbyVisionProfile
+        self.dolbyVisionCompatibility = dolbyVisionCompatibility
         self.width = width
         self.height = height
         self.range = range
@@ -64,6 +86,7 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case width, height, range, videoCodec, audioCodec, channels, channelLayout, atmos, bitrate, source
+        case dolbyVisionProfile, dolbyVisionCompatibility
     }
 
     /// Every field may be missing (Android writes them all; a field it left out is unknown).
@@ -79,6 +102,8 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         atmos = (try? c.decodeIfPresent(Bool.self, forKey: .atmos)) ?? false
         bitrate = try? c.decodeIfPresent(Int.self, forKey: .bitrate)
         source = (try? c.decodeIfPresent(SpecSource.self, forKey: .source)) ?? .provider
+        dolbyVisionProfile = try? c.decodeIfPresent(Int.self, forKey: .dolbyVisionProfile)
+        dolbyVisionCompatibility = try? c.decodeIfPresent(Int.self, forKey: .dolbyVisionCompatibility)
     }
 
     /// Whether anything at all is known.
@@ -125,7 +150,56 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         }
         merged.atmos = atmos || other.atmos
         merged.bitrate = bitrate ?? other.bitrate
+        merged.dolbyVisionProfile = dolbyVisionProfile ?? other.dolbyVisionProfile
+        merged.dolbyVisionCompatibility = dolbyVisionCompatibility ?? other.dolbyVisionCompatibility
         return merged
+    }
+
+    /// "P8.1", "P5", "P8": its Dolby Vision profile and base layer's compatibility; nil when the profile is unknown.
+    public var dolbyVisionProfileLabel: String? {
+        guard let profile = dolbyVisionProfile else { return nil }
+        return dolbyVisionCompatibility.map { "P\(profile).\($0)" } ?? "P\(profile)"
+    }
+
+    /// What a screen without Dolby Vision shows of this stream (`DolbyVisionFallback`): its base layer for profiles 8
+    /// and 9 (a 10 with a compatible one), wrong colours for 5 (a 10 without one), unknown for 7 or no profile.
+    public var dolbyVisionFallback: DolbyVisionFallback {
+        Self.dolbyVisionFallback(
+            isDolbyVision: range == .dolbyVision || dolbyVisionProfile != nil, profile: dolbyVisionProfile, compatibility: dolbyVisionCompatibility
+        )
+    }
+
+    /// `dolbyVisionFallback` of a stream: whether it `isDolbyVision`, its `profile` and base layer's `compatibility`.
+    public static func dolbyVisionFallback(isDolbyVision: Bool, profile: Int?, compatibility: Int?) -> DolbyVisionFallback {
+        guard isDolbyVision else { return .none }
+        switch profile {
+        case nil: return .unknown
+        case 8?, 9?: return .baseLayer
+        case 5?: return .wrongColours
+        case 10?:
+            switch compatibility {
+            case nil: return .unknown
+            case 0?: return .wrongColours
+            default: return .baseLayer
+            }
+        default: return .unknown
+        }
+    }
+
+    /// The Dolby Vision profile a codec string names ("dvhe.08.06" is 8, "dvh1.05.06" 5); nil for another codec.
+    public static func dolbyVisionProfile(ofCodecs codecs: String?) -> Int? {
+        guard let parts = lowered(codecs)?.split(separator: ".", omittingEmptySubsequences: false), parts.count >= 2,
+              dolbyVisionCodecs.contains(String(parts[0])), let profile = Int(parts[1]), (1...20).contains(profile) else { return nil }
+        return profile
+    }
+
+    /// The Dolby Vision profile and base layer's compatibility of a `dvcC` / `dvvC` configuration record (ETSI TS 103
+    /// 572): byte 2 holds the profile (7 bits), byte 4 the compatibility (its high 4 bits); nil when it is too short.
+    public static func dolbyVisionConfiguration(_ bytes: [UInt8]) -> (profile: Int, compatibility: Int)? {
+        guard bytes.count >= 5 else { return nil }
+        let profile = Int(bytes[2] >> 1)
+        guard (1...20).contains(profile) else { return nil }
+        return (profile, Int(bytes[4] >> 4))
     }
 
     /// "1920×802 · 1080p · SDR · H.264 · 5.1 AAC · 4521 kbit/s": every known field, for the title data panel.
@@ -136,7 +210,13 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         let parts: [String?] = [
             size,
             resolution,
-            range.map { $0 == .sdr ? "SDR" : (Self.rangeLabel($0) ?? "") },
+            range.map { shown -> String in
+                switch shown {
+                case .sdr: return "SDR"
+                case .dolbyVision: return [Self.rangeLabel(shown), dolbyVisionProfileLabel].compactMap { $0 }.joined(separator: " ")
+                default: return Self.rangeLabel(shown) ?? ""
+                }
+            },
             videoCodec,
             sound.isEmpty ? nil : sound,
             atmos ? Self.atmosWord : nil,
@@ -152,10 +232,14 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
     public struct ProbeBlock: Hashable, Sendable {
         public var fields: [String: String]
         public var sideData: [String]
+        /// The scalar fields of its `side_data_list` entries, the first of each name in lower case (a Dolby Vision
+        /// record's `dv_profile`, `dv_bl_signal_compatibility_id`).
+        public var sideFields: [String: String]
 
-        public init(fields: [String: String], sideData: [String] = []) {
+        public init(fields: [String: String], sideData: [String] = [], sideFields: [String: String] = [:]) {
             self.fields = fields
             self.sideData = sideData
+            self.sideFields = sideFields
         }
     }
 
@@ -337,9 +421,13 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
         let v = video?.fields ?? [:]
         let a = audio?.fields ?? [:]
         let tag = v["codec_tag_string"]?.lowercased()
+        let side = video?.sideFields ?? [:]
+        let dvProfile = side["dv_profile"].flatMap { Int($0.trimmingCharacters(in: .whitespaces)) }.flatMap { (1...20).contains($0) ? $0 : nil }
+        let dvCompatibility = side["dv_bl_signal_compatibility_id"].flatMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+            .flatMap { (0...15).contains($0) ? $0 : nil }
         var range: PictureRange?
         if let video {
-            if tag.map(dolbyVisionCodecs.contains) == true || (v["profile"]?.lowercased() ?? "").contains("dolby vision")
+            if dvProfile != nil || tag.map(dolbyVisionCodecs.contains) == true || (v["profile"]?.lowercased() ?? "").contains("dolby vision")
                 || video.sideData.contains(where: { $0.contains("dovi") || $0.contains("dolby vision") }) {
                 range = .dolbyVision
             } else if video.sideData.contains(where: { $0.contains("smpte2094") || $0.contains("hdr10+") }) {
@@ -367,7 +455,9 @@ public struct StreamSpecs: Codable, Hashable, Sendable {
             channelLayout: layout(of: a["channel_layout"]),
             atmos: audioProfile.contains("atmos") || audioProfile.contains("joc"),
             bitrate: positive(bitrate),
-            source: .provider
+            source: .provider,
+            dolbyVisionProfile: range == .dolbyVision ? dvProfile : nil,
+            dolbyVisionCompatibility: range == .dolbyVision && dvProfile != nil ? dvCompatibility : nil
         )
         return specs.isEmpty && specs.bitrate == nil ? nil : specs
     }
