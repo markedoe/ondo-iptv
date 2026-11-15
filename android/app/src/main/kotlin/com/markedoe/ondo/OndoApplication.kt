@@ -21,6 +21,7 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import com.markedoe.ondo.core.library.PlaceholderNames
+import com.markedoe.ondo.core.library.VersionWords
 import com.markedoe.ondo.core.net.OkHttpClientAdapter
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.AwardsDownload
@@ -190,6 +191,29 @@ internal fun Context.artworkCache(): DiskCache {
         .maximumMaxSizeBytes(2L * 1024 * 1024 * 1024)
         .build()
 }
+
+/** What a film version's chip says, in the app's language (FilmVersions.labels). */
+fun Resources.versionWords(): VersionWords = VersionWords(
+    standard = getString(R.string.version_standard),
+    numbered = getString(R.string.version_number),
+    fullHd = getString(R.string.version_full_hd),
+    hd = getString(R.string.version_hd),
+    sd = getString(R.string.version_sd),
+    multilingual = getString(R.string.version_multilingual),
+    french = getString(R.string.version_french),
+    frenchFrance = getString(R.string.version_french_france),
+    frenchQuebec = getString(R.string.version_french_quebec),
+    frenchInternational = getString(R.string.version_french_international),
+    original = getString(R.string.version_original),
+    english = getString(R.string.version_english),
+    spanish = getString(R.string.version_spanish),
+    german = getString(R.string.version_german),
+    italian = getString(R.string.version_italian),
+    portuguese = getString(R.string.version_portuguese),
+    arabic = getString(R.string.version_arabic),
+    frenchSubtitles = getString(R.string.version_french_subtitles),
+    subtitled = getString(R.string.version_subtitled),
+)
 
 /** The app's words for the names the core gives in English where the provider gives none ("Uncategorized", "Channel 12"…). */
 fun Resources.placeholderNames(): PlaceholderNames = PlaceholderNames(

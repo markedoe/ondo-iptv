@@ -98,7 +98,7 @@ final class FilmVersionsAppTests: XCTestCase {
         let hd = try movie("Glass City", in: model)
         let versions = model.visibleVersions(of: hd)
         XCTAssertEqual(names(versions), ["Glass City", "Glass City 4K DV", "Glass City 4K", "Glass City VOSTFR"])
-        XCTAssertEqual(model.versionBadges(versions).map(\.label), [nil, "4K DV", "4K", "VOSTFR"])
+        XCTAssertEqual(model.versionLabels(versions), ["Standard", "4K Dolby Vision", "4K", "Original, French subtitles"])
         let vostfr = try movie("Glass City VOSTFR", in: model)
         model.rememberVersion(vostfr)
         XCTAssertEqual(model.defaultVersion(of: hd), vostfr, "the one chosen last")
@@ -109,16 +109,19 @@ final class FilmVersionsAppTests: XCTestCase {
         XCTAssertEqual(model.defaultVersion(of: hd), dv, "the one in progress first")
         // Continue Watching stays per stream and says which version is in progress.
         let entry = try XCTUnwrap(model.continueWatching(.movie).first)
-        XCTAssertEqual(model.versionLabel(for: entry), "4K DV")
+        XCTAssertEqual(model.versionLabel(for: entry), "4K Dolby Vision")
     }
 
-    /// Two streams of the same tags are two badges, never collapsed: "4K DV" and "4K DV 2". (The M3U reader gives every
+    /// Two streams of the same tags are two chips, never collapsed: numbered. (The M3U reader gives every
     /// entry its own id, so an address listed twice is two streams here; Android's test covers one id listed twice.)
     func testTheSameTagsTwiceAreTwoBadges() async throws {
         // The catalogue ends without a newline.
         let line = "\n#EXTINF:6000 group-title=\"Movies | 4K\",Glass City 4K DV (2024)\n"
         let other = try await model(with: Self.catalogue + line + "http://127.0.0.1:9/glass-dv-2.mkv\n")
         let versions = other.visibleVersions(of: try movie("Glass City", in: other))
-        XCTAssertEqual(other.versionBadges(versions).compactMap(\.label), ["4K DV", "4K", "VOSTFR", "4K DV 2"])
+        XCTAssertEqual(
+            other.versionLabels(versions),
+            ["Standard", "4K Dolby Vision 1", "4K", "Original, French subtitles", "4K Dolby Vision 2"]
+        )
     }
 }

@@ -221,13 +221,24 @@ final class FilmVersionsTests: XCTestCase {
             XCTAssertEqual(FilmVersions.tags(name: name, categoryName: nil), [.vostfr], name)
         }
         XCTAssertEqual(FilmVersions.tags(name: "St Francis", categoryName: nil), [])
-        XCTAssertEqual(FilmVersions.tags(name: "Sandstorm", categoryName: "FILMS 1080p VOSTFR"), [.hd, .vostfr])
+        XCTAssertEqual(FilmVersions.tags(name: "Sandstorm", categoryName: "FILMS 1080p VOSTFR"), [.fhd, .vostfr])
         XCTAssertEqual(FilmVersions.tags(name: "Sandstorm FHD", categoryName: "UHD"), [.uhd], "4K leaves HD out")
         XCTAssertEqual(FilmVersions.tags(name: "Sandstorm", categoryName: "Action"), [])
+        XCTAssertEqual(FilmVersions.tags(name: "Sandstorm FHD MULTI VFI", categoryName: nil).filter { $0 != .multi }, [.fhd, .vfi])
+        XCTAssertEqual(FilmVersions.tags(name: "Sandstorm VO VOST", categoryName: nil), [.vost], "subtitled: the original language")
         let list = [movie("Sandstorm 4K", 2021), movie("Sandstorm", 2021), movie("Sandstorm 4K", 2021), movie("Sandstorm", 2021)]
-        let badges = FilmVersions.badges(list) { _ in nil }
-        XCTAssertEqual(badges.map(\.label), ["4K", nil, "4K 2", nil])
-        XCTAssertEqual(badges.map(\.ordinal), [1, 1, 2, 2], "two versions of the same tags are two badges")
+        XCTAssertEqual(
+            FilmVersions.labels(list, categoryName: { _ in nil }), ["4K 1", "Standard 1", "4K 2", "Standard 2"],
+            "two versions of the same tags are two chips"
+        )
+    }
+
+    /// A film offered plain and in "4K DV": the plain one had no tag, so its chip only said "Version".
+    func testAPlainVersionNextToATaggedOneSaysWhatItIs() {
+        let list = [movie("Copper Valley", 2026), movie("Copper Valley 4K DV", 2026)]
+        let labels = FilmVersions.labels(list, categoryName: { _ in nil })
+        XCTAssertEqual(labels, ["Standard", "4K Dolby Vision"])
+        XCTAssertEqual(Set(labels).count, labels.count, "two versions never read the same: \(labels)")
     }
 
     func testTheDefaultVersion() {
@@ -246,6 +257,28 @@ final class FilmVersionsTests: XCTestCase {
         XCTAssertEqual(FilmVersions.defaultVersion([vostfr, movie("Sandstorm VFF", 2021)], inProgress: nil, chosen: [], support: everything, categoryName: names), vostfr, "else the first")
         XCTAssertEqual(FilmVersions.defaultVersion([dv], inProgress: nil, chosen: [], support: PictureSupport(), categoryName: names), dv)
         XCTAssertNil(FilmVersions.defaultVersion([], inProgress: nil, chosen: [], support: everything, categoryName: names))
+    }
+
+    /// The title data says why a film's card plays the version it plays.
+    func testTheDefaultVersionSaysWhy() {
+        let dv = movie("Sandstorm 4K DV", 2021)
+        let hd = movie("Sandstorm HD", 2021)
+        let vostfr = movie("Sandstorm VOSTFR", 2021)
+        let list = [vostfr, dv, hd]
+        let names: (String) -> String? = { _ in nil }
+        let everything = PictureSupport(hdr: true, dolbyVision: true, uhd: true)
+        func choice(_ versions: [Movie], _ inProgress: String?, _ chosen: [String]) -> (String, DefaultReason)? {
+            FilmVersions.defaultChoice(versions, inProgress: inProgress, chosen: chosen, support: everything, categoryName: names)
+                .map { ($0.movie.id, $0.reason) }
+        }
+        XCTAssertEqual(choice(list, hd.id, [dv.id])?.1, .inProgress)
+        XCTAssertEqual(choice(list, hd.id, [dv.id])?.0, hd.id)
+        XCTAssertEqual(choice(list, nil, [vostfr.id])?.1, .chosen)
+        XCTAssertEqual(choice(list, nil, [])?.0, dv.id)
+        XCTAssertEqual(choice(list, nil, [])?.1, .bestForScreen)
+        XCTAssertEqual(choice([vostfr, movie("Sandstorm VFF", 2021)], nil, [])?.1, .first)
+        XCTAssertEqual(choice([dv], nil, [])?.1, .only)
+        XCTAssertNil(choice([], nil, []))
     }
 
     /// Random catalogues: every stream in exactly one group, never two ids together, every grouping justified by a rule.

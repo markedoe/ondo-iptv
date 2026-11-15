@@ -3,25 +3,103 @@ package com.markedoe.ondo.core.library
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.playback.MediaFormat
 import java.util.BitSet
 
 /** What the screen can show, for the version that plays best: high dynamic range, Dolby Vision, 4K. */
 data class PictureSupport(val hdr: Boolean = false, val dolbyVision: Boolean = false, val uhd: Boolean = false)
 
-/** A tag of a version, read from its name and its category's name; [label] is what its badge says (never translated). */
-enum class VersionTag(val label: String) {
-    UHD("4K"), DOLBY_VISION("DV"), HDR("HDR"), HD("HD"), HEVC("HEVC"),
-    TRUEFRENCH("TRUEFRENCH"), VFF("VFF"), VFQ("VFQ"), VF("VF"), VOSTFR("VOSTFR"), MULTI("MULTI"),
+/** Why a film's card plays the version it plays ([FilmVersions.defaultChoice]). */
+enum class DefaultReason {
+    /** The film has one version. */
+    ONLY,
+    /** The viewer is watching it. */
+    IN_PROGRESS,
+    /** The viewer chose it last on this device. */
+    CHOSEN,
+    /** It suits the screen best (4K on a 4K screen, no Dolby Vision where the screen cannot show it). */
+    BEST_FOR_SCREEN,
+    /** Nothing sets one apart: the first in the catalogue. */
+    FIRST,
+}
+
+/** What a version's tag says about it, in the order a version's chip names them (docs/VERSIONS.md). */
+enum class VersionAspect { QUALITY, RANGE, THREE_D, EDITION, CODEC, LANGUAGE, SUBTITLES }
+
+/**
+ * A tag of a version, read from its name and its category's name. Its chip says it in words ([VersionWords]): "DV" is
+ * "Dolby Vision", "VOSTFR" "Original, French subtitles". In the order of [VersionAspect], the best quality first.
+ */
+enum class VersionTag(val aspect: VersionAspect) {
+    UHD(VersionAspect.QUALITY), FHD(VersionAspect.QUALITY), HD(VersionAspect.QUALITY), SD(VersionAspect.QUALITY),
+    DOLBY_VISION(VersionAspect.RANGE), HDR(VersionAspect.RANGE),
+    THREE_D(VersionAspect.THREE_D), IMAX(VersionAspect.EDITION), HEVC(VersionAspect.CODEC),
+    MULTI(VersionAspect.LANGUAGE), VFF(VersionAspect.LANGUAGE), VFQ(VersionAspect.LANGUAGE), VFI(VersionAspect.LANGUAGE),
+    VF(VersionAspect.LANGUAGE), VO(VersionAspect.LANGUAGE), ENGLISH(VersionAspect.LANGUAGE), SPANISH(VersionAspect.LANGUAGE),
+    GERMAN(VersionAspect.LANGUAGE), ITALIAN(VersionAspect.LANGUAGE), PORTUGUESE(VersionAspect.LANGUAGE),
+    ARABIC(VersionAspect.LANGUAGE),
+    VOSTFR(VersionAspect.SUBTITLES), VOST(VersionAspect.SUBTITLES),
+    ;
+
+    /** Said with the other picture tags without a dot ("4K Dolby Vision"); a language or subtitles apart ("4K · English"). */
+    val isPicture: Boolean get() = aspect < VersionAspect.LANGUAGE
 }
 
 /**
- * A version's badge: its [tags] ("4K DV VFF"), and its [ordinal] among the versions of its film with the same tags
- * (1 for the first, 2 for the second…): two versions with the same tags are two badges, "4K" and "4K 2". No tag: the
- * app says "Version" in the viewer's language.
+ * The words of a version's chip in the viewer's language (the app's strings; English by default). The names of
+ * formats ("4K", "Dolby Vision", "HDR", "3D", "IMAX", "HEVC") are the same in every language.
  */
-data class VersionBadge(val tags: List<VersionTag>, val ordinal: Int) {
-    /** The tags' words, with the ordinal from the second on; null when there is no tag (the app names it). */
-    val label: String? get() = tags.takeIf { it.isNotEmpty() }?.joinToString(" ") { it.label }?.let { if (ordinal > 1) "$it $ordinal" else it }
+data class VersionWords(
+    /** A version without a tag next to versions with one: the provider's plain stream. */
+    val standard: String = "Standard",
+    /** Versions nothing tells apart, numbered: "Version 1", "Version 2" (`%1$d` is the number). */
+    val numbered: String = "Version %1\$d",
+    val fullHd: String = "Full HD",
+    val hd: String = "HD",
+    val sd: String = "SD",
+    val multilingual: String = "Multilingual",
+    val french: String = "French",
+    val frenchFrance: String = "French (France)",
+    val frenchQuebec: String = "French (Quebec)",
+    val frenchInternational: String = "French (international)",
+    val original: String = "Original language",
+    val english: String = "English",
+    val spanish: String = "Spanish",
+    val german: String = "German",
+    val italian: String = "Italian",
+    val portuguese: String = "Portuguese",
+    val arabic: String = "Arabic",
+    val frenchSubtitles: String = "Original, French subtitles",
+    val subtitled: String = "Original, subtitled",
+) {
+    fun word(tag: VersionTag): String = when (tag) {
+        VersionTag.UHD -> "4K"
+        VersionTag.FHD -> fullHd
+        VersionTag.HD -> hd
+        VersionTag.SD -> sd
+        VersionTag.DOLBY_VISION -> "Dolby Vision"
+        VersionTag.HDR -> "HDR"
+        VersionTag.THREE_D -> "3D"
+        VersionTag.IMAX -> "IMAX"
+        VersionTag.HEVC -> "HEVC"
+        VersionTag.MULTI -> multilingual
+        VersionTag.VFF -> frenchFrance
+        VersionTag.VFQ -> frenchQuebec
+        VersionTag.VFI -> frenchInternational
+        VersionTag.VF -> french
+        VersionTag.VO -> original
+        VersionTag.ENGLISH -> english
+        VersionTag.SPANISH -> spanish
+        VersionTag.GERMAN -> german
+        VersionTag.ITALIAN -> italian
+        VersionTag.PORTUGUESE -> portuguese
+        VersionTag.ARABIC -> arabic
+        VersionTag.VOSTFR -> frenchSubtitles
+        VersionTag.VOST -> subtitled
+    }
+
+    /** "Version 2". */
+    fun number(n: Int): String = runCatching { String.format(java.util.Locale.ROOT, numbered, n) }.getOrElse { "$numbered $n" }
 }
 
 /**
@@ -477,21 +555,68 @@ class FilmVersions private constructor(
 
         private val TAG_WORDS: Map<String, VersionTag> = mapOf(
             "4k" to VersionTag.UHD, "uhd" to VersionTag.UHD, "2160p" to VersionTag.UHD,
+            "fhd" to VersionTag.FHD, "1080p" to VersionTag.FHD, "hd" to VersionTag.HD, "720p" to VersionTag.HD,
+            "sd" to VersionTag.SD, "480p" to VersionTag.SD, "576p" to VersionTag.SD,
             "dv" to VersionTag.DOLBY_VISION, "dovi" to VersionTag.DOLBY_VISION,
             "hdr" to VersionTag.HDR, "hdr10" to VersionTag.HDR, "hdr10plus" to VersionTag.HDR,
-            "hd" to VersionTag.HD, "fhd" to VersionTag.HD, "1080p" to VersionTag.HD, "720p" to VersionTag.HD,
+            "3d" to VersionTag.THREE_D, "sbs" to VersionTag.THREE_D, "hsbs" to VersionTag.THREE_D, "imax" to VersionTag.IMAX,
             "hevc" to VersionTag.HEVC, "h265" to VersionTag.HEVC, "x265" to VersionTag.HEVC,
-            "truefrench" to VersionTag.TRUEFRENCH, "vff" to VersionTag.VFF, "vfq" to VersionTag.VFQ, "vf" to VersionTag.VF,
+            "multi" to VersionTag.MULTI, "dual" to VersionTag.MULTI,
+            "truefrench" to VersionTag.VFF, "vff" to VersionTag.VFF, "vfq" to VersionTag.VFQ, "vfi" to VersionTag.VFI,
+            "vf" to VersionTag.VF, "french" to VersionTag.VF, "vo" to VersionTag.VO, "english" to VersionTag.ENGLISH,
+            "spanish" to VersionTag.SPANISH, "espanol" to VersionTag.SPANISH, "castellano" to VersionTag.SPANISH,
+            "german" to VersionTag.GERMAN, "deutsch" to VersionTag.GERMAN, "italian" to VersionTag.ITALIAN,
+            "italiano" to VersionTag.ITALIAN, "portuguese" to VersionTag.PORTUGUESE, "portugues" to VersionTag.PORTUGUESE,
+            "arabic" to VersionTag.ARABIC,
             "vostfr" to VersionTag.VOSTFR, "stfr" to VersionTag.VOSTFR, "subfr" to VersionTag.VOSTFR, "frsub" to VersionTag.VOSTFR,
-            "multi" to VersionTag.MULTI,
+            "vost" to VersionTag.VOST, "vosta" to VersionTag.VOST, "vosten" to VersionTag.VOST, "subbed" to VersionTag.VOST,
         )
 
+        /**
+         * A language's code: a tag only in capitals, at either end of a name or a category ("FR - Sandstorm",
+         * "EN | Movies", "Sandstorm (DE)"), where "It" and "De" are words of titles.
+         */
+        private val EDGE_CODES: Map<String, VersionTag> = mapOf(
+            "fr" to VersionTag.VF, "en" to VersionTag.ENGLISH, "eng" to VersionTag.ENGLISH, "es" to VersionTag.SPANISH,
+            "esp" to VersionTag.SPANISH, "de" to VersionTag.GERMAN, "ger" to VersionTag.GERMAN, "it" to VersionTag.ITALIAN,
+            "ita" to VersionTag.ITALIAN, "pt" to VersionTag.PORTUGUESE, "br" to VersionTag.PORTUGUESE, "ar" to VersionTag.ARABIC,
+        )
+
+        /** Words of a provider's tag in two words ("Dolby Vision", "H 265", "ST FR"): never a word of a version's own. */
+        private val TAG_PARTS = setOf("dolby", "vision", "h", "265", "st", "sub", "fr")
+
+        /** Unicode whitespace (a no-break space too), as Apple's `CharacterSet.whitespacesAndNewlines`. */
+        private val NAME_SEPARATORS = Regex("""(?U)[\s|\[\](){}:·_,/]+""")
+
+        /**
+         * Tag words that are also ordinary words of titles ("The English Orchard", "French Lantern", "Dual Harbor"): in a
+         * version's name, tags only outside the title its versions share ([labelTags] of a film's versions).
+         */
+        private val TITLE_LIKE = setOf(
+            "english", "french", "spanish", "espanol", "castellano", "german", "deutsch", "italian", "italiano", "portuguese",
+            "portugues", "arabic", "dual", "vo", "sd",
+        )
+
+        /**
+         * A language's code before a name, set apart by a provider's delimiter: "FR - …", "|EN| …", "[IT] …", "DE: …";
+         * not a title's first word ("IT WAITS BELOW").
+         */
+        private val PREFIX_CODE = Regex("""(?U)^\s*[\[(|]?\s*([A-Z]{2,3})\s*[\])|:\-–·]""")
+
+        /** A language's code after a name, set apart the same way: "… (DE)", "… - EN", "… |FR|". */
+        private val SUFFIX_CODE = Regex("""(?U)[\[(|\-–:·]\s*([A-Z]{2,3})\s*[\])|]?\s*$""")
+
         /** The tags of a version, from its name and its category's name, in [VersionTag]'s order; 4K leaves HD out. */
-        fun tags(name: String, categoryName: String?): List<VersionTag> {
+        fun tags(name: String, categoryName: String?): List<VersionTag> = tags(name, categoryName, emptySet())
+
+        /** [tags], the words of [titleWords] that are also title words ([TITLE_LIKE]) not read as tags in the name. */
+        private fun tags(name: String, categoryName: String?, titleWords: Set<String>): List<VersionTag> {
             val found = java.util.EnumSet.noneOf(VersionTag::class.java)
-            for (text in listOfNotNull(name, categoryName)) {
+            for ((which, text) in listOf(name, categoryName).withIndex()) {
+                if (text == null) continue
                 val words = TextNormalizer.normalize(text).split(' ')
                 for ((index, word) in words.withIndex()) {
+                    if (which == 0 && word in titleWords && word in TITLE_LIKE) continue
                     TAG_WORDS[word]?.let(found::add)
                     val next = words.getOrNull(index + 1)
                     if (word == "dolby" && next == "vision") found.add(VersionTag.DOLBY_VISION)
@@ -500,22 +625,145 @@ class FilmVersions private constructor(
                     if ((word == "st" || word == "sub") && next == "fr" || word == "fr" && next == "sub") found.add(VersionTag.VOSTFR)
                 }
             }
-            if (VersionTag.UHD in found) found.remove(VersionTag.HD)
+            return tidy(found)
+        }
+
+        /** One quality (the best) and one French; subtitles mean the original language, not a dub. */
+        private fun tidy(found: java.util.EnumSet<VersionTag>): List<VersionTag> {
+            if (VersionTag.UHD in found) found.removeAll(listOf(VersionTag.FHD, VersionTag.HD, VersionTag.SD))
+            if (VersionTag.FHD in found) found.removeAll(listOf(VersionTag.HD, VersionTag.SD))
+            if (VersionTag.HD in found) found.remove(VersionTag.SD)
+            if (VersionTag.VOSTFR in found) found.remove(VersionTag.VOST)
+            if (VersionTag.VOSTFR in found || VersionTag.VOST in found) found.removeAll(listOf(VersionTag.VO, VersionTag.VF))
+            if (VersionTag.VFF in found || VersionTag.VFQ in found || VersionTag.VFI in found) found.remove(VersionTag.VF)
             return found.toList()
         }
 
-        /** The badges of a film's [versions], in their order; [categoryName] names a stream's category. */
-        fun badges(versions: List<Movie>, categoryName: (String) -> String?): List<VersionBadge> {
-            val seen = HashMap<List<VersionTag>, Int>()
-            return versions.map { movie ->
-                val tags = tags(movie.name, categoryName(movie.categoryId))
-                val ordinal = (seen[tags] ?: 0) + 1
-                seen[tags] = ordinal
-                VersionBadge(tags, ordinal)
+        /**
+         * [tags], with a language's code in capitals at either end of the name or the category, set apart by a provider's
+         * delimiter ([PREFIX_CODE], [SUFFIX_CODE], [EDGE_CODES]): a chip's tags. [titleWords]: see [tags].
+         */
+        fun labelTags(name: String, categoryName: String?, titleWords: Set<String> = emptySet()): List<VersionTag> {
+            val found = java.util.EnumSet.noneOf(VersionTag::class.java)
+            found.addAll(tags(name, categoryName, titleWords))
+            for (text in listOfNotNull(name, categoryName)) {
+                for (pattern in listOf(PREFIX_CODE, SUFFIX_CODE)) {
+                    pattern.find(text)?.groupValues?.get(1)?.let { EDGE_CODES[it.lowercase()] }?.let(found::add)
+                }
+            }
+            return tidy(found)
+        }
+
+        /**
+         * The chip tags of a film's [versions], in their order: a title word that is also a tag ("English", "French",
+         * "Dual") counts only outside the words every version's name shares ("The English Orchard" and "The English
+         * Orchard MULTI" differ by Multilingual only).
+         */
+        fun labelTags(versions: List<Movie>, categoryName: (String) -> String?): List<List<VersionTag>> {
+            val shared: Set<String> = if (versions.size < 2) emptySet() else
+                versions.map { TextNormalizer.normalize(it.name).split(' ').toHashSet() }.reduce { a, b -> a.apply { retainAll(b) } }
+            return versions.map { labelTags(it.name, categoryName(it.categoryId), shared) }
+        }
+
+        /**
+         * What a film's [versions] say on their chips, in their order, in [words]. Each names what sets it apart from the
+         * others, in [VersionAspect]'s order ("4K Dolby Vision", "HD · Original, French subtitles"): a tag they all share
+         * is left out. Two that would read the same add the words of their names the others lack ("Extended Cut"); a
+         * version without a tag next to tagged ones is "Standard". Labels still the same add, in turn, the words of their
+         * categories' names the others lack, their container ("Standard · MKV", "Standard · MP4"), then the provider's
+         * words the chips have no word for ("DUB"); labels still the same are numbered ("4K 1", "4K 2"; "Version 1",
+         * "Version 2"): no two versions read the same. [categoryName] names a stream's category.
+         */
+        fun labels(versions: List<Movie>, categoryName: (String) -> String?, words: VersionWords = VersionWords()): List<String> {
+            val tags = labelTags(versions, categoryName)
+            // The aspects the versions differ in: a tag all of them have, or none, tells none apart.
+            val differing = VersionAspect.entries.filter { aspect -> tags.map { list -> list.filter { it.aspect == aspect } }.distinct().size > 1 }
+            val texts = tags.map { list ->
+                val shown = list.filter { it.aspect in differing }
+                val picture = shown.filter { it.isPicture }.joinToString(" ") { words.word(it) }
+                (listOf(picture).filter { it.isNotEmpty() } + shown.filter { !it.isPicture }.map { words.word(it) }).joinToString(" · ")
+            }.toMutableList()
+            // Versions that would read the same: the words of their names the others lack.
+            val extras = extraWords(versions)
+            for (same in texts.indices.groupBy { texts[it] }.values) {
+                if (same.size < 2 || same.map { extras[it] }.distinct().size < 2) continue
+                for (i in same) if (extras[i].isNotEmpty()) texts[i] = listOf(texts[i], extras[i]).filter { it.isNotEmpty() }.joinToString(" · ")
+            }
+            val anyTagged = texts.any { it.isNotEmpty() }
+            val labels = texts.mapTo(ArrayList(texts.size)) { if (it.isEmpty() && anyTagged) words.standard else it }
+            // Still the same: what else sets them apart, in this order: the words of their categories' names, their
+            // container ("MKV", "MP4"), then the provider's words the chips have no name for ("DUB").
+            setApart(labels) { same -> differingWords(same.map { categoryName(versions[it].categoryId).orEmpty() }) }
+            setApart(labels) { same -> same.map { container(versions[it]).orEmpty() } }
+            setApart(labels) { same -> differingWords(same.map { versions[it].name }, tagsOnly = true) }
+            if (labels.any { it.isNotEmpty() }) for (i in labels.indices) if (labels[i].isEmpty()) labels[i] = words.standard
+            // Still the same: numbered, each of them.
+            val counts = labels.groupingBy { it }.eachCount()
+            val seen = HashMap<String, Int>()
+            val numbered = labels.map { label ->
+                if (counts.getValue(label) < 2) return@map label.ifEmpty { words.number(1) }
+                val n = (seen[label] ?: 0) + 1
+                seen[label] = n
+                if (label.isEmpty()) words.number(n) else "$label $n"
+            }
+            // A number that made another version's own label ("4K 2" next to two "4K"): their positions tell them apart.
+            return if (numbered.distinct().size == numbered.size) numbered else numbered.mapIndexed { i, label -> "$label (${i + 1})" }
+        }
+
+        /**
+         * Labels that read the same get what [values] gives each of them (in the order of the group's indices), when
+         * those differ: "Standard · MKV" next to "Standard · MP4".
+         */
+        private fun setApart(labels: MutableList<String>, values: (List<Int>) -> List<String>) {
+            for (same in labels.indices.groupBy { labels[it] }.values) {
+                if (same.size < 2) continue
+                val found = values(same)
+                if (found.distinct().size < 2) continue
+                same.forEachIndexed { k, i -> if (found[k].isNotEmpty()) labels[i] = listOf(labels[i], found[k]).filter { it.isNotEmpty() }.joinToString(" · ") }
             }
         }
 
-        /** The names of a playlist's movie categories by id, for [badges]. */
+        /**
+         * The words of each text that are not in every other one, years left out. The providers' tags are left out too,
+         * or, with [tagsOnly], they are the only words kept: those of a name the chips have no word for ("DUB", "TR").
+         */
+        private fun differingWords(texts: List<String>, tagsOnly: Boolean = false): List<String> {
+            val split = texts.map { text -> text.split(NAME_SEPARATORS).map { it.trim('-', '.', '*', '+', '"') }.filter { it.isNotEmpty() } }
+            val common = split.map { words -> words.flatMapTo(HashSet()) { TextNormalizer.normalize(it).split(' ') } }
+                .reduceOrNull { a, b -> a.apply { retainAll(b) } } ?: emptySet()
+            return split.map { words ->
+                words.filter { word ->
+                    val parts = TextNormalizer.normalize(word).split(' ').filter { it.isNotEmpty() }
+                    parts.isNotEmpty() && !parts.all { it in common || isYear(it) || (!tagsOnly && isNoise(it)) } &&
+                        (!tagsOnly || parts.all { it in common || isNoise(it) })
+                }.joinToString(" ")
+            }
+        }
+
+        /** A version's container in capitals ("MKV", "MP4", "HLS"): the provider's extension, else its address's. */
+        fun container(movie: Movie): String? =
+            movie.containerExtension?.let(MediaFormat::ofExtension) ?: MediaFormat.label(movie.streamUrl)
+
+        private fun isYear(word: String): Boolean = word.length == 4 && word.all { it in '0'..'9' } && word.toInt() in 1900..2099
+
+        /** The words of each version's name that are not in every other one's, tags and years left out ("Extended Cut"). */
+        private fun extraWords(versions: List<Movie>): List<String> {
+            val split = versions.map { movie -> movie.name.split(NAME_SEPARATORS).map { it.trim('-', '.', '*', '+', '"') }.filter { it.isNotEmpty() } }
+            val common = split.map { words -> words.flatMapTo(HashSet()) { TextNormalizer.normalize(it).split(' ') } }
+                .reduceOrNull { a, b -> a.apply { retainAll(b) } } ?: emptySet()
+            return split.map { words ->
+                words.filter { word ->
+                    val parts = TextNormalizer.normalize(word).split(' ').filter { it.isNotEmpty() }
+                    parts.isNotEmpty() && !parts.all { it in common || isNoise(it) }
+                }.joinToString(" ")
+            }
+        }
+
+        /** A provider's tag, a part of one, or a year: never a word that tells a version apart. */
+        private fun isNoise(word: String): Boolean =
+            word in TAG_WORDS || word in EDGE_CODES || word in TAG_PARTS || CatalogueMatcher.isTagWord(word) || isYear(word)
+
+        /** The names of a playlist's movie categories by id, for [labels]. */
         fun categoryNames(categories: List<MediaCategory>): (String) -> String? {
             val names = HashMap<String, String>(categories.size * 2)
             for (category in categories) names.putIfAbsent(category.id, category.name)
@@ -531,7 +779,7 @@ class FilmVersions private constructor(
             if (VersionTag.DOLBY_VISION in tags) score += if (support.dolbyVision) 4 else -40
             if (VersionTag.HDR in tags) score += if (support.hdr) 2 else -20
             if (VersionTag.UHD in tags) score += if (support.uhd) 8 else 1
-            if (VersionTag.HD in tags) score += 4
+            if (VersionTag.HD in tags || VersionTag.FHD in tags) score += 4
             return score
         }
 
@@ -546,23 +794,34 @@ class FilmVersions private constructor(
             chosen: List<String>,
             support: PictureSupport,
             categoryName: (String) -> String?,
-        ): Movie? {
-            if (versions.size < 2) return versions.firstOrNull()
-            inProgress?.let { id -> versions.firstOrNull { it.id == id }?.let { return it } }
+        ): Movie? = defaultChoice(versions, inProgress, chosen, support, categoryName)?.first
+
+        /** [defaultVersion] and why it is that one; null without versions. */
+        fun defaultChoice(
+            versions: List<Movie>,
+            inProgress: String?,
+            chosen: List<String>,
+            support: PictureSupport,
+            categoryName: (String) -> String?,
+        ): Pair<Movie, DefaultReason>? {
+            if (versions.size < 2) return versions.firstOrNull()?.let { it to DefaultReason.ONLY }
+            inProgress?.let { id -> versions.firstOrNull { it.id == id }?.let { return it to DefaultReason.IN_PROGRESS } }
             if (chosen.isNotEmpty()) {
                 val ids = versions.mapTo(HashSet()) { it.id }
-                chosen.firstOrNull { it in ids }?.let { id -> return versions.first { it.id == id } }
+                chosen.firstOrNull { it in ids }?.let { id -> return versions.first { it.id == id } to DefaultReason.CHOSEN }
             }
             var best = versions.first()
             var bestScore = Int.MIN_VALUE
+            val scores = HashSet<Int>()
             for (movie in versions) {
                 val score = score(tags(movie.name, categoryName(movie.categoryId)), support)
+                scores.add(score)
                 if (score > bestScore) {
                     best = movie
                     bestScore = score
                 }
             }
-            return best
+            return best to if (scores.size > 1) DefaultReason.BEST_FOR_SCREEN else DefaultReason.FIRST
         }
     }
 

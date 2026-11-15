@@ -31,26 +31,41 @@ extension AppModel {
     /// The version a film's card plays and its page selects first (`FilmVersions.defaultVersion`): the one in progress,
     /// else the one chosen last on this device, else the best for the screen, else the first.
     func defaultVersion(of movie: Movie, among known: [Movie]? = nil) -> Movie {
+        defaultChoice(of: movie, among: known).movie
+    }
+
+    /// `defaultVersion(of:)` and why it is that one (`FilmVersions.defaultChoice`), for the player's title data.
+    func defaultChoice(of movie: Movie, among known: [Movie]? = nil) -> (movie: Movie, reason: DefaultReason) {
         let versions = known ?? visibleVersions(of: movie)
-        guard versions.count > 1 else { return movie }
+        guard versions.count > 1 else { return (movie, .only) }
         let inProgress = versions.compactMap { version -> (movie: Movie, watched: Date)? in
             guard let entry = progress(movie: version), entry.isResumable else { return nil }
             return (version, entry.lastWatchedAt)
         }.max { $0.watched < $1.watched }?.movie
         let names = categoryNames
-        return FilmVersions.defaultVersion(
+        return FilmVersions.defaultChoice(
             versions, inProgress: inProgress?.id, chosen: settings.chosenVersions, support: Self.pictureSupport,
             categoryName: { names[$0] }
-        ) ?? movie
+        ) ?? (movie, .only)
     }
 
-    /// The badges of a film's versions, in their order (`FilmVersions.badges`).
-    func versionBadges(_ versions: [Movie]) -> [VersionBadge] {
+    /// What the chips of a film's versions say, in their order, in the app's language (`FilmVersions.labels`): what sets
+    /// each apart ("4K Dolby Vision", "Original, French subtitles", "Standard").
+    /// Worked out once per catalogue and set of versions (`versionLabelsCache`, emptied with each catalogue), in words
+    /// read once (`versionWords`): a film's page and its Continue Watching card ask on every pass of their body.
+    func versionLabels(_ versions: [Movie]) -> [String] {
+        let key = versions.map(\.id).joined(separator: "\u{1F}")
+        if let known = versionLabelsCache[key], known.count == versions.count { return known }
         let names = categoryNames
-        return FilmVersions.badges(versions) { names[$0] }
+        let labels = FilmVersions.labels(versions, categoryName: { names[$0] }, words: Self.versionWords)
+        versionLabelsCache[key] = labels
+        return labels
     }
 
-    private var categoryNames: [String: String] {
+    /// The words of the chips in the app's language, read once.
+    static let versionWords = VersionWords.app()
+
+    var categoryNames: [String: String] {
         Dictionary(content.movieCategories.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     }
 
@@ -65,13 +80,13 @@ extension AppModel {
         }
     }
 
-    /// What a Continue Watching card says of its stream when its film has several versions: its badge ("4K DV", else
-    /// "Version" with its number); nil for a film of one version, a series or a channel. Continue Watching stays per stream.
+    /// What a Continue Watching card says of its stream when its film has several versions: its chip ("4K Dolby Vision",
+    /// "Standard"); nil for a film of one version, a series or a channel. Continue Watching stays per stream.
     func versionLabel(for entry: HistoryEntry) -> String? {
         guard entry.reference.type == .movie, let movie = index.moviesByID[entry.reference.itemID] else { return nil }
         let versions = visibleVersions(of: movie)
         guard versions.count > 1, let index = versions.firstIndex(where: { $0.id == movie.id }) else { return nil }
-        return VersionChips.label(versionBadges(versions)[index])
+        return versionLabels(versions)[index]
     }
 
     /// Whether a film is in My List: when one of its versions is.
@@ -119,4 +134,31 @@ extension AppModel {
         #endif
         return PictureSupport(hdr: hdr, dolbyVision: dolbyVision, uhd: max(size.width, size.height) >= 3840)
     }()
+}
+
+extension VersionWords {
+    /// The words of a film version's chip in the app's language (`bundle`: another language's, for tests).
+    static func app(bundle: Bundle = .main) -> VersionWords {
+        var words = VersionWords()
+        words.standard = String(localized: "Standard", bundle: bundle)
+        words.numbered = { number in String(localized: "Version \(number)", bundle: bundle) }
+        words.fullHD = String(localized: "Full HD", bundle: bundle)
+        words.hd = String(localized: "HD", bundle: bundle)
+        words.sd = String(localized: "SD", bundle: bundle)
+        words.multilingual = String(localized: "Multilingual", bundle: bundle)
+        words.french = String(localized: "French", bundle: bundle)
+        words.frenchFrance = String(localized: "French (France)", bundle: bundle)
+        words.frenchQuebec = String(localized: "French (Quebec)", bundle: bundle)
+        words.frenchInternational = String(localized: "French (international)", bundle: bundle)
+        words.original = String(localized: "Original language", bundle: bundle)
+        words.english = String(localized: "English", bundle: bundle)
+        words.spanish = String(localized: "Spanish", bundle: bundle)
+        words.german = String(localized: "German", bundle: bundle)
+        words.italian = String(localized: "Italian", bundle: bundle)
+        words.portuguese = String(localized: "Portuguese", bundle: bundle)
+        words.arabic = String(localized: "Arabic", bundle: bundle)
+        words.frenchSubtitles = String(localized: "Original, French subtitles", bundle: bundle)
+        words.subtitled = String(localized: "Original, subtitled", bundle: bundle)
+        return words
+    }
 }

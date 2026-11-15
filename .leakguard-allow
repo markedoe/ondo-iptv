@@ -13,3 +13,8 @@
 \bfe80::1c2b:3cff:fe4d:5e6f\b
 # The made-up host with a user part of the OpenSubtitles host tests (a session host the client must refuse).
 \bx@evil\.example\b
+# The made-up login of the title data redaction tests (RedactionTest, TitleDataTest, fixtures/title-data): what must be masked.
+\bs3cret-pass\b
+\bdemo:hunter22@panel\.example\.com\b
+\bpa%2Bss99\b
+\bvipname:pw-9871@list\.example\.com\b

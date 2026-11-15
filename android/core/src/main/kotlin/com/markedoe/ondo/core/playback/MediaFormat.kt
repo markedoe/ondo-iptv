@@ -11,12 +11,15 @@ object MediaFormat {
         "3gp", "divx", "asf", "rmvb",
     )
 
-    fun label(url: String): String? {
-        val extension = ProblemReport.container(url) ?: return null
-        return when (extension) {
+    fun label(url: String): String? = ofExtension(ProblemReport.container(url) ?: return null)
+
+    /** The format an extension names ("mkv", ".MKV"), as [label] says it; null for one it does not know. */
+    fun ofExtension(extension: String): String? {
+        val ext = extension.trim().trimStart('.').lowercase(java.util.Locale.ROOT)
+        return when (ext) {
             "m3u8" -> "HLS"
             "mpd" -> "DASH"
-            in containers -> extension.uppercase()
+            in containers -> ext.uppercase(java.util.Locale.ROOT)
             else -> null
         }
     }
