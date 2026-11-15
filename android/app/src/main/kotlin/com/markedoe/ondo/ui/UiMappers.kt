@@ -30,6 +30,7 @@ import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.Favorite
+import com.markedoe.ondo.data.FilmGroupsFile
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
@@ -171,14 +172,36 @@ object UiMappers {
     private val filmsLock = Any()
 
     /**
+     * Where a catalogue's grouping is kept between two starts ([FilmGroupsFile]; set by the application): the same
+     * catalogue read again is not grouped again, which reads every one of its titles before Home's rows can show. Null:
+     * nowhere, each catalogue is grouped (the tests).
+     */
+    @Volatile var filmGroups: FilmGroupsFile? = null
+
+    /** How many catalogues with movies were grouped by reading their titles, and how many from the groups kept (ColdStartTimingTest). */
+    internal val filmGroupings = java.util.concurrent.atomic.AtomicInteger()
+    internal val filmGroupingsRestored = java.util.concurrent.atomic.AtomicInteger()
+
+    /**
      * Built once per catalogue: the screens asking at once when a catalogue arrives wait for the one build (a TV's memory
-     * holds one grouping of a large catalogue, not one per screen).
+     * holds one grouping of a large catalogue, not one per screen). From the groups kept at an earlier start when they
+     * are this catalogue's ([filmGroups]); else grouped, and its groups kept.
      */
     fun films(content: PlaylistContent): FilmVersions {
         filmVersions?.let { (known, versions) -> if (known === content) return versions }
         synchronized(filmsLock) {
             filmVersions?.let { (known, versions) -> if (known === content) return versions }
-            return FilmVersions.of(content.movies).also { filmVersions = content to it }
+            val kept = filmGroups
+            val restored = kept?.read(content.movies)?.let { FilmVersions.restored(content.movies, it) }
+            val versions = if (restored != null) {
+                filmGroupingsRestored.incrementAndGet()
+                restored
+            } else {
+                if (content.movies.isNotEmpty()) filmGroupings.incrementAndGet()
+                FilmVersions.of(content.movies).also { kept?.write(content.movies, it.groups()) }
+            }
+            filmVersions = content to versions
+            return versions
         }
     }
 

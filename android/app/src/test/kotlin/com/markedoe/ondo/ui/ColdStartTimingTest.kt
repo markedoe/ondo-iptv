@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.InMemoryMetadataStore
 import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.MetadataTitles
@@ -20,6 +21,7 @@ import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.Favorite
+import com.markedoe.ondo.data.FilmGroupsFile
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LaunchMarks
 import com.markedoe.ondo.data.LibraryState
@@ -137,6 +139,7 @@ class ColdStartTimingTest {
         @AfterClass @JvmStatic
         fun dropTheCatalogue() {
             LaunchMarks.sink = null
+            UiMappers.filmGroups = null
             built = null
             UiMappers.forgetCatalogue()
         }
@@ -437,6 +440,14 @@ class ColdStartTimingTest {
         val content = built.content
         val versions = stage("3.films cold (UiMappers.films: FilmVersions.of)", setup = cold) { UiMappers.films(content) }
         say("3.films distinctFilms=${versions.distinct(content.movies).size}")
+        // The groups kept from an earlier start (FilmGroupsFile): the same catalogue is not grouped again.
+        val keptGroups = FilmGroupsFile(File(folder.newFolder("films"), FilmGroupsFile.FILE_NAME), 1)
+        stage("3.films groups kept (FilmGroupsFile.write)") { keptGroups.write(content.movies, versions.groups()) }
+        val restored = stage("3.films restored (FilmGroupsFile.read + FilmVersions.restored)") {
+            keptGroups.read(content.movies)?.let { FilmVersions.restored(content.movies, it) }
+        }
+        assertNotNull("the groups kept are read back", restored)
+        assertEquals("the same films restored", versions.groupCount, restored!!.groupCount)
         stage("3.movieAwards.prepare cold (real awards.json)", setup = { MovieAwards.forget() }) { MovieAwards.prepare(content, built.awards) }
         stage("3.keptPosterFacts (MetadataTitles + match of the kept titles)") { posterFacts(content, built.keptTitles) }
         stage("3.metadataTitles only (MetadataTitles of the catalogue)") { MetadataTitles(content.movies, content.series) }
@@ -560,12 +571,24 @@ class ColdStartTimingTest {
 
         val kept = File(directory, "home-$PLAYLIST_ID.json")
         assertTrue("no Home kept before the first start", !kept.exists())
+        // As the app: the grouping of the catalogue's films kept next to it, from one start to the next.
+        UiMappers.filmGroups = FilmGroupsFile(File(directory, FilmGroupsFile.FILE_NAME), 1)
+        val groupedBefore = UiMappers.filmGroupings.get()
         val first = coldOpen(store, metadata, awardsText, "7.vm", waitForKeptHome = kept)
         assertTrue("Home kept for the next start", kept.isFile)
         say("7.vm.keptHome bytes=${kept.length()}")
+        val groupedByFirst = UiMappers.filmGroupings.get() - groupedBefore
         UiMappers.forgetCatalogue()
         System.gc()
+        val restoredBefore = UiMappers.filmGroupingsRestored.get()
         val second = coldOpen(store, metadata, awardsText, "7.vm.kept", waitForKeptHome = null)
+        val groupedBySecond = UiMappers.filmGroupings.get() - groupedBefore - groupedByFirst
+        val restoredBySecond = UiMappers.filmGroupingsRestored.get() - restoredBefore
+        say("7.vm.films groupedAtTheFirstStart=$groupedByFirst groupedAtTheSecond=$groupedBySecond restoredAtTheSecond=$restoredBySecond")
+        // The catalogue's films are grouped by reading its titles once, at the first start; the next one takes the groups kept.
+        assertEquals("the first start groups the films once", 1, groupedByFirst)
+        assertEquals("the second start groups them again", 0, groupedBySecond)
+        assertEquals("the second start takes the groups kept", 1, restoredBySecond)
         UiMappers.forgetCatalogue()
         System.gc()
         // The main thread busy for a second from the start (the first screen being drawn): what the start reads from the
@@ -625,6 +648,8 @@ class ColdStartTimingTest {
         System.gc()
         val directory = folder.newFolder("add")
         val store = AppStore(directory)
+        // As the app: the films' grouping kept next to the catalogue once made.
+        UiMappers.filmGroups = FilmGroupsFile(File(directory, FilmGroupsFile.FILE_NAME), 1)
         val address = "http://panel.example.com/list.m3u"
         val list = playlistText()
         say("8.add list chars=${list.length} MB=%.1f".format(Locale.ROOT, list.length / 1_048_576.0))

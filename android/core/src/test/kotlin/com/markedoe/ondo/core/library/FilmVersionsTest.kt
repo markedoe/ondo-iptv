@@ -27,6 +27,47 @@ class FilmVersionsTest {
 
     private fun together(versions: FilmVersions, a: Movie, b: Movie) = versions.groupOf(a.id) == versions.groupOf(b.id)
 
+    /** A grouping kept between two starts (Android: `FilmGroupsFile`) gives the same versions again, without reading a title. */
+    @Test
+    fun aGroupingKeptIsRestoredAsItWas() {
+        val movies = listOf(
+            movie("FR - Dune", 2021, tmdb = 438631), movie("EN - Dune", 2021, tmdb = 438631), movie("Arrival", 2016),
+            movie("Dune 4K", 2021), movie("Arrival", 2016), movie("Heat", 1995, tmdb = 949), movie("Dune", 1984, tmdb = 841),
+        )
+        val grouped = FilmVersions.of(movies)
+        val kept = requireNotNull(grouped.groups())
+        assertEquals(movies.size, kept.size)
+        val restored = requireNotNull(FilmVersions.restored(movies, kept))
+        assertTrue(restored.isGrouped)
+        assertEquals(grouped.groupCount, restored.groupCount)
+        assertEquals(groups(grouped), groups(restored))
+        for (movie in movies) {
+            assertEquals(grouped.groupOf(movie), restored.groupOf(movie))
+            assertEquals(grouped.groupOf(movie.id), restored.groupOf(movie.id))
+            assertEquals(grouped.versions(movie), restored.versions(movie))
+            assertEquals(grouped.hasVersions(movie), restored.hasVersions(movie))
+        }
+        assertEquals(grouped.distinct(movies), restored.distinct(movies))
+        assertEquals(grouped.expand(setOf(movies[0].id)), restored.expand(setOf(movies[0].id)))
+        assertEquals(grouped.diagnostics.groups, restored.diagnostics.groups)
+        assertEquals(grouped.diagnostics.groupsWithVersions, restored.diagnostics.groupsWithVersions)
+        // What was kept is copied: changing it after does not change the versions restored.
+        kept[kept.size - 1] = 0
+        assertEquals(groups(grouped), groups(restored))
+    }
+
+    @Test
+    fun groupsThatAreNotTheseMoviesGroupingAreNotRestored() {
+        val movies = listOf(movie("Dune", 2021), movie("Dune", 2021), movie("Heat", 1995))
+        assertNull(FilmVersions.restored(movies.dropLast(1), intArrayOf(0, 0, 1)), "another count of movies")
+        assertNull(FilmVersions.restored(movies, intArrayOf(0, 2, 1)), "a group before the one before it")
+        assertNull(FilmVersions.restored(movies, intArrayOf(1, 0, 0)), "not numbered from the first stream")
+        assertNull(FilmVersions.restored(movies, intArrayOf(0, -1, 0)), "no such group")
+        assertNull(FilmVersions.restored(emptyList(), IntArray(0)), "no movie")
+        assertNull(FilmVersions.none(movies).groups(), "nothing grouped, nothing to keep")
+        assertEquals(listOf(listOf("Dune", "Dune"), listOf("Heat")), groups(requireNotNull(FilmVersions.restored(movies, intArrayOf(0, 0, 1)))))
+    }
+
     @Test
     fun aTmdbIdIsAPositiveNumberOnly() {
         assertEquals(603, FilmVersions.tmdbId("603"))

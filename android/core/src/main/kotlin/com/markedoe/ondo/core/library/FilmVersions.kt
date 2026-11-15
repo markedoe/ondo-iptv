@@ -153,6 +153,12 @@ class FilmVersions private constructor(
 
     val groupCount: Int get() = if (groupOf == null) movies.size else starts.size - 1
 
+    /**
+     * Each stream's group, in the catalogue's order (null when nothing is grouped): what [restored] makes these
+     * versions from again for the same catalogue, without reading a title.
+     */
+    fun groups(): IntArray? = groupOf?.copyOf()
+
     /** Each row of the catalogue with this stream id (a panel can list one stream twice, in two categories). */
     private inline fun forEachIndexOf(id: String, action: (Int) -> Unit) {
         if (table.isEmpty()) return
@@ -518,6 +524,15 @@ class FilmVersions private constructor(
                 if (number[c] < 0) number[c] = groups++
                 groupOf[i] = number[c]
             }
+            return assembled(movies, groupOf, groups, Diagnostics(n, groups, 0, groupedById, groupedByTitle, mismatches, ambiguous, withoutYears))
+        }
+
+        /**
+         * The versions of [movies] from each stream's group ([groupOf], [groups] of them, numbered in the order of their
+         * first stream); [diagnostics] with its count of groups of two streams or more filled in.
+         */
+        private fun assembled(movies: List<Movie>, groupOf: IntArray, groups: Int, diagnostics: Diagnostics): FilmVersions {
+            val n = movies.size
             val starts = IntArray(groups + 1)
             for (i in 0 until n) starts[groupOf[i] + 1]++
             for (g in 0 until groups) starts[g + 1] += starts[g]
@@ -526,10 +541,31 @@ class FilmVersions private constructor(
             for (i in 0 until n) members[fill[groupOf[i]]++] = i
             var withVersions = 0
             for (g in 0 until groups) if (starts[g + 1] - starts[g] > 1) withVersions++
-            return FilmVersions(
-                movies, groupOf, starts, members, idTable(movies),
-                Diagnostics(n, groups, withVersions, groupedById, groupedByTitle, mismatches, ambiguous, withoutYears),
-            )
+            return FilmVersions(movies, groupOf, starts, members, idTable(movies), diagnostics.copy(groupsWithVersions = withVersions))
+        }
+
+        /**
+         * Changes with the rules above: a grouping kept by an app with other rules ([groups]) is not [restored], it is
+         * made again.
+         */
+        const val RULES = 1
+
+        /**
+         * The versions of [movies] as [groups] has them ([FilmVersions.groups] of an earlier grouping of the same movies
+         * in the same order, kept between two starts of the app): no title is read, a large catalogue's grouping takes
+         * a moment. Null when [groups] is not a grouping of these movies (another count, groups not numbered in the
+         * order of their first stream): the caller groups them again ([of]). Only the counts of streams and groups of
+         * [Diagnostics] are known then.
+         */
+        fun restored(movies: List<Movie>, groups: IntArray): FilmVersions? {
+            val n = movies.size
+            if (n == 0 || groups.size != n) return null
+            var count = 0
+            for (group in groups) {
+                if (group < 0 || group > count) return null
+                if (group == count) count++
+            }
+            return assembled(movies, groups.copyOf(), count, Diagnostics(n, count))
         }
 
         private fun idTable(movies: List<Movie>): IntArray {

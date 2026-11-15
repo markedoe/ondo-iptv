@@ -72,13 +72,17 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   before the first screen is drawn (`MainActivity.onCreate` asks for it): none of it waits for the main thread. A
   playlist added or refreshed is shown first and written to the device after (tens of megabytes on a large panel);
   adding still ends once it is written. With nothing kept of TMDb (a first playlist, no token), the index of the
-  catalogue's titles is not built to match nothing. The app times these moments itself (`data/LaunchMarks.kt`:
+  catalogue's titles is not built to match nothing. The grouping of a catalogue's films into versions, which reads
+  every title, is made once: its groups are kept next to the saved catalogue (`data/FilmGroupsFile.kt`,
+  `film-groups.bin`: numbers only) and taken back at the next start for the very same movies, rules and build of the
+  app; anything else groups again. The app times these moments itself (`data/LaunchMarks.kt`:
   durations only, in the system log under `OndoLaunch`, from the process's start): `ready`, `catalogue read`,
   `home kept shown`, `home rows`, `home whole`, `movies tab`, `series tab`, and for a playlist added
   `add: downloaded and parsed`, `add: catalogue shown`, `add: catalogue saved`; the TV release check prints them
   ("timed by the app"). `ColdStartTimingTest` prints the same marks, opens once more with the main thread busy for a
   second (the saved catalogue's read must have started meanwhile) and adds a playlist of 100,000 movies to an empty app
-  (stage 8: its catalogue in the state before its file is written, no index of its titles built).
+  (stage 8: its catalogue in the state before its file is written, no index of its titles built); it also checks that
+  the second start takes the films' groups kept by the first.
 - **TV header** (`ui/tv/TvFocusHeader.kt`): on Home, the Movies and Series tabs and a category's, genre's, year's or
   award's titles, a header of fixed height pinned above the posters shows the one with the focus: its backdrop (else
   its poster, blurred) behind the whole page, edge to edge and down to the screen's bottom, the rows drawn over it

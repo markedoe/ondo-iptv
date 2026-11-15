@@ -26,6 +26,7 @@ import com.markedoe.ondo.core.net.OkHttpClientAdapter
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.AwardsDownload
 import com.markedoe.ondo.data.CrashLog
+import com.markedoe.ondo.data.FilmGroupsFile
 import com.markedoe.ondo.data.LaunchMarks
 import com.markedoe.ondo.data.LocalSync
 import com.markedoe.ondo.data.OndoRepository
@@ -65,6 +66,8 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             PlayingNow.recordRestart(crashFile, about, it, bootAt = now - SystemClock.elapsedRealtime(), bootCount = bootCount())
         }
         CrashLog.install(crashFile, about)
+        // A catalogue's films grouped once, not at each start: the groups are kept next to the saved catalogue.
+        com.markedoe.ondo.ui.UiMappers.filmGroups = FilmGroupsFile(filesDir.resolve("ondo").resolve(FilmGroupsFile.FILE_NAME), BuildConfig.VERSION_CODE)
         // The launch's moments in the system log, counted from the process's start (durations only).
         LaunchMarks.sink = { android.util.Log.i(LaunchMarks.TAG, it) }
         LaunchMarks.begin(agoMs = SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis())
