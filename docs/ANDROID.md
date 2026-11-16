@@ -61,7 +61,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   first card's title, facts and backdrop). A tab opened while the catalogue is read shows its titles to continue
   watching, each with its title for the header: the one Home kept, else its name and picture from the history; never
   an empty header over the rows. `ColdStartTimingTest`
-  (`./gradlew :app:coldStartTest`, a 100,000-movie catalogue, in a test JVM of its own with a 2 GB heap) times the cold
+  (`./gradlew :app:coldStartTest`, a 100,000-movie catalogue, in a test JVM of its own with a 2 GB heap, after the other
+  tests and never beside them) times the cold
   start: it always checks that Home kept is shown and that Home is worked out 3 times at most (once with Home kept); its time targets
   (the carousel within 300 ms with Home kept, 2.5 s without, the Movies tab and the Series tab each within 100 ms) hold
   in the night's run and are reported otherwise. `HomeSnapshotTest` checks what the snapshot is kept for,
