@@ -68,7 +68,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   ses infos et son image de fond). Un onglet ouvert pendant la lecture du catalogue montre ses titres à reprendre,
   chacun avec son titre pour l'en-tête : celui que l'Accueil a gardé, sinon son nom et son image tirés de l'historique ;
   jamais d'en-tête vide au-dessus des rangées. `ColdStartTimingTest` (`./gradlew :app:coldStartTest`, un catalogue de 100 000 films, dans
-  une JVM de test à part avec un tas de 2 Go) mesure le démarrage à froid : il vérifie toujours que l'Accueil gardé
+  une JVM de test à part avec un tas de 2 Go, après les autres tests et jamais à côté d'eux) mesure le démarrage à froid : il vérifie toujours que l'Accueil gardé
   s'affiche et que l'Accueil est calculé 3 fois au plus (une avec l'Accueil gardé) ; ses objectifs de temps (le carrousel en 300 ms
   avec l'Accueil gardé, 2,5 s sans, l'onglet Films et l'onglet Séries chacun en 100 ms) sont exigés dans le run de la
   nuit et rapportés sinon. `HomeSnapshotTest` vérifie pour quoi l'instantané est gardé, `TabsWorkedOutAheadTest` qu'un

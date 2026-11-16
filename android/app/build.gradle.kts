@@ -182,4 +182,7 @@ val coldStartTest by tasks.registering(Test::class) {
     maxHeapSize = "2g"
     // Its time targets hold in the night's run only (ONDO_COLDSTART_STRICT, android.yml); otherwise ten times them.
     systemProperty("ondo.coldStart.strict", System.getenv("ONDO_COLDSTART_STRICT") ?: "false")
+    // Timed alone: after the other tests, never beside their Robolectric JVMs. With the configuration cache Gradle runs
+    // a project's tasks side by side, and the unit tests' forks then took the cores the cold start is timed on.
+    mustRunAfter(tasks.withType<Test>().matching { it.name != "coldStartTest" })
 }
