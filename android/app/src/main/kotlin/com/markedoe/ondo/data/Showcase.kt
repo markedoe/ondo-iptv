@@ -129,9 +129,16 @@ class Showcase(
      * with the next one ([nextEpisode], from its seasons in [details]: an entry at the start, or the next one's own
      * when it was started); a series watched to its last episode leaves. Without its seasons yet, the finished entry
      * stands for the series (its Play plays the next episode).
+     *
+     * Never a title [watched] (the keys of `UiMappers.watchedKeys`, as its poster's check mark has it): a film once one of
+     * its versions is watched or marked so (another version left halfway included), a series once every episode known is,
+     * whatever order they were watched or marked in. Marked unwatched again, a version left halfway comes back with its
+     * resume point (marking a title watched never erases another version's progress).
      */
-    fun continueWatching(details: (String) -> SeriesDetails? = { null }): List<WatchEntry> =
+    fun continueWatching(watched: Set<String>, details: (String) -> SeriesDetails? = { null }): List<WatchEntry> =
         library.continueWatching(playlistId).mapNotNull { entry ->
+            val key = if (entry.kind == ItemKind.MOVIE) "m-${entry.itemId}" else "s-${entry.itemId}"
+            if (key in watched) return@mapNotNull null
             if (entry.kind != ItemKind.SERIES || !entry.isFinished) return@mapNotNull entry
             val series = seriesById[entry.itemId] ?: return@mapNotNull entry
             val seasons = details(series.id) ?: return@mapNotNull entry

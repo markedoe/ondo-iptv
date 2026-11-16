@@ -584,7 +584,8 @@ object UiMappers {
 
     fun home(state: OndoState, labels: Labels, now: Long, kept: Map<String, TitleMetadata> = emptyMap()): HomeUiState {
         // The carousel leaves out the titles watched, as their check mark has them (off the main thread: Home's flow).
-        val showcase = showcase(state, kept, watched = watchedKeys(state))
+        val watched = watchedKeys(state)
+        val showcase = showcase(state, kept, watched = watched)
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val hero = showcase.heroItems(now).map { item ->
@@ -613,7 +614,8 @@ object UiMappers {
             updatedAt = state.content.fetchedAt.takeIf { it > 0 && !state.content.isEmpty },
             now = now,
             hero = hero,
-            continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).map { resume(it, state, labels.versionWords) },
+            // Never a title watched, as the carousel ([Showcase.continueWatching]).
+            continueWatching = showcase.continueWatching(watched, nextEpisodeDetails(state)).map { resume(it, state, labels.versionWords) },
             myList = showcase.myList(),
             newMovies = showcase.newMovies(now),
             newSeries = showcase.newSeries(now),
@@ -702,7 +704,8 @@ object UiMappers {
         return VodUiState(
             title = title,
             categories = rows.map { it.category },
-            continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).filter { it.kind == kind }.map { entry ->
+            // Never a title watched, as Home's row ([watchedKeys]: off the main thread, as the tab is worked out).
+            continueWatching = showcase.continueWatching(watchedKeys(state), nextEpisodeDetails(state)).filter { it.kind == kind }.map { entry ->
                 resume(entry, state, versionWords).let { card -> if (card.showcase != null || !reading) card else card.copy(showcase = keptTitle(entry) ?: standIn(entry)) }
             },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },

@@ -39,7 +39,8 @@ object HomeSnapshots {
                 val entry = WatchEntry.ofKey(card.key)?.let { entries["${it.kind}|${it.itemId}"] } ?: return@mapNotNull null
                 HomeSnapshot.Resume(
                     card.key, card.title, card.subtitle, card.imageUrl, card.progress, card.minutesLeft, card.isSeries, card.hasPage,
-                    card.showcase?.let(::title), card.upNext, entryKey = entry.key, entryResumable = entry.isResumable,
+                    // With its film's versions: a version watched since takes the card away ([home]).
+                    card.showcase?.let { listed(it, state) }, card.upNext, entryKey = entry.key, entryResumable = entry.isResumable,
                 )
             },
             myList = home.myList.map { listed(it, state) },
@@ -79,14 +80,14 @@ object HomeSnapshots {
     /**
      * Home drawn from [snapshot], with [state]'s own playlist name, profile and progress flags, and its lists as the
      * profile's library has them now: a card to continue watching only while its entry is still its title's latest (its
-     * progress as it is now), a title of My List only while My List holds it, the carousel's My List mark as it is now.
+     * progress as it is now) and its title is not watched, a title of My List only while My List holds it, the carousel's My List mark as it is now.
      */
     fun home(snapshot: HomeSnapshot, state: OndoState, now: Long): HomeUiState {
         val playlistId = state.activePlaylistId.orEmpty()
         val library = state.library
         val entries = if (playlistId == snapshot.playlistId) library.continueWatching(playlistId).associateBy { "${it.kind}|${it.itemId}" } else emptyMap()
-        // The carousel never shows a title watched since it was kept (`UiMappers.watchedKeys`'s rule, from the history
-        // alone: the catalogue is not grouped for it).
+        // The carousel and Continue watching never show a title watched since it was kept (`UiMappers.watchedKeys`'s rule,
+        // from the history alone: the catalogue is not grouped for it).
         val watched = library.watchedTitles(playlistId)
         fun inMyList(title: HomeSnapshot.Title): Boolean = when {
             title.movie != null -> (title.ids + title.movie.id).any { library.isFavorite(playlistId, ItemKind.MOVIE, it) }
@@ -103,6 +104,9 @@ object HomeSnapshots {
                 val kept = WatchEntry.ofKey(card.key)?.takeIf { it.playlistId == playlistId } ?: return@mapNotNull null
                 val entry = entries["${kept.kind}|${kept.itemId}"] ?: return@mapNotNull null
                 if (entry.key != card.entryKey || entry.isResumable != card.entryResumable) return@mapNotNull null
+                // Never a title watched since it was kept (another version of its film, every episode of its series), as
+                // Continue watching once the catalogue is read ([com.markedoe.ondo.data.Showcase.continueWatching]).
+                if (card.showcase?.let { isWatched(it, watched, state) } == true) return@mapNotNull null
                 val same = entry.key == card.key && !card.upNext
                 ResumeItem(
                     card.key, card.title, card.subtitle, card.imageUrl,

@@ -132,7 +132,9 @@ Only movies, and only within one playlist (live channels and series are never gr
 - **Stored data stays per stream**: favourites, history, progress and sync are unchanged, and nothing new is synced.
   A film is watched (and left out by "Hide watched movies") when one of its versions is finished, and in My List when
   one of its versions is; adding a film from its card adds its version shown first, taking it out removes every
-  version kept. Continue Watching keeps each stream, with its version's chip. The version chosen last is kept on the
+  version kept. Continue Watching keeps each stream, with its version's chip, until the film is watched: one version
+  finished or marked watched takes the film out of it (and of the carousel), another version left halfway included;
+  marked unwatched again, that version comes back with its resume point. The version chosen last is kept on the
   device only.
 
 ## What a version is made of

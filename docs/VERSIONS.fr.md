@@ -148,7 +148,9 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   rien de nouveau n'est synchronisé. Un film est vu (et écarté par « Masquer les films déjà vus ») quand l'une de ses
   versions est terminée, et dans Ma liste quand l'une de ses versions y est ; ajouter un film depuis son affiche ajoute
   sa version montrée d'abord, le retirer retire toutes les versions gardées. « Continuer à regarder » garde chaque flux,
-  avec la pastille de sa version. La dernière version choisie reste sur l'appareil.
+  avec la pastille de sa version, jusqu'à ce que le film soit vu : une version terminée ou marquée comme vue retire le
+  film de cette rangée (et du carrousel), même si une autre version a été laissée en cours ; marqué à nouveau comme
+  non vu, cette version revient avec son point de reprise. La dernière version choisie reste sur l'appareil.
 
 ## De quoi une version est faite
 

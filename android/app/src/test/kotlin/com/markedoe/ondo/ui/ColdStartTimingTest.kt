@@ -484,12 +484,12 @@ class ColdStartTimingTest {
         stage("5.showcase.heroItems kept=empty (fresh showcase)", setup = { UiMappers.showcase(state) }) { it.heroItems(NOW) }
         stage("5.showcase.newMovies (fresh showcase)", setup = fresh) { it.newMovies(NOW) }
         stage("5.showcase.newSeries (fresh showcase)", setup = fresh) { it.newSeries(NOW) }
-        stage("5.showcase.continueWatching (fresh showcase)", setup = fresh) { it.continueWatching() }
+        stage("5.showcase.continueWatching (fresh showcase)", setup = fresh) { it.continueWatching(emptySet()) }
         stage("5.showcase.myList (fresh showcase)", setup = fresh) { it.myList() }
         stage("5.showcase.trending (fresh showcase)", setup = fresh) { it.trending() }
         stage("5.showcase.all of home's lists (one fresh showcase)", setup = fresh) { showcase ->
             showcase.heroItems(NOW)
-            showcase.continueWatching()
+            showcase.continueWatching(emptySet())
             showcase.myList()
             showcase.newMovies(NOW)
             showcase.newSeries(NOW)
