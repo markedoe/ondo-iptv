@@ -103,23 +103,23 @@ class ContinueWatchingLeavesWatchedEverySurfaceTest {
     private fun titles(cards: List<ResumeItem>): Set<String> = cards.mapNotNull { WatchEntry.ofKey(it.key)?.itemId }.toSet()
 
     /**
-     * Every surface that shows Continue watching, with the cards it draws for [state]. Home on a phone (`HomeScreen`) and
+     * Every surface that shows Continue watching, with the cards it draws for [shownState]. Home on a phone (`HomeScreen`) and
      * on a TV (`TvHomeScreen`, its movies and series rows) draw [HomeUiState.continueWatching]; the Movies and Series tabs
      * (`VodScreen`, phone and TV) theirs; Home kept for the next start (a snapshot made while the titles were in progress,
      * shown at launch before the catalogue is read) its own.
      */
-    private fun surfaces(state: OndoState): Map<String, Set<String>> {
-        val home = titles(UiMappers.home(state, labels, Fixtures.NOW, Fixtures.kept()).continueWatching)
+    private fun surfaces(shownState: OndoState): Map<String, Set<String>> {
+        val home = titles(UiMappers.home(shownState, labels, Fixtures.NOW, Fixtures.kept()).continueWatching)
         val kept = state(before).let { earlier ->
             requireNotNull(HomeSnapshots.of(UiMappers.home(earlier, labels, Fixtures.NOW, Fixtures.kept()), earlier, labels))
         }
         // At launch: the catalogue and the seasons not read yet.
-        val launching = Fixtures.state(state.library, PlaylistContent.EMPTY).copy(isRestoring = true)
+        val launching = Fixtures.state(shownState.library, PlaylistContent.EMPTY).copy(isRestoring = true)
         return mapOf(
             "phone Home (HomeScreen)" to home,
             "TV Home (TvHomeScreen)" to home,
-            "Movies tab (VodScreen)" to titles(UiMappers.vod(state, series = false, title = "").continueWatching),
-            "Series tab (VodScreen)" to titles(UiMappers.vod(state, series = true, title = "").continueWatching),
+            "Movies tab (VodScreen)" to titles(UiMappers.vod(shownState, series = false, title = "").continueWatching),
+            "Series tab (VodScreen)" to titles(UiMappers.vod(shownState, series = true, title = "").continueWatching),
             "saved Home at launch (HomeSnapshots)" to titles(HomeSnapshots.home(kept, launching, Fixtures.NOW).continueWatching),
         )
     }
