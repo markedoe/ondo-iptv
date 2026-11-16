@@ -170,15 +170,23 @@ extension AppModel {
     /// (`nextEpisode(in:details:)`, from its seasons once known: an entry at its start, or the next one's own when it was
     /// started), and leaves after its last episode. Its seasons not known yet, the finished entry stands for the series:
     /// `resume(_:)` plays the next one.
+    ///
+    /// Never a title watched (`watchedKeys`, as its poster's check mark and the carousel have it): a film once one of its
+    /// versions is watched or marked so (another version left halfway included), a series once every episode known is,
+    /// whatever order they were watched or marked in. Marked unwatched again, a version left halfway comes back with its
+    /// resume point (marking a title watched never erases another version's progress).
     func continueWatching() -> [HistoryEntry] {
         guard let playlist = activePlaylist else { return [] }
         // Categories only: a title already started stays here though its own name carries a hidden language.
         let excluded = excludedCategoryIDs
+        let watched = watchedKeys
         return library.continueWatching(playlistID: playlist.id).compactMap { entry -> HistoryEntry? in
             switch entry.reference.type {
             case .movie:
+                guard !watched.contains("m-" + entry.reference.itemID) else { return nil }
                 return index.moviesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } == true ? entry : nil
             case .series:
+                guard !watched.contains("s-" + entry.reference.itemID) else { return nil }
                 guard let series = index.seriesByID[entry.reference.itemID], !excluded.contains(series.categoryID) else { return nil }
                 guard entry.isFinished else { return entry }
                 return removedElsewhere(since: entry) ? nil : goingOn(from: entry, in: series)
