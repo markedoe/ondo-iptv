@@ -38,6 +38,8 @@ final class LocalHTTPServer: @unchecked Sendable {
     private let handler: @Sendable (Request) -> Response
     private let lock = NSLock()
     private var recorded: [Request] = []
+    /// The address once listening: a second `start()` returns it (a started listener reports no new state).
+    private var address: URL?
 
     init(handler: @escaping @Sendable (Request) -> Response) throws {
         let parameters = NWParameters.tcp
@@ -53,14 +55,16 @@ final class LocalHTTPServer: @unchecked Sendable {
         lock.withLock { recorded }
     }
 
-    /// Starts listening and returns the server's address, `http://127.0.0.1:<port>`.
+    /// Starts listening and returns the server's address, `http://127.0.0.1:<port>`; the same address when started already.
     func start() async throws -> URL {
+        if let address = lock.withLock({ address }) { return address }
         let once = Once()
         return try await withCheckedThrowingContinuation { continuation in
-            listener.stateUpdateHandler = { [listener] state in
+            listener.stateUpdateHandler = { [weak self, listener] state in
                 switch state {
                 case .ready:
                     guard let port = listener.port, let url = URL(string: "http://127.0.0.1:\(port.rawValue)") else { return }
+                    if let self { self.lock.withLock { self.address = url } }
                     once.run { continuation.resume(returning: url) }
                 case .failed(let error):
                     once.run { continuation.resume(throwing: error) }

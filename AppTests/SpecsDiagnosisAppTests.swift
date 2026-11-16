@@ -10,6 +10,8 @@ import IPTVCore
 @MainActor
 final class SpecsDiagnosisAppTests: XCTestCase {
     private var root: URL!
+    /// Shared by the launches of a test: the next launch reads the password the first one kept, as on a device.
+    private let secrets = InMemorySecretStore()
 
     override func setUp() async throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("OndoSpecsDiagnosis-\(UUID().uuidString)")
@@ -20,11 +22,12 @@ final class SpecsDiagnosisAppTests: XCTestCase {
         try? FileManager.default.removeItem(at: root)
     }
 
+    /// A launch; `adding` starts the panel and adds it (the first launch only: a listener is started once).
     private func model(_ panel: DiagnosisPanel, adding: Bool = true) async throws -> AppModel {
-        let base = try await panel.server.start()
-        let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        let model = AppModel(storageRoot: root, secrets: secrets, reminderScheduler: InMemoryReminderScheduler())
         await model.bootstrap()
         if adding {
+            let base = try await panel.server.start()
             try await model.addPlaylist(Playlist(
                 name: "Panel", source: .xtream(XtreamCredentials(server: base, username: "viewer", password: "secret")), autoRefreshHours: 0
             ))
@@ -52,9 +55,11 @@ final class SpecsDiagnosisAppTests: XCTestCase {
         archive.versions[dv.id] = .init(value: MediaDetails(title: "Copper Lake", plot: "A lake."), fetchedAt: .now)
         try first.cacheStore.save(archive, name: DetailsArchive.documentName(for: playlist.id), keepingPrevious: false)
 
+        // `bootstrap()` opens the playlist, which starts reading its document: waiting for that read is enough.
         let second = try await model(panel, adding: false)
-        await eventually { second.movieDetailsCache[plain.id] != nil && second.movieDetailsCache[dv.id] != nil }
         await second.storedDetailsLoaded()
+        XCTAssertEqual(second.activePlaylist?.id, playlist.id)
+        XCTAssertEqual(panel.asked, [], "nothing asked at launch")
         XCTAssertNotNil(second.movieDetailsCache[plain.id], "the kept details are read back")
         XCTAssertNil(second.movieDetailsCache[plain.id]?.streamSpecs)
         // The other version asked again and saved: the page's own old details stay on disk, never lost.
