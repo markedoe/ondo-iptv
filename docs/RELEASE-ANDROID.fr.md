@@ -107,14 +107,14 @@ comme une adresse de playlist : ce n'est pas une connexion à Ondo. Ne choisisse
 Play demande alors des identifiants qui fonctionnent (« Missing sign in details »). L'app n'embarque ni
 chaîne ni démo : les examinateurs la testent avec la playlist de test hébergée sur le site du projet,
 `https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u` ([site/review](../site/review/README.fr.md) : notre chaîne et notre série
-de test, des films de la Blender Foundation sous CC BY), donnée dans les instructions ci-dessous.
+de test, de courts extraits de films de la Blender Foundation sous CC BY), donnée dans les instructions ci-dessous.
 
 Si Play signale encore « Missing sign in details » (ses vérifications voient les champs Xtream), répondez **Yes**
 et ajoutez un jeu d'instructions : nom `Test playlist – no account`, utilisateur `No account needed`, mot de
 passe `No password needed`, et dans *Any other instructions* (en anglais pour l'examinateur) : « Ondo has no
 accounts and no payments, and ships no channels. On the welcome screen, tap Add a Playlist, choose M3U link and
 enter https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u : a test playlist hosted on the project's own site, with only content we
-have the rights to (a test channel and series we produce, and Blender Foundation films under Creative Commons).
+have the rights to (a test channel and series we produce, and short excerpts of Blender Foundation films under Creative Commons, which end early by design).
 Every screen of the app can be reviewed with it. The Xtream fields (server, username, password) are for the
 user's own provider: Ondo provides no server and no content. » Ne donnez jamais les identifiants d'un vrai
 abonnement IPTV.

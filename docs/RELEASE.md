@@ -134,7 +134,7 @@ ICP license).
 Contact information (name, phone, email), *Sign-in required*: no. The notes are uploaded by fastlane
 (`fastlane/metadata/review_information/notes.txt`): player with no content, how to test with the test playlist
 hosted on the project's site (`https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u`, see
-[site/review](../site/review/README.md): our own test channel and series, Blender Foundation films under CC BY;
+[site/review](../site/review/README.md): our own test channel and series, short excerpts of Blender Foundation films under CC BY;
 the apps ship no demo), why HTTP (`NSAllowsArbitraryLoads`), then each permission, background mode and entitlement:
 local network, notifications, background audio, AirPlay and Cast, the Mac sandbox (network client,
 user-selected files).

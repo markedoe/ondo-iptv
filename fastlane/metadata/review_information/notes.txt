@@ -2,7 +2,7 @@ Ondo is a player only: it does not host, provide or sell any content or IPTV sub
 
 HOW TO TEST WITHOUT AN IPTV SUBSCRIPTION
 1. Launch the app. On "Welcome to Ondo", tap "Add a Playlist", choose "M3U URL" and enter as Playlist URL: https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u
-This test playlist is hosted on the project's own website and holds only content we have the rights to: a test channel and test series we produce ourselves (test pattern and clock, with a TV guide), and Blender Foundation films under Creative Commons Attribution licences. Sources and licences: https://github.com/markedoe/ondo-iptv/blob/main/site/review/README.md
+This playlist is hosted on our own website and holds only content we have the rights to: a test channel and series we produce ourselves (test pattern, TV guide), and short excerpts of Blender Foundation films under Creative Commons Attribution licences, ending early by design. Sources and licences: https://github.com/markedoe/ondo-iptv/blob/main/site/review/README.md
 2. Open Live TV (tab bar on iPhone, sidebar on iPad and Mac) and choose "Ondo Test Channel", or open Movies or Series. On the Mac the player opens in its own window.
 
 TMDb works only with the user's own token. Online subtitle services need the user's own account or API key; the optional ones are off by default.
