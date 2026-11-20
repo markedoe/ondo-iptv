@@ -3,12 +3,13 @@
 
 App Review and the Google Play reviewer test Ondo with site/review/ondo-review.m3u, hosted on the project's site (the
 apps ship no playlist or channel). It must stay what the review notes say it is: our own test channel and series, and
-Blender Foundation films under Creative Commons, from the hosts listed in site/review/README.md.
+excerpts of Blender Foundation films under Creative Commons, all hosted on our site (site/review/README.md).
 
-1. Every address in the playlist (streams, logos, the guide) is https on an allowed host: our site, or one of the
-   hosts of the open films. A host not on the list is a third party whose rights nobody checked.
+1. Every address in the playlist (streams, logos, the guide) is https on our site. Any other host is a third party
+   whose rights nobody checked and that can stop answering (download.blender.org answered 403 to the catch-up).
 2. The playlist is an M3U with a guide (url-tvg) on our site, and each channel's tvg-id is in the guide
-   (site/review/guide.xml).
+   (site/review/guide.xml). In the repository, each address names a file under site/review/, and each HLS playlist
+   there names segments that exist.
 3. With --online URL (the release workflows, with the Pages address of main): the hosted playlist is fetched, the same
    rules apply to it, every address answers (HEAD, or a one-byte range when HEAD is refused), and the hosted guide
    covers the present hour.
@@ -25,23 +26,21 @@ import urllib.request
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-# Our site (GitHub Pages of the repository) and the hosts of the open films (site/review/README.md gives each source).
+# Our site (GitHub Pages of the repository): the only host the playlist may name.
 OWN_SITE = re.compile(r"^https://[\w-]+\.github\.io/ondo-iptv/review/")
-ALLOWED_HOSTS = {
-    "download.blender.org",          # Blender Foundation, the films' own downloads
-    "test-streams.mux.dev",          # Mux's public test streams (Big Buck Bunny)
-    "demo.unified-streaming.com",    # Unified Streaming's public demo streams (Tears of Steel)
-}
 ADDRESS = re.compile(r"""https?://[^\s"'<>,]+""")
 ATTRIBUTE = re.compile(r'([\w-]+)="([^"]*)"')
 TIMEOUT = 20
 
 
 def allowed(address: str) -> bool:
-    if OWN_SITE.match(address):
-        return True
-    parsed = urllib.parse.urlsplit(address)
-    return parsed.scheme == "https" and parsed.hostname in ALLOWED_HOSTS
+    return bool(OWN_SITE.match(address))
+
+
+def site_file(root: Path, address: str):
+    """The file under site/review/ that an address on our site serves."""
+    path = urllib.parse.unquote(urllib.parse.urlsplit(OWN_SITE.sub("", address)).path)
+    return root / "site/review" / path
 
 
 def addresses(playlist: str) -> list:
@@ -77,8 +76,8 @@ def check_playlist(playlist: str, where: str, problems: list) -> None:
         problems.append(f"{where}: no stream")
     for address in addresses(playlist):
         if not allowed(address):
-            problems.append(f"{where}: {address} is not on our site nor an allowed host of the open films "
-                            "(.github/scripts/check_review_playlist.py ALLOWED_HOSTS, site/review/README.md)")
+            problems.append(f"{where}: {address} is not on our site: host the file under site/review/ "
+                            "(site/review/README.md)")
     guide = guide_address(playlist)
     if not guide or not OWN_SITE.match(guide):
         problems.append(f"{where}: the guide (url-tvg) must be on our site, site/review/guide.xml")
@@ -166,6 +165,26 @@ def check_repository(root: Path, problems: list) -> None:
     for channel in channel_ids(playlist):
         if channel not in ids:
             problems.append(f"site/review/guide.xml has no channel {channel} (tvg-id in site/review/ondo-review.m3u)")
+    check_files(root, playlist, problems)
+
+
+def check_files(root: Path, playlist: str, problems: list) -> None:
+    """Each address on our site names a file of site/review/, and each HLS playlist there names segments that exist."""
+    for address in addresses(playlist):
+        if not allowed(address):
+            continue
+        path = site_file(root, address)
+        if not path.is_file():
+            problems.append(f"{address} names {path.relative_to(root)}, which is missing")
+            continue
+        if path.suffix == ".m3u8":
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    if "://" in line or line.startswith("/") or ".." in line.split("/"):
+                        problems.append(f"{path.relative_to(root)}: {line} must be a file next to it")
+                    elif not (path.parent / line).is_file():
+                        problems.append(f"{path.relative_to(root)}: segment {line} is missing")
 
 
 def main() -> int:

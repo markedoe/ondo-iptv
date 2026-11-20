@@ -1,5 +1,6 @@
-"""The review playlist check must reject a third-party host, a non-https address, a guide off our site and a channel
-missing from the guide, and accept the repository's playlist.
+"""The review playlist check must reject any host but our site (the films' former hosts included), a non-https
+address, a guide off our site, a channel missing from the guide and a file or segment missing from site/review, and
+accept the repository's playlist.
 
 Run: python3 -m unittest discover -s .github/scripts/tests
 """
@@ -23,14 +24,26 @@ PLAYLIST = (f'#EXTM3U url-tvg="{SITE}/guide.xml"\n'
             f'#EXTINF:-1 tvg-id="ondo.test" tvg-logo="{SITE}/live/logo.png" tvg-type="live",Ondo Test Channel\n'
             f'{SITE}/live/channel.m3u8\n'
             '#EXTINF:-1 tvg-type="movie",Elephants Dream (2006)\n'
-            'https://download.blender.org/ED/elephantsdream-720-h264-st-aac.mov\n')
+            f'{SITE}/films/elephants-dream.mov\n')
+# The hosts the open films were linked from until they answered 403 to the review checks.
+FORMER_HOSTS = (
+    "https://download.blender.org/ED/elephantsdream-720-h264-st-aac.mov",
+    "https://download.blender.org/durian/trailer/sintel_trailer-720p.mp4",
+    "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+)
 
 
 class ReviewPlaylistTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root)
-        (self.root / "site/review").mkdir(parents=True)
+        review = self.root / "site/review"
+        for folder in ("live", "films"):
+            (review / folder).mkdir(parents=True)
+        (review / "live/channel.m3u8").write_text("#EXTM3U\n#EXTINF:6.000,\nsegment00.ts\n", encoding="utf-8")
+        for name in ("live/segment00.ts", "live/logo.png", "films/elephants-dream.mov"):
+            (review / name).write_bytes(b"\0")
         self.write_guide(datetime.date(2026, 11, 2))
 
     def write_guide(self, today: datetime.date):
@@ -47,7 +60,7 @@ class ReviewPlaylistTests(unittest.TestCase):
         self.assertEqual(code, 1, output)
         self.assertIn(words, output)
 
-    def test_accepts_our_channel_and_an_open_film(self):
+    def test_accepts_our_channel_and_an_open_film_on_our_site(self):
         code, output = self.run_check(PLAYLIST)
         self.assertEqual(code, 0, output)
 
@@ -68,13 +81,40 @@ class ReviewPlaylistTests(unittest.TestCase):
         self.assertFails(PLAYLIST.replace(f"{SITE}/live/logo.png", "https://images.example.com/logo.png"),
                          "images.example.com/logo.png is not on our site")
 
-    def test_rejects_plain_http_even_on_an_allowed_host(self):
-        self.assertFails(PLAYLIST.replace("https://download.blender.org", "http://download.blender.org"),
-                         "http://download.blender.org/ED/elephantsdream-720-h264-st-aac.mov is not on our site")
+    def test_rejects_the_former_hosts_of_the_open_films(self):
+        for address in FORMER_HOSTS:
+            with self.subTest(address=address):
+                self.assertFails(PLAYLIST.replace(f"{SITE}/films/elephants-dream.mov", address),
+                                 f"{address} is not on our site")
+
+    def test_the_repository_names_only_our_site(self):
+        playlist = (REPOSITORY / "site/review/ondo-review.m3u").read_text(encoding="utf-8")
+        for address in check_review_playlist.addresses(playlist):
+            self.assertRegex(address, check_review_playlist.OWN_SITE)
+
+    def test_rejects_plain_http_even_on_our_site(self):
+        self.assertFails(PLAYLIST.replace(f"{SITE}/films/", "http://example.github.io/ondo-iptv/review/films/"),
+                         "http://example.github.io/ondo-iptv/review/films/elephants-dream.mov is not on our site")
 
     def test_rejects_a_look_alike_host(self):
-        self.assertFails(PLAYLIST.replace("download.blender.org", "download.blender.org.example.net"),
-                         "is not on our site")
+        for look_alike in ("https://example.github.io.example.net/ondo-iptv/review/films/",
+                           "https://example.github.io/other-repository/review/films/",
+                           "https://example.github.io/ondo-iptv/other/films/"):
+            with self.subTest(look_alike=look_alike):
+                self.assertFails(PLAYLIST.replace(f"{SITE}/films/", look_alike), "is not on our site")
+
+    def test_rejects_a_film_missing_from_the_site(self):
+        (self.root / "site/review/films/elephants-dream.mov").unlink()
+        self.assertFails(PLAYLIST, "names site/review/films/elephants-dream.mov, which is missing")
+
+    def test_rejects_a_missing_segment(self):
+        (self.root / "site/review/live/segment00.ts").unlink()
+        self.assertFails(PLAYLIST, "site/review/live/channel.m3u8: segment segment00.ts is missing")
+
+    def test_rejects_a_segment_elsewhere(self):
+        (self.root / "site/review/live/channel.m3u8").write_text(
+            "#EXTM3U\n#EXTINF:6.000,\nhttps://cdn.example.net/segment00.ts\n", encoding="utf-8")
+        self.assertFails(PLAYLIST, "https://cdn.example.net/segment00.ts must be a file next to it")
 
     def test_rejects_a_guide_off_our_site(self):
         self.assertFails(PLAYLIST.replace(f'url-tvg="{SITE}/guide.xml"', 'url-tvg=""'),
