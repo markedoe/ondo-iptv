@@ -135,6 +135,9 @@ import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.core.playback.TitleTracks
+import com.markedoe.ondo.core.playback.TrackDefaults
+import com.markedoe.ondo.core.playback.TrackMemory
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PlayingNow
@@ -291,6 +294,16 @@ class PlayerActivity : ComponentActivity() {
     /** The downloaded subtitle was just loaded or found for the title: chosen whatever the selection says. */
     private var sideLoadFresh = false
 
+    /**
+     * The track selection as last seen by the listener, and the last one the app set itself (the title's tracks, a
+     * downloaded subtitle): only a change from what was seen that the app did not make is the viewer's choice.
+     */
+    private var seenTracks: androidx.media3.common.TrackSelectionParameters? = null
+    private var appliedTracks: androidx.media3.common.TrackSelectionParameters? = null
+
+    /** The title's tracks were picked for this player's stream, once it listed them (`TrackMemory.plan`). */
+    private var tracksPlanned = false
+
     /** Up next is on screen, near the end of an episode; null otherwise, and once the viewer declined it. */
     private var upNext by mutableStateOf<UpNext?>(null)
     private var upNextDeclined = false
@@ -376,12 +389,17 @@ class PlayerActivity : ComponentActivity() {
         startOnlineSubtitles()
         val exoPlayer = buildPlayer()
         player = exoPlayer
-        // Opened again alone, before the settings were read: the viewer's languages as soon as they are.
+        // Opened again alone, before the settings were read: the title's and the profile's languages as soon as they are.
         val opening = repository.state.value
         if (!opening.isReady) {
             lifecycleScope.launch {
                 repository.state.first { it.isReady }
-                player?.let { it.trackSelectionParameters = TrackPreferences.parameters(it.trackSelectionParameters, trackLanguages(), deviceLanguages()) }
+                player?.let { opened ->
+                    val (memory, defaults) = titleTracks()
+                    applyTracks(opened, TrackPreferences.parameters(opened.trackSelectionParameters, memory, defaults, deviceLanguages()))
+                    tracksPlanned = false
+                    planTracks(opened, opened.currentTracks)
+                }
             }
         }
         // Opened again alone, before the catalogue was read (the settings may be read already): an episode's series, Up
@@ -611,8 +629,32 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    private fun trackLanguages(): TrackLanguages = repository.state.value.settings.let {
-        TrackLanguages(it.preferredAudioLanguage, it.preferredSubtitleLanguage, it.subtitlesOn)
+    /** What was chosen for the title playing, and the languages of the profile playback belongs to (docs/TRACKS.md). */
+    private fun titleTracks(): Pair<TitleTracks?, TrackDefaults?> = repository.titleTracks(request.trackKeys)
+
+    /** [parameters] set by the app, not by the viewer: nothing is learned from them. */
+    private fun applyTracks(exoPlayer: ExoPlayer, parameters: androidx.media3.common.TrackSelectionParameters) {
+        appliedTracks = parameters
+        seenTracks = parameters
+        exoPlayer.trackSelectionParameters = parameters
+    }
+
+    /** The title's sound and subtitles among the tracks [tracks] lists, once per stream: by language and kind, never by place. */
+    private fun planTracks(exoPlayer: ExoPlayer, tracks: androidx.media3.common.Tracks) {
+        if (tracksPlanned || tracks.groups.none { it.type == C.TRACK_TYPE_AUDIO || it.type == C.TRACK_TYPE_TEXT }) return
+        tracksPlanned = true
+        val (memory, defaults) = titleTracks()
+        if (memory == null && defaults == null) return
+        TrackPreferences.planned(exoPlayer.trackSelectionParameters, tracks, memory, defaults)?.let { applyTracks(exoPlayer, it) }
+    }
+
+    /** A change of the track selection: when the viewer made it, what they chose is kept for the title. */
+    private fun tracksChanged(parameters: androidx.media3.common.TrackSelectionParameters) {
+        val previous = seenTracks
+        seenTracks = parameters
+        if (parameters == appliedTracks || previous == null) return
+        val chosen = TrackPreferences.chosen(previous, parameters)
+        if (!chosen.isEmpty) repository.rememberTracks(request.trackKeys, chosen.audio, chosen.subtitles, chosen.subtitlesOff)
     }
 
     /** The device's languages, the first first ("fr", "en"). */
@@ -626,7 +668,8 @@ class PlayerActivity : ComponentActivity() {
         sideLoaded = hint?.let { services.chosen(titleKey) }
         sideLoadFresh = sideLoaded != null
         online = hint?.let {
-            val languages = com.markedoe.ondo.core.subtitles.SubtitleLanguages.defaults(repository.state.value.settings.preferredSubtitleLanguage, deviceLanguages())
+            val wanted = titleTracks().let { (memory, defaults) -> TrackMemory.subtitleLanguages(memory, defaults).firstOrNull() }
+            val languages = com.markedoe.ondo.core.subtitles.SubtitleLanguages.defaults(wanted, deviceLanguages())
             OnlineSubtitles(lifecycleScope, ServicesSource(services, titleKey), it, languages) { chosen -> loadSubtitle(titleKey, chosen) }
         }
     }
@@ -872,23 +915,29 @@ class PlayerActivity : ComponentActivity() {
                 val exoPlayer = this
                 // A film on a TV asks the screen for its own frame rate itself ([matchFrameRate]).
                 if (matchesFrameRate) setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
-                // The viewer's languages, before the listener: what the app sets is no choice of the viewer's.
-                trackSelectionParameters = TrackPreferences.parameters(trackSelectionParameters, trackLanguages(), deviceLanguages())
+                // The title's and the profile's languages, before the listener: what the app sets is no choice of the viewer's.
+                tracksPlanned = false
+                val (memory, defaults) = titleTracks()
+                trackSelectionParameters = TrackPreferences.parameters(trackSelectionParameters, memory, defaults, deviceLanguages())
+                seenTracks = trackSelectionParameters
+                appliedTracks = seenTracks
                 addListener(object : Player.Listener {
-                    // A choice in the panels (or in Media3's phone controls) is kept for the next streams.
+                    // A choice in the panels (or in Media3's phone controls) is kept for the title: its next episodes,
+                    // its other versions, a restart (docs/TRACKS.md).
                     override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) {
-                        val learned = TrackPreferences.learned(trackLanguages(), parameters)
-                        repository.setTrackLanguages(learned.audio, learned.subtitles, learned.subtitlesOn)
+                        if (player === exoPlayer) tracksChanged(parameters)
                     }
 
-                    // The subtitle downloaded for this title plays as soon as its track is there.
+                    // The title's tracks once the stream lists them; the subtitle downloaded for this title as soon as
+                    // its track is there.
                     override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
                         recordSpecs(tracks)
+                        if (player === exoPlayer) planTracks(exoPlayer, tracks)
                         if (!sideLoadPending) return
                         val parameters = SideLoadedSubtitle.select(exoPlayer.trackSelectionParameters, tracks) ?: return
                         sideLoadPending = false
                         sideLoadFresh = false
-                        exoPlayer.trackSelectionParameters = parameters
+                        applyTracks(exoPlayer, parameters)
                     }
 
                     override fun onPlayerError(error: PlaybackException) {

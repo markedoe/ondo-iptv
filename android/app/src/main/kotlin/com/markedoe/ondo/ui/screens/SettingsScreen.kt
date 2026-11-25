@@ -27,6 +27,8 @@ import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Reorder
+import androidx.compose.material.icons.rounded.RecordVoiceOver
+import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Speed
@@ -52,6 +54,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -67,6 +71,8 @@ import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.updatedAgoText
 import androidx.compose.runtime.produceState
 import com.markedoe.ondo.core.playback.PlaybackBuffer
+import com.markedoe.ondo.core.playback.TrackDefaults
+import com.markedoe.ondo.core.playback.TrackMemory
 import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.Tip
@@ -97,6 +103,8 @@ data class SettingsUiState(
     /** Buffer settings in seconds, 0 for automatic. */
     val liveBuffer: Int = 0,
     val vodBuffer: Int = 0,
+    /** The open profile's languages for a film or a series nothing was chosen for (docs/TRACKS.md). */
+    val trackDefaults: TrackDefaults = TrackDefaults(),
     /** Hours after which the playlist in use is downloaded again; 0: only when asked. */
     val autoRefreshHours: Int = 24,
     val version: String = "",
@@ -131,6 +139,9 @@ class SettingsActions(
     val onLiveBuffer: (Int) -> Unit = {},
     val onAutoRefresh: (Int) -> Unit = {},
     val onVodBuffer: (Int) -> Unit = {},
+    /** The open profile's sound language (null: automatic), and its subtitle language (null: off). */
+    val onAudioLanguage: (String?) -> Unit = {},
+    val onSubtitleLanguage: (String?) -> Unit = {},
     val onCategories: () -> Unit = {},
     /** Settings → Row order. */
     val onRowOrder: () -> Unit = {},
@@ -336,6 +347,20 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
             item { BufferRow(stringResource(R.string.buffer_live), state.liveBuffer, actions.onLiveBuffer, Modifier.testTag("liveBufferRow")) }
             item { BufferRow(stringResource(R.string.buffer_vod), state.vodBuffer, actions.onVodBuffer, Modifier.testTag("vodBufferRow")) }
             item {
+                LanguageRow(stringResource(R.string.audio_language), state.trackDefaults.audio, stringResource(R.string.automatic), actions.onAudioLanguage, Icons.Rounded.RecordVoiceOver, Modifier.testTag("audioLanguageRow"))
+            }
+            item {
+                LanguageRow(stringResource(R.string.subtitle_language), state.trackDefaults.subtitles, stringResource(R.string.off), actions.onSubtitleLanguage, Icons.Rounded.Subtitles, Modifier.testTag("subtitleLanguageRow"))
+            }
+            item {
+                Text(
+                    stringResource(R.string.track_languages_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            item {
                 Text(
                     stringResource(R.string.buffer_hint),
                     style = MaterialTheme.typography.bodySmall,
@@ -426,6 +451,42 @@ private fun BufferRow(label: String, seconds: Int, onChange: (Int) -> Unit, modi
         }
     }
 }
+
+/**
+ * A language of the open profile (Settings, Player): its current one, or [none] (Automatic, Off), and the choices in a
+ * menu, each language named in the app's language.
+ */
+@Composable
+private fun LanguageRow(label: String, language: String?, none: String, onChange: (String?) -> Unit, icon: ImageVector, modifier: Modifier = Modifier) {
+    var open by remember { mutableStateOf(false) }
+    val locale = LocalConfiguration.current.locales[0]
+    Box {
+        ListItem(
+            headlineContent = { Text(label) },
+            supportingContent = { Text(trackLanguageName(language, locale) ?: none) },
+            leadingContent = { Icon(icon, contentDescription = null) },
+            modifier = modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { open = true },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, offset = DpOffset(16.dp, 0.dp)) {
+            (listOf<String?>(null) + TrackMemory.CHOICES).forEach { choice ->
+                DropdownMenuItem(
+                    text = { Text(trackLanguageName(choice, locale) ?: none) },
+                    onClick = {
+                        open = false
+                        onChange(choice)
+                    },
+                    trailingIcon = { if (choice == language) Icon(Icons.Rounded.Check, contentDescription = null) },
+                    modifier = Modifier.semantics { selected = choice == language }.testTag("languageChoice-${choice ?: "none"}"),
+                )
+            }
+        }
+    }
+}
+
+/** A language code's name in [locale] ("French", "Français"), capitalised; null for none. */
+internal fun trackLanguageName(code: String?, locale: java.util.Locale): String? =
+    code?.let { java.util.Locale.forLanguageTag(it).getDisplayLanguage(locale).ifEmpty { it } }
+        ?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
 
 /** How often the playlist in use is downloaded again on its own. */
 @Composable

@@ -638,6 +638,24 @@ class ScreensTest {
         assertEquals(listOf(false), turned)
     }
 
+    /** Settings, Player: the profile's sound and subtitle languages, Automatic and Off first, each language by its name. */
+    @Test
+    fun settingsChooseTheProfilesLanguages() {
+        val audio = mutableListOf<String?>()
+        val subtitles = mutableListOf<String?>()
+        val state = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
+            .copy(trackDefaults = com.markedoe.ondo.core.playback.TrackDefaults(subtitles = "en"))
+        compose.setContent { OndoTheme { SettingsScreen(state, SettingsActions(onAudioLanguage = { audio += it }, onSubtitleLanguage = { subtitles += it })) } }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("audioLanguageRow"))
+        compose.onNodeWithTag("audioLanguageRow").assert(hasText("Automatic")).performClick()
+        compose.onNodeWithTag("languageChoice-fr").assert(hasText("French")).performClick()
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("subtitleLanguageRow"))
+        compose.onNodeWithTag("subtitleLanguageRow").assert(hasText("English")).performClick()
+        compose.onNodeWithTag("languageChoice-none").assert(hasText("Off")).performClick()
+        assertEquals(listOf<String?>("fr"), audio)
+        assertEquals(listOf<String?>(null), subtitles)
+    }
+
     /** Settings, Player: a buffer length is chosen from its menu, automatic first. */
     @Test
     fun settingsChooseTheBufferForMoviesAndSeries() {

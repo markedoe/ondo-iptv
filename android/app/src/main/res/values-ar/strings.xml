@@ -401,6 +401,9 @@
     <string name="buffer_live">التخزين المؤقت للبث المباشر</string>
     <string name="buffer_vod">التخزين المؤقت للأفلام والمسلسلات</string>
     <string name="buffer_hint">يغطي التخزين المؤقت الأطول انقطاعات أطول من المزوّد، لكن الصورة تستغرق عندها وقتًا أطول للظهور وللعودة بعد القفز. يتكيّف الخيار التلقائي مع المزوّد.</string>
+    <string name="audio_language">لغة الصوت</string>
+    <string name="subtitle_language">لغة الترجمة</string>
+    <string name="track_languages_hint">لهذا الملف الشخصي، عندما لم يُختر شيء بعد لفيلم أو مسلسل. يُحتفظ بالصوت والترجمة اللذين تختارهما في المشغّل لذلك الفيلم أو المسلسل: تبدأ حلقاته التالية بهما.</string>
     <plurals name="buffer_seconds">
         <item quantity="zero">%d ثانية</item>
         <item quantity="one">ثانية واحدة</item>

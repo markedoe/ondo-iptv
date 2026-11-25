@@ -787,7 +787,8 @@ class OndoViewModel(
     fun playMovie(id: String, fromStart: Boolean = false) {
         val current = state.value
         current.content.movies.firstOrNull { it.id == id }?.let { movie ->
-            emit(repository.playRequest(movie, fromStart, UiMappers.fallbacks(current, movie, UiMappers.filmsIfReady(current))))
+            val films = UiMappers.filmsIfReady(current)
+            emit(repository.playRequest(movie, fromStart, UiMappers.fallbacks(current, movie, films), films.versions(movie)))
         }
     }
 
@@ -1021,6 +1022,12 @@ class OndoViewModel(
     fun setPosterSort(sort: PosterSort) = repository.setPosterSort(sort)
     fun setLiveBuffer(seconds: Int) = repository.setLiveBuffer(seconds)
     fun setVodBuffer(seconds: Int) = repository.setVodBuffer(seconds)
+
+    /** The open profile's sound language for a title nothing was chosen for; null: automatic (docs/TRACKS.md). */
+    fun setAudioLanguage(code: String?) = repository.setTrackDefaults(repository.trackDefaults().copy(audio = code))
+
+    /** The open profile's subtitle language for a title nothing was chosen for; null: off. */
+    fun setSubtitleLanguage(code: String?) = repository.setTrackDefaults(repository.trackDefaults().copy(subtitles = code))
 
     fun setAutoRefreshHours(hours: Int) = repository.setAutoRefreshHours(hours)
     fun setCategoryHidden(categoryId: String, hidden: Boolean) = repository.setCategoryHidden(categoryId, hidden)

@@ -69,7 +69,10 @@ data class AppSettings(
     val syncDeviceId: String = "",
     /** The latest time sync dated or received here (`SyncClock.last`, docs/SYNC.md "Clocks"); 0 before any. */
     val syncClock: Long = 0,
-    /** The viewer's sound and subtitle languages, learned from their choices in the player (see `TrackPreferences`). */
+    /**
+     * The sound and subtitle languages the player learned from the viewer's choices before each profile had its own and
+     * each title kept its tracks (docs/TRACKS.md): read only as the main profile's languages until it sets some.
+     */
     val preferredAudioLanguage: String? = null,
     val preferredSubtitleLanguage: String? = null,
     val subtitlesOn: Boolean = false,

@@ -7,6 +7,8 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +43,9 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tv
@@ -65,6 +69,7 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -92,6 +97,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.screens.autoRefreshLabel
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.core.playback.PlaybackBuffer
+import com.markedoe.ondo.core.playback.TrackMemory
 import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.ui.components.tmdbStatus
@@ -101,6 +107,7 @@ import com.markedoe.ondo.ui.screens.playlistDetail
 import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsUiState
 import com.markedoe.ondo.ui.screens.bufferLabel
+import com.markedoe.ondo.ui.screens.trackLanguageName
 import com.markedoe.ondo.ui.screens.label
 import com.markedoe.ondo.ui.screens.lastCrashTitle
 import com.markedoe.ondo.ui.screens.message
@@ -130,6 +137,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
     var deleting by remember { mutableStateOf<PlaylistSummary?>(null) }
     var choosingBuffer by remember { mutableStateOf<BufferChoice?>(null) }
     var choosingRefresh by remember { mutableStateOf(false) }
+    var choosingLanguage by remember { mutableStateOf<LanguageChoice?>(null) }
     val requesters = remember { TvSettingsSection.entries.associateWith { FocusRequester() } }
     // Where the focus goes back once a dialog closes: the button that opened it, or Add a Playlist after a deletion.
     val returns = remember { HashMap<String, FocusRequester>() }
@@ -139,7 +147,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
     // gives the focus back to the row that opened another page ([FocusMemory.restore]): that row takes it.
     val paneFirst = remember(section) { FocusRequester() }
     val restoring = LocalFocusMemory.current?.restore != null
-    FocusBackAfter(open = deleting != null || choosingBuffer != null || choosingRefresh, requester = returnTo(focusBack))
+    FocusBackAfter(open = deleting != null || choosingBuffer != null || choosingRefresh || choosingLanguage != null, requester = returnTo(focusBack))
     Row(
         Modifier
             .fillMaxSize()
@@ -184,7 +192,11 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
             when (section) {
                 TvSettingsSection.PLAYLISTS -> playlists(state, actions, paneFirst, ::returnTo, onDelete = { deleting = it; focusBack = "delete:${it.id}" }, onAutoRefresh = { choosingRefresh = true; focusBack = "autoRefresh" })
                 TvSettingsSection.SYNC -> sync(state, actions, paneFirst)
-                TvSettingsSection.PLAYER -> player(state, actions, paneFirst, ::returnTo, onChoose = { choosingBuffer = it; focusBack = it.key })
+                TvSettingsSection.PLAYER -> player(
+                    state, actions, paneFirst, ::returnTo,
+                    onChoose = { choosingBuffer = it; focusBack = it.key },
+                    onChooseLanguage = { choosingLanguage = it; focusBack = it.key },
+                )
                 TvSettingsSection.CATALOGUE -> catalogue(state, actions, paneFirst, canChooseAppLanguage)
                 TvSettingsSection.TIPS -> tips(state, actions, paneFirst)
                 TvSettingsSection.ABOUT -> about(state, actions, paneFirst)
@@ -217,6 +229,20 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
             onDismiss = { choosingRefresh = false },
         )
     }
+    choosingLanguage?.let { choice ->
+        val locale = LocalConfiguration.current.locales[0]
+        TvChoiceDialog(
+            title = choice.title,
+            options = listOf<String?>(null) + TrackMemory.CHOICES,
+            selected = choice.language,
+            label = { trackLanguageName(it, locale) ?: choice.none },
+            onPick = {
+                choice.onChange(it)
+                choosingLanguage = null
+            },
+            onDismiss = { choosingLanguage = null },
+        )
+    }
     choosingBuffer?.let { choice ->
         TvChoiceDialog(
             title = choice.title,
@@ -233,6 +259,9 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
 }
 
 private class BufferChoice(val key: String, val title: String, val seconds: Int, val onChange: (Int) -> Unit)
+
+/** A language of the open profile being chosen: [none] names the choice of no language (Automatic, Off). */
+private class LanguageChoice(val key: String, val title: String, val none: String, val language: String?, val onChange: (String?) -> Unit)
 
 /** A part of Settings: shown on the right as soon as the remote is on it. */
 @Composable
@@ -453,7 +482,14 @@ private fun PlaylistCard(playlist: PlaylistSummary, refreshing: Boolean, actions
 
 private val DangerRed = Color(0xFFB3261E)
 
-private fun LazyListScope.player(state: SettingsUiState, actions: SettingsActions, first: FocusRequester, returnTo: (String) -> FocusRequester, onChoose: (BufferChoice) -> Unit) {
+private fun LazyListScope.player(
+    state: SettingsUiState,
+    actions: SettingsActions,
+    first: FocusRequester,
+    returnTo: (String) -> FocusRequester,
+    onChoose: (BufferChoice) -> Unit,
+    onChooseLanguage: (LanguageChoice) -> Unit,
+) {
     title(R.string.player, hint = R.string.buffer_hint)
     item(key = "liveBuffer") {
         val title = stringResource(R.string.buffer_live)
@@ -462,6 +498,27 @@ private fun LazyListScope.player(state: SettingsUiState, actions: SettingsAction
     item(key = "vodBuffer") {
         val title = stringResource(R.string.buffer_vod)
         SettingRow(title, Icons.Rounded.Speed, subtitle = bufferLabel(state.vodBuffer), modifier = Modifier.focusRequester(returnTo("vodBuffer")).focusMemory("settings-vodBuffer").testTag("vodBufferRow"), onClick = { onChoose(BufferChoice("vodBuffer", title, state.vodBuffer, actions.onVodBuffer)) })
+    }
+    // This profile's languages for a film or a series nothing was chosen for (docs/TRACKS.md).
+    item(key = "audioLanguage") {
+        val title = stringResource(R.string.audio_language)
+        val none = stringResource(R.string.automatic)
+        val locale = LocalConfiguration.current.locales[0]
+        SettingRow(
+            title, Icons.Rounded.RecordVoiceOver, subtitle = trackLanguageName(state.trackDefaults.audio, locale) ?: none,
+            modifier = Modifier.focusRequester(returnTo("audioLanguage")).focusMemory("settings-audioLanguage").testTag("audioLanguageRow"),
+            onClick = { onChooseLanguage(LanguageChoice("audioLanguage", title, none, state.trackDefaults.audio, actions.onAudioLanguage)) },
+        )
+    }
+    item(key = "subtitleLanguage") {
+        val title = stringResource(R.string.subtitle_language)
+        val none = stringResource(R.string.off)
+        val locale = LocalConfiguration.current.locales[0]
+        SettingRow(
+            title, Icons.Rounded.Subtitles, subtitle = trackLanguageName(state.trackDefaults.subtitles, locale) ?: none,
+            modifier = Modifier.focusRequester(returnTo("subtitleLanguage")).focusMemory("settings-subtitleLanguage").testTag("subtitleLanguageRow"),
+            onClick = { onChooseLanguage(LanguageChoice("subtitleLanguage", title, none, state.trackDefaults.subtitles, actions.onSubtitleLanguage)) },
+        )
     }
 }
 
@@ -763,7 +820,8 @@ fun <T> TvChoiceDialog(title: String, options: List<T>, selected: T, label: @Com
             colors = SurfaceDefaults.colors(containerColor = OndoColors.SurfaceHigh, contentColor = Color.White),
             modifier = Modifier.widthIn(min = 360.dp, max = 480.dp).newOkPressesOnly().testTag("choiceDialog"),
         ) {
-            Column(Modifier.padding(vertical = 24.dp, horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // Scrolls with the remote when the choices are more than the screen holds (the languages).
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 24.dp, horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, bottom = 12.dp))
                 FocusOnOpen(current)
                 options.forEach { option ->

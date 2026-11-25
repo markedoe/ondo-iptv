@@ -17,6 +17,12 @@ data class PlayRequest(
     val startPositionMs: Long = 0,
     /** Identifies the history entry to update with the progress. */
     val progressKey: String? = null,
+    /**
+     * The keys the sound and subtitles chosen for this title are kept under (`TrackMemory`, docs/TRACKS.md): the film's
+     * or the series', first, where a choice is kept; then the film's other versions, whose choices it takes. Empty for a
+     * channel or a replay.
+     */
+    val trackKeys: List<String> = emptyList(),
     /** What is played, in the problem report's words ("film", "episode", "catch-up"…, see `ProblemReport.kind`). */
     val kind: String? = null,
     /**

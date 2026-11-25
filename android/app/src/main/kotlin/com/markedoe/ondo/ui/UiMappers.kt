@@ -1237,6 +1237,8 @@ object UiMappers {
         prepareAhead = state.settings.prepareAhead,
         liveBuffer = state.settings.liveBuffer,
         vodBuffer = state.settings.vodBuffer,
+        trackDefaults = com.markedoe.ondo.data.profileTrackDefaults(state.library, state.activeProfile.isMain, state.settings)
+            ?: com.markedoe.ondo.core.playback.TrackDefaults(),
         autoRefreshHours = state.settings.autoRefreshHours,
         version = version,
         isRefreshing = state.isLoading,

@@ -362,6 +362,9 @@
     <string name="buffer_live">Mémoire tampon du direct</string>
     <string name="buffer_vod">Mémoire tampon des films et séries</string>
     <string name="buffer_hint">Une mémoire tampon plus longue couvre des coupures plus longues du fournisseur ; l’image met alors plus de temps à apparaître et à revenir après un saut. Automatique s’adapte au fournisseur.</string>
+    <string name="audio_language">Langue audio</string>
+    <string name="subtitle_language">Langue des sous-titres</string>
+    <string name="track_languages_hint">Pour ce profil, quand rien n’a encore été choisi pour un film ou une série. Le son et les sous-titres choisis dans le lecteur sont gardés pour ce film ou cette série : ses épisodes suivants démarrent avec.</string>
     <plurals name="buffer_seconds">
         <item quantity="one">%d seconde</item>
         <item quantity="many">%d de secondes</item>

@@ -133,7 +133,7 @@ class TvPlayerControlsTest {
         // Off as Media3's own controls do it: no subtitle track chosen, only the forced ones may still show.
         assertTrue(off.overrides.values.none { it.type == C.TRACK_TYPE_TEXT })
         assertEquals(TrackPreferences.SUBTITLES_OFF, off.ignoredTextSelectionFlags)
-        assertFalse(TrackPreferences.learned(TrackLanguages(subtitles = "en", subtitlesOn = true), off).subtitlesOn)
+        assertTrue("Off is kept for the title", TrackPreferences.chosen(english, off).subtitlesOff)
     }
 
     @Test

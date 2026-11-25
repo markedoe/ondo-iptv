@@ -48,6 +48,10 @@ import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.core.playback.TitleTracks
+import com.markedoe.ondo.core.playback.TrackDefaults
+import com.markedoe.ondo.core.playback.TrackMemory
+import com.markedoe.ondo.core.playback.TrackPick
 import com.markedoe.ondo.core.sync.SentSnapshot
 import com.markedoe.ondo.core.sync.SyncRows
 import com.markedoe.ondo.core.sync.SyncSelection
@@ -1354,11 +1358,36 @@ class OndoRepository(
         load(playlist)
     }
 
-    /** The languages the viewer chose in the player, for the next streams. Nothing written when nothing changed. */
-    fun setTrackLanguages(audio: String?, subtitles: String?, subtitlesOn: Boolean) {
-        val settings = _state.value.settings
-        if (settings.preferredAudioLanguage == audio && settings.preferredSubtitleLanguage == subtitles && settings.subtitlesOn == subtitlesOn) return
-        updateSettings { it.copy(preferredAudioLanguage = audio, preferredSubtitleLanguage = subtitles, subtitlesOn = subtitlesOn) }
+    /**
+     * What a stream of the title known by [keys] starts with (docs/TRACKS.md): the sound and subtitles chosen for it, and
+     * the languages of the profile playback belongs to. Main thread; a look through at most [TrackMemory.MAX_TITLES].
+     */
+    fun titleTracks(keys: List<String>): Pair<TitleTracks?, TrackDefaults?> {
+        val library = playbackLibrary()
+        val state = _state.value
+        val id = playbackProfileId ?: state.activeProfile.id
+        val isMain = state.profiles.firstOrNull { it.id == id }?.isMain ?: state.activeProfile.isMain
+        return TrackMemory.remembered(library.titleTracks, keys) to profileTrackDefaults(library, isMain, state.settings)
+    }
+
+    /** The open profile's languages for a title nothing was chosen for (Settings, Player). */
+    fun trackDefaults(): TrackDefaults = _state.value.let { profileTrackDefaults(it.library, it.activeProfile.isMain, it.settings) } ?: TrackDefaults()
+
+    /**
+     * A choice made in the player while the title known by [keys] plays (its own key first): [audio] a sound track,
+     * [subtitles] a subtitle track, [subtitlesOff] subtitles turned off. Kept in the library of the profile playback
+     * belongs to, on this device.
+     */
+    fun rememberTracks(keys: List<String>, audio: TrackPick? = null, subtitles: TrackPick? = null, subtitlesOff: Boolean = false) {
+        if (keys.isEmpty() || (audio == null && subtitles == null && !subtitlesOff)) return
+        val at = now()
+        updatePlaybackLibrary { it.copy(titleTracks = TrackMemory.remember(it.titleTracks, keys, audio, subtitles, subtitlesOff, at)) }
+    }
+
+    /** The open profile's languages for a title nothing was chosen for (Settings, Player). */
+    fun setTrackDefaults(defaults: TrackDefaults) {
+        if (_state.value.library.trackDefaults == defaults) return
+        updateLibrary { it.copy(trackDefaults = defaults) }
     }
 
     fun setVideoScale(scale: VideoScale) {
@@ -2040,14 +2069,17 @@ class OndoRepository(
      * [movie]'s request; the addresses of [fallbacks] (the other streams of its chip, which play the same thing) follow
      * its own, so the player tries them before showing an error. The progress stays [movie]'s.
      */
-    fun playRequest(movie: Movie, fromStart: Boolean = false, fallbacks: List<Movie> = emptyList()): PlayRequest? {
+    fun playRequest(movie: Movie, fromStart: Boolean = false, fallbacks: List<Movie> = emptyList(), versions: List<Movie> = emptyList()): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
         val factory = PlaybackFactory(playlist.toCorePlaylist())
         val own = factory.item(movie)
         val item = if (fallbacks.isEmpty()) own else own.copy(urls = (own.urls + fallbacks.flatMap { factory.item(it).urls }).distinct())
         val entry = WatchEntry(playlist.id, ItemKind.MOVIE, movie.id, null, movie.name, movie.year?.toString(), movie.posterUrl, lastWatchedAt = 0)
         val tmdbId = movie.tmdbId ?: _state.value.movieDetails[movie.id]?.tmdbId?.toIntOrNull()
-        return start(item, entry, fromStart).copy(subtitleSearch = SubtitleSearchHint.of(movie.name, movie.year, tmdbId = tmdbId))
+        val request = start(item, entry, fromStart)
+        // The tracks chosen for another version of the film are this one's too (docs/TRACKS.md).
+        val versionKeys = versions.map { "${playlist.id}|${ItemKind.MOVIE.name}|${it.id}" }
+        return request.copy(subtitleSearch = SubtitleSearchHint.of(movie.name, movie.year, tmdbId = tmdbId), trackKeys = (request.trackKeys + versionKeys).distinct())
     }
 
     fun playRequest(series: Series, episode: Episode): PlayRequest? {
@@ -2179,6 +2211,7 @@ class OndoRepository(
             artworkUrl = item.artworkUrl,
             startPositionMs = resumeAt,
             progressKey = entry.key,
+            trackKeys = listOfNotNull(TrackMemory.titleKey(entry.key)),
             kind = ProblemReport.kind(item),
             liveBuffer = _state.value.settings.liveBuffer,
             vodBuffer = _state.value.settings.vodBuffer,

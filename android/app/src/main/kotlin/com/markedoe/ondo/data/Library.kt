@@ -1,11 +1,26 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.model.HistoryEntry
+import com.markedoe.ondo.core.playback.TitleTracks
+import com.markedoe.ondo.core.playback.TrackDefaults
 import com.markedoe.ondo.core.sync.SyncHidden
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncRows
 import com.markedoe.ondo.core.sync.SyncSelection
 import kotlinx.serialization.Serializable
+
+/**
+ * A profile's languages for a title nothing was chosen for: those it set; for the main profile, before it set any, those
+ * the player learned on this device before each profile had its own (the settings' `preferredAudioLanguage`…,
+ * docs/TRACKS.md "Migration"). Null: none.
+ */
+fun profileTrackDefaults(library: LibraryState, isMain: Boolean, settings: AppSettings): TrackDefaults? {
+    library.trackDefaults?.let { return it }
+    if (!isMain) return null
+    val subtitles = settings.preferredSubtitleLanguage?.takeIf { settings.subtitlesOn }
+    if (settings.preferredAudioLanguage == null && subtitles == null) return null
+    return TrackDefaults(settings.preferredAudioLanguage, subtitles)
+}
 
 /** Kind of item in the library; a person (actor or director) is kept by name, whatever the playlist. */
 @Serializable
@@ -153,6 +168,13 @@ data class LibraryState(
      * last set; sync carries them (docs/SYNC.md, "Selections").
      */
     val selections: List<SyncSelection> = emptyList(),
+    /**
+     * The sound and subtitles chosen in the player for each film and series, the latest first (`TrackMemory`,
+     * docs/TRACKS.md): this profile's, on this device only (sync does not carry them).
+     */
+    val titleTracks: List<TitleTracks> = emptyList(),
+    /** This profile's languages for a title nothing was chosen for (Settings, Player); null: never set. */
+    val trackDefaults: TrackDefaults? = null,
 ) {
     /** The selection of [id]; null when there is none. */
     fun selection(id: String): SyncSelection? = selections.firstOrNull { it.id == id }

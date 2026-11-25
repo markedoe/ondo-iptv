@@ -349,6 +349,9 @@
     <string name="buffer_live">लाइव टीवी के लिए बफ़र</string>
     <string name="buffer_vod">फ़िल्मों और सीरीज़ के लिए बफ़र</string>
     <string name="buffer_hint">लंबा बफ़र प्रदाता की लंबी रुकावटों को संभाल लेता है; लेकिन तब तस्वीर दिखने और आगे-पीछे जाने के बाद लौटने में ज़्यादा समय लगता है। स्वचालित विकल्प प्रदाता के अनुसार ढल जाता है।</string>
+    <string name="audio_language">ऑडियो भाषा</string>
+    <string name="subtitle_language">सबटाइटल भाषा</string>
+    <string name="track_languages_hint">इस प्रोफ़ाइल के लिए, जब किसी फ़िल्म या सीरीज़ के लिए अभी कुछ नहीं चुना गया हो। प्लेयर में चुनी गई आवाज़ और सबटाइटल उस फ़िल्म या सीरीज़ के लिए रखे जाते हैं: उसके अगले एपिसोड उन्हीं से शुरू होते हैं।</string>
     <plurals name="buffer_seconds">
         <item quantity="one">%d सेकंड</item>
         <item quantity="other">%d सेकंड</item>

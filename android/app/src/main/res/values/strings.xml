@@ -360,6 +360,9 @@
     <string name="buffer_live">Buffer for live TV</string>
     <string name="buffer_vod">Buffer for movies &amp; series</string>
     <string name="buffer_hint">A longer buffer covers longer interruptions from the provider; the picture then takes longer to appear and to come back after a skip. Automatic adapts to the provider.</string>
+    <string name="audio_language">Audio language</string>
+    <string name="subtitle_language">Subtitle language</string>
+    <string name="track_languages_hint">For this profile, when nothing was chosen yet for a film or a series. The sound and subtitles you choose in the player are kept for that film or series: its next episodes start with them.</string>
     <plurals name="buffer_seconds">
         <item quantity="one">%d second</item>
         <item quantity="other">%d seconds</item>

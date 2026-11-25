@@ -6,6 +6,8 @@ import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
+import com.markedoe.ondo.core.playback.TrackDefaults
+import com.markedoe.ondo.core.playback.TrackPick
 import com.markedoe.ondo.core.subtitles.CredentialCheck
 import com.markedoe.ondo.core.subtitles.SubtitleService
 import com.markedoe.ondo.core.sync.SyncKey
@@ -215,6 +217,23 @@ class ProfileScopeTest {
             name = "lists",
             set = { repository.createCollection("Weekend") },
             read = { library.collections.firstOrNull { it.name == "Weekend" }?.id },
+        ),
+        // The languages and the tracks chosen per title stay on the device, as the playback settings (docs/TRACKS.md).
+        PerProfile(
+            name = "default languages",
+            syncs = false,
+            set = { repository.setTrackDefaults(TrackDefaults(audio = "fr", subtitles = "en")) },
+            read = { library.trackDefaults },
+        ),
+        PerProfile(
+            name = "tracks chosen for a title",
+            syncs = false,
+            set = {
+                val request = requireNotNull(repository.playRequest(state.content.movies.first()))
+                repository.rememberTracks(request.trackKeys, audio = TrackPick(language = "fr"))
+                repository.playbackEnded()
+            },
+            read = { library.titleTracks.firstOrNull()?.let { it.key to it.audio?.language } },
         ),
         PerProfile(
             name = "selections",

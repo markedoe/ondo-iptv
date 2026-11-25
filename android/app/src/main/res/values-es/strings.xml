@@ -362,6 +362,9 @@
     <string name="buffer_live">Búfer de la TV en directo</string>
     <string name="buffer_vod">Búfer de películas y series</string>
     <string name="buffer_hint">Un búfer más largo cubre cortes más largos del proveedor; la imagen tarda entonces más en aparecer y en volver tras un salto. Automático se adapta al proveedor.</string>
+    <string name="audio_language">Idioma del audio</string>
+    <string name="subtitle_language">Idioma de los subtítulos</string>
+    <string name="track_languages_hint">Para este perfil, cuando aún no se eligió nada para una película o una serie. El audio y los subtítulos que eliges en el reproductor se guardan para esa película o serie: sus siguientes episodios empiezan con ellos.</string>
     <plurals name="buffer_seconds">
         <item quantity="one">%d segundo</item>
         <item quantity="many">%d de segundos</item>

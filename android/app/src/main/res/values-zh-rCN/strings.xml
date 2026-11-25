@@ -336,6 +336,9 @@
     <string name="buffer_live">直播缓冲</string>
     <string name="buffer_vod">电影和剧集缓冲</string>
     <string name="buffer_hint">缓冲越长，越能应对服务商较长的中断，但画面出现以及跳转后恢复所需的时间也会更长。“自动”会根据服务商进行调整。</string>
+    <string name="audio_language">音频语言</string>
+    <string name="subtitle_language">字幕语言</string>
+    <string name="track_languages_hint">用于此个人资料中尚未选择过的电影或剧集。你在播放器中选择的音轨和字幕会为该电影或剧集保留：之后的剧集会沿用。</string>
     <plurals name="buffer_seconds">
         <item quantity="other">%d 秒</item>
     </plurals>
