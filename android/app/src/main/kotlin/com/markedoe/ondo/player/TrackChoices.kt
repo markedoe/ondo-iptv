@@ -145,11 +145,15 @@ object TrackChoices {
     fun choose(player: Player, type: Int, choice: TrackChoice?) {
         val changed = choice == null || !choice.selected
         player.trackSelectionParameters = select(player.trackSelectionParameters, type, choice)
-        if (type == C.TRACK_TYPE_AUDIO && changed && player.isCurrentMediaItemSeekable && !player.isCurrentMediaItemLive) {
-            // Half a second back, never the very position: Media3 skips a seek to where it already is (a paused film
-            // above all), and the renderers would not start again.
-            player.seekTo((player.currentPosition - SEEK_BACK_MS).coerceAtLeast(0))
-        }
+        if (type == C.TRACK_TYPE_AUDIO && changed) resync(player)
+    }
+
+    /** After another audio track: the seek that brings the pictures back with the sound (see [choose]). */
+    fun resync(player: Player) {
+        if (!player.isCurrentMediaItemSeekable || player.isCurrentMediaItemLive) return
+        // Half a second back, never the very position: Media3 skips a seek to where it already is (a paused film
+        // above all), and the renderers would not start again.
+        player.seekTo((player.currentPosition - SEEK_BACK_MS).coerceAtLeast(0))
     }
 
     /** "English" (or "Portuguese (Brazil)") in [locale]'s words; null for no language or one Java does not know. */

@@ -100,6 +100,32 @@ final class TitleTracksTests: XCTestCase {
         XCTAssertEqual(model.titleTracks(for: episode("e2")).memory?.audio?.language, "fr")
     }
 
+    /// Saved with the profile's library: a new start of the app finds them.
+    func testTheTracksChosenAreThereAfterARestart() async throws {
+        let model = try await makeModel()
+        model.setTrackDefaults(TrackDefaults(audio: "es"))
+        model.rememberTracks(for: episode("e1"), audio: TrackPick(language: "fr"), subtitlesOff: true)
+        model.flush()
+        let again = try await makeModel()
+        XCTAssertEqual(again.titleTracks(for: episode("e2")).memory?.audio?.language, "fr")
+        XCTAssertEqual(again.titleTracks(for: episode("e2")).memory?.subtitlesOff, true)
+        XCTAssertEqual(again.trackDefaults, TrackDefaults(audio: "es"))
+    }
+
+    /// A choice made after another profile opened during playback goes to the profile the playback began in.
+    func testAChoiceGoesToTheProfileThePlaybackBelongsTo() async throws {
+        let model = try await makeModel()
+        let main = model.activeProfile
+        model.recordStart(episode("e1"))
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: "star.fill", isKids: false, pin: nil)
+        model.switchProfile(to: guest)
+        model.rememberTracks(for: episode("e1"), audio: TrackPick(language: "fr"))
+        XCTAssertEqual(model.titleTracks(for: episode("e1")).memory?.audio?.language, "fr", "read from the playback's profile")
+        XCTAssertTrue(model.library.titleTracks.isEmpty, "not the guest's")
+        model.switchProfile(to: main)
+        XCTAssertEqual(model.library.titleTracks.first?.audio?.language, "fr")
+    }
+
     /// The languages the player learned on the device before each profile had its own are the main profile's, until it sets some.
     func testTheLanguagesLearnedBeforeAreTheMainProfilesOnly() async throws {
         var settings = AppSettings()

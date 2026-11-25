@@ -18,8 +18,8 @@ extension PlayerController {
         noteAttempt(url, engine: "the system player (MKV remuxed)")
         let headers = item.headers.dictionary
         // The title's sound language, then the profile's, then the device's (docs/TRACKS.md).
-        let wanted = titleTracks?(item)
-        let languages = TrackMemory.audioLanguages(memory: wanted?.memory, defaults: wanted?.defaults) + Locale.preferredLanguages
+        let wanted = wantedTracks(for: item)
+        let languages = TrackMemory.audioLanguages(memory: wanted.memory, defaults: wanted.defaults) + Locale.preferredLanguages
         let opened = clock
         remuxTask = Task { [weak self] in
             do {

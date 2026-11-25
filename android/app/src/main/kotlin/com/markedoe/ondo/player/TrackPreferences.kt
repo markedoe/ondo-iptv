@@ -67,11 +67,19 @@ object TrackPreferences {
      * [base] asking Media3 for the title's sound language, then the profile's, then the device's ([deviceLanguages]):
      * before the track the provider flags as default, which is often English. Subtitles in the title's or the profile's
      * language when it has one; else none but the forced ones (foreign dialogue). A language the stream lacks shows no
-     * subtitles rather than the track flagged default.
+     * subtitles rather than the track flagged default. [keepOverrides]: the tracks already chosen on this player (by the
+     * viewer, or a downloaded subtitle) stay chosen.
      */
-    fun parameters(base: TrackSelectionParameters, memory: TitleTracks?, defaults: TrackDefaults?, deviceLanguages: List<String>): TrackSelectionParameters {
+    fun parameters(
+        base: TrackSelectionParameters,
+        memory: TitleTracks?,
+        defaults: TrackDefaults?,
+        deviceLanguages: List<String>,
+        keepOverrides: Boolean = false,
+    ): TrackSelectionParameters {
         val builder = base.buildUpon()
-            .clearOverrides()
+        if (!keepOverrides) builder.clearOverrides()
+        builder
             .setPreferredAudioLanguages(*(TrackMemory.audioLanguages(memory, defaults) + deviceLanguages).distinct().toTypedArray())
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             .setIgnoredTextSelectionFlags(SUBTITLES_OFF)
@@ -102,12 +110,15 @@ object TrackPreferences {
         codec = format.sampleMimeType,
     )
 
+    /** The selection [planned] makes, and whether it changes the sound (then followed by a seek, as a choice in a panel). */
+    class Planned(val parameters: TrackSelectionParameters, val audioChanged: Boolean)
+
     /**
      * [parameters] with the tracks the title's memory and the profile's languages call for among [tracks]
      * (`TrackMemory.plan`: by language and kind, never by place), once the stream has listed them; null when Media3's
-     * own selection is already them.
+     * own selection is already them (its pick in the language is kept whatever its codec).
      */
-    fun planned(parameters: TrackSelectionParameters, tracks: Tracks, memory: TitleTracks?, defaults: TrackDefaults?): TrackSelectionParameters? {
+    fun planned(parameters: TrackSelectionParameters, tracks: Tracks, memory: TitleTracks?, defaults: TrackDefaults?): Planned? {
         val audio = playable(tracks, C.TRACK_TYPE_AUDIO)
         val text = playable(tracks, C.TRACK_TYPE_TEXT)
         if (audio.isEmpty() && text.isEmpty()) return null
@@ -116,9 +127,11 @@ object TrackPreferences {
         val plan = TrackMemory.plan(audio.map { it.track }, text.map { it.track }, memory, defaults, currentAudio, currentText)
         val builder = parameters.buildUpon()
         var changed = false
+        var audioChanged = false
         plan.audio?.takeIf { it != currentAudio }?.let { audio[it] }?.let { chosen ->
             builder.setOverrideForType(TrackSelectionOverride(chosen.group.mediaTrackGroup, chosen.index))
             changed = true
+            audioChanged = true
         }
         plan.subtitles?.takeIf { it != currentText }?.let { text[it] }?.let { chosen ->
             builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
@@ -126,7 +139,7 @@ object TrackPreferences {
                 .setIgnoredTextSelectionFlags(0)
             changed = true
         }
-        return if (changed) builder.build() else null
+        return if (changed) Planned(builder.build(), audioChanged) else null
     }
 
     /**

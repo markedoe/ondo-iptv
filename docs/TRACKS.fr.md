@@ -24,7 +24,8 @@ dans IPTVCore (`Packages/IPTVCore/Sources/IPTVCore/Playback/TrackMemory.swift`) 
 Un choix est gardé par ce qui distingue la piste, jamais par sa place dans le flux (deux épisodes rangent leurs pistes
 dans des ordres différents) : sa langue (`fre`, `fra`, `fr-CA` et `fr` n'en font qu'une), si elle est forcée (seulement
 les dialogues étrangers) ou pour les sourds et malentendants, son nom quand elle n'a pas de langue, et le codec du son.
-La piste du flux qui lui ressemble le plus est choisie ; celle en cours quand elle convient autant.
+La piste du flux qui lui ressemble le plus est choisie ; celle que le lecteur joue déjà dans cette langue est gardée si
+elle n'en diffère que par le codec, pour qu'un démarrage ne change pas le son pour rien.
 
 ## Quand elle manque
 
@@ -49,13 +50,20 @@ n'en hérite pas. Ils restent sur l'appareil : la synchronisation ne transporte 
 ## Les lecteurs
 
 - **Android** (téléphone et TV, Media3) : les langues sont demandées au sélecteur de pistes de Media3 avant l'ouverture
-  du flux, puis, une fois les pistes du flux connues, elles sont choisies selon les règles ci-dessus. Un changement de
+  du flux, puis, une fois les pistes du flux connues, elles sont choisies selon les règles ci-dessus, une fois par film ou épisode
+  ouvert (pas de nouveau à une nouvelle tentative ou à une autre adresse) et jamais à la place d'une piste choisie
+  entre-temps ; un changement de son est suivi du même petit saut qu'un choix dans le panneau Audio, qui garde l'image
+  avec le son. Des réglages lus tard gardent les pistes déjà choisies. Un changement de
   sélection fait par la personne (panneaux Audio et Sous-titres, commandes de Media3 sur téléphone) est gardé ; un
   changement fait par l'application (ces pistes, un sous-titre téléchargé) ne l'est pas.
 - **Apple** (iPhone, iPad, Mac) : la sélection de médias du lecteur du système, une fois ses options lues ; les films MKV
   remuxés sur iPhone et iPad demandent les mêmes langues de son ; VLC (films MKV sur Mac, flux que le lecteur du système
   refuse) choisit parmi les pistes qu'il liste d'après la langue que donnent leurs noms (`Track 1 - [French]`), sinon
-  d'après le nom. Un fichier de sous-titres chargé n'est pas un choix de la personne.
+  d'après le nom, les sous-titres une fois listés (souvent après le son) ; il ne désactive ses propres sous-titres
+  (les forcés) que pour le Désactivé du titre ou du profil. Ce que la personne a choisi sur un élément reste quand le
+  flux est rouvert (nouvelle tentative, reconnexion), une chaîne comprise. Un fichier de sous-titres chargé n'est pas un
+  choix de la personne. Un choix est gardé dans la bibliothèque du profil où la lecture a commencé, même si un autre
+  profil a été ouvert entre-temps.
 
 ## Migration
 

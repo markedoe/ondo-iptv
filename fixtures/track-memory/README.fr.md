@@ -16,6 +16,8 @@ Le son et les sous-titres gardés pour chaque film et chaque série, et les lang
   désactivés) ;
 - `remember` : ce qui est retenu, les clés du titre en cours (les versions d'un film : celle qui joue d'abord), un choix
   (`audio`, `subtitles`, `subtitlesOff`) et ce qui est retenu ensuite, le plus récent d'abord ;
+- `subtitlesOff` : ce qui est retenu et les réglages par défaut du profil, et si un flux sans les sous-titres voulus
+  n'en montre aucun (le Désactivé du titre ou du profil) plutôt que le choix du lecteur (les forcés) ;
 - `titleKeys` : une clé de progression et la clé sous laquelle les pistes d'un titre sont gardées (celle de la série
   pour tous ses épisodes ; aucune pour une chaîne).
 

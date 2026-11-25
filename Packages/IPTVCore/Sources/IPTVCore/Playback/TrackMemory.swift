@@ -129,8 +129,9 @@ public enum TrackMemory {
     }
 
     /// The track of `tracks` that `pick` stands for: one in its language (by its label when it named none), the most
-    /// like it (forced, hearing impaired, label, codec); `current` when it is as like it as any. Nil when none has its
-    /// language.
+    /// like it (forced, hearing impaired, label, codec); `current` when it is as like it as any but for the codec (the
+    /// player's own pick in the language is not changed for a codec alone: no switch at every start). Nil when none has
+    /// its language.
     public static func match(_ tracks: [StreamTrack], _ pick: TrackPick, current: Int? = nil) -> Int? {
         let language = Self.language(pick.language)
         let label = pick.label?.trimmingCharacters(in: .whitespaces).nilIfEmpty
@@ -153,7 +154,7 @@ public enum TrackMemory {
             return score
         }
         let best = candidates.map(score).max() ?? 0
-        if let current, candidates.contains(current), score(current) == best { return current }
+        if let current, candidates.contains(current), score(current) >= best - 1 { return current }
         return candidates.first { score($0) == best } ?? first
     }
 
@@ -172,6 +173,12 @@ public enum TrackMemory {
                 ?? defaults?.subtitles.flatMap { match(subtitles, TrackPick(language: $0), current: currentSubtitles) }
         }
         return TrackPlan(audio: sound, subtitles: text)
+    }
+
+    /// Whether a stream for which the plan found no subtitle track is to show none, as the title or the profile says
+    /// (subtitles turned off for the title, or the profile's Off); else the player's own pick stays (forced ones).
+    public static func subtitlesOff(memory: TitleTracks?, defaults: TrackDefaults?) -> Bool {
+        memory?.subtitlesOff == true || (defaults != nil && defaults?.subtitles == nil)
     }
 
     /// The sound languages to ask a player for before it lists the tracks, the first preferred.
@@ -218,15 +225,26 @@ public enum TrackMemory {
         let word = name[name.index(after: open)..<close].trimmingCharacters(in: .whitespaces)
         guard !word.isEmpty else { return nil }
         if word.count <= 3, let code = language(word), code.count == 2 { return code }
-        for locale in [Locale(identifier: "en"), Locale.current] {
+        return languageNames[word.lowercased()]
+    }
+
+    /// Reads the language names VLC's track names are compared with (`vlcLanguage`), once: call it off the main actor
+    /// before VLC lists its tracks, so that the first stream does not wait for it.
+    public static func prepareVLCNames() {
+        _ = languageNames.count
+    }
+
+    /// Each two-letter language's name in English and in the device's language, lower case, to its code: built once, at
+    /// its first use (a static constant), never per track.
+    static let languageNames: [String: String] = {
+        var names: [String: String] = [:]
+        for locale in [Locale.current, Locale(identifier: "en")] {
             for code in Locale.LanguageCode.isoLanguageCodes.map(\.identifier) where code.count == 2 {
-                if let shown = locale.localizedString(forLanguageCode: code), shown.caseInsensitiveCompare(word) == .orderedSame {
-                    return code
-                }
+                if let shown = locale.localizedString(forLanguageCode: code) { names[shown.lowercased()] = code }
             }
         }
-        return nil
-    }
+        return names
+    }()
 
     private static func distinct(_ codes: [String]) -> [String] {
         var seen = Set<String>()

@@ -47,7 +47,15 @@ final class TrackMemoryTests: XCTestCase {
         var expected: [TitleTracks]
     }
 
+    private struct Off: Decodable {
+        var name: String
+        var memory: TitleTracks?
+        var defaults: TrackDefaults?
+        var expected: Bool
+    }
+
     private struct Cases: Decodable {
+        var subtitlesOff: [Off]
         var languages: [[String?]]
         var matches: [Match]
         var plans: [Plan]
@@ -91,6 +99,21 @@ final class TrackMemoryTests: XCTestCase {
         }
     }
 
+    func testSubtitlesAreOffOnlyWhenTheTitleOrTheProfileSaysSo() throws {
+        for test in try cases().subtitlesOff {
+            XCTAssertEqual(TrackMemory.subtitlesOff(memory: test.memory, defaults: test.defaults), test.expected, test.name)
+        }
+    }
+
+    /// VLC's language names are read once: many track names cost no more than a few look-ups.
+    func testVLCLanguageNamesAreReadOnce() {
+        TrackMemory.prepareVLCNames()
+        let start = Date()
+        for n in 0..<2_000 { _ = TrackMemory.vlcLanguage("Track \(n) - [French]") }
+        XCTAssertLessThan(Date().timeIntervalSince(start), 0.5)
+        XCTAssertEqual(TrackMemory.vlcLanguage("Track 3 - [french]"), "fr")
+    }
+
     func testASeriesKeepsItsTracksForAllItsEpisodes() throws {
         // Apple keys a title by `MediaReference.itemKey`, which is the series' for an episode: the rule is the Kotlin one.
         for pair in try cases().titleKeys {
@@ -124,6 +147,26 @@ final class TrackMemoryTests: XCTestCase {
         XCTAssertEqual(memories.count, TrackMemory.maxTitles)
         XCTAssertEqual(memories.first?.key, "p|movie|\(TrackMemory.maxTitles)")
         XCTAssertNil(TrackMemory.remembered(memories, keys: ["p|movie|0"]))
+    }
+
+    /// Kept in the library document and read back; a library from before reads with none, and a damaged entry loses no other.
+    func testTheLibraryKeepsTheTracksAndReadsOlderDocuments() throws {
+        var library = UserLibrary()
+        library.titleTracks = [TitleTracks(key: "p|series|s1", audio: TrackPick(language: "fr"),
+                                           subtitles: TrackPick(language: "en", forced: true), at: 3)]
+        library.trackDefaults = TrackDefaults(audio: "es")
+        let read = try JSONDecoder().decode(UserLibrary.self, from: JSONEncoder().encode(library))
+        XCTAssertEqual(read.titleTracks, library.titleTracks)
+        XCTAssertEqual(read.trackDefaults, library.trackDefaults)
+
+        let old = try JSONDecoder().decode(UserLibrary.self, from: Data(#"{"hiddenCategoryKeys":["p|c"]}"#.utf8))
+        XCTAssertEqual(old.hiddenCategoryKeys, ["p|c"])
+        XCTAssertEqual(old.titleTracks, [])
+        XCTAssertNil(old.trackDefaults)
+
+        let damaged = try JSONDecoder().decode(UserLibrary.self, from: Data(
+            #"{"titleTracks":[{"audio":{"language":"fr"}},{"key":"p|movie|m1","subtitlesOff":true}]}"#.utf8))
+        XCTAssertEqual(damaged.titleTracks, [TitleTracks(key: "p|movie|m1", subtitlesOff: true)])
     }
 
     func testVLCTrackNamesGiveTheirLanguage() {

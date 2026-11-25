@@ -19,16 +19,24 @@ extension AppModel {
         return keys
     }
 
-    /// What `item` starts with: the tracks chosen for its title, and the open profile's languages.
+    /// What `item` starts with: the tracks chosen for its title, and the languages of the profile its playback belongs to
+    /// (the one open as it started, `playbackProfiles`).
     func titleTracks(for item: PlaybackItem) -> (memory: TitleTracks?, defaults: TrackDefaults?) {
-        (TrackMemory.remembered(library.titleTracks, keys: trackKeys(for: item)), profileTrackDefaults)
+        let owner = playbackProfiles[item.reference.playbackKey] ?? activeProfile.id
+        guard owner != activeProfile.id, let profile = profiles.first(where: { $0.id == owner }) else {
+            return (TrackMemory.remembered(library.titleTracks, keys: trackKeys(for: item)), profileTrackDefaults)
+        }
+        let other = otherLibraries[owner] ?? (userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
+        return (TrackMemory.remembered(other.titleTracks, keys: trackKeys(for: item)), profileLanguages(of: other, isMain: profile.isMain))
     }
 
     /// The open profile's languages: those it set; for the main profile, before it set any, those the player learned on
     /// this device before each profile had its own (`AppSettings.preferredAudioLanguage`…, docs/TRACKS.md "Migration").
-    var profileTrackDefaults: TrackDefaults? {
+    var profileTrackDefaults: TrackDefaults? { profileLanguages(of: library, isMain: activeProfile.isMain) }
+
+    private func profileLanguages(of library: UserLibrary, isMain: Bool) -> TrackDefaults? {
         if let defaults = library.trackDefaults { return defaults }
-        guard activeProfile.isMain else { return nil }
+        guard isMain else { return nil }
         let audio = TrackMemory.language(settings.preferredAudioLanguage)
         let subtitles = settings.subtitlesEnabled ? TrackMemory.language(settings.preferredSubtitleLanguage) : nil
         guard audio != nil || subtitles != nil else { return nil }
@@ -48,7 +56,8 @@ extension AppModel {
         let keys = trackKeys(for: item)
         guard !keys.isEmpty, audio != nil || subtitles != nil || subtitlesOff else { return }
         let at = Int64(Date().timeIntervalSince1970 * 1000)
-        updateLibrary {
+        // The profile the playback belongs to, even when another one opened meanwhile.
+        updatePlaybackLibrary(of: item.reference.playbackKey) {
             $0.titleTracks = TrackMemory.remember($0.titleTracks, keys: keys, audio: audio, subtitles: subtitles, subtitlesOff: subtitlesOff, at: at)
         }
     }

@@ -138,7 +138,9 @@ class TrackPreferencesTest {
 
         val episode2 = tracks(audio("de"), audio("en"), audio("fr"), text("en"), text("de"))
         val opened = TrackPreferences.parameters(base, title, null, listOf("en"))
-        val planned = requireNotNull(TrackPreferences.planned(opened, episode2, title, null))
+        val plannedTracks = requireNotNull(TrackPreferences.planned(opened, episode2, title, null))
+        assertTrue("another sound: the seek follows", plannedTracks.audioChanged)
+        val planned = plannedTracks.parameters
         assertEquals("fr", chosenLanguage(planned, C.TRACK_TYPE_AUDIO))
         assertEquals("en", chosenLanguage(planned, C.TRACK_TYPE_TEXT))
         assertFalse("what the app sets is no choice of the viewer's", TrackPreferences.chosen(planned, planned).audio != null)
@@ -149,7 +151,7 @@ class TrackPreferencesTest {
         val title = TitleTracks("p|MOVIE|m1", audio = TrackPick(language = "it"))
         val stream = tracks(audio("en"), audio("de"))
         val planned = TrackPreferences.planned(base, stream, title, TrackDefaults(audio = "de"))
-        assertEquals("de", chosenLanguage(requireNotNull(planned), C.TRACK_TYPE_AUDIO))
+        assertEquals("de", chosenLanguage(requireNotNull(planned).parameters, C.TRACK_TYPE_AUDIO))
         assertNull("the stream's own sound plays", TrackPreferences.planned(base, stream, title, TrackDefaults(audio = "ja")))
     }
 
@@ -173,12 +175,13 @@ class TrackPreferencesTest {
         val title = TitleTracks("p|SERIES|s1", audio = TrackPick(language = "fr"), subtitles = TrackPick(language = "en"))
         val opening = TrackPreferences.parameters(base, title, null, listOf("en"))
         val learner = TrackLearner().also { it.started(opening) }
-        val planned = requireNotNull(TrackPreferences.planned(opening, stream, title, null))
+        val planned = requireNotNull(TrackPreferences.planned(opening, stream, title, null)).parameters
         assertTrue(learner.applying(opening, planned))
         assertFalse("the same selection again: the player says nothing", learner.applying(planned, planned))
         val english = planned.buildUpon().setOverrideForType(TrackSelectionOverride(stream.groups[0].mediaTrackGroup, 0)).build()
         // A downloaded subtitle set by the app right after the title's tracks: both callbacks are the app's.
-        val downloaded = english.buildUpon().setIgnoredTextSelectionFlags(0).build()
+        val downloaded = english.buildUpon().setPreferredTextLanguages("de").build()
+        assertFalse("a selection of its own", downloaded == english)
         assertTrue(learner.applying(planned, english))
         assertTrue(learner.applying(english, downloaded))
         assertTrue(learner.changed(planned).isEmpty)
@@ -187,6 +190,27 @@ class TrackPreferencesTest {
         // The viewer picks French again, the track the app had chosen.
         val french = downloaded.buildUpon().setOverrideForType(TrackSelectionOverride(stream.groups[1].mediaTrackGroup, 0)).build()
         assertEquals("fr", learner.changed(french).audio?.language)
+    }
+
+    /** Media3 already plays the remembered language in another codec: no switch, so no new start of the sound. */
+    @Test
+    fun theLanguagePlayingIsKeptWhateverItsCodec() {
+        val stream = tracks(
+            Format.Builder().setSampleMimeType(MimeTypes.AUDIO_AAC).setChannelCount(2).setSampleRate(48_000).setLanguage("fr").build(),
+            Format.Builder().setSampleMimeType(MimeTypes.AUDIO_E_AC3).setChannelCount(6).setSampleRate(48_000).setLanguage("fr").build(),
+        )
+        val title = TitleTracks("p|MOVIE|m1", audio = TrackPick(language = "fr", codec = MimeTypes.AUDIO_E_AC3))
+        assertNull(TrackPreferences.planned(base, stream, title, null))
+    }
+
+    /** The settings read after the tracks were chosen keep them: a downloaded subtitle or the viewer's choice stays. */
+    @Test
+    fun theLanguagesReadLateKeepTheTracksChosen() {
+        val stream = tracks(audio("en"), audio("fr"))
+        val chosen = base.buildUpon().setOverrideForType(TrackSelectionOverride(stream.groups[1].mediaTrackGroup, 0)).build()
+        val late = TrackPreferences.parameters(chosen, null, TrackDefaults(audio = "en"), listOf("en"), keepOverrides = true)
+        assertEquals("fr", chosenLanguage(late, C.TRACK_TYPE_AUDIO))
+        assertNull(chosenLanguage(TrackPreferences.parameters(chosen, null, null, listOf("en")), C.TRACK_TYPE_AUDIO))
     }
 
     @Test

@@ -1,6 +1,10 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.core.playback.TitleTracks
+import com.markedoe.ondo.core.playback.TrackDefaults
+import com.markedoe.ondo.core.playback.TrackMemory
+import com.markedoe.ondo.core.playback.TrackPick
 import java.io.File
 import java.io.InputStream
 import org.junit.Assert.assertEquals
@@ -40,6 +44,32 @@ class AppStoreTest {
         assertTrue(folder.root.resolve("library.json.corrupt-7").exists())
         store.saveLibrary(LibraryState())
         assertEquals("not json", folder.root.resolve("library.json.corrupt-7").readText())
+    }
+
+    /** The tracks chosen per title and the profile's languages are saved with the library and read back. */
+    @Test
+    fun theTracksChosenPerTitleAreSavedAndReadBack() {
+        val library = LibraryState(
+            titleTracks = listOf(TitleTracks("p|SERIES|s1", audio = TrackPick(language = "fr"), subtitles = TrackPick(language = "en", forced = true), at = 3)),
+            trackDefaults = TrackDefaults(audio = "es"),
+        )
+        AppStore(folder.root).saveLibrary(library)
+        assertEquals(library, AppStore(folder.root).loadLibrary())
+    }
+
+    /** A library saved before them reads with none; a damaged entry stands for no title and loses nothing else. */
+    @Test
+    fun aLibraryFromBeforeTheTrackMemoryStillReads() {
+        folder.root.resolve("library.json").writeText("""{"hiddenTags":["PT"]}""")
+        val old = AppStore(folder.root).loadLibrary()
+        assertEquals(setOf("PT"), old.hiddenTags)
+        assertEquals(emptyList<TitleTracks>(), old.titleTracks)
+        assertNull(old.trackDefaults)
+        folder.root.resolve("library.json").writeText("""{"hiddenTags":["PT"],"titleTracks":[{"audio":{"language":"fr"}},{"key":"p|MOVIE|m1","subtitlesOff":true}]}""")
+        val damaged = AppStore(folder.root).loadLibrary()
+        assertEquals(setOf("PT"), damaged.hiddenTags)
+        assertEquals(true, TrackMemory.remembered(damaged.titleTracks, listOf("p|MOVIE|m1"))?.subtitlesOff)
+        assertNull(TrackMemory.remembered(damaged.titleTracks, listOf("")))
     }
 
     /** Opens documents as the app does, except [large] ones: too large for the memory left. */

@@ -60,6 +60,20 @@
       "expected": 1
     },
     {
+      "name": "the track playing in the language is kept for a codec alone",
+      "tracks": [{"language": "fr", "codec": "E-AC-3"}, {"language": "fr", "codec": "AAC"}],
+      "pick": {"language": "fr", "codec": "E-AC-3"},
+      "current": 1,
+      "expected": 1
+    },
+    {
+      "name": "but not when its label differs from the one chosen",
+      "tracks": [{"language": "en", "label": "Commentary"}, {"language": "en"}],
+      "pick": {"language": "en", "label": "Commentary"},
+      "current": 1,
+      "expected": 0
+    },
+    {
       "name": "tracks without a language, by their label",
       "tracks": [{"language": null, "label": "Track 1"}, {"language": null, "label": "Original"}],
       "pick": {"label": "original"},
@@ -166,6 +180,13 @@
       "at": 2,
       "expected": [{"key": "p|MOVIE|m1", "at": 1}]
     }
+  ],
+  "subtitlesOff": [
+    {"name": "turned off for the title", "memory": {"key": "p|SERIES|s1", "subtitlesOff": true}, "defaults": null, "expected": true},
+    {"name": "the profile's Off", "memory": null, "defaults": {"audio": "fr"}, "expected": true},
+    {"name": "a language chosen for the title, the profile's Off", "memory": {"key": "p|MOVIE|m1", "subtitles": {"language": "en"}}, "defaults": {}, "expected": true},
+    {"name": "the profile's language", "memory": null, "defaults": {"subtitles": "en"}, "expected": false},
+    {"name": "nothing said: the player's own pick", "memory": {"key": "p|MOVIE|m1", "subtitles": {"language": "en"}}, "defaults": null, "expected": false}
   ],
   "titleKeys": [
     ["p|SERIES|s1|e2", "p|SERIES|s1"],

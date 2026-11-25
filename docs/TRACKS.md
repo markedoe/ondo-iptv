@@ -23,7 +23,8 @@ languages for the titles it never chose for. Both apps follow the same rules, in
 A choice is kept by what tells the track apart, never by its place in the stream (two episodes list their tracks in
 different orders): its language (`fre`, `fra`, `fr-CA` and `fr` are one), whether it is forced (foreign dialogue only)
 or for the deaf and hard of hearing, its name when it has no language, and the sound's codec. The stream's track most
-like it is chosen; the one already playing when it is as good.
+like it is chosen; the one the player already plays in that language is kept unless it differs by more than its codec, so
+that a start does not switch the sound for nothing.
 
 ## When it is missing
 
@@ -46,13 +47,19 @@ nothing of them. They stay on the device: sync does not carry the playback setti
 ## The players
 
 - **Android** (phone and TV, Media3): the languages are asked of Media3's track selector before the stream opens, then,
-  once the stream lists its tracks, the tracks are chosen by the rules above. A change of the selection the viewer
+  once the stream lists its tracks, the tracks are chosen by the rules above, once per film or episode opened (not again
+  at a retry or another address) and never over a track the viewer chose meanwhile; a change of sound is followed by
+  the same short seek as a choice in the Audio panel, which keeps the picture with the sound. Settings read late keep
+  the tracks already chosen. A change of the selection the viewer
   makes (the Audio and Subtitles panels, Media3's phone controls) is kept; one the app makes (these tracks, a subtitle
   downloaded) is not.
 - **Apple** (iPhone, iPad, Mac): the system player's media selection, once its options are read; the MKV films remuxed
   on iPhone and iPad ask for the same sound languages; VLC (MKV films on a Mac, streams the system player refuses)
-  chooses among the tracks it lists by the language its track names give (`Track 1 - [French]`), else by the name. A
-  subtitle file loaded is no choice of the viewer's.
+  chooses among the tracks it lists by the language its track names give (`Track 1 - [French]`), else by the name, the
+  subtitles once it lists them (often later than the sound); it turns its own subtitles (forced ones) off only for the
+  title's or the profile's Off. What the viewer chose on an item stays when the stream is opened again (a retry, a
+  reconnection), a channel's included. A subtitle file loaded is no choice of the viewer's. A choice is kept in the
+  library of the profile the playback began in, even when another profile opened meanwhile.
 
 ## Migration
 

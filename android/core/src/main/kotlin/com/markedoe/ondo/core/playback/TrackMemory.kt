@@ -42,7 +42,8 @@ data class TrackPick(
  */
 @Serializable
 data class TitleTracks(
-    val key: String,
+    /** Empty only for an entry saved damaged: it stands for no title, and the library around it is still read. */
+    val key: String = "",
     val audio: TrackPick? = null,
     val subtitles: TrackPick? = null,
     val subtitlesOff: Boolean = false,
@@ -83,7 +84,8 @@ object TrackMemory {
 
     /**
      * The track of [tracks] that [pick] stands for: one in its language (by its label when it named none), the most
-     * like it (forced, hearing impaired, label, codec); [current] when it is as like it as any. Null when none has
+     * like it (forced, hearing impaired, label, codec); [current] when it is as like it as any but for the codec (the
+     * player's own pick in the language is not changed for a codec alone: no switch at every start). Null when none has
      * its language.
      */
     fun match(tracks: List<StreamTrack>, pick: TrackPick, current: Int? = null): Int? {
@@ -105,7 +107,7 @@ object TrackMemory {
             return score
         }
         val best = candidates.maxOf(::score)
-        if (current != null && current in candidates && score(current) == best) return current
+        if (current != null && current in candidates && score(current) >= best - 1) return current
         return candidates.first { score(it) == best }
     }
 
@@ -130,6 +132,13 @@ object TrackMemory {
         return TrackPlan(sound, text)
     }
 
+    /**
+     * Whether a stream for which [plan] found no subtitle track is to show none, as the title or the profile says
+     * (subtitles turned off for the title, or the profile's Off); else the player's own pick stays (forced ones).
+     */
+    fun subtitlesOff(memory: TitleTracks?, defaults: TrackDefaults?): Boolean =
+        memory?.subtitlesOff == true || (defaults != null && defaults.subtitles == null)
+
     /** The sound languages to ask a player for before it lists the tracks, the first preferred. */
     fun audioLanguages(memory: TitleTracks?, defaults: TrackDefaults?): List<String> =
         listOfNotNull(language(memory?.audio?.language), language(defaults?.audio)).distinct()
@@ -141,7 +150,7 @@ object TrackMemory {
 
     /** What is remembered for a title known by [keys] (a film's versions: the one playing first), the latest choice. */
     fun remembered(memories: List<TitleTracks>, keys: List<String>): TitleTracks? =
-        if (keys.isEmpty()) null else memories.firstOrNull { it.key in keys }
+        if (keys.isEmpty()) null else memories.firstOrNull { it.key.isNotEmpty() && it.key in keys }
 
     /**
      * [memories] with a choice made while [keys]`.first()` plays: [audio] a sound track chosen, [subtitles] a subtitle

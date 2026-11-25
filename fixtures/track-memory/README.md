@@ -15,6 +15,8 @@ cores: Android's `TrackMemoryTest` and Apple's `TrackMemoryTests`.
   and the tracks it starts with (sound none: the player's own; subtitles none: off);
 - `remember`: what is remembered, the keys of the title playing (a film's versions: the one playing first), a choice
   (`audio`, `subtitles`, `subtitlesOff`) and what is remembered then, the latest first;
+- `subtitlesOff`: what is remembered and the profile's defaults, and whether a stream without the subtitles wanted
+  shows none (the title's or the profile's Off) rather than the player's own pick (forced ones);
 - `titleKeys`: a progress key and the key a title's tracks are kept under (a series' for all its episodes; none for a
   channel).
 

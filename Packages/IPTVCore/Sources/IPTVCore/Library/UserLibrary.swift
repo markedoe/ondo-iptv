@@ -147,7 +147,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         shownCategoryTags = (try? c.decodeIfPresent([String: Date].self, forKey: .shownCategoryTags)) ?? [:]
         hiddenCategoryWords = (try? c.decodeIfPresent([String: Date].self, forKey: .hiddenCategoryWords)) ?? [:]
         shownCategoryWords = (try? c.decodeIfPresent([String: Date].self, forKey: .shownCategoryWords)) ?? [:]
-        titleTracks = (try? c.decodeIfPresent([TitleTracks].self, forKey: .titleTracks)) ?? []
+        // Entry by entry: a damaged one is left out, the others are kept.
+        titleTracks = (try? c.decodeIfPresent(LossyArray<TitleTracks>.self, forKey: .titleTracks))?.elements ?? []
         trackDefaults = try? c.decodeIfPresent(TrackDefaults.self, forKey: .trackDefaults)
     }
 

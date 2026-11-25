@@ -75,6 +75,13 @@ class TrackMemoryTest {
     }
 
     @Test
+    fun subtitlesAreOffOnlyWhenTheTitleOrTheProfileSaysSo() {
+        for (case in cases.getValue("subtitlesOff").jsonArray.map { it.jsonObject }) {
+            assertEquals(string(case["name"]), flag(case["expected"]), TrackMemory.subtitlesOff(memory(case["memory"]), defaults(case["defaults"])))
+        }
+    }
+
+    @Test
     fun aSeriesKeepsItsTracksForAllItsEpisodes() {
         for (case in cases.getValue("titleKeys").jsonArray) {
             val (progress, expected) = case.jsonArray.map { string(it) }

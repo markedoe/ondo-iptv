@@ -297,8 +297,11 @@ class PlayerActivity : ComponentActivity() {
     /** Tells the viewer's track choices from the app's on the player playing ([TrackLearner]). */
     private var trackLearner = TrackLearner()
 
-    /** The title's tracks were picked for this player's stream, once it listed them (`TrackMemory.plan`). */
+    /** The title's tracks were picked for this request, once its stream listed them (`TrackMemory.plan`): once only. */
     private var tracksPlanned = false
+
+    /** The viewer chose a track on this request: nothing the app picks replaces it (a retry, the settings read late). */
+    private var viewerChoseTracks = false
 
     /** Up next is on screen, near the end of an episode; null otherwise, and once the viewer declined it. */
     private var upNext by mutableStateOf<UpNext?>(null)
@@ -392,7 +395,8 @@ class PlayerActivity : ComponentActivity() {
                 repository.state.first { it.isReady }
                 player?.let { opened ->
                     val (memory, defaults) = titleTracks()
-                    applyTracks(opened, TrackPreferences.parameters(opened.trackSelectionParameters, memory, defaults, deviceLanguages()))
+                    // The tracks already chosen (a downloaded subtitle, the viewer's) stay.
+                    applyTracks(opened, TrackPreferences.parameters(opened.trackSelectionParameters, memory, defaults, deviceLanguages(), keepOverrides = true))
                     tracksPlanned = false
                     planTracks(opened, opened.currentTracks)
                 }
@@ -639,17 +643,22 @@ class PlayerActivity : ComponentActivity() {
     /** The title's sound and subtitles among the tracks [tracks] lists, once per stream: by language and kind, never by place. */
     private fun planTracks(exoPlayer: ExoPlayer, tracks: androidx.media3.common.Tracks) {
         // A channel opens as it always did: zapping waits for nothing more.
-        if (request.isLive || tracksPlanned || tracks.groups.none { it.type == C.TRACK_TYPE_AUDIO || it.type == C.TRACK_TYPE_TEXT }) return
+        if (request.isLive || tracksPlanned || viewerChoseTracks || tracks.groups.none { it.type == C.TRACK_TYPE_AUDIO || it.type == C.TRACK_TYPE_TEXT }) return
         tracksPlanned = true
         val (memory, defaults) = titleTracks()
         if (memory == null && defaults == null) return
-        TrackPreferences.planned(exoPlayer.trackSelectionParameters, tracks, memory, defaults)?.let { applyTracks(exoPlayer, it) }
+        val planned = TrackPreferences.planned(exoPlayer.trackSelectionParameters, tracks, memory, defaults) ?: return
+        applyTracks(exoPlayer, planned.parameters)
+        // Another sound once the stream plays: the same seek as a choice in the Audio panel keeps the pictures with it.
+        if (planned.audioChanged) TrackChoices.resync(exoPlayer)
     }
 
     /** A change of the track selection: when the viewer made it, what they chose is kept for the title. */
     private fun tracksChanged(parameters: androidx.media3.common.TrackSelectionParameters) {
         val chosen = trackLearner.changed(parameters)
-        if (!chosen.isEmpty) repository.rememberTracks(trackKeys(), chosen.audio, chosen.subtitles, chosen.subtitlesOff)
+        if (chosen.isEmpty) return
+        viewerChoseTracks = true
+        repository.rememberTracks(trackKeys(), chosen.audio, chosen.subtitles, chosen.subtitlesOff)
     }
 
     /** The device's languages, the first first ("fr", "en"). */
@@ -912,6 +921,7 @@ class PlayerActivity : ComponentActivity() {
                 if (matchesFrameRate) setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
                 // The title's and the profile's languages, before the listener: what the app sets is no choice of the viewer's.
                 tracksPlanned = false
+                viewerChoseTracks = false
                 val (memory, defaults) = titleTracks()
                 trackSelectionParameters = TrackPreferences.parameters(trackSelectionParameters, memory, defaults, deviceLanguages())
                 trackLearner = TrackLearner().also { it.started(trackSelectionParameters) }
@@ -1055,8 +1065,6 @@ class PlayerActivity : ComponentActivity() {
             .build()
         // Chosen again after the video is opened again (a retry, another address) only while the viewer keeps it: a
         // later Off or another track stays.
-        // Each address opened (a fallback, a retry) lists its own tracks: the title's are picked among them again.
-        tracksPlanned = false
         sideLoadPending = sideLoaded != null && (sideLoadFresh || player?.let { SideLoadedSubtitle.isChosen(it.trackSelectionParameters) } == true)
         player?.apply {
             if (request.isLive || startMs <= 0) setMediaItem(item) else setMediaItem(item, startMs)
