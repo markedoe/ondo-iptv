@@ -3237,6 +3237,46 @@
         }
       }
     },
+    "Audio language": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue audio"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma del audio"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma do áudio"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频语言"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لغة الصوت"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ऑडियो भाषा"
+          }
+        }
+      }
+    },
     "Auto refresh": {
       "localizations": {
         "fr": {
@@ -8153,6 +8193,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "बधिर और कम सुनने वालों के लिए"
+          }
+        }
+      }
+    },
+    "For this profile, when nothing was chosen yet for a film or a series. The sound and subtitles you choose in the player are kept for that film or series: its next episodes start with them.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour ce profil, quand rien n’a encore été choisi pour un film ou une série. Le son et les sous-titres choisis dans le lecteur sont gardés pour ce film ou cette série : ses épisodes suivants démarrent avec."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para este perfil, cuando aún no se eligió nada para una película o una serie. El audio y los subtítulos que eliges en el reproductor se guardan para esa película o serie: sus siguientes episodios empiezan con ellos."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para este perfil, quando nada foi escolhido ainda para um filme ou uma série. O áudio e as legendas que você escolhe no player ficam guardados para esse filme ou série: os próximos episódios começam com eles."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用于此个人资料中尚未选择过的电影或剧集。你在播放器中选择的音轨和字幕会为该电影或剧集保留：之后的剧集会沿用。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لهذا الملف الشخصي، عندما لم يُختر شيء بعد لفيلم أو مسلسل. يُحتفظ بالصوت والترجمة اللذين تختارهما في المشغّل لذلك الفيلم أو المسلسل: تبدأ حلقاته التالية بهما."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस प्रोफ़ाइल के लिए, जब किसी फ़िल्म या सीरीज़ के लिए अभी कुछ नहीं चुना गया हो। प्लेयर में चुनी गई आवाज़ और सबटाइटल उस फ़िल्म या सीरीज़ के लिए रखे जाते हैं: उसके अगले एपिसोड उन्हीं से शुरू होते हैं।"
           }
         }
       }
@@ -17793,6 +17873,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "इस संग्रह को शेयर करना बंद करें?"
+          }
+        }
+      }
+    },
+    "Subtitle language": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue des sous-titres"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma de los subtítulos"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma das legendas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕语言"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لغة الترجمة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सबटाइटल भाषा"
           }
         }
       }

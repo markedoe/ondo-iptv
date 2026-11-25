@@ -88,6 +88,25 @@ struct SettingsView: View {
     }
 
     /// The language Ondo shows itself in, in that language ("Français").
+    /// The languages a profile can choose for its sound and subtitles, each in the app's language ("French").
+    private var languageChoices: some View {
+        ForEach(TrackMemory.choices, id: \.self) { code in
+            Text(verbatim: Locale.current.localizedString(forLanguageCode: code)?.capitalized(with: .current) ?? code).tag(Optional(code))
+        }
+    }
+
+    /// One of the open profile's languages, as a picker changes it.
+    private func trackDefault(_ path: WritableKeyPath<TrackDefaults, String?>) -> Binding<String?> {
+        Binding(
+            get: { model.trackDefaults[keyPath: path] },
+            set: { value in
+                var defaults = model.trackDefaults
+                defaults[keyPath: path] = value
+                model.setTrackDefaults(defaults)
+            }
+        )
+    }
+
     /// Automatic, then the buffer lengths in seconds (`PlaybackBuffer`).
     private var bufferChoices: some View {
         ForEach(PlaybackBuffer.choices, id: \.self) { seconds in
@@ -253,6 +272,26 @@ struct SettingsView: View {
                 Text("Player")
             } footer: {
                 Text("A longer buffer covers longer interruptions from the provider; the picture then takes longer to appear and to come back after a skip. Automatic adapts to the provider.")
+            }
+
+            // This profile's languages for a film or a series nothing was chosen for (docs/TRACKS.md).
+            Section {
+                Picker(selection: trackDefault(\.audio)) {
+                    Text("Automatic").tag(String?.none)
+                    languageChoices
+                } label: {
+                    Label("Audio language", systemImage: "waveform")
+                }
+                .accessibilityIdentifier("audioLanguagePicker")
+                Picker(selection: trackDefault(\.subtitles)) {
+                    Text("Off").tag(String?.none)
+                    languageChoices
+                } label: {
+                    Label("Subtitle language", systemImage: "captions.bubble")
+                }
+                .accessibilityIdentifier("subtitleLanguagePicker")
+            } footer: {
+                Text("For this profile, when nothing was chosen yet for a film or a series. The sound and subtitles you choose in the player are kept for that film or series: its next episodes start with them.")
             }
 
             Section {

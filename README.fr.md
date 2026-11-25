@@ -53,7 +53,9 @@ chaque changement de l'interface.
   « Note TMDb 7,8 » après le titre), une coche sur l'affiche de chaque titre déjà vu (une série
   une fois tous ses épisodes vus), **Marquer comme vu / Marquer comme non vu** sur sa fiche (chaque épisode aussi), films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), **versions d'un film
   regroupées** (4K, Dolby Vision, HD, VOSTFR… : le film une fois, ses versions en badges sur sa fiche ;
-  [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (synopsis, casting, bande-annonce), saisons /
+  [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), **le son et les sous-titres choisis gardés pour chaque film et chaque
+  série**, avec les langues de chaque profil ([docs/TRACKS.fr.md](docs/TRACKS.fr.md)), fiches (synopsis, casting,
+  bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
   acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (les séries d'après la liste
   du fournisseur, les films parmi les fiches déjà ouvertes et l'index des personnes gardé sur l'appareil, ou tous

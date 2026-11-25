@@ -230,7 +230,9 @@ extension AppModel {
     /// The search for what is playing: the catalogue's title and year for a film, the series name with the
     /// season and episode for an episode. Every field stays editable in the search screen.
     func subtitleQuery(for item: PlaybackItem) -> SubtitleQuery {
-        let languages = Self.subtitleLanguages(saved: settings.subtitleSearchLanguages, preferred: settings.preferredSubtitleLanguage,
+        let wanted = titleTracks(for: item)
+        let preferred = TrackMemory.subtitleLanguages(memory: wanted.memory, defaults: wanted.defaults).first
+        let languages = Self.subtitleLanguages(saved: settings.subtitleSearchLanguages, preferred: preferred,
                                                device: Locale.preferredLanguages)
         switch item.reference.type {
         case .movie:

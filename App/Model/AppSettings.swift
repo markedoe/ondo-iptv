@@ -56,6 +56,8 @@ struct AppSettings: Codable, Equatable {
     var lockAdultCategoriesAutomatically = true
     var epgDaysAhead = 3
     var posterSort: PosterSort = .playlist
+    /// The sound and subtitle languages the player learned before each profile had its own and each title kept its
+    /// tracks (docs/TRACKS.md): read only as the main profile's languages until it sets some (`profileTrackDefaults`).
     var preferredAudioLanguage: String?
     var preferredSubtitleLanguage: String?
     var subtitlesEnabled = false

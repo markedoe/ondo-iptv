@@ -53,7 +53,8 @@ interface changes.
   VoiceOver says "TMDb rating 7.8" after the title),
   a check mark on the poster of every title watched (a series once all its episodes are), **Mark as Watched / Mark as
   Unwatched** on its page (each episode too), watched movies hidden if you like (Search and My List keep them), **a film's versions grouped** (4K, Dolby Vision,
-  HD, VOSTFR…: the film once, its versions as badges on its page; [docs/VERSIONS.md](docs/VERSIONS.md)),
+  HD, VOSTFR…: the film once, its versions as badges on its page; [docs/VERSIONS.md](docs/VERSIONS.md)), **the sound and
+  subtitles you choose kept for each film and series**, with each profile's languages ([docs/TRACKS.md](docs/TRACKS.md)),
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
   see their other movies and series in the playlist (series from the provider's list, movies from the pages

@@ -122,8 +122,8 @@ final class ProfileScopeTests: XCTestCase {
                    read: { $0.settings.addic7edOptIn ? AnyHashable(true) : nil }),
             // The playback settings are every profile's, and each device's: they do not sync (docs/SYNC.md).
             Shared(name: "playback setting", syncs: false,
-                   set: { model in model.updateSettings { $0.preferredSubtitleLanguage = "pt" } },
-                   read: { $0.settings.preferredSubtitleLanguage == "pt" ? AnyHashable("pt") : nil }),
+                   set: { model in model.updateSettings { $0.vodBuffer = 5 } },
+                   read: { $0.settings.vodBuffer == 5 ? AnyHashable(5) : nil }),
         ]
     }
 
@@ -171,6 +171,19 @@ final class ProfileScopeTests: XCTestCase {
             PerProfile(name: "lists",
                        set: { _ = $0.createList(named: "Weekend") },
                        read: { model in Self.found(model.library.customLists.first { $0.name == "Weekend" }?.id) }),
+            // The languages and the tracks chosen per title stay on the device, as the playback settings (docs/TRACKS.md).
+            PerProfile(name: "default languages", syncs: false,
+                       set: { $0.setTrackDefaults(TrackDefaults(audio: "fr", subtitles: "en")) },
+                       read: { Self.found($0.library.trackDefaults) }),
+            PerProfile(name: "tracks chosen for a title", syncs: false,
+                       set: { model in
+                           let playlist = try XCTUnwrap(model.activePlaylist)
+                           let movie = try XCTUnwrap(model.content.movies.first)
+                           let item = PlaybackItem(reference: MediaReference(playlistID: playlist.id, type: .movie, itemID: movie.id),
+                                                   title: movie.name, streamURL: URL(string: "http://127.0.0.1:9/movie.mp4")!, isLive: false)
+                           model.rememberTracks(for: item, audio: TrackPick(language: "fr"))
+                       },
+                       read: { model in Self.found(model.library.titleTracks.first.map { [$0.key, $0.audio?.language ?? ""] }) }),
             PerProfile(name: "selections",
                        set: { _ = $0.saveSelection(id: nil, name: "Nineties", tags: ["decade:1990"], all: false, tabs: [SyncRows.movies]) },
                        read: { model in Self.found(model.profileSelections.first { $0.name == "Nineties" }.map { [$0.id] + $0.tags }) }),

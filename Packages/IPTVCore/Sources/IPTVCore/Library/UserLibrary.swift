@@ -77,6 +77,11 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     /// -> when; showing one again leaves a dated marker for sync.
     public var hiddenCategoryWords: [String: Date]
     public var shownCategoryWords: [String: Date]
+    /// The sound and subtitles chosen in the player for each film and series, the latest first (`TrackMemory`,
+    /// docs/TRACKS.md): this profile's, on this device only (sync does not carry them).
+    public var titleTracks: [TitleTracks]
+    /// This profile's languages for a title nothing was chosen for (Settings, Player); nil: never set.
+    public var trackDefaults: TrackDefaults?
 
     public static let maxHistory = 500
 
@@ -107,6 +112,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         self.shownCategoryTags = [:]
         self.hiddenCategoryWords = [:]
         self.shownCategoryWords = [:]
+        self.titleTracks = []
+        self.trackDefaults = nil
     }
 
     enum CodingKeys: String, CodingKey {
@@ -114,6 +121,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         case favoriteTombstones, listItemTombstones, historyTombstones, historyClearedAt, deletedListIDs
         case reminders, reminderTombstones, hiddenChannels, unhiddenChannels
         case hiddenCategoryTags, shownCategoryTags, hiddenCategoryWords, shownCategoryWords
+        case titleTracks, trackDefaults
     }
 
     /// Tolerant decoding: data saved by older versions keeps working.
@@ -139,6 +147,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         shownCategoryTags = (try? c.decodeIfPresent([String: Date].self, forKey: .shownCategoryTags)) ?? [:]
         hiddenCategoryWords = (try? c.decodeIfPresent([String: Date].self, forKey: .hiddenCategoryWords)) ?? [:]
         shownCategoryWords = (try? c.decodeIfPresent([String: Date].self, forKey: .shownCategoryWords)) ?? [:]
+        titleTracks = (try? c.decodeIfPresent([TitleTracks].self, forKey: .titleTracks)) ?? []
+        trackDefaults = try? c.decodeIfPresent(TrackDefaults.self, forKey: .trackDefaults)
     }
 
     public static func categoryKey(playlistID: UUID, categoryID: String) -> String {

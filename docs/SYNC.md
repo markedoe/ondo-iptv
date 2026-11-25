@@ -29,7 +29,7 @@ Row order) and the selections, and the viewer profiles (name, colour, avatar, Ki
 people, lists, progress, order of rows, selections and hidden categories, languages and styles (docs/PROFILES.md), and the lists
 shared with every profile.
 
-Stays on each device: the other settings, hidden channels and channel edits, the category locks (Apple), reminders, profile PINs (never sent, salted
+Stays on each device: the other settings, the sound and subtitles kept per title and each profile's languages (docs/TRACKS.md), hidden channels and channel edits, the category locks (Apple), reminders, profile PINs (never sent, salted
 or not: see docs/PROFILES.md), "Always open this profile", downloads, the catalogues themselves (each device downloads
 its playlists), and file playlists (a file imported on one device is not on the others).
 

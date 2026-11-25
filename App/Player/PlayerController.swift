@@ -88,9 +88,11 @@ final class PlayerController: NSObject {
     @ObservationIgnored var autoRetry = true
     /// Multiview tiles never start Picture in Picture.
     @ObservationIgnored var allowsPictureInPicture = true
-    @ObservationIgnored var preferredAudioLanguage: String?
-    @ObservationIgnored var preferredSubtitleLanguage: String?
-    @ObservationIgnored var subtitlesEnabledByDefault = false
+    /// What an item starts with: the tracks chosen for its title and the profile's languages (`TrackMemory`,
+    /// docs/TRACKS.md); nil: the player's own choice.
+    @ObservationIgnored var titleTracks: ((PlaybackItem) -> (memory: TitleTracks?, defaults: TrackDefaults?))?
+    /// A choice the viewer made in the player for the item playing: a sound track, a subtitle track, or subtitles off.
+    @ObservationIgnored var onTracksChosen: ((PlaybackItem, _ audio: TrackPick?, _ subtitles: TrackPick?, _ subtitlesOff: Bool) -> Void)?
     @ObservationIgnored var enginePreference: PlayerEngine = .automatic
     /// Buffer settings in seconds, 0 for automatic (`PlaybackBuffer`).
     @ObservationIgnored var liveBufferSetting = 0
@@ -157,6 +159,8 @@ final class PlayerController: NSObject {
     @ObservationIgnored private var vlcStartSeekSent = false
     /// What VLC read of this film's picture went to `onSpecs` (`refreshVLCTracks`).
     @ObservationIgnored private var vlcSpecsSent = false
+    /// The title's tracks were picked among those VLC listed for this item (`refreshVLCTracks`).
+    @ObservationIgnored private var vlcTracksPlanned = false
     #endif
 
     override init() {
@@ -208,6 +212,7 @@ final class PlayerController: NSObject {
         vlcChaptersRead = false
         #if canImport(VLCKitSPM)
         vlcSpecsSent = false
+        vlcTracksPlanned = false
         #endif
         candidates = item.candidateURLs
         candidateIndex = 0
@@ -638,24 +643,40 @@ extension PlayerController {
         audioTracks = Self.tracks(in: audible)
         subtitleTracks = Self.tracks(in: legible)
 
-        // Apply language preferences (kept between episodes and channels).
+        // The title's tracks, else the profile's languages, by language and kind (never by place: docs/TRACKS.md).
+        let wanted = item.flatMap { titleTracks?($0) }
+        let currentAudio = audible.flatMap { group in playerItem.currentMediaSelection.selectedMediaOption(in: group).flatMap { group.options.firstIndex(of: $0) } }
+        let plan = TrackMemory.plan(audio: Self.streamTracks(in: audible), subtitles: Self.streamTracks(in: legible),
+                                    memory: wanted?.memory, defaults: wanted?.defaults, currentAudio: currentAudio)
         if let audible {
-            if let language = preferredAudioLanguage,
-               let index = audible.options.firstIndex(where: { $0.extendedLanguageTag == language || $0.locale?.language.languageCode?.identifier == language }) {
-                playerItem.select(audible.options[index], in: audible)
-            }
+            if let index = plan.audio, index != currentAudio { playerItem.select(audible.options[index], in: audible) }
             selectedAudioTrackID = playerItem.currentMediaSelection.selectedMediaOption(in: audible).flatMap { audible.options.firstIndex(of: $0) }
         }
         if let legible {
-            if subtitlesEnabledByDefault, let language = preferredSubtitleLanguage,
-               let index = legible.options.firstIndex(where: { $0.extendedLanguageTag == language || $0.locale?.language.languageCode?.identifier == language }) {
-                playerItem.select(legible.options[index], in: legible)
-            } else if !subtitlesEnabledByDefault {
-                playerItem.select(nil, in: legible)
-            }
+            playerItem.select(plan.subtitles.map { legible.options[$0] }, in: legible)
             selectedSubtitleTrackID = playerItem.currentMediaSelection.selectedMediaOption(in: legible).flatMap { legible.options.firstIndex(of: $0) }
         }
         await readCreditsStart(of: playerItem)
+    }
+
+    /// The options of `group` as the track memory compares them: language, forced, for the hard of hearing; the name
+    /// only when no language is given.
+    static func streamTracks(in group: AVMediaSelectionGroup?) -> [StreamTrack] {
+        guard let group else { return [] }
+        return group.options.map { option in
+            let language = option.extendedLanguageTag ?? option.locale?.identifier
+            return StreamTrack(language: language, label: language == nil ? option.displayName : nil,
+                               forced: option.hasMediaCharacteristic(.containsOnlyForcedSubtitles),
+                               hearingImpaired: option.hasMediaCharacteristic(.describesMusicAndSoundForAccessibility))
+        }
+    }
+
+    /// What a choice of `track` among `tracks` (the engine's) says of it: by its language, else by its name.
+    private func pick(_ track: MediaTrack, audio: Bool) -> TrackPick {
+        if activeEngine == .apple, let group = audio ? audioGroup : subtitleGroup, track.id < group.options.count {
+            return TrackPick(Self.streamTracks(in: group)[track.id])
+        }
+        return TrackPick(StreamTrack(language: TrackMemory.vlcLanguage(track.name), label: track.name))
     }
 
     private static func tracks(in group: AVMediaSelectionGroup?) -> [MediaTrack] {
@@ -665,34 +686,37 @@ extension PlayerController {
         }
     }
 
+    /// The viewer's choice of a sound track: kept for the title (`onTracksChosen`).
     func selectAudioTrack(_ track: MediaTrack) {
+        if let item { onTracksChosen?(item, pick(track, audio: true), nil, false) }
         if activeEngine == .vlc {
             selectVLCAudioTrack(track)
             return
         }
         guard let group = audioGroup, track.id < group.options.count else { return }
-        let option = group.options[track.id]
-        player.currentItem?.select(option, in: group)
+        player.currentItem?.select(group.options[track.id], in: group)
         selectedAudioTrackID = track.id
-        preferredAudioLanguage = option.extendedLanguageTag
     }
 
+    /// The viewer's choice of a subtitle track, or of none: kept for the title (`onTracksChosen`).
     func selectSubtitleTrack(_ track: MediaTrack?) {
+        if let item { onTracksChosen?(item, nil, track.map { pick($0, audio: false) }, track == nil) }
+        showSubtitleTrack(track)
+    }
+
+    /// Shows `track`'s subtitles, or none, without it being a choice of the viewer's (an external subtitle loaded).
+    private func showSubtitleTrack(_ track: MediaTrack?) {
         if activeEngine == .vlc {
             selectVLCSubtitleTrack(track)
             return
         }
         guard let group = subtitleGroup else { return }
         if let track, track.id < group.options.count {
-            let option = group.options[track.id]
-            player.currentItem?.select(option, in: group)
+            player.currentItem?.select(group.options[track.id], in: group)
             selectedSubtitleTrackID = track.id
-            preferredSubtitleLanguage = option.extendedLanguageTag
-            subtitlesEnabledByDefault = true
         } else {
             player.currentItem?.select(nil, in: group)
             selectedSubtitleTrackID = nil
-            subtitlesEnabledByDefault = false
         }
     }
 
@@ -702,7 +726,7 @@ extension PlayerController {
         let cues = SubtitleParser.parse(try Data(contentsOf: url))
         externalSubtitles = cues
         externalSubtitleName = cues.isEmpty ? nil : url.lastPathComponent
-        if !cues.isEmpty { selectSubtitleTrack(nil) }
+        if !cues.isEmpty { showSubtitleTrack(nil) }
     }
 
     /// A subtitle downloaded from a subtitle service.
@@ -712,7 +736,7 @@ extension PlayerController {
         externalSubtitles = cues
         externalSubtitleName = name
         subtitleDelay = 0
-        selectSubtitleTrack(nil)
+        showSubtitleTrack(nil)
         return true
     }
 
@@ -922,6 +946,7 @@ extension PlayerController {
         if audioID != selectedAudioTrackID { selectedAudioTrackID = audioID }
         let subtitleID = backend.selectedSubtitleTrackID
         if subtitleID != selectedSubtitleTrackID { selectedSubtitleTrackID = subtitleID }
+        if !vlcTracksPlanned, !audio.isEmpty { planVLCTracks(backend, audio: audio, subtitles: subtitles) }
         let size = backend.videoSize
         let resolution: CGSize? = size == .zero ? nil : size
         if resolution != videoResolution { videoResolution = resolution }
@@ -930,6 +955,19 @@ extension PlayerController {
             vlcSpecsSent = true
             onSpecs?(item, specs)
         }
+    }
+
+    /// The title's tracks among those VLC lists, once per item: by the language VLC names, else by the name.
+    private func planVLCTracks(_ backend: VLCBackend, audio: [MediaTrack], subtitles: [MediaTrack]) {
+        vlcTracksPlanned = true
+        guard let item, let wanted = titleTracks?(item), wanted.memory != nil || wanted.defaults != nil else { return }
+        func stream(_ track: MediaTrack) -> StreamTrack { StreamTrack(language: TrackMemory.vlcLanguage(track.name), label: track.name) }
+        let currentAudio = audio.firstIndex { $0.id == backend.selectedAudioTrackID }
+        let plan = TrackMemory.plan(audio: audio.map(stream), subtitles: subtitles.map(stream), memory: wanted.memory,
+                                    defaults: wanted.defaults, currentAudio: currentAudio)
+        if let index = plan.audio, index != currentAudio { selectVLCAudioTrack(audio[index]) }
+        let wantedSubtitles = plan.subtitles.map { subtitles[$0] }
+        if wantedSubtitles?.id != backend.selectedSubtitleTrackID { selectVLCSubtitleTrack(wantedSubtitles) }
     }
 
     private func handleVLCTime(_ current: Double, _ total: Double) {

@@ -30,7 +30,7 @@ couleur, avatar, Enfant) avec, pour chaque profil, sa liste, ses chaînes favori
 progression, son ordre des rangées, ses présélections et ses catégories, langues et styles masqués (docs/PROFILES.fr.md), et les listes
 partagées avec tous les profils.
 
-Restent sur chaque appareil : les autres réglages, les chaînes masquées et les modifications de chaînes, les
+Restent sur chaque appareil : les autres réglages, le son et les sous-titres gardés par titre et les langues de chaque profil (docs/TRACKS.fr.md), les chaînes masquées et les modifications de chaînes, les
 verrouillages de catégories (Apple), les rappels,
 les codes des profils (jamais envoyés, salés ou non : voir docs/PROFILES.fr.md), « Toujours ouvrir ce profil », les
 téléchargements, les catalogues eux-mêmes (chaque appareil télécharge ses playlists), et les playlists fichier (un

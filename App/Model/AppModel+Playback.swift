@@ -284,9 +284,12 @@ extension AppModel {
         let controller = session.controller
         controller.autoRetry = settings.autoRetryStreams
         controller.aspect = settings.defaultAspect
-        controller.preferredAudioLanguage = settings.preferredAudioLanguage
-        controller.preferredSubtitleLanguage = settings.preferredSubtitleLanguage
-        controller.subtitlesEnabledByDefault = settings.subtitlesEnabled
+        // Each item starts with the tracks chosen for its title, else the profile's languages; a choice is kept for the
+        // title (docs/TRACKS.md).
+        controller.titleTracks = { [weak self] item in self?.titleTracks(for: item) ?? (nil, nil) }
+        controller.onTracksChosen = { [weak self] item, audio, subtitles, off in
+            self?.rememberTracks(for: item, audio: audio, subtitles: subtitles, subtitlesOff: off)
+        }
         controller.enginePreference = settings.playerEngine
         controller.liveBufferSetting = settings.liveBuffer
         controller.vodBufferSetting = settings.vodBuffer
@@ -345,12 +348,6 @@ extension AppModel {
     func session(id: UUID) -> PlaybackSession? { sessions[id] }
 
     func endSession(_ session: PlaybackSession) {
-        // Remember the user's track choices for the next streams.
-        updateSettings {
-            $0.preferredAudioLanguage = session.controller.preferredAudioLanguage ?? $0.preferredAudioLanguage
-            $0.preferredSubtitleLanguage = session.controller.preferredSubtitleLanguage ?? $0.preferredSubtitleLanguage
-            $0.subtitlesEnabled = session.controller.subtitlesEnabledByDefault
-        }
         session.controller.stop()
         NowPlayingCenter.shared.deactivate(session)
         sessions[session.id] = nil
