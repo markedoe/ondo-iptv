@@ -1,9 +1,4 @@
-• TMDb score on posters and Continue Watching cards
-• Mark as Watched or Unwatched on movie, series and episode pages, or a whole season at once; watched titles show a check mark on their posters
-• My List shown as a bookmark
-• A film's versions that play the same thing now share one chip
-• Version chips and the film page show what each stream holds: resolution, HDR or Dolby Vision, codec and sound (5.1, E-AC-3, Atmos)
-• A Dolby Vision version your screen cannot show correctly no longer plays first
-• Cinema copies (CAM, TS…) are marked and play last
-• Stream Statistics: a Title data panel with each version's details
-• Many fixes
+• The sound and subtitles you choose are kept for the series: every next episode starts with them
+• And for the film: it starts with them again, and its other versions use them when they have that language
+• New in Settings, Player: Audio language and Subtitle language, for each profile, used for titles where nothing was chosen yet
+• Live channels open with your profile's languages

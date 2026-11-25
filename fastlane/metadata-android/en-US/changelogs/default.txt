@@ -1,8 +1,3 @@
-• TMDb score on posters
-• Mark as watched from a title's page; a check mark on watched posters
-• My List shown as a bookmark
-• Version chips show real specs (4K, HDR, Dolby Vision, codec, 5.1, Atmos); identical versions share one
-• Dolby Vision your screen can't show no longer plays first; cinema copies (CAM, TS…) play last
-• Stream Statistics: title data
-• Faster start; on TV, faster tabs, rows no longer cut, steadier focus
-• Many fixes
+• The sound and subtitles you choose are kept per series (every next episode starts with them) and per film (its other versions use them when they have that language)
+• New in Settings, Player: Audio language and Subtitle language, for each profile, for titles where nothing was chosen yet
+• Live channels open with your profile's languages

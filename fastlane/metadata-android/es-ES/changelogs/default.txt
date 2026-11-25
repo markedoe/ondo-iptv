@@ -1,8 +1,3 @@
-• Puntuación de TMDb en los pósteres
-• Marcar como visto desde su página; una marca en los pósteres vistos
-• Mi lista como marcador
-• Botones de versión con datos reales (4K, HDR, Dolby Vision, códec, 5.1, Atmos); versiones idénticas en uno
-• El Dolby Vision que tu pantalla no muestra ya no va primero; copias de cine (CAM, TS…) al final
-• Estadísticas del flujo: datos del título
-• Inicio más rápido; en TV, pestañas más rápidas, filas sin cortes, foco más estable
-• Muchas correcciones
+• El audio y los subtítulos elegidos se guardan por serie (cada episodio siguiente empieza con ellos) y por película (sus otras versiones los usan si tienen ese idioma)
+• Nuevo en Ajustes, Reproductor: Idioma del audio e Idioma de los subtítulos, por perfil, para los títulos sin elección
+• Los canales en directo se abren con los idiomas del perfil

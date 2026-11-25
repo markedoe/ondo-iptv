@@ -1,9 +1,4 @@
-• Nota do TMDb nos pôsteres e nos cards de Continuar assistindo
-• Marcar como assistido ou não assistido nas páginas de filme, série e episódio, ou uma temporada inteira de uma vez; títulos assistidos mostram um check no pôster
-• Minha lista aparece como um marcador
-• As versões de um filme que tocam a mesma coisa agora ficam em um só botão
-• Os botões de versão e a página do filme mostram o que cada stream traz: resolução, HDR ou Dolby Vision, codec e som (5.1, E-AC-3, Atmos)
-• Uma versão Dolby Vision que sua tela não exibe corretamente não toca mais primeiro
-• Cópias de cinema (CAM, TS…) são sinalizadas e tocam por último
-• Estatísticas do stream: um painel Dados do título com os detalhes de cada versão
-• Muitas correções
+• O áudio e as legendas que você escolhe ficam guardados para a série: cada próximo episódio começa com eles
+• E para o filme: ele volta a começar com eles, e as outras versões usam os mesmos quando têm esse idioma
+• Novo em Ajustes, Player: Idioma do áudio e Idioma das legendas, para cada perfil, usados nos títulos em que nada foi escolhido ainda
+• Os canais ao vivo abrem com os idiomas do seu perfil

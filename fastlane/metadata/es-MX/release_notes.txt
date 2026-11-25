@@ -1,9 +1,4 @@
-• Calificación de TMDb en los pósters y en las tarjetas de Seguir viendo
-• Marcar como visto o no visto desde la página de una película, una serie o un episodio, o una temporada completa de una vez; los títulos vistos muestran una marca en su póster
-• Mi lista se muestra como un marcador
-• Las versiones de una película que reproducen lo mismo ahora comparten un solo botón
-• Los botones de versión y la página de la película muestran lo que trae cada stream: resolución, HDR o Dolby Vision, códec y sonido (5.1, E-AC-3, Atmos)
-• Una versión Dolby Vision que tu pantalla no puede mostrar bien ya no se reproduce primero
-• Las copias de cine (CAM, TS…) se marcan y se reproducen al final
-• Estadísticas del flujo: un panel Datos del título con los detalles de cada versión
-• Muchas correcciones
+• El audio y los subtítulos que eliges se guardan para la serie: cada episodio siguiente empieza con ellos
+• Y para la película: vuelve a empezar con ellos, y sus otras versiones los usan cuando tienen ese idioma
+• Nuevo en Ajustes, Reproductor: Idioma del audio e Idioma de los subtítulos, para cada perfil, usados en los títulos donde todavía no se eligió nada
+• Los canales en vivo se abren con los idiomas de tu perfil

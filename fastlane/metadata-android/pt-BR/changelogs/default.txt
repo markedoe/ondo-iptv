@@ -1,8 +1,3 @@
-• Nota do TMDb nos pôsteres
-• Marcar como assistido na página; um check nos pôsteres assistidos
-• Minha lista como marcador
-• Botões de versão com especificações reais (4K, HDR, Dolby Vision, codec, 5.1, Atmos); versões idênticas em um só
-• Dolby Vision que sua tela não exibe não toca mais primeiro; cópias de cinema (CAM, TS…) por último
-• Estatísticas do stream: dados do título
-• Abertura mais rápida; na TV, abas mais rápidas, fileiras sem cortes, foco mais estável
-• Muitas correções
+• O áudio e as legendas escolhidos ficam guardados por série (cada próximo episódio começa com eles) e por filme (as outras versões usam os mesmos se tiverem esse idioma)
+• Novo em Configurações, Player: Idioma do áudio e Idioma das legendas, por perfil, para títulos ainda sem escolha
+• Os canais ao vivo abrem com os idiomas do perfil

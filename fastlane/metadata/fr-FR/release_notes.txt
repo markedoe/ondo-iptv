@@ -1,9 +1,4 @@
-• Note TMDb sur les affiches et les cartes Continuer à regarder
-• Marquer comme vu ou non vu depuis la page d'un film, d'une série ou d'un épisode, ou toute une saison d'un coup ; les titres vus portent une coche sur leur affiche
-• Ma liste affichée comme un marque-page
-• Les versions d'un film qui lisent la même chose partagent désormais une seule pastille
-• Les pastilles de version et la page du film montrent ce que contient chaque flux : définition, HDR ou Dolby Vision, codec et son (5.1, E-AC-3, Atmos)
-• Une version Dolby Vision que votre écran ne peut pas afficher correctement n'est plus lue en premier
-• Les copies cinéma (CAM, TS…) sont signalées et lues en dernier
-• Statistiques du flux : un panneau Données du titre avec le détail de chaque version
-• Nombreuses corrections
+• Le son et les sous-titres que vous choisissez sont gardés pour la série : chaque épisode suivant démarre avec
+• Et pour le film : il redémarre avec, et ses autres versions les reprennent quand elles ont cette langue
+• Nouveau dans Réglages, Lecteur : Langue audio et Langue des sous-titres, pour chaque profil, utilisées pour les titres où rien n'a encore été choisi
+• Les chaînes en direct s'ouvrent dans les langues de votre profil

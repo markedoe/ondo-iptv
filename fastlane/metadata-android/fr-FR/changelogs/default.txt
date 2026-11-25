@@ -1,8 +1,3 @@
-• Note TMDb sur les affiches
-• Marquer comme vu depuis sa page ; coche sur les affiches vues
-• Ma liste en marque-page
-• Pastilles de version aux caractéristiques réelles (4K, HDR, Dolby Vision, codec, 5.1, Atmos) ; versions identiques réunies
-• Le Dolby Vision mal affiché par l'écran ne passe plus en premier ; copies cinéma (CAM, TS…) en dernier
-• Statistiques du flux : données du titre
-• Démarrage plus rapide ; sur TV, onglets plus vifs, rangées entières, focus stable
-• Nombreuses corrections
+• Le son et les sous-titres choisis sont gardés par série (chaque épisode suivant démarre avec) et par film (ses autres versions les reprennent quand elles ont cette langue)
+• Nouveau dans Réglages, Lecteur : Langue audio et Langue des sous-titres, par profil, pour les titres où rien n'a été choisi
+• Les chaînes en direct s'ouvrent dans les langues du profil
