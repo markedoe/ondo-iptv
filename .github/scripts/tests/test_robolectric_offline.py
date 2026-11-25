@@ -102,6 +102,8 @@ def config_sdks(source: str, where: str = "<source>") -> set:
 
 def properties_sdks(text: str):
     """The `sdk=` levels of a robolectric.properties, or None when it sets none."""
+    if re.search(r"^\s*(minSdk|maxSdk)\s*=", text, re.MULTILINE):
+        raise AssertionError("robolectric.properties: minSdk/maxSdk is not supported by this check; pin sdk=N")
     match = re.search(r"^\s*sdk\s*=\s*(.+)$", text, re.MULTILINE)
     if not match:
         return None
@@ -111,11 +113,13 @@ def properties_sdks(text: str):
 def module_sdks(module: Path) -> set:
     levels = set()
     default = None
-    for properties in module.glob("src/test*/resources/robolectric.properties"):
+    for properties in module.glob("src/test*/resources/**/robolectric.properties"):
         found = properties_sdks(properties.read_text(encoding="utf-8"))
-        if found:
-            default = (default or set()) | found
-    # Without sdk in robolectric.properties, Robolectric runs on the app's targetSdk.
+        if properties.parent.name == "resources":
+            default = found
+        elif found:  # a package's own robolectric.properties
+            levels |= found
+    # Without sdk in the root robolectric.properties, Robolectric runs on the app's targetSdk.
     levels |= default if default else {catalog_version("targetSdk")}
     for source in list(module.glob("src/test*/**/*.kt")) + list(module.glob("src/test*/**/*.java")):
         levels |= config_sdks(source.read_text(encoding="utf-8"), str(source.relative_to(ROOT)))
@@ -161,6 +165,8 @@ class ParserTest(unittest.TestCase):
     def test_properties(self):
         self.assertEqual(properties_sdks("sdk=35\napplication=android.app.Application\n"), {35})
         self.assertIsNone(properties_sdks("application=android.app.Application\n"))
+        with self.assertRaises(AssertionError):
+            properties_sdks("minSdk=30\n")
 
     def test_a_new_level_needs_its_jar(self):
         needed = {ANDROID_ALL["4.17"][level] for level in {35, 34}}
