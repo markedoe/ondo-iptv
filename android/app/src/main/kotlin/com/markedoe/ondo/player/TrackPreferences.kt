@@ -19,6 +19,45 @@ data class TracksChosen(val audio: TrackPick? = null, val subtitles: TrackPick? 
 }
 
 /**
+ * Tells the viewer's track choices from the app's on one player: every change of its track selection comes back through
+ * `onTrackSelectionParametersChanged`, the app's own (the title's tracks, a downloaded subtitle) included. Each selection
+ * the app sets is noted, and the one change it causes is no choice; any other change is, from the selection seen last.
+ */
+@OptIn(UnstableApi::class)
+class TrackLearner {
+    private var seen: TrackSelectionParameters? = null
+    private val pending = ArrayList<TrackSelectionParameters>()
+
+    /** The selection the player starts with, set before its listener: no change follows. */
+    fun started(parameters: TrackSelectionParameters) {
+        seen = parameters
+        pending.clear()
+    }
+
+    /**
+     * The app sets [parameters] on a player whose selection is [current]: false when they are the same (the player then
+     * says nothing, as Media3 does); else its change is noted as the app's.
+     */
+    fun applying(current: TrackSelectionParameters, parameters: TrackSelectionParameters): Boolean {
+        if (parameters == current) return false
+        pending += parameters
+        return true
+    }
+
+    /** A change of the selection: what the viewer chose, nothing for one the app made. */
+    fun changed(parameters: TrackSelectionParameters): TracksChosen {
+        val previous = seen
+        seen = parameters
+        val index = pending.indexOf(parameters)
+        if (index >= 0) {
+            pending.removeAt(index)
+            return TracksChosen()
+        }
+        return previous?.let { TrackPreferences.chosen(it, parameters) } ?: TracksChosen()
+    }
+}
+
+/**
  * The tracks a stream opens with, from what was chosen for its title and the profile's languages (`TrackMemory`,
  * docs/TRACKS.md); and what a choice in the player says.
  */
@@ -95,18 +134,18 @@ object TrackPreferences {
      * track chosen, a subtitle track chosen, or subtitles turned off. A type of track that did not change says nothing.
      */
     fun chosen(previous: TrackSelectionParameters, parameters: TrackSelectionParameters): TracksChosen {
-        val audio = override(parameters, C.TRACK_TYPE_AUDIO)
-        val text = override(parameters, C.TRACK_TYPE_TEXT)
+        val audio = overrideOf(parameters, C.TRACK_TYPE_AUDIO)
+        val text = overrideOf(parameters, C.TRACK_TYPE_TEXT)
         val off = text == null && isOff(parameters)
-        val wasOff = override(previous, C.TRACK_TYPE_TEXT) == null && isOff(previous)
+        val wasOff = overrideOf(previous, C.TRACK_TYPE_TEXT) == null && isOff(previous)
         return TracksChosen(
-            audio = audio?.takeIf { it != override(previous, C.TRACK_TYPE_AUDIO) }?.let { pick(it) },
-            subtitles = text?.takeIf { it != override(previous, C.TRACK_TYPE_TEXT) }?.let { pick(it) },
+            audio = audio?.takeIf { it != overrideOf(previous, C.TRACK_TYPE_AUDIO) }?.let { pick(it) },
+            subtitles = text?.takeIf { it != overrideOf(previous, C.TRACK_TYPE_TEXT) }?.let { pick(it) },
             subtitlesOff = off && !wasOff,
         )
     }
 
-    private fun override(parameters: TrackSelectionParameters, type: Int): TrackSelectionOverride? =
+    private fun overrideOf(parameters: TrackSelectionParameters, type: Int): TrackSelectionOverride? =
         parameters.overrides.values.firstOrNull { it.type == type }
 
     private fun pick(override: TrackSelectionOverride): TrackPick =

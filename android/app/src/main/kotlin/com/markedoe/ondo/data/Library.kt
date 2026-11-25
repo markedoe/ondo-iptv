@@ -3,6 +3,7 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.model.HistoryEntry
 import com.markedoe.ondo.core.playback.TitleTracks
 import com.markedoe.ondo.core.playback.TrackDefaults
+import com.markedoe.ondo.core.playback.TrackMemory
 import com.markedoe.ondo.core.sync.SyncHidden
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncRows
@@ -17,9 +18,10 @@ import kotlinx.serialization.Serializable
 fun profileTrackDefaults(library: LibraryState, isMain: Boolean, settings: AppSettings): TrackDefaults? {
     library.trackDefaults?.let { return it }
     if (!isMain) return null
-    val subtitles = settings.preferredSubtitleLanguage?.takeIf { settings.subtitlesOn }
-    if (settings.preferredAudioLanguage == null && subtitles == null) return null
-    return TrackDefaults(settings.preferredAudioLanguage, subtitles)
+    val audio = TrackMemory.language(settings.preferredAudioLanguage)
+    val subtitles = TrackMemory.language(settings.preferredSubtitleLanguage)?.takeIf { settings.subtitlesOn }
+    if (audio == null && subtitles == null) return null
+    return TrackDefaults(audio, subtitles)
 }
 
 /** Kind of item in the library; a person (actor or director) is kept by name, whatever the playlist. */

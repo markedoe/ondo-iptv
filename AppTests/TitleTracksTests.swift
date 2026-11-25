@@ -18,7 +18,7 @@ final class TitleTracksTests: XCTestCase {
         try? FileManager.default.removeItem(at: root)
     }
 
-    private func model(settings: AppSettings? = nil) async throws -> AppModel {
+    private func makeModel(settings: AppSettings? = nil) async throws -> AppModel {
         if let settings {
             try FileStore(directory: root.appendingPathComponent("Support", isDirectory: true)).save(settings, name: "settings")
         }
@@ -38,7 +38,7 @@ final class TitleTracksTests: XCTestCase {
     }
 
     func testTheTracksChosenOnEpisodeOneAreThoseOfEpisodeTwo() async throws {
-        let model = try await model()
+        let model = try await makeModel()
         model.rememberTracks(for: episode("e1"), audio: TrackPick(language: "fr"))
         model.rememberTracks(for: episode("e1"), subtitles: TrackPick(language: "en"))
         let wanted = model.titleTracks(for: episode("e2"))
@@ -52,7 +52,7 @@ final class TitleTracksTests: XCTestCase {
     }
 
     func testAFilmStartedAgainKeepsItsTracks() async throws {
-        let model = try await model()
+        let model = try await makeModel()
         model.rememberTracks(for: film, audio: TrackPick(language: "fr"), subtitlesOff: true)
         var again = film
         again.startPosition = 0
@@ -66,7 +66,7 @@ final class TitleTracksTests: XCTestCase {
     }
 
     func testWithNothingChosenTheProfilesLanguagesApply() async throws {
-        let model = try await model()
+        let model = try await makeModel()
         XCTAssertNil(model.titleTracks(for: film).memory)
         XCTAssertNil(model.titleTracks(for: film).defaults)
         model.setTrackDefaults(TrackDefaults(audio: "es", subtitles: "fr"))
@@ -77,7 +77,7 @@ final class TitleTracksTests: XCTestCase {
     }
 
     func testARememberedLanguageTheStreamLacksFallsBack() async throws {
-        let model = try await model()
+        let model = try await makeModel()
         model.setTrackDefaults(TrackDefaults(audio: "de"))
         model.rememberTracks(for: film, audio: TrackPick(language: "it"))
         let wanted = model.titleTracks(for: film)
@@ -87,7 +87,7 @@ final class TitleTracksTests: XCTestCase {
     }
 
     func testAnotherProfileDoesNotInheritTheChoicesNorTheLanguages() async throws {
-        let model = try await model()
+        let model = try await makeModel()
         model.setTrackDefaults(TrackDefaults(audio: "fr"))
         model.rememberTracks(for: episode("e1"), audio: TrackPick(language: "fr"), subtitles: TrackPick(language: "en"))
         let main = model.activeProfile
@@ -106,7 +106,7 @@ final class TitleTracksTests: XCTestCase {
         settings.preferredAudioLanguage = "fr"
         settings.preferredSubtitleLanguage = "en"
         settings.subtitlesEnabled = true
-        let model = try await model(settings: settings)
+        let model = try await makeModel(settings: settings)
         XCTAssertEqual(model.trackDefaults, TrackDefaults(audio: "fr", subtitles: "en"))
         model.setTrackDefaults(TrackDefaults(audio: "de"))
         XCTAssertEqual(model.trackDefaults, TrackDefaults(audio: "de"))

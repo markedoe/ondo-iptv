@@ -16,7 +16,10 @@ dans IPTVCore (`Packages/IPTVCore/Sources/IPTVCore/Playback/TrackMemory.swift`) 
 - **Un film** : gardés pour le film, qui redémarre avec, là où il a été laissé ou depuis le début. Les autres versions
   du film (4K, HD, VOSTFR…, docs/VERSIONS.fr.md) prennent aussi ce choix, quand elles ont la langue.
 - Chaque partie n'est gardée qu'une fois choisie : des sous-titres choisis seuls laissent le son à la langue du profil.
-- **Les chaînes en direct** ne gardent rien : le zapping reste tel qu'il était.
+- **Les chaînes en direct** ne gardent rien par chaîne. Elles s'ouvrent avec les langues du profil, demandées au lecteur
+  avant le flux (Android n'ajoute aucun choix une fois les pistes de la chaîne connues : le zapping n'attend rien de
+  plus) ; un choix sur une chaîne n'est plus reporté sur la suivante, comme quand l'appareil apprenait une langue pour
+  tout.
 
 Un choix est gardé par ce qui distingue la piste, jamais par sa place dans le flux (deux épisodes rangent leurs pistes
 dans des ordres différents) : sa langue (`fre`, `fra`, `fr-CA` et `fr` n'en font qu'une), si elle est forcée (seulement

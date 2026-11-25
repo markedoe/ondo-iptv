@@ -16,7 +16,9 @@ languages for the titles it never chose for. Both apps follow the same rules, in
 - **A film**: kept for the film, so that it starts with them again, from where it was left or from the start. The
   film's other versions (4K, HD, VOSTFR…, docs/VERSIONS.md) take the choice too, where they have the language.
 - Each part is kept only once chosen: subtitles chosen alone leave the sound to the profile's language.
-- **Live channels** keep nothing: zapping stays as it was.
+- **Live channels** keep nothing per channel. They open with the profile's languages, as a request to the player before
+  the stream (Android adds no choice once the channel lists its tracks, so zapping waits for nothing more); a choice on
+  a channel is no longer carried to the next one, as it was when the device learned one language for everything.
 
 A choice is kept by what tells the track apart, never by its place in the stream (two episodes list their tracks in
 different orders): its language (`fre`, `fra`, `fr-CA` and `fr` are one), whether it is forced (foreign dialogue only)

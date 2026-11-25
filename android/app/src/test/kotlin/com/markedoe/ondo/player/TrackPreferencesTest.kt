@@ -153,6 +153,42 @@ class TrackPreferencesTest {
         assertNull("the stream's own sound plays", TrackPreferences.planned(base, stream, title, TrackDefaults(audio = "ja")))
     }
 
+    /** Subtitles on then Off again, back to the very selection the player opened with: Off is still the viewer's choice. */
+    @Test
+    fun offBackToTheOpeningSelectionIsKept() {
+        val stream = tracks(audio("en"), text("en"))
+        val opening = TrackPreferences.parameters(base, null, null, listOf("en"))
+        val learner = TrackLearner().also { it.started(opening) }
+        val on = TrackChoices.select(opening, C.TRACK_TYPE_TEXT, TrackChoice("English", null, false, stream.groups[1], 0))
+        assertEquals("en", learner.changed(on).subtitles?.language)
+        val off = TrackChoices.select(on, C.TRACK_TYPE_TEXT, null)
+        assertEquals(opening, off)
+        assertTrue(learner.changed(off).subtitlesOff)
+    }
+
+    /** What the app sets says nothing; the viewer going back to the track the app chose is a choice. */
+    @Test
+    fun theAppsSelectionIsNoChoiceButGoingBackToItIs() {
+        val stream = tracks(audio("en"), audio("fr"), text("en"))
+        val title = TitleTracks("p|SERIES|s1", audio = TrackPick(language = "fr"), subtitles = TrackPick(language = "en"))
+        val opening = TrackPreferences.parameters(base, title, null, listOf("en"))
+        val learner = TrackLearner().also { it.started(opening) }
+        val planned = requireNotNull(TrackPreferences.planned(opening, stream, title, null))
+        assertTrue(learner.applying(opening, planned))
+        assertFalse("the same selection again: the player says nothing", learner.applying(planned, planned))
+        val english = planned.buildUpon().setOverrideForType(TrackSelectionOverride(stream.groups[0].mediaTrackGroup, 0)).build()
+        // A downloaded subtitle set by the app right after the title's tracks: both callbacks are the app's.
+        val downloaded = english.buildUpon().setIgnoredTextSelectionFlags(0).build()
+        assertTrue(learner.applying(planned, english))
+        assertTrue(learner.applying(english, downloaded))
+        assertTrue(learner.changed(planned).isEmpty)
+        assertTrue(learner.changed(english).isEmpty)
+        assertTrue(learner.changed(downloaded).isEmpty)
+        // The viewer picks French again, the track the app had chosen.
+        val french = downloaded.buildUpon().setOverrideForType(TrackSelectionOverride(stream.groups[1].mediaTrackGroup, 0)).build()
+        assertEquals("fr", learner.changed(french).audio?.language)
+    }
+
     @Test
     fun nothingChosenAndNoLanguagesLeaveMedia3sSelection() {
         assertNull(TrackPreferences.planned(base, tracks(audio("en"), audio("fr")), null, null))

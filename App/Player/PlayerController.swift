@@ -653,7 +653,8 @@ extension PlayerController {
             selectedAudioTrackID = playerItem.currentMediaSelection.selectedMediaOption(in: audible).flatMap { audible.options.firstIndex(of: $0) }
         }
         if let legible {
-            playerItem.select(plan.subtitles.map { legible.options[$0] }, in: legible)
+            // A subtitle file loaded shows alone (a retry opens the stream again with it).
+            playerItem.select(externalSubtitles.isEmpty ? plan.subtitles.map { legible.options[$0] } : nil, in: legible)
             selectedSubtitleTrackID = playerItem.currentMediaSelection.selectedMediaOption(in: legible).flatMap { legible.options.firstIndex(of: $0) }
         }
         await readCreditsStart(of: playerItem)
@@ -960,7 +961,8 @@ extension PlayerController {
     /// The title's tracks among those VLC lists, once per item: by the language VLC names, else by the name.
     private func planVLCTracks(_ backend: VLCBackend, audio: [MediaTrack], subtitles: [MediaTrack]) {
         vlcTracksPlanned = true
-        guard let item, let wanted = titleTracks?(item), wanted.memory != nil || wanted.defaults != nil else { return }
+        // A channel opens as it always did with VLC: zapping waits for nothing more.
+        guard let item, !item.isLive, let wanted = titleTracks?(item), wanted.memory != nil || wanted.defaults != nil else { return }
         func stream(_ track: MediaTrack) -> StreamTrack { StreamTrack(language: TrackMemory.vlcLanguage(track.name), label: track.name) }
         let currentAudio = audio.firstIndex { $0.id == backend.selectedAudioTrackID }
         let plan = TrackMemory.plan(audio: audio.map(stream), subtitles: subtitles.map(stream), memory: wanted.memory,
@@ -1022,6 +1024,7 @@ extension PlayerController {
         let backend = vlc()
         pendingStart = Self.resumeStart(for: item)
         vlcStartSeekSent = false
+        vlcTracksPlanned = false
         if let pendingStart { currentTime = pendingStart }
         let caching = item.isLive
             ? PlaybackBuffer.seconds(setting: liveBufferSetting, automatic: VLCBackend.liveBuffer.seconds)

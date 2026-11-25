@@ -88,9 +88,11 @@ struct SettingsView: View {
     }
 
     /// The language Ondo shows itself in, in that language ("Français").
-    /// The languages a profile can choose for its sound and subtitles, each in the app's language ("French").
-    private var languageChoices: some View {
-        ForEach(TrackMemory.choices, id: \.self) { code in
+    /// The languages a profile can choose for its sound and subtitles, each in the app's language ("French"), with
+    /// `current` when it is another (one learned before profiles had their own).
+    private func languageChoices(_ current: String?) -> some View {
+        let codes = TrackMemory.choices + (current.map { TrackMemory.choices.contains($0) ? [] : [$0] } ?? [])
+        return ForEach(codes, id: \.self) { code in
             Text(verbatim: Locale.current.localizedString(forLanguageCode: code)?.capitalized(with: .current) ?? code).tag(Optional(code))
         }
     }
@@ -278,14 +280,14 @@ struct SettingsView: View {
             Section {
                 Picker(selection: trackDefault(\.audio)) {
                     Text("Automatic").tag(String?.none)
-                    languageChoices
+                    languageChoices(model.trackDefaults.audio)
                 } label: {
                     Label("Audio language", systemImage: "waveform")
                 }
                 .accessibilityIdentifier("audioLanguagePicker")
                 Picker(selection: trackDefault(\.subtitles)) {
                     Text("Off").tag(String?.none)
-                    languageChoices
+                    languageChoices(model.trackDefaults.subtitles)
                 } label: {
                     Label("Subtitle language", systemImage: "captions.bubble")
                 }

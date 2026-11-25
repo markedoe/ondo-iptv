@@ -29,9 +29,10 @@ extension AppModel {
     var profileTrackDefaults: TrackDefaults? {
         if let defaults = library.trackDefaults { return defaults }
         guard activeProfile.isMain else { return nil }
-        let subtitles = settings.subtitlesEnabled ? settings.preferredSubtitleLanguage : nil
-        guard settings.preferredAudioLanguage != nil || subtitles != nil else { return nil }
-        return TrackDefaults(audio: settings.preferredAudioLanguage, subtitles: subtitles)
+        let audio = TrackMemory.language(settings.preferredAudioLanguage)
+        let subtitles = settings.subtitlesEnabled ? TrackMemory.language(settings.preferredSubtitleLanguage) : nil
+        guard audio != nil || subtitles != nil else { return nil }
+        return TrackDefaults(audio: audio, subtitles: subtitles)
     }
 
     /// The open profile's languages as Settings shows them.
