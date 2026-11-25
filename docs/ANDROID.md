@@ -260,6 +260,12 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   Every test class takes `HangGuard` as its first rule (`check_hang_guard.py` in CI): a test that runs over 120 s
   fails with every thread's stack in the log and in `build/reports/tests/hang-guard`, and each test is named as it
   starts and ends, so a test that hangs is named instead of the job waiting in silence for its timeout.
+  Robolectric never downloads Android while the tests run: its `android-all-instrumented` jar for each SDK level the
+  tests use (`sdk=35` in `robolectric.properties`, any `@Config(sdk = ...)`) is declared in the `robolectricRuntime`
+  configuration of `app/build.gradle.kts`, so Gradle downloads it with its retries and its cache, and every Test task
+  (`coldStartTest` included) reads its copy with `robolectric.offline=true`. A test pinned to a new SDK level, or a
+  new Robolectric version, needs its jar there (the version from Robolectric's `DefaultSdkProvider`):
+  `test_robolectric_offline.py` (CI) fails until it is declared.
 
 Planned next (not included in v1): Chromecast, downloads, profiles and PIN,
 second libVLC engine; on a TV, launcher channels and voice search.

@@ -95,8 +95,23 @@ roborazzi {
     outputDir.set(file("src/test/screenshots"))
 }
 
+// Robolectric's Android (android-all-instrumented), one jar per SDK level the tests run on (robolectric.properties,
+// @Config(sdk = ...)), with the version Robolectric's DefaultSdkProvider gives that level. Gradle downloads them, with
+// its retries and its cache; the tests read the copy below offline instead of fetching from Maven Central at run time,
+// where a 429 failed the whole run (test_robolectric_offline.py checks the list against the tests).
+val robolectricRuntime by configurations.creating {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+val robolectricJars by tasks.registering(Sync::class) {
+    from(robolectricRuntime)
+    into(layout.buildDirectory.dir("robolectric-jars"))
+}
+
 dependencies {
     implementation(libs.ondo.core)
+
+    robolectricRuntime("org.robolectric:android-all-instrumented:15-robolectric-13954326-i7") // SDK 35
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
@@ -160,6 +175,13 @@ tasks.withType<Test>().configureEach {
     // A test over its time (HangGuard, 120 s) fails with every thread's stack in the log and in
     // build/reports/tests/hang-guard; whatever else hangs, Gradle stops the tests before the CI job's 45 minutes.
     systemProperty("ondo.hangGuard.dir", "build/reports/tests/hang-guard")
+    // Robolectric's Android from robolectricJars, never from the network (relative to the project dir, the tests'
+    // working directory). Every Test task: testDebugUnitTest, testReleaseUnitTest, coldStartTest.
+    inputs.files(robolectricJars)
+        .withPropertyName("robolectricJars")
+        .withPathSensitivity(PathSensitivity.NAME_ONLY)
+    systemProperty("robolectric.offline", "true")
+    systemProperty("robolectric.dependency.dir", "build/robolectric-jars")
     timeout.set(Duration.ofMinutes(30))
     testLogging {
         // Each test named as it starts and ends in the log: one that never ends shows by name.

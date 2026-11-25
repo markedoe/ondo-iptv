@@ -18,6 +18,10 @@ updates:
     directory: /android
     schedule:
       interval: weekly
+    ignore:
+      # Robolectric's Android jars (robolectricRuntime, android/app/build.gradle.kts): their version is the one
+      # Robolectric's own table gives an SDK level, never the newest; they change with Robolectric.
+      - dependency-name: "org.robolectric:android-all-instrumented"
     groups:
       android:
         patterns: ["*"]

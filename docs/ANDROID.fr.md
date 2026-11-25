@@ -300,6 +300,12 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   de 120 s échoue avec la pile de chaque thread dans le journal et dans `build/reports/tests/hang-guard`, et chaque
   test est nommé quand il commence et quand il finit : un test bloqué est nommé au lieu d'un job qui attend en
   silence son délai.
+  Robolectric ne télécharge jamais Android pendant les tests : son jar `android-all-instrumented` pour chaque niveau
+  de SDK des tests (`sdk=35` dans `robolectric.properties`, tout `@Config(sdk = ...)`) est déclaré dans la
+  configuration `robolectricRuntime` de `app/build.gradle.kts` : Gradle le télécharge avec ses nouvelles tentatives et
+  son cache, et chaque tâche Test (`coldStartTest` comprise) lit sa copie avec `robolectric.offline=true`. Un test
+  fixé sur un nouveau niveau de SDK, ou une nouvelle version de Robolectric, demande d'y ajouter son jar (la version
+  donnée par `DefaultSdkProvider` de Robolectric) : `test_robolectric_offline.py` (CI) échoue tant qu'il manque.
 
 Prévu ensuite (non inclus en v1) : Chromecast, téléchargements, profils et PIN,
 second moteur libVLC ; sur une TV, chaînes du lanceur et recherche vocale.
