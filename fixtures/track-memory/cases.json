@@ -1,0 +1,176 @@
+{
+  "languages": [
+    ["fr", "fr"], ["FR", "fr"], ["fre", "fr"], ["fra", "fr"], ["fr-CA", "fr"], ["pt_BR", "pt"], ["eng", "en"],
+    ["ger", "de"], ["zho", "zh"], ["zh-Hans", "zh"], ["nob", "no"], ["und", null], ["mul", null], ["", null], [null, null]
+  ],
+  "matches": [
+    {
+      "name": "the language, whatever its place",
+      "tracks": [{"language": "en"}, {"language": "fre"}],
+      "pick": {"language": "fr"},
+      "expected": 1
+    },
+    {
+      "name": "a language the stream lacks",
+      "tracks": [{"language": "en"}, {"language": "de"}],
+      "pick": {"language": "fr"},
+      "expected": null
+    },
+    {
+      "name": "full subtitles rather than forced ones",
+      "tracks": [{"language": "en", "forced": true}, {"language": "en"}],
+      "pick": {"language": "en"},
+      "expected": 1
+    },
+    {
+      "name": "forced subtitles when forced ones were chosen",
+      "tracks": [{"language": "en"}, {"language": "en", "forced": true}],
+      "pick": {"language": "en", "forced": true},
+      "expected": 1
+    },
+    {
+      "name": "forced ones when the language has no others",
+      "tracks": [{"language": "de"}, {"language": "en", "forced": true}],
+      "pick": {"language": "en"},
+      "expected": 1
+    },
+    {
+      "name": "subtitles for the hearing impaired when they were chosen",
+      "tracks": [{"language": "en"}, {"language": "en", "hearingImpaired": true}],
+      "pick": {"language": "en", "hearingImpaired": true},
+      "expected": 1
+    },
+    {
+      "name": "the same codec among two sounds of a language",
+      "tracks": [{"language": "fr", "codec": "AAC"}, {"language": "fr", "codec": "E-AC-3"}],
+      "pick": {"language": "fr", "codec": "E-AC-3"},
+      "expected": 1
+    },
+    {
+      "name": "the same label among two sounds of a language",
+      "tracks": [{"language": "en"}, {"language": "en", "label": "Commentary"}],
+      "pick": {"language": "en", "label": "commentary"},
+      "expected": 1
+    },
+    {
+      "name": "the track playing when it is as good as any",
+      "tracks": [{"language": "fr", "codec": "AAC"}, {"language": "fr", "codec": "AC-3"}],
+      "pick": {"language": "fr"},
+      "current": 1,
+      "expected": 1
+    },
+    {
+      "name": "tracks without a language, by their label",
+      "tracks": [{"language": null, "label": "Track 1"}, {"language": null, "label": "Original"}],
+      "pick": {"label": "original"},
+      "expected": 1
+    },
+    {
+      "name": "no language and no label: nothing",
+      "tracks": [{"language": null, "label": "Original"}],
+      "pick": {},
+      "expected": null
+    }
+  ],
+  "plans": [
+    {
+      "name": "episode 2 starts with the French sound and English subtitles chosen on episode 1",
+      "audio": [{"language": "en"}, {"language": "fr"}],
+      "subtitles": [{"language": "fr"}, {"language": "es"}, {"language": "en"}],
+      "memory": {"key": "p|SERIES|s1", "audio": {"language": "fr"}, "subtitles": {"language": "en"}},
+      "defaults": {"audio": "en", "subtitles": "es"},
+      "expected": {"audio": 1, "subtitles": 2}
+    },
+    {
+      "name": "nothing remembered: the profile's defaults",
+      "audio": [{"language": "en"}, {"language": "fr"}],
+      "subtitles": [{"language": "fr"}, {"language": "es"}],
+      "memory": null,
+      "defaults": {"audio": "fr", "subtitles": "es"},
+      "expected": {"audio": 1, "subtitles": 1}
+    },
+    {
+      "name": "nothing remembered and no defaults: the player's own",
+      "audio": [{"language": "en"}, {"language": "fr"}],
+      "subtitles": [{"language": "fr"}],
+      "memory": null,
+      "defaults": null,
+      "expected": {"audio": null, "subtitles": null}
+    },
+    {
+      "name": "a remembered language the stream lacks falls back to the default",
+      "audio": [{"language": "en"}, {"language": "de"}],
+      "subtitles": [{"language": "de"}, {"language": "en"}],
+      "memory": {"key": "p|MOVIE|m1", "audio": {"language": "fr"}, "subtitles": {"language": "fr"}},
+      "defaults": {"audio": "de", "subtitles": "en"},
+      "expected": {"audio": 1, "subtitles": 1}
+    },
+    {
+      "name": "a remembered language and a default the stream lacks: the stream's own sound, no subtitles",
+      "audio": [{"language": "en"}],
+      "subtitles": [{"language": "en"}],
+      "memory": {"key": "p|MOVIE|m1", "audio": {"language": "fr"}, "subtitles": {"language": "fr"}},
+      "defaults": {"audio": "it", "subtitles": "it"},
+      "expected": {"audio": null, "subtitles": null}
+    },
+    {
+      "name": "subtitles turned off for the title stay off, whatever the default",
+      "audio": [{"language": "en"}],
+      "subtitles": [{"language": "en"}],
+      "memory": {"key": "p|SERIES|s1", "subtitlesOff": true},
+      "defaults": {"subtitles": "en"},
+      "expected": {"audio": null, "subtitles": null}
+    },
+    {
+      "name": "only subtitles chosen: the sound follows the default",
+      "audio": [{"language": "en"}, {"language": "fr"}],
+      "subtitles": [{"language": "en"}],
+      "memory": {"key": "p|SERIES|s1", "subtitles": {"language": "en"}},
+      "defaults": {"audio": "fr"},
+      "expected": {"audio": 1, "subtitles": 0}
+    }
+  ],
+  "remember": [
+    {
+      "name": "a sound chosen, then subtitles: both kept",
+      "memories": [{"key": "p|SERIES|s1", "audio": {"language": "fr"}, "at": 1}],
+      "keys": ["p|SERIES|s1"],
+      "subtitles": {"language": "en"},
+      "at": 2,
+      "expected": [{"key": "p|SERIES|s1", "audio": {"language": "fr"}, "subtitles": {"language": "en"}, "subtitlesOff": false, "at": 2}]
+    },
+    {
+      "name": "subtitles turned off forget the subtitle track",
+      "memories": [{"key": "p|SERIES|s1", "subtitles": {"language": "en"}, "at": 1}],
+      "keys": ["p|SERIES|s1"],
+      "subtitlesOff": true,
+      "at": 2,
+      "expected": [{"key": "p|SERIES|s1", "subtitlesOff": true, "at": 2}]
+    },
+    {
+      "name": "another version of a film takes what was chosen on the first, under its own key, first",
+      "memories": [{"key": "p|MOVIE|other", "at": 3}, {"key": "p|MOVIE|hd", "audio": {"language": "fr"}, "at": 1}],
+      "keys": ["p|MOVIE|4k", "p|MOVIE|hd"],
+      "subtitles": {"language": "en"},
+      "at": 5,
+      "expected": [
+        {"key": "p|MOVIE|4k", "audio": {"language": "fr"}, "subtitles": {"language": "en"}, "subtitlesOff": false, "at": 5},
+        {"key": "p|MOVIE|other", "at": 3},
+        {"key": "p|MOVIE|hd", "audio": {"language": "fr"}, "at": 1}
+      ]
+    },
+    {
+      "name": "nothing chosen: nothing changes",
+      "memories": [{"key": "p|MOVIE|m1", "at": 1}],
+      "keys": ["p|MOVIE|m1"],
+      "at": 2,
+      "expected": [{"key": "p|MOVIE|m1", "at": 1}]
+    }
+  ],
+  "titleKeys": [
+    ["p|SERIES|s1|e2", "p|SERIES|s1"],
+    ["p|MOVIE|m1|", "p|MOVIE|m1"],
+    ["p|CHANNEL|c1|", null],
+    [null, null]
+  ]
+}
