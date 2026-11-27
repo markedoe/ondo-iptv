@@ -88,7 +88,7 @@ fun Artwork(
     var failed by remember(start) { mutableStateOf(false) }
     pending?.let { next ->
         LaunchedEffect(next) {
-            delay(next.waitMs)
+            artworkWait(next.waitMs)
             attempts = next
             pending = null
         }
@@ -127,6 +127,9 @@ fun Artwork(
 
 /** The tries again of every card's pictures, by host ([ArtworkBreaker]); a test gives its own. */
 internal var artworkBreaker: ArtworkBreaker = ArtworkBreaker.shared
+
+/** How a card waits before asking again: a coroutine delay; tests replace it to see and release each wait. */
+internal var artworkWait: suspend (Long) -> Unit = { delay(it) }
 
 /** The HTTP status the image server answered a failed load with, from Coil's answer (not its message). */
 internal fun artworkStatus(error: Throwable?): Int? = (error as? HttpException)?.response?.code

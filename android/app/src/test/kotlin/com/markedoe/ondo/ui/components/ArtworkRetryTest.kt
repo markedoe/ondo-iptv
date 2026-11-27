@@ -65,6 +65,7 @@ class ArtworkRetryTest {
     fun setUp() {
         // A breaker of the test's own: the app's keeps what other tests failed.
         artworkBreaker = ArtworkBreaker()
+        artworkWait = { ms -> waits += ms; val gate = kotlinx.coroutines.CompletableDeferred<Unit>(); held += gate; gate.await() }
         // The clock moves only when the test says: the waits between tries are stepped through, not run at once.
         compose.mainClock.autoAdvance = false
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
@@ -81,6 +82,16 @@ class ArtworkRetryTest {
     fun tearDown() {
         SingletonImageLoader.reset()
         artworkBreaker = ArtworkBreaker.shared
+        artworkWait = { kotlinx.coroutines.delay(it) }
+    }
+
+    /** The waits asked for, each held until the test releases it. */
+    private val waits = mutableListOf<Long>()
+    private val held = mutableListOf<kotlinx.coroutines.CompletableDeferred<Unit>>()
+
+    private fun releaseWait() {
+        compose.runOnIdle { held.removeAt(0).complete(Unit) }
+        step(100)
     }
 
     private inner class Answers : Interceptor {
@@ -114,12 +125,14 @@ class ArtworkRetryTest {
         assertEquals(listOf(provider), requests.toList())
         assertTrue("the code shows while no picture does", codeShown())
 
-        step(1_000)
-        assertEquals("not before its wait", listOf(provider), requests.toList())
-        step(600)
-        assertEquals("asked again after 1.5 s", listOf(provider, provider), requests.toList())
-        step(5_200)
-        assertEquals("then after 5 s, then the still", listOf(provider, provider, provider, still), requests.toList())
+        step(5_000)
+        assertEquals("not before its wait is over", listOf(provider), requests.toList())
+        assertEquals("waits 1.5 s first", listOf(1_500L), waits.toList())
+        releaseWait()
+        assertEquals("asked again after the wait", listOf(provider, provider), requests.toList())
+        assertEquals("then waits 5 s", listOf(1_500L, 5_000L), waits.toList())
+        releaseWait()
+        assertEquals("then the still", listOf(provider, provider, provider, still), requests.toList())
         step(200)
         assertTrue("the still shows: the code goes", !codeShown())
     }
@@ -128,7 +141,9 @@ class ArtworkRetryTest {
     fun aBusyServerIsAskedAgainAMissingPictureGivesWayAtOnce() {
         answers = mapOf(provider to status(503), still to null)
         compose.setContent { Artwork(provider, "S01E01", Modifier.size(160.dp, 90.dp), fallbackUrls = listOf(still)) }
-        step(1_800)
+        step(200)
+        assertEquals("503: waits before asking again", listOf(1_500L), waits.toList())
+        releaseWait()
         assertEquals("503: asked again", listOf(provider, provider), requests.toList())
     }
 
