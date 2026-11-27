@@ -2456,6 +2456,12 @@ class OndoRepository(
             val changed = changedAt != null && stored != null && stored.first.found && changedAt * 1_000 > stored.first.fetchedAt
             if (stored != null && MetadataFreshness.isFresh(stored.first, now()) && !changed) return@run
             if (client == null) return@run
+            if (tmdbBusy()) {
+                // TMDb said it was busy a moment ago: not asked before the pause is over, asked again the next time the
+                // title shows after it.
+                metadataAsked.remove(key)
+                return@run
+            }
             val info = try {
                 if (ahead) {
                     tmdbSlots.withPermit {
@@ -2469,8 +2475,10 @@ class OndoRepository(
                 throw e
             } catch (e: Exception) {
                 // Out of reach or busy for a moment (429, 5xx): asked again the next time the title shows (a series'
-                // seasons wait for its TMDb id). TMDb refused or failed: not this session.
+                // seasons wait for its TMDb id), after [TMDB_BUSY_PAUSE_MS] when busy. TMDb refused or failed: not this
+                // session.
                 if (isPassingFailure(e)) metadataAsked.remove(key)
+                noteTmdbBusy(e)
                 noteTmdbFailure(e)
                 return@run
             }
@@ -2528,6 +2536,10 @@ class OndoRepository(
         val maxAge = if (stored?.second.isNullOrEmpty()) MetadataFreshness.NOT_FOUND_MS else MetadataFreshness.FOUND_MS
         if (stored != null && MetadataFreshness.isFresh(stored.first, maxAge, now())) return
         if (client == null) return
+        if (tmdbBusy()) {
+            seasonsAsked.remove("$key|$season")
+            return
+        }
         val episodes = try {
             withContext(io) { client.seasonEpisodes(id, season) }
         } catch (e: CancellationException) {
@@ -2537,11 +2549,25 @@ class OndoRepository(
             // Out of reach or busy for a moment (429, 5xx): asked again the next time the season shows, else its
             // stills would stay missing all session. TMDb refused (401) or has no such season: not this session.
             if (isPassingFailure(e)) seasonsAsked.remove("$key|$season")
+            noteTmdbBusy(e)
             noteTmdbFailure(e)
             return
         }
         withContext(io) { metadata.saveSeason(storeKey, now(), episodes) }
         showSeason(key, season, episodes)
+    }
+
+    /**
+     * Until when TMDb is left alone after it said it was busy (429, 5xx): the titles and seasons shown meanwhile are asked
+     * once the pause is over, not each time they show (its answers carry no Retry-After this client reads).
+     */
+    @Volatile private var tmdbBusyUntil = 0L
+
+    private fun tmdbBusy(): Boolean = now() < tmdbBusyUntil
+
+    private fun noteTmdbBusy(e: Exception) {
+        val code = (e as? HttpException.BadStatus)?.code ?: return
+        if (code == 429 || code in 500..599) tmdbBusyUntil = now() + TMDB_BUSY_PAUSE_MS
     }
 
     /** A failure that says nothing of the request: the network, or a server busy for a moment (429, 5xx). */
@@ -2712,6 +2738,9 @@ class OndoRepository(
         /** Titles asked of TMDb ahead of the viewer at the same time, and the pause after each (as on Apple devices). */
         private const val MAX_PREFETCHING = 2
         private const val PACE_MS = 250L
+
+        /** How long TMDb is left alone after it said it was busy ([tmdbBusyUntil]). */
+        internal const val TMDB_BUSY_PAUSE_MS = 60_000L
         private const val LOCAL_PEOPLE_LIMIT = 8
         private const val PHOTO_CANDIDATES = 5
 

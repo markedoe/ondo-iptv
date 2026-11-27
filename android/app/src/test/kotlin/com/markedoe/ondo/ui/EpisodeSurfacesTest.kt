@@ -154,8 +154,8 @@ class EpisodeSurfacesTest {
     }
 
     /**
-     * TMDb busy for a moment (429, 503) as the page opens: the season is asked again the next time it shows, and its
-     * stills come. Before, any answer of TMDb's but the network's kept it from being asked again all session.
+     * TMDb busy for a moment (429, 503) as the page opens: left alone for [OndoRepository.TMDB_BUSY_PAUSE_MS] (not asked at
+     * each show), then the season is asked again the next time it shows, and its stills come. Before, any answer of TMDb's but the network's kept it from being asked again all session.
      */
     @Test
     fun aSeasonTmdbWasBusyForIsAskedAgainTheNextTimeItShows() = busyTmdb(seriesBusy = false)
@@ -190,7 +190,8 @@ class EpisodeSurfacesTest {
         store.saveSettings(AppSettings(activePlaylistId = "x1"))
         val jackRyan = Series(id = "1", name = name, categoryId = shows.id, xtreamSeriesId = 1)
         store.saveContent("x1", PlaylistContent(series = listOf(jackRyan), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
-        val repository = OndoRepository(store, http, backgroundScope, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
+        var time = System.currentTimeMillis()
+        val repository = OndoRepository(store, http, backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler), matching = Dispatchers.Unconfined)
         val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)).also { models += it }
         val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series.single()
         assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
@@ -202,7 +203,17 @@ class EpisodeSurfacesTest {
         settle()
         assertEquals("TMDb busy: no still yet", null, page().getOrNull(1)?.posterUrl)
 
-        // The page opens again (or another season and back): the season shows again.
+        // Shown again at once: TMDb is left alone for a minute, not asked at each show.
+        repeat(3) {
+            viewModel.wantSeason(series.id, 3)
+            viewModel.loadSeries(series.id)
+            settle()
+        }
+        assertEquals("TMDb not asked again during its pause", 1, if (seriesBusy) seriesRequests else seasonRequests)
+        assertEquals(null, page().getOrNull(1)?.posterUrl)
+
+        // The page opens again after the pause (or another season and back): the season shows again.
+        time += OndoRepository.TMDB_BUSY_PAUSE_MS + 1
         viewModel.wantSeason(series.id, 3)
         viewModel.loadSeries(series.id)
         settleUntil { page().getOrNull(1)?.posterUrl?.contains("tmdb") == true }

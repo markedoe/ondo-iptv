@@ -1,8 +1,13 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.HangGuard
+import java.io.EOFException
 import java.io.IOException
+import java.io.InterruptedIOException
+import java.net.ConnectException
+import java.net.SocketException
 import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -74,15 +79,58 @@ class ArtworkAttemptsTest {
     }
 
     @Test
-    fun theNetworkAndABusyServerAreWorthAnotherTryNotAMissingPicture() {
-        assertTrue(ArtworkAttempts.isTransient(SocketTimeoutException("timeout")))
-        assertTrue(ArtworkAttempts.isTransient(IOException("unexpected end of stream")))
-        assertTrue(ArtworkAttempts.isTransient(RuntimeException("HTTP 503")))
-        assertTrue(ArtworkAttempts.isTransient(RuntimeException("HTTP 429")))
-        assertTrue(ArtworkAttempts.isTransient(IllegalStateException("load failed", SocketTimeoutException())))
-        assertFalse(ArtworkAttempts.isTransient(RuntimeException("HTTP 404")))
-        assertFalse(ArtworkAttempts.isTransient(IOException("HTTP 403")))
-        assertFalse("not a picture", ArtworkAttempts.isTransient(IllegalStateException("Failed to decode")))
-        assertFalse(ArtworkAttempts.isTransient(null))
+    fun onlyAServerOutOfReachOrBusyIsAskedAgain() {
+        assertTrue("refused", ArtworkAttempts.isRetryable(ConnectException("Failed to connect")))
+        assertTrue("reset", ArtworkAttempts.isRetryable(SocketException("Connection reset")))
+        assertTrue("DNS", ArtworkAttempts.isRetryable(UnknownHostException("panel.example.com")))
+        assertTrue("connect timeout", ArtworkAttempts.isRetryable(SocketTimeoutException("Connect timed out")))
+        assertTrue("cut", ArtworkAttempts.isRetryable(IOException("unexpected end of stream", EOFException())))
+        assertTrue("wrapped", ArtworkAttempts.isRetryable(IllegalStateException("load failed", ConnectException())))
+        assertTrue(ArtworkAttempts.isRetryable(null, status = 503))
+        assertTrue(ArtworkAttempts.isRetryable(null, status = 429))
+        assertTrue(ArtworkAttempts.isRetryable(null, status = 408))
+        // A picture that stopped arriving would start over from nothing: the next address instead.
+        assertFalse("read timeout", ArtworkAttempts.isRetryable(SocketTimeoutException("timeout")))
+        assertFalse("whole call timeout", ArtworkAttempts.isRetryable(InterruptedIOException("timeout")))
+        assertFalse(ArtworkAttempts.isRetryable(null, status = 404))
+        assertFalse("the status decides, not the message", ArtworkAttempts.isRetryable(RuntimeException("HTTP 503"), status = 403))
+        assertFalse("a message is not a status", ArtworkAttempts.isRetryable(RuntimeException("HTTP 503")))
+        assertFalse("not a picture", ArtworkAttempts.isRetryable(IllegalStateException("Failed to decode")))
+        assertFalse(ArtworkAttempts.isRetryable(null))
+    }
+
+    @Test
+    fun aHostThatKeepsFailingIsNotAskedAgainForAWhile() {
+        var time = 1_000_000L
+        val breaker = ArtworkBreaker(threshold = 5, windowMs = 30_000, pauseMs = 60_000, now = { time })
+        val dead = ArtworkAttempts.start("http://dead.example.com/a.jpg", listOf(still))
+        val refused = ConnectException("Failed to connect")
+        // Four cards fail: each is asked again.
+        repeat(4) { assertEquals(1, dead.afterFailure(refused, null, breaker).retries) }
+        // The fifth failure within 30 s pauses the host: its card goes to the still at once.
+        assertEquals(still, dead.afterFailure(refused, null, breaker).url)
+        assertFalse(breaker.allowsRetry("dead.example.com"))
+        assertTrue("other hosts are not paused", breaker.allowsRetry("panel.example.com"))
+        time += 60_001
+        assertTrue("asked again once the pause is over", breaker.allowsRetry("dead.example.com"))
+    }
+
+    @Test
+    fun failuresFarApartOrFollowedByAPictureDoNotPauseTheHost() {
+        var time = 0L
+        val breaker = ArtworkBreaker(threshold = 5, windowMs = 30_000, pauseMs = 60_000, now = { time })
+        repeat(10) {
+            breaker.failed("slow.example.com")
+            time += 10_000
+        }
+        assertTrue("never five within 30 s", breaker.allowsRetry("slow.example.com"))
+        repeat(4) { breaker.failed("panel.example.com") }
+        breaker.succeeded("http://panel.example.com/images/e1.jpg")
+        breaker.failed("panel.example.com")
+        assertTrue("a picture that loaded forgets the failures", breaker.allowsRetry("panel.example.com"))
+        // A failure not worth another try (a 404) does not count.
+        val missing = ArtworkAttempts.start("http://cdn.example.com/a.jpg")
+        repeat(10) { missing.afterFailure(null, 404, breaker) }
+        assertTrue(breaker.allowsRetry("cdn.example.com"))
     }
 }

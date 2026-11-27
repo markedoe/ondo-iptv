@@ -1,6 +1,8 @@
 package com.markedoe.ondo.ui.components
 
 import com.markedoe.ondo.core.library.ArtworkAttempts
+import com.markedoe.ondo.core.library.ArtworkBreaker
+import com.markedoe.ondo.core.library.afterFailure
 import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -43,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
+import coil3.network.HttpException
 import coil3.request.ImageRequest
 import kotlin.math.PI
 import kotlinx.coroutines.delay
@@ -104,11 +107,15 @@ fun Artwork(
                     contentDescription = null,
                     contentScale = contentScale,
                     modifier = Modifier.fillMaxSize(),
-                    onSuccess = { failed = false },
+                    onSuccess = {
+                        failed = false
+                        artworkBreaker.succeeded(current)
+                    },
                     onError = { error ->
                         // The title shows from the first failure, as before, while the next tries are made.
                         failed = true
-                        val next = attempts.failed(ArtworkAttempts.isTransient(error.result.throwable))
+                        val throwable = error.result.throwable
+                        val next = attempts.afterFailure(throwable, artworkStatus(throwable), artworkBreaker)
                         if (next.waitMs == 0L) attempts = next else pending = next
                     },
                 )
@@ -117,6 +124,12 @@ fun Artwork(
         if (failed && showsTitleFallback) CoverTitle(title)
     }
 }
+
+/** The tries again of every card's pictures, by host ([ArtworkBreaker]); a test gives its own. */
+internal var artworkBreaker: ArtworkBreaker = ArtworkBreaker.shared
+
+/** The HTTP status the image server answered a failed load with, from Coil's answer (not its message). */
+internal fun artworkStatus(error: Throwable?): Int? = (error as? HttpException)?.response?.code
 
 /** A poster as a blurred background (carousel, pages without a backdrop): decoded small, then blurred. */
 @Composable
