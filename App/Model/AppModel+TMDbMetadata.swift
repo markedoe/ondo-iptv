@@ -19,6 +19,8 @@ final class TMDbMetadata {
     var seasons: [String: [Int: [TMDbEpisode]]] = [:]
     /// The seasons asked this session ("<series id>|<season>").
     @ObservationIgnored var seasonsAsked: Set<String> = []
+    /// TMDb said it was busy (429, 5xx): titles and seasons shown meanwhile wait for the pause to end.
+    @ObservationIgnored var busy = BusyPause()
     /// People's photos by key (`MetadataKey.person`).
     var photos: [String: URL] = [:]
 
@@ -250,6 +252,8 @@ extension AppModel {
         let title = details.map(\.title).flatMap { $0.isEmpty ? nil : $0 } ?? item.title
         let year = item.year ?? details?.releaseDate.flatMap { Int($0.prefix(4)) }
         let client = TMDbClient(credential: credential, http: http, language: tmdbLanguage, pacer: paced ? tmdbMetadata.pacer : nil)
+        // Busy a moment ago: asked again the next time the title shows after the pause.
+        guard !tmdbMetadata.busy.isBusy() else { return }
         let info: TMDbTitleInfo?
         do {
             info = try await client.titleInfo(of: item.contentType, tmdbID: details?.tmdbID, title: title, year: year)
@@ -261,6 +265,7 @@ extension AppModel {
                 // TMDb refused or failed: not asked again this session. Out of reach or busy for a moment (429, 5xx): the
                 // next page or card asks again (a series' seasons wait for its TMDb id).
                 if !isPassingFailure(error) { tmdbMetadata.attempted.insert(item.id) }
+                tmdbMetadata.busy.note(error)
                 noteTMDbFailure(error, credential: credential)
             }
             return
@@ -308,6 +313,10 @@ extension AppModel {
             tmdbMetadata.seasonsAsked.remove(asked)
             return
         }
+        guard !tmdbMetadata.busy.isBusy() else {
+            tmdbMetadata.seasonsAsked.remove(asked)
+            return
+        }
         let client = TMDbClient(credential: credential, http: http, language: tmdbLanguage, pacer: tmdbMetadata.pacer)
         do {
             let episodes = try await client.seasonEpisodes(seriesID: id, season: season)
@@ -318,6 +327,7 @@ extension AppModel {
             // Out of reach, busy for a moment (429, 5xx) or cancelled: asked again the next time the season shows, else its
             // stills would stay missing all session. TMDb refused or has no such season: not this session.
             if Task.isCancelled || isPassingFailure(error) { tmdbMetadata.seasonsAsked.remove(asked) }
+            tmdbMetadata.busy.note(error)
             noteTMDbFailure(error, credential: credential)
         }
     }

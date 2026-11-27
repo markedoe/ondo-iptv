@@ -1,4 +1,7 @@
 import XCTest
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 @testable import IPTVCore
 
 /// A card's picture is not given up at its first failed load: a network failure is asked again a moment later, then the
@@ -53,5 +56,49 @@ final class ArtworkAttemptsTests: XCTestCase {
         XCTAssertEqual(ArtworkAttempts(provider, fallbacks: [nil, provider]).urls, [provider])
         XCTAssertTrue(ArtworkAttempts(nil).urls.isEmpty)
         XCTAssertEqual(ArtworkAttempts(nil, fallbacks: [still]).url, still)
+    }
+
+    func testOnlyAServerOutOfReachOrBusyIsAskedAgain() {
+        XCTAssertTrue(ArtworkAttempts.isRetryable(urlError: .cannotConnectToHost, status: nil))
+        XCTAssertTrue(ArtworkAttempts.isRetryable(urlError: .networkConnectionLost, status: nil))
+        XCTAssertTrue(ArtworkAttempts.isRetryable(urlError: .dnsLookupFailed, status: nil))
+        XCTAssertTrue(ArtworkAttempts.isRetryable(urlError: nil, status: 503))
+        XCTAssertTrue(ArtworkAttempts.isRetryable(urlError: nil, status: 429))
+        XCTAssertTrue(ArtworkAttempts.isRetryable(urlError: nil, status: 408))
+        XCTAssertFalse(ArtworkAttempts.isRetryable(urlError: .timedOut, status: nil), "a slow picture is not started over")
+        XCTAssertFalse(ArtworkAttempts.isRetryable(urlError: nil, status: 404))
+        XCTAssertFalse(ArtworkAttempts.isRetryable(urlError: .cancelled, status: nil))
+        XCTAssertFalse(ArtworkAttempts.isRetryable(urlError: nil, status: nil), "not a picture")
+    }
+
+    func testAHostThatKeepsFailingIsNotAskedAgainForAWhile() {
+        final class Clock: @unchecked Sendable { var time = Date(timeIntervalSince1970: 1_000_000) }
+        let clock = Clock()
+        let breaker = ArtworkBreaker(threshold: 5, window: 30, pause: 60, now: { clock.time })
+        let dead = ArtworkAttempts(URL(string: "http://dead.example.com/a.jpg")!, fallbacks: [still])
+        for _ in 0..<4 { XCTAssertEqual(dead.afterFailure(urlError: .cannotConnectToHost, status: nil, breaker: breaker).retries, 1) }
+        XCTAssertEqual(dead.afterFailure(urlError: .cannotConnectToHost, status: nil, breaker: breaker).url, still, "paused: the still at once")
+        XCTAssertFalse(breaker.allowsRetry("dead.example.com"))
+        XCTAssertTrue(breaker.allowsRetry("panel.example.com"), "other hosts are not paused")
+        clock.time += 61
+        XCTAssertTrue(breaker.allowsRetry("dead.example.com"), "asked again once the pause is over")
+    }
+
+    func testFailuresFarApartOrFollowedByAPictureDoNotPauseTheHost() {
+        final class Clock: @unchecked Sendable { var time = Date(timeIntervalSince1970: 0) }
+        let clock = Clock()
+        let breaker = ArtworkBreaker(threshold: 5, window: 30, pause: 60, now: { clock.time })
+        for _ in 0..<10 {
+            breaker.failed("slow.example.com")
+            clock.time += 10
+        }
+        XCTAssertTrue(breaker.allowsRetry("slow.example.com"), "never five within 30 s")
+        for _ in 0..<4 { breaker.failed("panel.example.com") }
+        breaker.succeeded(URL(string: "http://panel.example.com/images/e1.jpg"))
+        breaker.failed("panel.example.com")
+        XCTAssertTrue(breaker.allowsRetry("panel.example.com"), "a picture that loaded forgets the failures")
+        let missing = ArtworkAttempts(URL(string: "http://cdn.example.com/a.jpg")!)
+        for _ in 0..<10 { _ = missing.afterFailure(urlError: nil, status: 404, breaker: breaker) }
+        XCTAssertTrue(breaker.allowsRetry("cdn.example.com"), "a 404 does not count")
     }
 }

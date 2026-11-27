@@ -79,6 +79,13 @@ enum Artwork {
         case broken
     }
 
+    /// What a failed load says for `ArtworkAttempts.isRetryable`: the URL error, or the status the server answered.
+    static func retryReason(_ error: Error) -> (urlError: URLError.Code?, status: Int?) {
+        let underlying = (error as? ImagePipeline.Error)?.dataLoadingError ?? error
+        if let loading = underlying as? DataLoader.Error, case .statusCodeUnacceptable(let code) = loading { return (nil, code) }
+        return ((underlying as? URLError)?.code, nil)
+    }
+
     static func failure(_ error: Error) -> Failure {
         let underlying = (error as? ImagePipeline.Error)?.dataLoadingError ?? error
         guard let urlError = underlying as? URLError else { return .broken }
@@ -106,6 +113,8 @@ struct RemoteImage: View {
     var fallbackURLs: [URL] = []
     /// The tries for the addresses shown now; another address starts over.
     @State private var attempts: ArtworkAttempts?
+    /// The next try, waiting a moment after a failure worth another one.
+    @State private var pending: ArtworkAttempts?
 
     private var start: ArtworkAttempts { ArtworkAttempts(url, fallbacks: fallbackURLs) }
 
@@ -128,19 +137,23 @@ struct RemoteImage: View {
         }
         // A cancelled request (scrolled away) reports nothing.
         .onCompletion { result in
-            guard case .failure(let error) = result else { return }
-            let failure = Artwork.failure(error)
-            guard failure != .cancelled else { return }
-            let next = current.failed(transient: failure == .network)
-            guard next.wait > 0 else {
-                attempts = next
-                return
+            switch result {
+            case .success:
+                ArtworkBreaker.shared.succeeded(current.url)
+            case .failure(let error):
+                guard Artwork.failure(error) != .cancelled else { return }
+                let reason = Artwork.retryReason(error)
+                let next = current.afterFailure(urlError: reason.urlError, status: reason.status)
+                if next.wait > 0 { pending = next } else { attempts = next }
             }
-            // One more try a moment later (a new identity loads it again), unless the address changed meanwhile.
-            Task {
-                try? await Task.sleep(for: .seconds(next.wait))
-                if shown == current { attempts = next }
-            }
+        }
+        // One more try a moment later (a new identity loads it again); the wait ends with the view (`task`).
+        .task(id: pending) {
+            guard let next = pending else { return }
+            try? await Task.sleep(for: .seconds(next.wait))
+            guard !Task.isCancelled, pending == next else { return }
+            attempts = next
+            pending = nil
         }
         .id(current.attempt)
     }

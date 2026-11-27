@@ -21,4 +21,19 @@ final class PassingFailureTests: XCTestCase {
         XCTAssertFalse(isPassingFailure(HTTPClientError.emptyResponse))
         XCTAssertFalse(isPassingFailure(DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "not TMDb"))))
     }
+
+    func testABusyServiceIsLeftAloneForAMinute() {
+        let at = Date(timeIntervalSince1970: 1_000_000)
+        var pause = BusyPause()
+        XCTAssertFalse(pause.isBusy(at: at))
+        pause.note(HTTPClientError.badStatus(404), at: at)
+        XCTAssertFalse(pause.isBusy(at: at), "a missing season is no reason to wait")
+        pause.note(URLError(.timedOut), at: at)
+        XCTAssertFalse(pause.isBusy(at: at), "out of reach: asked again at the next show")
+        pause.note(HTTPClientError.badStatus(429), at: at)
+        XCTAssertTrue(pause.isBusy(at: at.addingTimeInterval(59)), "not asked at each show")
+        XCTAssertFalse(pause.isBusy(at: at.addingTimeInterval(61)), "asked again after a minute")
+        pause.note(HTTPClientError.badStatus(503), at: at.addingTimeInterval(100))
+        XCTAssertTrue(pause.isBusy(at: at.addingTimeInterval(130)))
+    }
 }

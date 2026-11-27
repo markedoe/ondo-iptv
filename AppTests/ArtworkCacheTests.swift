@@ -1,6 +1,7 @@
 import XCTest
 import ImageIO
 import Nuke
+import IPTVCore
 @testable import Ondo
 
 /// Posters stay on disk: at the next launch they come back without a download, already at the size the screen
@@ -62,6 +63,35 @@ final class ArtworkCacheTests: XCTestCase {
         #else
         XCTAssertEqual(Artwork.diskLimit, 512 * 1024 * 1024)
         #endif
+    }
+
+    /// A busy image server (503, 429) is asked again, an address that leads nowhere (404) is not: the status is read from
+    /// Nuke's real error, as `RemoteImage` reads it (`Artwork.retryReason`).
+    func testABusyImageServerIsWorthAnotherTryNotAMissingPicture() async throws {
+        let server = try LocalHTTPServer { request in
+            let code = Int(request.path.split(separator: "/").last.map(String.init)?.replacingOccurrences(of: ".jpg", with: "") ?? "") ?? 404
+            return LocalHTTPServer.Response(status: code)
+        }
+        let base = try await server.start()
+        let pipeline = Artwork.pipeline(cacheName: "OndoArtworkTests-\(UUID().uuidString)")
+        defer { (pipeline.configuration.dataCache as? DataCache).map { try? FileManager.default.removeItem(at: $0.path) } }
+        func reason(_ code: Int) async -> (urlError: URLError.Code?, status: Int?) {
+            do {
+                _ = try await pipeline.image(for: Artwork.request(base.appendingPathComponent("\(code).jpg"), maxPixelSize: 100))
+                XCTFail("HTTP \(code) loaded")
+                return (nil, nil)
+            } catch {
+                return Artwork.retryReason(error)
+            }
+        }
+        let busy = await reason(503)
+        XCTAssertEqual(busy.status, 503)
+        XCTAssertTrue(ArtworkAttempts.isRetryable(urlError: busy.urlError, status: busy.status))
+        let limited = await reason(429)
+        XCTAssertTrue(ArtworkAttempts.isRetryable(urlError: limited.urlError, status: limited.status))
+        let missing = await reason(404)
+        XCTAssertEqual(missing.status, 404)
+        XCTAssertFalse(ArtworkAttempts.isRetryable(urlError: missing.urlError, status: missing.status))
     }
 
     private static func jpeg(width: Int, height: Int) -> Data? {

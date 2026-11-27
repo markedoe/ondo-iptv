@@ -7,8 +7,27 @@ import FoundationNetworking
 /// for a moment (429, 5xx). A refusal (401), an address that leads nowhere (404) or an unreadable answer is not.
 public func isPassingFailure(_ error: Error) -> Bool {
     if error is URLError { return true }
-    if case .badStatus(let code) = error as? HTTPClientError { return code == 429 || (500...599).contains(code) }
+    if let http = error as? HTTPClientError, case .badStatus(let code) = http { return code == 429 || (500...599).contains(code) }
     return false
+}
+
+/// Until when a service that said it was busy (429, 5xx) is left alone: what is shown meanwhile is asked once the pause
+/// is over, not each time it shows (its answers carry no Retry-After this client reads). Same rule as Android's
+/// `OndoRepository.TMDB_BUSY_PAUSE_MS`.
+public struct BusyPause: Sendable {
+    public static let duration: TimeInterval = 60
+    public private(set) var until: Date = .distantPast
+
+    public init() {}
+
+    /// Whether the service is left alone at `now`.
+    public func isBusy(at now: Date = Date()) -> Bool { now < until }
+
+    /// After a failed request: a 429 or 5xx starts the pause.
+    public mutating func note(_ error: Error, at now: Date = Date()) {
+        guard let http = error as? HTTPClientError, case .badStatus(let code) = http, code == 429 || (500...599).contains(code) else { return }
+        until = now.addingTimeInterval(Self.duration)
+    }
 }
 
 public enum HTTPClientError: Error, LocalizedError, Equatable {
