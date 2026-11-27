@@ -166,8 +166,9 @@ internal fun Context.bootCount(): Int? =
  * Artwork's client, made from the app's [shared] one (its connections, its User-Agent): its own queue (the shared one
  * allows 5 requests per host), so posters and thumbnails never wait behind the provider's catalogue, details and guide
  * requests to the same server; and shorter timeouts, a whole picture included ([ARTWORK_CALL_TIMEOUT_S]): the shared
- * client's 10 minutes for a guide would let a picture trickling in hold one of the host's places that long, the cards
- * after it waiting. A picture that gives up is asked again ([com.markedoe.ondo.core.library.ArtworkAttempts]).
+ * client's 10 minutes for a guide would let a stalled picture hold one of the host's places that long, the cards after
+ * it waiting. Long enough for a slow server's large picture to arrive: one cut short is asked again from its start
+ * ([com.markedoe.ondo.core.library.ArtworkAttempts]).
  */
 internal fun artworkHttp(shared: OkHttpClient): OkHttpClient = shared.newBuilder()
     .dispatcher(Dispatcher().apply { maxRequestsPerHost = ARTWORK_REQUESTS_PER_HOST })
@@ -180,7 +181,7 @@ internal fun artworkHttp(shared: OkHttpClient): OkHttpClient = shared.newBuilder
 internal const val ARTWORK_REQUESTS_PER_HOST = 10
 
 /** Longest a picture may take, from its request to its last byte. */
-internal const val ARTWORK_CALL_TIMEOUT_S = 30L
+internal const val ARTWORK_CALL_TIMEOUT_S = 120L
 
 /** The app's image loader (posters, thumbnails, logos, cast photos), on [http]: see [OndoApplication.newImageLoader]. */
 internal fun Context.artworkLoader(http: OkHttpClient): ImageLoader = ImageLoader.Builder(this)

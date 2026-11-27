@@ -154,20 +154,31 @@ class EpisodeSurfacesTest {
     }
 
     /**
-     * TMDb busy for a moment (503) as the page opens: the season is asked again the next time it shows, and its stills
-     * come. Before, any answer of TMDb's but the network's kept the season from being asked again all session.
+     * TMDb busy for a moment (429, 503) as the page opens: the season is asked again the next time it shows, and its
+     * stills come. Before, any answer of TMDb's but the network's kept it from being asked again all session.
      */
     @Test
-    fun aSeasonTmdbWasBusyForIsAskedAgainTheNextTimeItShows() = runTest {
+    fun aSeasonTmdbWasBusyForIsAskedAgainTheNextTimeItShows() = busyTmdb(seriesBusy = false)
+
+    /** The same with TMDb busy for the series itself: its seasons wait for its TMDb id, asked again as the page opens. */
+    @Test
+    fun aSeriesTmdbWasBusyForIsAskedAgainWhenItsPageOpensAgain() = busyTmdb(seriesBusy = true)
+
+    private fun busyTmdb(seriesBusy: Boolean) = runTest {
+        var seriesRequests = 0
         var seasonRequests = 0
         val http = object : HttpClient {
             override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
                 "get_series_info" in url -> seriesInfo
                 url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
-                url.startsWith("https://api.themoviedb.org/3/tv/73375?") -> """{"id":73375,"name":"Tom Clancy's Jack Ryan"}"""
+                url.startsWith("https://api.themoviedb.org/3/tv/73375?") -> {
+                    seriesRequests++
+                    if (seriesBusy && seriesRequests == 1) throw HttpException.BadStatus(503)
+                    """{"id":73375,"name":"Tom Clancy's Jack Ryan"}"""
+                }
                 url.startsWith("https://api.themoviedb.org/3/tv/73375/season/3?") -> {
                     seasonRequests++
-                    if (seasonRequests == 1) throw HttpException.BadStatus(503)
+                    if (!seriesBusy && seasonRequests == 1) throw HttpException.BadStatus(429)
                     tmdbSeason
                 }
                 else -> throw HttpException.BadStatus(404)
@@ -187,14 +198,16 @@ class EpisodeSurfacesTest {
         viewModel.wantSeason(series.id, 3)
         viewModel.loadSeries(series.id)
         fun page() = UiMappers.seriesDetail(viewModel.state.value, series, 3, null).seasons.singleOrNull()?.episodes.orEmpty()
-        settleUntil { seasonRequests == 1 && page().isNotEmpty() }
+        settleUntil { (if (seriesBusy) seriesRequests else seasonRequests) == 1 && page().isNotEmpty() }
         settle()
         assertEquals("TMDb busy: no still yet", null, page().getOrNull(1)?.posterUrl)
 
-        // The season shows again (the page opened again, another season and back).
+        // The page opens again (or another season and back): the season shows again.
         viewModel.wantSeason(series.id, 3)
+        viewModel.loadSeries(series.id)
         settleUntil { page().getOrNull(1)?.posterUrl?.contains("tmdb") == true }
-        assertEquals(2, seasonRequests)
+        assertEquals(if (seriesBusy) 1 else 2, seasonRequests)
+        if (seriesBusy) assertEquals("the series asked again", 2, seriesRequests)
         assertEquals("https://image.tmdb.org/t/p/w300/tmdb-2.jpg", page()[1].posterUrl)
     }
 }

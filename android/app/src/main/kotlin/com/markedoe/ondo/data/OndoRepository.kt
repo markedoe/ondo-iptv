@@ -2468,8 +2468,9 @@ class OndoRepository(
                 metadataAsked.remove(key)
                 throw e
             } catch (e: Exception) {
-                // Out of reach: asked again the next time the title shows. TMDb refused or failed: not this session.
-                if (e is java.io.IOException && e !is HttpException) metadataAsked.remove(key)
+                // Out of reach or busy for a moment (429, 5xx): asked again the next time the title shows (a series'
+                // seasons wait for its TMDb id). TMDb refused or failed: not this session.
+                if (isPassingFailure(e)) metadataAsked.remove(key)
                 noteTmdbFailure(e)
                 return@run
             }

@@ -15,11 +15,11 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +46,6 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import kotlin.math.PI
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.math.sin
 
 val PosterShape = RoundedCornerShape(10.dp)
@@ -59,7 +58,8 @@ private const val BLURRED_DECODE_SIZE = 96
  * comes from the title, with the title on it. Lists stay good-looking with incomplete catalogues.
  *
  * A load that fails for the network is asked again a moment later, then [fallbackUrls] are tried in turn (TMDb's still
- * of an episode), and only then the cover shows its title ([ArtworkAttempts]). Shown again, the card starts over.
+ * of an episode), before the cover is left for good ([ArtworkAttempts]); its title shows from the first failure. Shown
+ * again, the card starts over.
  */
 @Composable
 fun Artwork(
@@ -79,7 +79,17 @@ fun Artwork(
         return
     }
     var attempts by remember(start) { mutableStateOf(start) }
-    val scope = rememberCoroutineScope()
+    // The next try, waiting a moment after a network error: only composed while one waits (nothing on the way to a
+    // picture that loads), and cancelled with the card.
+    var pending by remember(start) { mutableStateOf<ArtworkAttempts?>(null) }
+    var failed by remember(start) { mutableStateOf(false) }
+    pending?.let { next ->
+        LaunchedEffect(next) {
+            delay(next.waitMs)
+            attempts = next
+            pending = null
+        }
+    }
     val context = LocalPlatformContext.current
     val current = attempts.url
     // The cover is drawn behind the picture: it shows while the picture loads and fades in, and stays if it fails.
@@ -94,23 +104,17 @@ fun Artwork(
                     contentDescription = null,
                     contentScale = contentScale,
                     modifier = Modifier.fillMaxSize(),
+                    onSuccess = { failed = false },
                     onError = { error ->
-                        val tried = attempts
-                        val next = tried.failed(ArtworkAttempts.isTransient(error.result.throwable))
-                        if (next.waitMs == 0L) {
-                            attempts = next
-                        } else {
-                            // Left meanwhile (another title in the card, the card gone): the wait goes with it.
-                            scope.launch {
-                                delay(next.waitMs)
-                                if (attempts === tried) attempts = next
-                            }
-                        }
+                        // The title shows from the first failure, as before, while the next tries are made.
+                        failed = true
+                        val next = attempts.failed(ArtworkAttempts.isTransient(error.result.throwable))
+                        if (next.waitMs == 0L) attempts = next else pending = next
                     },
                 )
             }
         }
-        if (attempts.gaveUp && showsTitleFallback) CoverTitle(title)
+        if (failed && showsTitleFallback) CoverTitle(title)
     }
 }
 

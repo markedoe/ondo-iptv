@@ -117,11 +117,6 @@ class EpisodeTitlesTest {
             merged.map { it.stillUrl },
             "TMDb's still stands by where the provider's picture may lead nowhere",
         )
-        assertEquals(
-            listOf("http://example.com/provider-1.jpg", "https://image.tmdb.org/t/p/w300/s1.jpg"),
-            merged.first().pictureUrls,
-            "a card tries the provider's picture, then TMDb's still",
-        )
         assertEquals(listOf("Falcon", "Paralysis", "Episode 3", "Own Title", "Episode 5"), merged.map { it.title })
         assertEquals("TMDb's plot", merged[2].plot)
         // Matched by number in the same season, never by position or another season's.

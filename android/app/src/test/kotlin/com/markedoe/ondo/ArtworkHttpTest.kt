@@ -21,7 +21,8 @@ import org.junit.Test
 /**
  * Pictures never wait behind the provider's API: the provider's server answers both (its catalogue, details and guide,
  * and its episodes' pictures), and the shared client takes 5 requests per host at once. A picture also gives up within
- * [ARTWORK_CALL_TIMEOUT_S], not the shared client's 10 minutes, so one trickling in does not hold a place for long.
+ * [ARTWORK_CALL_TIMEOUT_S], not the shared client's 10 minutes, so a stalled one does not hold a place for long, yet
+ * leaves a slow server's large picture the time to arrive.
  */
 class ArtworkHttpTest {
     @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
@@ -89,7 +90,7 @@ class ArtworkHttpTest {
         assertTrue("more places per host than the shared client", artwork.dispatcher.maxRequestsPerHost > shared.dispatcher.maxRequestsPerHost)
         val sharedWithTimeouts = OkHttpClient.Builder().callTimeout(600, TimeUnit.SECONDS).build()
         val timeout = artworkHttp(sharedWithTimeouts).callTimeoutMillis
-        assertTrue("a whole picture within 30 s, not the shared 10 minutes: $timeout ms", timeout in 1..30_000)
+        assertTrue("a whole picture within 2 minutes, not the shared 10: $timeout ms", timeout in 60_000..120_000)
         assertEquals(15_000, artwork.readTimeoutMillis)
         assertEquals(15_000, artwork.connectTimeoutMillis)
         assertEquals("the shared client's connections", shared.connectionPool, artwork.connectionPool)
