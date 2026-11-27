@@ -1,3 +1,4 @@
 • O áudio e as legendas escolhidos ficam guardados por série (cada próximo episódio começa com eles) e por filme (as outras versões usam os mesmos se tiverem esse idioma)
 • Novo em Configurações, Player: Idioma do áudio e Idioma das legendas, por perfil, para títulos ainda sem escolha
 • Os canais ao vivo abrem com os idiomas do perfil
+• As imagens de episódio que não carregam são pedidas de novo, com a imagem do TMDb no lugar

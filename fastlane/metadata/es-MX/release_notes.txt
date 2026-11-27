@@ -2,3 +2,4 @@
 • Y para la película: vuelve a empezar con ellos, y sus otras versiones los usan cuando tienen ese idioma
 • Nuevo en Ajustes, Reproductor: Idioma del audio e Idioma de los subtítulos, para cada perfil, usados en los títulos donde todavía no se eligió nada
 • Los canales en vivo se abren con los idiomas de tu perfil
+• Las imágenes de episodio que no cargan se piden de nuevo, con la imagen de TMDb como sustituta

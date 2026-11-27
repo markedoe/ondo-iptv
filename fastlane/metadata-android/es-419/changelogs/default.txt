@@ -1,3 +1,4 @@
 • El audio y los subtítulos elegidos se guardan por serie (cada episodio siguiente empieza con ellos) y por película (sus otras versiones los usan si tienen ese idioma)
 • Nuevo en Ajustes, Reproductor: Idioma del audio e Idioma de los subtítulos, por perfil, para los títulos sin elección
 • Los canales en vivo se abren con los idiomas del perfil
+• Las imágenes de episodio que no cargan se piden de nuevo, con la imagen de TMDb como sustituta

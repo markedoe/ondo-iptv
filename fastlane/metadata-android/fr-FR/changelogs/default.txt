@@ -1,3 +1,4 @@
 • Le son et les sous-titres choisis sont gardés par série (chaque épisode suivant démarre avec) et par film (ses autres versions les reprennent quand elles ont cette langue)
 • Nouveau dans Réglages, Lecteur : Langue audio et Langue des sous-titres, par profil, pour les titres où rien n'a été choisi
 • Les chaînes en direct s'ouvrent dans les langues du profil
+• Les images d'épisode qui ne se chargent pas sont redemandées, avec celle de TMDb en remplacement

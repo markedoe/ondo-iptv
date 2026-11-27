@@ -2,3 +2,4 @@
 • Et pour le film : il redémarre avec, et ses autres versions les reprennent quand elles ont cette langue
 • Nouveau dans Réglages, Lecteur : Langue audio et Langue des sous-titres, pour chaque profil, utilisées pour les titres où rien n'a encore été choisi
 • Les chaînes en direct s'ouvrent dans les langues de votre profil
+• Les images d'épisode qui ne se chargent pas sont redemandées, avec celle de TMDb en remplacement

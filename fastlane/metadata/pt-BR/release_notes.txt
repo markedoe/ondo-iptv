@@ -2,3 +2,4 @@
 • E para o filme: ele volta a começar com eles, e as outras versões usam os mesmos quando têm esse idioma
 • Novo em Ajustes, Player: Idioma do áudio e Idioma das legendas, para cada perfil, usados nos títulos em que nada foi escolhido ainda
 • Os canais ao vivo abrem com os idiomas do seu perfil
+• As imagens de episódio que não carregam são pedidas de novo, com a imagem do TMDb no lugar

@@ -1,3 +1,4 @@
 • The sound and subtitles you choose are kept per series (every next episode starts with them) and per film (its other versions use them when they have that language)
 • New in Settings, Player: Audio language and Subtitle language, for each profile, for titles where nothing was chosen yet
 • Live channels open with your profile's languages
+• Episode pictures that fail to load are asked again, with TMDb's picture as a stand-in
