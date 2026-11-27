@@ -17,7 +17,16 @@ data class Episode(
     val releaseDate: String? = null,
     val rating: Double? = null,
     val headers: HttpHeaders? = null,
+    /**
+     * TMDb's still of the episode, tried when the provider's picture ([posterUrl]) does not load
+     * ([com.markedoe.ondo.core.library.EpisodeTitles.merge]). Worked out as it shows: never kept or synced.
+     */
+    @kotlinx.serialization.Transient val stillUrl: String? = null,
 ) {
+    /** The episode's pictures in the order a card tries them: the provider's, then TMDb's still. */
+    val pictureUrls: List<String>
+        get() = listOfNotNull(posterUrl, stillUrl).filter { it.isNotBlank() }.distinct()
+
     /** `"S01E05"`. */
     val code: String
         get() = String.format(Locale.ROOT, "S%02dE%02d", season, number)

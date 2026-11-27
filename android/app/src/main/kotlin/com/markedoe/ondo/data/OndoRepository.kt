@@ -2533,13 +2533,20 @@ class OndoRepository(
             seasonsAsked.remove("$key|$season")
             throw e
         } catch (e: Exception) {
-            // Out of reach: asked again the next time the season shows. TMDb refused or failed: not this session.
-            if (e is java.io.IOException && e !is HttpException) seasonsAsked.remove("$key|$season")
+            // Out of reach or busy for a moment (429, 5xx): asked again the next time the season shows, else its
+            // stills would stay missing all session. TMDb refused (401) or has no such season: not this session.
+            if (isPassingFailure(e)) seasonsAsked.remove("$key|$season")
             noteTmdbFailure(e)
             return
         }
         withContext(io) { metadata.saveSeason(storeKey, now(), episodes) }
         showSeason(key, season, episodes)
+    }
+
+    /** A failure that says nothing of the request: the network, or a server busy for a moment (429, 5xx). */
+    private fun isPassingFailure(e: Exception): Boolean {
+        val code = (e as? HttpException.BadStatus)?.code
+        return if (code != null) code == 429 || code in 500..599 else e is java.io.IOException && e !is HttpException
     }
 
     private fun showSeason(key: String, season: Int, episodes: List<TmdbEpisode>) {

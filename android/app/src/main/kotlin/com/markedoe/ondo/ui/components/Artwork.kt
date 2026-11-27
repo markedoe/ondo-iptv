@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.components
 
+import com.markedoe.ondo.core.library.ArtworkAttempts
 import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -15,8 +16,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +45,8 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import kotlin.math.PI
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.sin
 
 val PosterShape = RoundedCornerShape(10.dp)
@@ -52,6 +57,9 @@ private const val BLURRED_DECODE_SIZE = 96
 /**
  * Artwork from the provider, or — when there is none or it fails — a generated cover: a gradient whose hue
  * comes from the title, with the title on it. Lists stay good-looking with incomplete catalogues.
+ *
+ * A load that fails for the network is asked again a moment later, then [fallbackUrls] are tried in turn (TMDb's still
+ * of an episode), and only then the cover shows its title ([ArtworkAttempts]). Shown again, the card starts over.
  */
 @Composable
 fun Artwork(
@@ -62,26 +70,47 @@ fun Artwork(
     showsTitleFallback: Boolean = true,
     /** At most this many pixels wide and high, rather than the size on screen (blurred copies). */
     decodeSize: Int? = null,
+    /** Other addresses of the same picture, tried when [url] does not load. */
+    fallbackUrls: List<String> = emptyList(),
 ) {
-    if (url.isNullOrBlank()) {
+    val start = remember(url, fallbackUrls) { ArtworkAttempts.start(url, fallbackUrls) }
+    if (start.urls.isEmpty()) {
         GeneratedCover(title, modifier, showsTitleFallback)
         return
     }
-    var failed by remember(url) { mutableStateOf(false) }
+    var attempts by remember(start) { mutableStateOf(start) }
+    val scope = rememberCoroutineScope()
     val context = LocalPlatformContext.current
-    val model: Any = remember(url, decodeSize) { if (decodeSize == null) url else ImageRequest.Builder(context).data(url).size(decodeSize).build() }
+    val current = attempts.url
     // The cover is drawn behind the picture: it shows while the picture loads and fades in, and stays if it fails.
     // No subcomposition per item, unlike a loading slot (lists scroll more smoothly).
     Box(modifier.generatedCover(title), contentAlignment = Alignment.BottomCenter) {
-        AsyncImage(
-            model = model,
-            contentDescription = null,
-            contentScale = contentScale,
-            modifier = Modifier.fillMaxSize(),
-            onSuccess = { failed = false },
-            onError = { failed = true },
-        )
-        if (failed && showsTitleFallback) CoverTitle(title)
+        if (current != null) {
+            // A new request for each try ([ArtworkAttempts.attempt]): the same address asked again loads again.
+            key(attempts.attempt) {
+                val model: Any = remember(current, decodeSize) { if (decodeSize == null) current else ImageRequest.Builder(context).data(current).size(decodeSize).build() }
+                AsyncImage(
+                    model = model,
+                    contentDescription = null,
+                    contentScale = contentScale,
+                    modifier = Modifier.fillMaxSize(),
+                    onError = { error ->
+                        val tried = attempts
+                        val next = tried.failed(ArtworkAttempts.isTransient(error.result.throwable))
+                        if (next.waitMs == 0L) {
+                            attempts = next
+                        } else {
+                            // Left meanwhile (another title in the card, the card gone): the wait goes with it.
+                            scope.launch {
+                                delay(next.waitMs)
+                                if (attempts === tried) attempts = next
+                            }
+                        }
+                    },
+                )
+            }
+        }
+        if (attempts.gaveUp && showsTitleFallback) CoverTitle(title)
     }
 }
 

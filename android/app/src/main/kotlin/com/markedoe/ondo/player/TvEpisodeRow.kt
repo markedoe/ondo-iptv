@@ -65,6 +65,8 @@ data class EpisodeChoice(
     val number: Int,
     val title: String,
     val imageUrl: String? = null,
+    /** TMDb's still, tried when [imageUrl] does not load. */
+    val stillUrl: String? = null,
     /** How far the viewer went, from 0 (not started) to 1. */
     val progress: Float = 0f,
     val watched: Boolean = false,
@@ -194,7 +196,7 @@ private fun EpisodeCard(episode: EpisodeChoice, playing: Boolean, modifier: Modi
             ),
         ) {
             Box(Modifier.fillMaxSize()) {
-                Artwork(url = episode.imageUrl, title = episode.code, modifier = Modifier.fillMaxSize())
+                Artwork(url = episode.imageUrl, title = episode.code, modifier = Modifier.fillMaxSize(), fallbackUrls = listOfNotNull(episode.stillUrl))
                 if (playing) {
                     Text(
                         nowPlaying,

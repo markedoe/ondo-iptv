@@ -649,7 +649,7 @@ private fun TvEpisodeCard(episode: Episode, progress: WatchProgress?, onClick: (
             border = CardDefaults.border(focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(3.dp, Color.White), shape = TvTokens.CardShape)),
         ) {
             Box(Modifier.fillMaxSize()) {
-                Artwork(url = episode.posterUrl, title = episode.code, modifier = Modifier.fillMaxSize())
+                Artwork(url = episode.posterUrl, title = episode.code, modifier = Modifier.fillMaxSize(), fallbackUrls = listOfNotNull(episode.stillUrl))
                 if (progress?.finished == true) {
                     Icon(
                         Icons.Rounded.CheckCircle,

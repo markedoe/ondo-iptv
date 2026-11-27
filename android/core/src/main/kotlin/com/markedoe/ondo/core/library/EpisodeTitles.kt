@@ -86,16 +86,18 @@ object EpisodeTitles {
 
     /**
      * [episode] as it shows: its title ([clean]), TMDb's name for it first ([tmdb]); its picture the provider's, else
-     * TMDb's still; its plot the provider's, else TMDb's. The same instance when nothing changes.
+     * TMDb's still, which is also the provider's stand-in when that does not load ([Episode.stillUrl]); its plot the provider's, else TMDb's. The same instance when nothing changes.
      */
     fun merge(episode: Episode, seriesName: String?, tmdb: TmdbEpisode?): Episode {
         val own = clean(episode.title, seriesName, episode.number)
         val tmdbName = tmdb?.name?.let { clean(it, seriesName, episode.number) }?.takeIf { !isPlaceholder(it, episode.number) }
         val title = tmdbName ?: own
         val poster = episode.posterUrl?.takeIf { it.isNotBlank() } ?: tmdb?.stillUrl ?: episode.posterUrl
+        // The provider's picture can lead nowhere: TMDb's still is then tried in its place.
+        val still = tmdb?.stillUrl?.takeIf { it != poster } ?: episode.stillUrl?.takeIf { it != poster }
         val plot = episode.plot?.takeIf { it.isNotBlank() } ?: tmdb?.overview?.takeIf { it.isNotBlank() } ?: episode.plot
-        if (title == episode.title && poster == episode.posterUrl && plot == episode.plot) return episode
-        return episode.copy(title = title, posterUrl = poster, plot = plot)
+        if (title == episode.title && poster == episode.posterUrl && still == episode.stillUrl && plot == episode.plot) return episode
+        return episode.copy(title = title, posterUrl = poster, stillUrl = still, plot = plot)
     }
 
     /**

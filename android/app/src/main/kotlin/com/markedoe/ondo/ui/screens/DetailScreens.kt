@@ -832,7 +832,7 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.width(if (metrics.compact) 150.dp else 220.dp).aspectRatio(16f / 9f).clip(CardShape)) {
-            Artwork(url = episode.posterUrl, title = episode.code, modifier = Modifier.fillMaxSize())
+            Artwork(url = episode.posterUrl, title = episode.code, modifier = Modifier.fillMaxSize(), fallbackUrls = listOfNotNull(episode.stillUrl))
             Icon(
                 Icons.Rounded.PlayArrow,
                 contentDescription = null,

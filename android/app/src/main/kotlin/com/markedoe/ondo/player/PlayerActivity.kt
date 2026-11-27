@@ -854,6 +854,7 @@ class PlayerActivity : ComponentActivity() {
                         number = episode.number,
                         title = episode.title,
                         imageUrl = episode.posterUrl,
+                        stillUrl = episode.stillUrl,
                         progress = progress?.progress?.toFloat() ?: 0f,
                         watched = progress?.isFinished == true,
                     )

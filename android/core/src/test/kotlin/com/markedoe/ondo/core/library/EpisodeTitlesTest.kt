@@ -14,6 +14,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import org.junit.Rule
 
 /** An episode's own title on every screen, and TMDb's stills and names for the episodes a provider leaves bare. */
@@ -111,12 +112,32 @@ class EpisodeTitlesTest {
             merged.map { it.posterUrl },
             "the provider's picture first, TMDb's still where it gave none, the placeholder when neither has one",
         )
+        assertEquals(
+            listOf("https://image.tmdb.org/t/p/w300/s1.jpg", null, null, "https://image.tmdb.org/t/p/w300/s4.jpg", null),
+            merged.map { it.stillUrl },
+            "TMDb's still stands by where the provider's picture may lead nowhere",
+        )
+        assertEquals(
+            listOf("http://example.com/provider-1.jpg", "https://image.tmdb.org/t/p/w300/s1.jpg"),
+            merged.first().pictureUrls,
+            "a card tries the provider's picture, then TMDb's still",
+        )
         assertEquals(listOf("Falcon", "Paralysis", "Episode 3", "Own Title", "Episode 5"), merged.map { it.title })
         assertEquals("TMDb's plot", merged[2].plot)
         // Matched by number in the same season, never by position or another season's.
         assertEquals("Pilot", EpisodeTitles.merge(details, jackRyan, tmdb).seasons.first().episodes.single().title)
         val clean = SeriesDetails(MediaDetails(title = "x"), listOf(Season(1, "Season 1", listOf(Episode("a", "Pilot", 1, 1, "http://example.com/a.mp4", posterUrl = "http://example.com/a.jpg")))))
         assertSame(clean, EpisodeTitles.merge(clean, "x", emptyMap()), "nothing to change: the same instance")
+        val again = EpisodeTitles.merge(details, jackRyan, tmdb)
+        assertSame(again, EpisodeTitles.merge(again, jackRyan, tmdb), "merged twice: the same instance")
+    }
+
+    @Test
+    fun theStandByStillIsNeverKept() {
+        val episode = Episode("e1", "Falcon", 3, 1, "http://example.com/1.mp4", posterUrl = "http://example.com/1.jpg", stillUrl = "https://image.tmdb.org/t/p/w300/s1.jpg")
+        val json = Json.encodeToString(Episode.serializer(), episode)
+        assertTrue("stillUrl" !in json, json)
+        assertEquals(episode.copy(stillUrl = null), Json.decodeFromString(Episode.serializer(), json))
     }
 
     @Test
