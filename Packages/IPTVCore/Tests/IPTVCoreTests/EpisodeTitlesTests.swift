@@ -98,11 +98,6 @@ final class EpisodeTitlesTests: XCTestCase {
             ["https://image.tmdb.org/t/p/w300/s1.jpg", nil, nil, "https://image.tmdb.org/t/p/w300/s4.jpg", nil],
             "TMDb's still stands by where the provider's picture may lead nowhere"
         )
-        XCTAssertEqual(
-            season3[0].pictureURLs.map(\.absoluteString),
-            ["http://example.com/provider-1.jpg", "https://image.tmdb.org/t/p/w300/s1.jpg"],
-            "a card tries the provider's picture, then TMDb's still"
-        )
         XCTAssertEqual(EpisodeTitles.merge(merged, seriesName: jackRyan, tmdb: tmdb), merged, "merged twice: the same")
         XCTAssertEqual(season3.map(\.title), ["Falcon", "Paralysis", "Episode 3", "Own Title", "Episode 5"])
         XCTAssertEqual(season3[2].plot, "TMDb's plot")

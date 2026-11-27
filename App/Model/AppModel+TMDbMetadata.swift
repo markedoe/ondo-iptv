@@ -258,8 +258,9 @@ extension AppModel {
                 // The app went to the background: first in line when it comes back.
                 if tmdbMetadata.queue.add(item.id, urgent: true) { tmdbMetadata.waiting[item.id] = item }
             } else {
-                // TMDb refused or failed: not asked again this session. Out of reach: the next page or card asks again.
-                if !(error is URLError) { tmdbMetadata.attempted.insert(item.id) }
+                // TMDb refused or failed: not asked again this session. Out of reach or busy for a moment (429, 5xx): the
+                // next page or card asks again (a series' seasons wait for its TMDb id).
+                if !isPassingFailure(error) { tmdbMetadata.attempted.insert(item.id) }
                 noteTMDbFailure(error, credential: credential)
             }
             return
