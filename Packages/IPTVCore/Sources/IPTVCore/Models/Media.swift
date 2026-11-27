@@ -146,6 +146,20 @@ public struct Episode: Identifiable, Codable, Hashable, Sendable {
     public var releaseDate: String?
     public var rating: Double?
     public var headers: HTTPHeaders?
+    /// TMDb's still of the episode, tried when the provider's picture (`posterURL`) does not load
+    /// (`EpisodeTitles.merge`). Worked out as it shows: never kept or synced (not in `CodingKeys`).
+    public var stillURL: URL? = nil
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, season, number, streamURL, posterURL, plot, durationSeconds, releaseDate, rating, headers
+    }
+
+    /// The episode's pictures in the order a card tries them: the provider's, then TMDb's still.
+    public var pictureURLs: [URL] {
+        var urls: [URL] = []
+        for url in [posterURL, stillURL].compactMap({ $0 }) where !urls.contains(url) { urls.append(url) }
+        return urls
+    }
 
     public init(
         id: String,

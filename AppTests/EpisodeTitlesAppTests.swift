@@ -4,7 +4,7 @@ import IPTVCore
 
 /// An episode reads the same on every screen that names it: its own title (TMDb's name, else the provider's without
 /// the series' name, tags and code, else "Episode N" in the app's language), never the provider's whole name, and its
-/// still from TMDb where the provider has none. The surfaces: the series' page and the player's queue (Up next) read
+/// still from TMDb where the provider has none, or in place of a provider's picture that does not load. The surfaces: the series' page and the player's queue (Up next) read
 /// `AppModel.details(for:)`, i.e. `shown(_:of:)`; Continue Watching and an episode resumed at once read
 /// `episodeLine(of:)`; search lists no episode. Same cases as Android's `EpisodeSurfacesTest`.
 @MainActor
@@ -45,6 +45,11 @@ final class EpisodeTitlesAppTests: XCTestCase {
             shown.map { $0.posterURL?.absoluteString },
             ["http://img.example.com/provider-1.jpg", "https://image.tmdb.org/t/p/w300/tmdb-2.jpg", "https://image.tmdb.org/t/p/w300/tmdb-3.jpg",
              "http://img.example.com/provider-4.jpg", nil]
+        )
+        // The provider's pictures may lead nowhere: TMDb's still stands by, tried in their place (the page's cards).
+        XCTAssertEqual(
+            shown.map { $0.stillURL?.absoluteString },
+            ["https://image.tmdb.org/t/p/w300/tmdb-1.jpg", nil, nil, "https://image.tmdb.org/t/p/w300/tmdb-4.jpg", nil]
         )
         XCTAssertFalse(shown.contains { $0.title.contains("Jack Ryan") }, "never the series' name")
 

@@ -3,6 +3,14 @@ import Foundation
 import FoundationNetworking
 #endif
 
+/// A failure that says nothing of the request, worth asking again later: the network (`URLError`), or a server busy
+/// for a moment (429, 5xx). A refusal (401), an address that leads nowhere (404) or an unreadable answer is not.
+public func isPassingFailure(_ error: Error) -> Bool {
+    if error is URLError { return true }
+    if case .badStatus(let code) = error as? HTTPClientError { return code == 429 || (500...599).contains(code) }
+    return false
+}
+
 public enum HTTPClientError: Error, LocalizedError, Equatable {
     case badStatus(Int)
     case emptyResponse

@@ -71,7 +71,7 @@ public enum EpisodeTitles {
     }
 
     /// `episode` as it shows: its title (`clean`), TMDb's name for it first (`tmdb`); its picture the provider's, else
-    /// TMDb's still; its plot the provider's, else TMDb's.
+    /// TMDb's still, which also stands in for the provider's when that does not load (`Episode.stillURL`); its plot the provider's, else TMDb's.
     public static func merge(_ episode: Episode, seriesName: String?, tmdb: TMDbEpisode?) -> Episode {
         var result = episode
         let own = clean(episode.title, seriesName: seriesName, number: episode.number)
@@ -79,6 +79,8 @@ public enum EpisodeTitles {
             .flatMap { isPlaceholder($0, number: episode.number) ? nil : $0 }
         result.title = tmdbName ?? own
         if episode.posterURL == nil, let still = tmdb?.stillURL { result.posterURL = still }
+        // The provider's picture can lead nowhere: TMDb's still is then tried in its place.
+        if let still = tmdb?.stillURL ?? episode.stillURL { result.stillURL = still == result.posterURL ? nil : still }
         if episode.plot?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true,
            let overview = tmdb?.overview, !overview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             result.plot = overview

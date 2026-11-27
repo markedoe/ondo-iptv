@@ -93,10 +93,34 @@ final class EpisodeTitlesTests: XCTestCase {
             ],
             "the provider's picture first, TMDb's still where it gave none, the placeholder when neither has one"
         )
+        XCTAssertEqual(
+            season3.map { $0.stillURL?.absoluteString },
+            ["https://image.tmdb.org/t/p/w300/s1.jpg", nil, nil, "https://image.tmdb.org/t/p/w300/s4.jpg", nil],
+            "TMDb's still stands by where the provider's picture may lead nowhere"
+        )
+        XCTAssertEqual(
+            season3[0].pictureURLs.map(\.absoluteString),
+            ["http://example.com/provider-1.jpg", "https://image.tmdb.org/t/p/w300/s1.jpg"],
+            "a card tries the provider's picture, then TMDb's still"
+        )
+        XCTAssertEqual(EpisodeTitles.merge(merged, seriesName: jackRyan, tmdb: tmdb), merged, "merged twice: the same")
         XCTAssertEqual(season3.map(\.title), ["Falcon", "Paralysis", "Episode 3", "Own Title", "Episode 5"])
         XCTAssertEqual(season3[2].plot, "TMDb's plot")
         // Matched by number in the same season, never by position or another season's.
         XCTAssertEqual(merged.seasons[0].episodes.map(\.title), ["Pilot"])
+    }
+
+    func testTheStandByStillIsNeverKept() throws {
+        var episode = Episode(
+            id: "e1", title: "Falcon", season: 3, number: 1, streamURL: URL(string: "http://example.com/1.mp4")!,
+            posterURL: URL(string: "http://example.com/1.jpg")
+        )
+        episode.stillURL = URL(string: "https://image.tmdb.org/t/p/w300/s1.jpg")
+        let data = try JSONEncoder().encode(episode)
+        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("stillURL"))
+        var expected = episode
+        expected.stillURL = nil
+        XCTAssertEqual(try JSONDecoder().decode(Episode.self, from: data), expected)
     }
 
     func testASeasonsEpisodesComeInOneRequest() async throws {

@@ -356,7 +356,10 @@ struct EpisodeRow: View {
         return OndoColor.surface
             .frame(width: width, height: width * 9 / 16)
             .overlay {
-                RemoteImage(url: episode.posterURL, placeholderText: episode.code, contentMode: .fill, maxPixelSize: 440)
+                RemoteImage(
+                    url: episode.posterURL, placeholderText: episode.code, contentMode: .fill, maxPixelSize: 440,
+                    fallbackURLs: episode.stillURL.map { [$0] } ?? []
+                )
             }
             .overlay(alignment: .bottomLeading) {
                 Image(systemName: "play.fill")

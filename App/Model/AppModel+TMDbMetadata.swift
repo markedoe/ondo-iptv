@@ -314,8 +314,9 @@ extension AppModel {
             await Task.detached(priority: .utility) { store.saveSeason(row) }.value
             showSeason(episodes, season: season, of: series)
         } catch {
-            // Out of reach or cancelled: asked again the next time the season shows. TMDb refused or failed: not this session.
-            if Task.isCancelled || error is URLError { tmdbMetadata.seasonsAsked.remove(asked) }
+            // Out of reach, busy for a moment (429, 5xx) or cancelled: asked again the next time the season shows, else its
+            // stills would stay missing all session. TMDb refused or has no such season: not this session.
+            if Task.isCancelled || isPassingFailure(error) { tmdbMetadata.seasonsAsked.remove(asked) }
             noteTMDbFailure(error, credential: credential)
         }
     }

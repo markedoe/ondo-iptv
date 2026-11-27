@@ -2,6 +2,7 @@ import SwiftUI
 import CoreImage
 import Nuke
 import NukeUI
+import IPTVCore
 
 /// Artwork (logos, posters) goes through Nuke: memory cache, a disk cache, request coalescing and
 /// downsampling, so huge provider images do not cost memory in long lists.
@@ -93,15 +94,30 @@ enum Artwork {
     }
 }
 
-/// Async image with a monogram placeholder (channel logos are frequently missing or broken).
+/// Async image with a monogram placeholder (channel logos are frequently missing or broken). A load that fails for the
+/// network is asked again a moment later, then `fallbackURLs` are tried in turn (TMDb's still of an episode), and only
+/// then the monogram stays (`ArtworkAttempts`). Shown again, it starts over.
 struct RemoteImage: View {
     let url: URL?
     var placeholderText: String = ""
     var contentMode: ContentMode = .fit
     var maxPixelSize: CGFloat = 300
+    /// Other addresses of the same picture, tried when `url` does not load.
+    var fallbackURLs: [URL] = []
+    /// The tries for the addresses shown now; another address starts over.
+    @State private var attempts: ArtworkAttempts?
+
+    private var start: ArtworkAttempts { ArtworkAttempts(url, fallbacks: fallbackURLs) }
+
+    private var shown: ArtworkAttempts {
+        let fresh = start
+        guard let attempts, attempts.urls == fresh.urls else { return fresh }
+        return attempts
+    }
 
     var body: some View {
-        LazyImage(request: url.map { Artwork.request($0, maxPixelSize: maxPixelSize) }) { state in
+        let current = shown
+        LazyImage(request: current.url.map { Artwork.request($0, maxPixelSize: maxPixelSize) }) { state in
             if let image = state.image {
                 image
                     .resizable()
@@ -110,6 +126,23 @@ struct RemoteImage: View {
                 MonogramView(text: placeholderText)
             }
         }
+        // A cancelled request (scrolled away) reports nothing.
+        .onCompletion { result in
+            guard case .failure(let error) = result else { return }
+            let failure = Artwork.failure(error)
+            guard failure != .cancelled else { return }
+            let next = current.failed(transient: failure == .network)
+            guard next.wait > 0 else {
+                attempts = next
+                return
+            }
+            // One more try a moment later (a new identity loads it again), unless the address changed meanwhile.
+            Task {
+                try? await Task.sleep(for: .seconds(next.wait))
+                if shown == current { attempts = next }
+            }
+        }
+        .id(current.attempt)
     }
 }
 
